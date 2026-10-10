@@ -1,0 +1,13 @@
+{
+  "type": "sukuna:soul_corridor",
+  "generator": {
+    "type": "sukuna:soul_corridor",
+    "settings": {
+      "biome": "sukuna:soul_corridor",
+      "lakes": false,
+      "features": false,
+      "structure_overrides": [],
+      "layers": [{"height":1,"block":"minecraft:bedrock"}]
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "type": "sukuna:void_arena",
+  "generator": {
+    "type": "sukuna:void_arena",
+    "settings": {
+      "biome": "minecraft:the_end",
+      "lakes": false,
+      "features": false,
+      "structure_overrides": [],
+      "layers": [{"height": 1, "block": "minecraft:bedrock"}]
+    }
+  }
+}

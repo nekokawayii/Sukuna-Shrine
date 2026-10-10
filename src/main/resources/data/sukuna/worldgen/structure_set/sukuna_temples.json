@@ -1,0 +1,15 @@
+{
+  "structures": [
+    {
+      "structure": "sukuna:sukuna_temple",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "salt": 19358147,
+    "spacing": 34,
+    "separation": 8,
+    "spread_type": "linear"
+  }
+}

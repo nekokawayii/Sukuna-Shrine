@@ -1,0 +1,35 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "sukuna:page_zhang"
+    },
+    {
+      "item": "sukuna:page_huai"
+    },
+    {
+      "item": "sukuna:page_xue"
+    },
+    {
+      "item": "sukuna:page_nong"
+    },
+    {
+      "item": "sukuna:page_qing"
+    },
+    {
+      "item": "sukuna:page_dan"
+    },
+    {
+      "item": "sukuna:page_san"
+    },
+    {
+      "item": "sukuna:page_gu"
+    },
+    {
+      "item": "sukuna:page_shao"
+    }
+  ],
+  "result": {
+    "item": "sukuna:nine_death_paintings"
+  }
+}

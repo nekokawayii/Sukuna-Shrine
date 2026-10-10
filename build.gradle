@@ -1,0 +1,38 @@
+plugins { id 'java'; id 'net.minecraftforge.gradle' version '[6.0,6.2)' }
+version = '1.5.0-r101'
+group = 'cn.blockforge.generated.nnnnr1201forge2'
+base { archivesName = 'sukuna-forge-1.20.1' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+minecraft { mappings channel: 'official', version: '1.20.1' }
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.20.1-47.4.0'
+    compileOnly files('libs/touhoulittlemaid-1-2.5.2-forge_mc1.20.1.jar')
+}
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+processResources {
+    def props = [mod_id: 'sukuna', mod_name: '宿傩 · 伏魔御厨子', mod_version: project.version,
+                 minecraft_version: '1.20.1', forge_version: '47.4.0']
+    inputs.properties props
+    filteringCharset = 'UTF-8'
+    filesMatching('META-INF/mods.toml') { expand props }
+}
+jar {
+    archiveClassifier = 'ask'
+    manifest { attributes 'Sukuna-Wallpaper-Edition': 'ask' }
+}
+jar.finalizedBy('reobfJar')
+
+// 从已重映射的询问版生成默认共享版，两版字节码完全一致，仅默认授权资源不同。
+// 该任务由正式 build 执行；不在构建之外手工修改发行 jar。
+def autoShareJar = tasks.register('autoShareJar', Jar) {
+    dependsOn tasks.named('reobfJar')
+    archiveClassifier = 'auto-share'
+    from({ zipTree(tasks.named('jar').get().archiveFile.get().asFile) }) {
+        exclude 'sukuna-wallpaper-defaults.properties', 'META-INF/MANIFEST.MF'
+    }
+    from('src/wallpaper-auto-share')
+    manifest { attributes 'Sukuna-Wallpaper-Edition': 'auto-share' }
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+tasks.named('assemble') { dependsOn autoShareJar }

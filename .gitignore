@@ -1,0 +1,9 @@
+build/
+.gradle/
+run/
+logs/
+*.class
+research-photon/
+photon-branches.json
+previews/shrine_preview.bbmodel
+.automods/

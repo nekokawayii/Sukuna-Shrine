@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": ["ADA", "DHD", "ADA"],
+  "key": {
+    "A": {"item": "minecraft:amethyst_shard"},
+    "D": {"item": "minecraft:diamond"},
+    "H": {"item": "minecraft:heart_of_the_sea"}
+  },
+  "result": {"item": "sukuna:true_false_love", "count": 1}
+}

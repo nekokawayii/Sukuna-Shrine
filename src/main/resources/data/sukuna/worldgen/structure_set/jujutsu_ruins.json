@@ -1,0 +1,15 @@
+{
+  "structures": [
+    {
+      "structure": "sukuna:jujutsu_ruins",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "salt": 47139851,
+    "spacing": 48,
+    "separation": 16,
+    "spread_type": "linear"
+  }
+}

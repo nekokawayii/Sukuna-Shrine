@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "conditions": [{"type": "sukuna:controller_crafting_enabled"}],
+  "category": "misc",
+  "pattern": ["DDD", "DDD", "DDD"],
+  "key": {"D": {"item": "minecraft:dirt"}},
+  "result": {"item": "sukuna:void_controller", "count": 1}
+}

@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [" G ", "ADA", " R "],
+  "key": {
+    "G": {"item": "minecraft:gold_ingot"},
+    "A": {"item": "minecraft:amethyst_shard"},
+    "D": {"item": "minecraft:diamond"},
+    "R": {"item": "minecraft:poppy"}
+  },
+  "result": {"item": "sukuna:eternal_love", "count": 1}
+}

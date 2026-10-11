@@ -7,7 +7,8 @@ public final class DomainClashRules {
     public static final double HEAL_FRACTION=0.55;
     public static int percent(int lead){return Math.max(0,Math.min(100,50+lead));}
     public static int winner(int lead){return lead>=WIN_LEAD?1:lead<=-WIN_LEAD?-1:0;}
-    public static int bossCps(boolean guardian,int roll){return guardian?5:1+Math.floorMod(roll,7);}
+    /** 净土守护者 5 次/秒；五条悟 3 次/秒；其余首领 1～7 次/秒。 */
+    public static int bossCps(boolean guardian,boolean gojo,int roll){return guardian?5:gojo?3:1+Math.floorMod(roll,7);}
     public static double healCost(double maximum){return Math.max(0,maximum)*HEAL_FRACTION;}
     public static boolean overlaps(double squaredDistance,double a,double b){return squaredDistance<=(a+b)*(a+b);}
     private DomainClashRules(){}

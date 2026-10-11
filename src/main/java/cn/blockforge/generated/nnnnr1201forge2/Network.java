@@ -53,16 +53,16 @@ public final class Network {
     public record SettingsToggle(int kind) {}
     public record ControllerRequest(int field, int delta) {}
     public record ControllerValueRequest(int field,String value) {}
-    public record ControllerState(double bossHealth, double bossFrequency, double bossDamage, double voidDamage, int domainSeconds,
+    public record ControllerState(double voidDamage, int domainSeconds,
                                   double resonance, int maxRifts, int slashLength, int blackFlashChance, boolean redCut, boolean rewardBoost,
                                   double yujiHealth, double yujiFrequency, double yujiDamage, double buddhaHealth, double buddhaFrequency, double buddhaDamage, net.minecraft.nbt.CompoundTag guardian) {
         static ControllerState read(FriendlyByteBuf b) {
-            return new ControllerState(b.readDouble(), b.readDouble(), b.readDouble(), b.readDouble(), b.readVarInt(), b.readDouble(),
+            return new ControllerState(b.readDouble(), b.readVarInt(), b.readDouble(),
                 b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean(), b.readDouble(), b.readDouble(), b.readDouble(),
                 b.readDouble(), b.readDouble(), b.readDouble(), b.readNbt());
         }
         void write(FriendlyByteBuf b) {
-            b.writeDouble(bossHealth); b.writeDouble(bossFrequency); b.writeDouble(bossDamage); b.writeDouble(voidDamage);
+            b.writeDouble(voidDamage);
             b.writeVarInt(domainSeconds); b.writeDouble(resonance); b.writeVarInt(maxRifts); b.writeVarInt(slashLength);
             b.writeVarInt(blackFlashChance); b.writeBoolean(redCut); b.writeBoolean(rewardBoost);
             b.writeDouble(yujiHealth); b.writeDouble(yujiFrequency); b.writeDouble(yujiDamage); b.writeDouble(buddhaHealth); b.writeDouble(buddhaFrequency); b.writeDouble(buddhaDamage);b.writeNbt(guardian);
@@ -70,9 +70,9 @@ public final class Network {
     }
     public static Consumer<ControllerState> controllerReceiver = p -> {};
     public static Consumer<Progress> progressReceiver = p -> {};
-    public record Progress(double energy,double maximum,int fingers,boolean awakened,boolean siphon,boolean disorder,boolean unlocked,boolean nine,boolean rotation,boolean fist,String guide,boolean soulShrine,boolean voidShrine,boolean pureLandVictory,boolean burnout,double reverseHealing,double reverseCost,boolean modpackMode,int clashPenaltyTicks,boolean sukuna,boolean uraume,int iceFish,int wallSpacing,boolean wallDiagonal,boolean dismantleQi) {
-        static Progress read(FriendlyByteBuf b){return new Progress(b.readDouble(),b.readDouble(),b.readVarInt(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readUtf(2048),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readDouble(),b.readDouble(),b.readBoolean(),b.readVarInt(),b.readBoolean(),b.readBoolean(),b.readVarInt(),b.readVarInt(),b.readBoolean(),b.readBoolean());}
-        void write(FriendlyByteBuf b){b.writeDouble(energy);b.writeDouble(maximum);b.writeVarInt(fingers);b.writeBoolean(awakened);b.writeBoolean(siphon);b.writeBoolean(disorder);b.writeBoolean(unlocked);b.writeBoolean(nine);b.writeBoolean(rotation);b.writeBoolean(fist);b.writeUtf(guide,2048);b.writeBoolean(soulShrine);b.writeBoolean(voidShrine);b.writeBoolean(pureLandVictory);b.writeBoolean(burnout);b.writeDouble(reverseHealing);b.writeDouble(reverseCost);b.writeBoolean(modpackMode);b.writeVarInt(clashPenaltyTicks);b.writeBoolean(sukuna);b.writeBoolean(uraume);b.writeVarInt(iceFish);b.writeVarInt(wallSpacing);b.writeBoolean(wallDiagonal);b.writeBoolean(dismantleQi);}
+    public record Progress(double energy,double maximum,int fingers,boolean awakened,boolean siphon,boolean disorder,boolean unlocked,boolean nine,boolean rotation,boolean fist,String guide,boolean soulShrine,boolean voidShrine,boolean pureLandVictory,boolean burnout,double reverseHealing,double reverseCost,boolean modpackMode,int clashPenaltyTicks,boolean sukuna,boolean uraume,int iceFish,int wallSpacing,boolean wallDiagonal,boolean dismantleQi,boolean amplification,boolean gojo) {
+        static Progress read(FriendlyByteBuf b){return new Progress(b.readDouble(),b.readDouble(),b.readVarInt(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readUtf(2048),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readDouble(),b.readDouble(),b.readBoolean(),b.readVarInt(),b.readBoolean(),b.readBoolean(),b.readVarInt(),b.readVarInt(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean());}
+        void write(FriendlyByteBuf b){b.writeDouble(energy);b.writeDouble(maximum);b.writeVarInt(fingers);b.writeBoolean(awakened);b.writeBoolean(siphon);b.writeBoolean(disorder);b.writeBoolean(unlocked);b.writeBoolean(nine);b.writeBoolean(rotation);b.writeBoolean(fist);b.writeUtf(guide,2048);b.writeBoolean(soulShrine);b.writeBoolean(voidShrine);b.writeBoolean(pureLandVictory);b.writeBoolean(burnout);b.writeDouble(reverseHealing);b.writeDouble(reverseCost);b.writeBoolean(modpackMode);b.writeVarInt(clashPenaltyTicks);b.writeBoolean(sukuna);b.writeBoolean(uraume);b.writeVarInt(iceFish);b.writeVarInt(wallSpacing);b.writeBoolean(wallDiagonal);b.writeBoolean(dismantleQi);b.writeBoolean(amplification);b.writeBoolean(gojo);}
     }
     public record WallOptions(int halfBlocks,boolean diagonal){}
     public static Consumer<DrawState> drawReceiver=m->{};
@@ -104,7 +104,7 @@ public final class Network {
         CHANNEL.messageBuilder(Cast.class,0,NetworkDirection.PLAY_TO_SERVER).encoder((m,b)->b.writeUtf(m.action().name(),32)).decoder(b->new Cast(SkillAction.valueOf(b.readUtf(32)))).consumerMainThread((m,c)->{
             var p=c.get().getSender();
             if(p!=null&&m.action()==SkillAction.CANCEL_CHARGE){Skills.cancelCharge(p);TechniqueInput.cancel(p);c.get().setPacketHandled(true);return;}
-            if(p!=null&&!SixfoldFinale.active(p)&&!SixfoldFinale.controlled(p)&&!DomainClash.active(p)&&!NetBranches.locked(p)&&!Uraume.locked(p)&&!CombatExpansion.controlled(p)&&!DismantleMotion.active(p)){
+            if(p!=null&&!SixfoldFinale.active(p)&&!SixfoldFinale.controlled(p)&&!DomainClash.active(p)&&!NetBranches.locked(p)&&!Uraume.locked(p)&&!CombatExpansion.controlled(p)&&!DismantleMotion.active(p)&&!GojoEntity.mindLocked(p)){
                 switch(m.action()){
                     case TOGGLE_DISMANTLE -> SlashForms.toggle(p);
                     case SHAPE_SLASH -> SlashForms.cast(p,SlashFormRules.SHAPE);
@@ -150,6 +150,16 @@ public final class Network {
                     case GUARDIAN_BEAM -> GuardianPlayerSkills.cast(p,9);
                     case REVERSE -> Curse.reverse(p);
                     case REPAIR_BURNOUT -> Curse.repairBurnout(p);
+                    case DOMAIN_AMPLIFICATION -> DomainAmplification.toggle(p);
+                    case GOJO_BLUE -> GojoCombat.cast(p,0);
+                    case GOJO_RED -> GojoCombat.cast(p,1);
+                    case GOJO_RED_MAX -> GojoCombat.cast(p,2);
+                    case GOJO_PURPLE -> GojoCombat.cast(p,3);
+                    case GOJO_UNLIMITED -> GojoCombat.cast(p,4);
+                    case GOJO_TELEPORT -> GojoCombat.cast(p,5);
+                    case GOJO_MELEE -> GojoCombat.cast(p,6);
+                    case GOJO_DOMAIN -> GojoCombat.cast(p,7);
+                    case GOJO_BLUE_MAX -> GojoCombat.cast(p,8);
                 }
             }
             c.get().setPacketHandled(true);

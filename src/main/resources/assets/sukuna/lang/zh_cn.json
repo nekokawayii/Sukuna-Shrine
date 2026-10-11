@@ -45,13 +45,15 @@
   "block.sukuna.soul_gate": "灵魂之门",
   "block.sukuna.soul_thread": "灵魂丝线",
   "biome.sukuna.soul_corridor": "灵魂通道",
-  "entity.sukuna.void_aggregate": "构筑咒胎受肉：虚无相",
+  "entity.sukuna.gojo": "五条悟",
   "entity.sukuna.broken_mahito": "破碎真人",
   "block.sukuna.idle_transfigured_flesh": "无为转变改造肉块",
   "item.sukuna.idle_transfigured_flesh": "无为转变改造肉块",
   "entity.sukuna.void_node": "裂隙节点",
   "item.sukuna.void_key": "虚空钥匙",
-  "item.sukuna.void_spawn_egg": "虚空聚合体刷怪蛋",
+  "item.sukuna.gojo_spawn_egg": "五条悟刷怪蛋",
+  "item.sukuna.gojo_fragment": "六眼",
+  "key.sukuna.amplify": "领域展延（穿透无下限）",
   "item.sukuna.idle_transfiguration_curse": "无为转变诅咒",
   "item.sukuna.mahito_finger": "真人的手指",
   "item.sukuna.soul_separation_needle": "无为转变·解离针",
@@ -73,5 +75,7 @@
   "item.sukuna.legacy": "传承",
   "effect.sukuna.technique_burnout": "术式熔断",
   "task.sukuna.malevolent_shrine": "伏魔御厨子",
-  "task.sukuna.malevolent_shrine.desc": "Shift+右键喂食或查看咒力；先吃下宿傩记忆才会开启；优先低消耗咒术，无法施术时肉搏；领域共用120秒冷却，外放治疗主人"
+  "task.sukuna.malevolent_shrine.desc": "Shift+右键喂食或查看咒力；先吃下宿傩记忆才会开启；优先低消耗咒术，无法施术时肉搏；领域共用120秒冷却，外放治疗主人",
+  "task.sukuna.six_eyes": "六眼",
+  "task.sukuna.six_eyes.desc": "Shift+右键喂六眼解锁（没有任何阶段要求）；选中后女仆改用五条悟技能组：苍、赫、茈、无量空处，场上有苍时会用赫撞出无限制茈；与宿傩/里梅任务并存，随时可切回"
 }

@@ -22,6 +22,8 @@ public final class EternalLove {
     public static boolean duel(LivingEntity maid){return net.minecraftforge.fml.ModList.get().isLoaded("touhou_little_maid")&&MaidBridge.isMaid(maid)&&MaidDuel.duel(maid);}
     public static boolean protects(Player owner,LivingEntity target){return Curse.data(owner).getCompound(KEY).contains(target.getUUID().toString())||protects(owner.getUUID(),target);}
     public static boolean protects(UUID owner,LivingEntity target){return target.getPersistentData().getCompound(OWNERS).contains(owner.toString());}
+    /** 是否被任何一位玩家选为永恒挚爱：无量空处这类"绝对控制"据此免疫（非玩家施法者也要认这条）。 */
+    public static boolean protectedByAnyone(LivingEntity target){return !target.getPersistentData().getCompound(OWNERS).isEmpty();}
     public static void init(){}
     private static void mark(ServerPlayer p,LivingEntity target){
         CompoundTag saved=Curse.data(p).getCompound(KEY),owners=target.getPersistentData().getCompound(OWNERS);

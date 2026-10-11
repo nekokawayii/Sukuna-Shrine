@@ -12,9 +12,6 @@ import static cn.blockforge.generated.nnnnr1201forge2.Client.*;
 
 @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
 public final class VoidBossClient {
-    private record Visual(Network.Effect e,long start){}
-    private static final Map<String,Visual> rifts=new HashMap<>();
-    private static final List<Visual> effects=new ArrayList<>();
     private static final Map<Integer,Long> shrines=new HashMap<>();
     private static final Set<Integer> blueShrines=new HashSet<>();
     private static final Map<Integer,Long> blueCasters=new HashMap<>();
@@ -23,28 +20,11 @@ public final class VoidBossClient {
     public static void renderShrine(PoseStack ps,net.minecraft.client.renderer.MultiBufferSource source,float age,int owner){boolean blue=blue(owner);SHRINE.render(ps,source,15728880,"awaken",age/20,blue?0.14f:1,blue?0.85f:1,1,1);}
     public static boolean blue(int owner){return blueCasters.getOrDefault(owner,0L)>time||shrine(owner)&&blueShrines.contains(owner);}
     public static void closeShrine(int owner){shrines.remove(owner);blueShrines.remove(owner);}
-    public static void clear(){rifts.clear();effects.clear();shrines.clear();blueShrines.clear();blueCasters.clear();time=0;}
-    public static void tick(){time++;rifts.values().removeIf(v->time-v.start>v.e.life());effects.removeIf(v->time-v.start>v.e.life());shrines.values().removeIf(end->end<time);blueShrines.retainAll(shrines.keySet());}
-    public static void receive(Network.Effect e){if(e.kind()==144){if(e.seed()==1)blueCasters.put(e.owner(),time+e.life());else blueCasters.remove(e.owner());return;}String key=e.owner()+"/"+e.seed();if(e.kind()==100){if(rifts.size()<256||rifts.containsKey(key))rifts.put(key,new Visual(e,time));return;}if(e.kind()==101){rifts.remove(key);return;}if(e.kind()==112){shrines.put(e.owner(),time+e.life());if(e.seed()==1)blueShrines.add(e.owner());else blueShrines.remove(e.owner());return;}if(effects.size()<360)effects.add(new Visual(e,time));}
+    public static void clear(){shrines.clear();blueShrines.clear();blueCasters.clear();time=0;}
+    public static void tick(){time++;shrines.values().removeIf(end->end<time);blueShrines.retainAll(shrines.keySet());}
+    public static void receive(Network.Effect e){if(e.kind()==144){if(e.seed()==1)blueCasters.put(e.owner(),time+e.life());else blueCasters.remove(e.owner());return;}if(e.kind()==112){shrines.put(e.owner(),time+e.life());if(e.seed()==1)blueShrines.add(e.owner());else blueShrines.remove(e.owner());return;}}
     public static boolean shrine(int owner){return shrines.containsKey(owner);}
     @SubscribeEvent public static void fog(ViewportEvent.ComputeFogColor e){var mc=Minecraft.getInstance();if(mc.level!=null&&mc.level.dimension()==VoidJourney.ARENA){e.setRed(0.022f);e.setGreen(0.008f);e.setBlue(0.042f);}}
-    private static void disk(BufferBuilder b,PoseStack ps,Vec3 p,double r,int color){for(int i=0;i<40;i++){double a=i*Math.PI/20,z=(i+1)*Math.PI/20;quad(b,ps,p,p.add(Math.cos(a)*r,0,Math.sin(a)*r),p.add(Math.cos(z)*r,0,Math.sin(z)*r),p,color);}}
-    public static void draw(BufferBuilder b,PoseStack ps,Vec3 cam,float partial){
-        for(Visual v:rifts.values()){var e=v.e;SlashAppearance.use(e);Vec3 p=e.position();double r=e.size();disk(b,ps,p,r,0xF505020A);ring(b,ps,p.add(0,0.015,0),r,0.07,0xEA7D28B8,cam);for(int j=0;j<6;j++){double a=j*Math.PI/3+e.seed();Vec3 q=p.add(Math.cos(a)*r*0.85,0.02,Math.sin(a)*r*0.85);ribbon(b,ps,p,q,0.025,0xCC622091,cam);}}
-        for(Visual v:effects){var e=v.e;SlashAppearance.use(e);float age=time-v.start+partial;Vec3 p=e.position(),q=e.direction();double size=e.size();int alpha=(int)(220*Math.max(0,1-age/e.life()));
-            switch(e.kind()){
-                case 102->{ring(b,ps,p.add(0,0.04,0),size,0.06,0xFFC580E9,cam);}
-                case 103->{Vec3 tip=p.lerp(q,Math.min(1,age/e.life()));ribbon(b,ps,tip,tip.add(0,2.5,0),0.16,0xF005020A,cam);ribbon(b,ps,tip.add(0.2,0,0),tip.add(0.2,2.5,0),0.04,0xFFA04DE0,cam);}
-                case 104,108->{ribbon(b,ps,p,q,size,0xEE080311,cam);Vec3 edge=q.subtract(p).cross(cam.subtract(p)).normalize().scale(size);ribbon(b,ps,p.add(edge),q.add(edge),0.06,0xFF9D4CDB,cam);if(e.kind()==108)for(int j=0;j<5;j++){Vec3 x=p.lerp(q,j/5.0);ribbon(b,ps,x.add(-0.1,0,0),x.add(0.1,0.25,0),0.08,0xFF7F22B2,cam);}}
-                case 105->{for(int i=0;i<32;i++){double a=i*Math.PI/16;Vec3 x=p.add(Math.cos(a)*size,0,Math.sin(a)*size);ribbon(b,ps,x,x.add(0,5,0),0.11,0xF50A0315,cam);ribbon(b,ps,x.add(0.1,0,0),x.add(0.1,5,0),0.03,0xFF943AD0,cam);}ring(b,ps,p,size,0.2,0xFF8733CC,cam);}
-                case 106->{ring(b,ps,p,size,0.35,0xFF090211,cam);ring(b,ps,p.add(0,0.12,0),size+0.3,0.1,0xFFAB51E0,cam);}
-                case 107->{disk(b,ps,p.add(0,0.05,0),size,0xEE080210);for(int i=0;i<12;i++){double a=i*Math.PI/6+age*0.12;Vec3 x=p.add(Math.cos(a)*size,0.1,Math.sin(a)*size);ribbon(b,ps,x,x.add(0,age*0.065,0),0.1,0xAA7733BB,cam);}}
-                case 109->{for(int i=0;i<22;i++){double a=i*2.39996+age*0.10,r=size*(0.3+0.7*(i%7)/7.0);Vec3 x=p.add(Math.cos(a)*r,Math.sin(i+age*0.1)*r*0.6,Math.sin(a)*r);ribbon(b,ps,x,x.lerp(p,0.25),0.2,0xEC0A0212,cam);ribbon(b,ps,x,x.lerp(p,0.12),0.055,0xEF832FC2,cam);}}
-                case 110->{Vec3 toward=cam.subtract(p).normalize(),side=new Vec3(-toward.z,0,toward.x).normalize();for(int i=0;i<32;i++){double a=i*Math.PI/16,z=(i+1)*Math.PI/16;Vec3 x=p.add(side.scale(Math.cos(a)*size)).add(0,Math.sin(a)*size*0.45,0),y=p.add(side.scale(Math.cos(z)*size)).add(0,Math.sin(z)*size*0.45,0);ribbon(b,ps,x,y,0.09,0xFFB563E6,cam);}ribbon(b,ps,p.add(0,-0.55,0),p.add(0,0.55,0),0.13,0xFF000000,cam);}
-                case 111->{double h=Math.min(4,age*0.1);for(int i=0;i<5;i++){Vec3 x=p.add((i-2)*0.65,0,0);ribbon(b,ps,x,x.add(0,h-Math.abs(i-2)*0.3,0),0.28,0xF0050209,cam);ribbon(b,ps,x.add(0.25,0,0),x.add(0.25,h-Math.abs(i-2)*0.3,0),0.04,0xFF8D30C6,cam);}ring(b,ps,p,2,0.15,(alpha<<24)|0x942CD0,cam);}
-            }
-        }
-    }
     public static void domain(BufferBuilder b,PoseStack ps,Vec3 center,Vec3 shrine,Vec3 cam,float age,float fade,int owner){
         boolean blue=blue(owner);int accent=blue?0x269FFF:0xA145DB,light=blue?0x91E8FF:0xC965ED,eyeColor=blue?0xEE53CFFF:0xEEB25BEA;
         float pulse=age%160<8?1:0.45f;

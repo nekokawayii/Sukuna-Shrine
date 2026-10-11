@@ -13,6 +13,8 @@ public final class GuardianVisuals {
         float fade=Math.max(0,1-age/Math.max(1,e.life()));
         Vec3 c=e.position();
         int crimson=color(0xD91439,fade),white=color(0xFFF2E7,fade),cyan=color(0x68E9F2,fade);
+        // 百敛·穿血专用：由外到内只有三层暗红，不再有白色内芯与猩红高光。
+        int bloodDeep=color(0x3C0307,fade),bloodMid=color(0x7E0812,fade),bloodCore=color(0x9C0F1B,fade);
         switch(e.kind()){
             case 136 -> {
                 if(owner!=null)c=owner.position();
@@ -40,19 +42,19 @@ public final class GuardianVisuals {
                 }
             }
             case 138 -> {
-                // 穿血蓄力：血丝向双手前方的压缩血球收束。
+                // 穿血蓄力：血丝向双手前方的压缩血球收束，纯暗红。
                 double r=0.12+Math.max(0,Math.min(1,e.size()))*0.5;
                 Vec3 normal=owner==null?new Vec3(0,0,1):owner.getLookAngle();
-                disc(b,ps,c,normal,r,0.06,crimson,cam);
-                disc(b,ps,c,normal,r*0.45,0.035,white,cam);
+                disc(b,ps,c,normal,r,0.06,bloodMid,cam);
+                disc(b,ps,c,normal,r*0.45,0.035,bloodCore,cam);
                 for(int i=0;i<8;i++){
                     double a=i*Math.PI/4+age*0.3;
                     Vec3 d=new Vec3(Math.cos(a),Math.sin(a),Math.sin(a*2)*0.3).normalize();
-                    ribbon(b,ps,c.add(d.scale(r+0.45)),c.add(d.scale(r)),0.025,crimson,cam);
+                    ribbon(b,ps,c.add(d.scale(r+0.45)),c.add(d.scale(r)),0.025,bloodMid,cam);
                 }
             }
             case 139 -> {
-                // 发射终点直接使用服务端碰撞结果，不在客户端延伸穿墙。
+                // 发射终点直接使用服务端碰撞结果，不在客户端延伸穿墙；光束由外到内全部为暗红。
                 Vec3 end=e.direction(),dir=end.subtract(c).normalize();
                 // 第一人称时光束起点在镜头附近，直接沿视线会被相机裁掉；向镜头侧偏移并保留稳定宽度。
                 Vec3 side=dir.cross(cam.subtract(c)).normalize();
@@ -61,10 +63,10 @@ public final class GuardianVisuals {
                 Vec3 offset=side.scale(0.035);
                 c=c.add(offset);end=end.add(offset);
                 double width=Math.max(0.08,Math.min(0.48,e.size()+0.06));
-                ribbon(b,ps,c,end,width,color(0x69091F,fade*0.6f),cam);
-                ribbon(b,ps,c,end,width*0.50,crimson,cam);
-                ribbon(b,ps,c,end,width*0.16,white,cam);
-                disc(b,ps,end,dir,0.24+age*0.04,0.035,crimson,cam);
+                ribbon(b,ps,c,end,width,bloodDeep,cam);
+                ribbon(b,ps,c,end,width*0.50,bloodMid,cam);
+                ribbon(b,ps,c,end,width*0.16,bloodCore,cam);
+                disc(b,ps,end,dir,0.24+age*0.04,0.035,bloodCore,cam);
             }
             case 140 -> {
                 // 逕庭拳第一拍：蓝白断续魂线，区别于连打的实线拳风。
@@ -96,7 +98,7 @@ public final class GuardianVisuals {
         }
     }
     private static int color(int rgb,float alpha){return ((int)(235*Math.max(0,Math.min(1,alpha)))<<24)|rgb;}
-    private static void disc(BufferBuilder b,PoseStack ps,Vec3 center,Vec3 normal,double radius,double width,int color,Vec3 cam){
+    static void disc(BufferBuilder b,PoseStack ps,Vec3 center,Vec3 normal,double radius,double width,int color,Vec3 cam){
         Vec3 n=normal.normalize();if(n.lengthSqr()<0.01)n=new Vec3(0,0,1);
         Vec3 side=n.cross(new Vec3(0,1,0)).normalize();if(side.lengthSqr()<0.01)side=new Vec3(1,0,0);
         Vec3 up=n.cross(side).normalize();

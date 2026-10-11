@@ -39,12 +39,13 @@ public final class TechniqueInput {
                     if(old.skill==CombatExpansionRules.CLEAVE_LINGER&&MaidBridge.body(p).isShiftKeyDown()){if(Curse.fingers(p)>=5&&Curse.spend(p,Curse.COST[0]))TechniqueInput.withIntent(p,old.input,()->CombatExpansion.afterCast(p,old.skill));}
                     else cast(p,0,old.input);
                 }else CombatExpansion.releaseLinger(p);
-            }else if(old.skill==2&&!old.triggered)Skills.cleaveCharge(p,false);
+            }else if(old.skill>=34&&old.skill<41)GojoCombat.chargeRelease(p,old.skill-34); // 短按普通 / 长按最大功率
+            else if(old.skill==2&&!old.triggered)Skills.cleaveCharge(p,false);
             else if(old.skill==CombatExpansionRules.DRAGON_STAR)CombatExpansion.stopDragonChant(p);
             intents.remove(p.getUUID());return;
         }
         if(input.phase!=0||!SkillAction.isSkill(input.skill)||old!=null||!allowed(p)||DismantleMotion.active(p)||CombatExpansion.chanting(p))return;
-        if(!Journey.unlocked(p)&&input.skill!=22&&input.skill!=23)return;
+        if(!Journey.unlocked(p)&&input.skill!=22&&input.skill!=23&&!(input.skill>=34&&input.skill<41))return;
         Hold hold=new Hold(p,input);holds.put(p.getUUID(),hold);
         if(CombatExpansionRules.branch(input.skill)&&(!Journey.unlocked(p)||input.skill==CombatExpansionRules.CLEAVE_LINGER&&Curse.fingers(p)<5)){holds.remove(p.getUUID());return;}
         if(input.skill==2&&!Curse.awakened(p)&&!MaidBridge.body(p).isShiftKeyDown()){Skills.cleaveCharge(p,true);return;}
@@ -53,7 +54,7 @@ public final class TechniqueInput {
         if(input.skill==0&&!Curse.canSpend(p,Curse.COST[0])){cancel(p);CastFeedback.unavailable(p,Curse.COST[0]);return;}
         cast(p,input.skill,input);hold.triggered=true;hold.slashes=1;
     }
-    private static boolean allowed(ServerPlayer p){return CombatExpansion.valid(p,p.serverLevel())&&(Journey.unlocked(p)||Uraume.unlocked(p))&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p)&&!MaidBridge.recovering(p)&&!CombatExpansion.controlled(p);}
+    private static boolean allowed(ServerPlayer p){return !GojoEntity.mindLocked(p)&&CombatExpansion.valid(p,p.serverLevel())&&(Journey.unlocked(p)||Uraume.unlocked(p)||GojoPlayer.unlocked(p))&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p)&&!MaidBridge.recovering(p)&&!CombatExpansion.controlled(p);}
     private static void cast(ServerPlayer p,int skill,Input input){
         intents.put(p.getUUID(),input);
         try{castRaw(p,skill);}finally{intents.remove(p.getUUID());}
@@ -66,6 +67,7 @@ public final class TechniqueInput {
         if(skill==17||skill==18){NetBranches.cast(p,skill);return;}
         if(skill>=19&&skill<=21){SukunaBranches.cast(p,skill);return;}
         if(skill==22||skill==23){Uraume.cast(p,skill);return;}
+        if(skill>=34&&skill<41){GojoCombat.chargeStart(p,skill-34);return;}
         if(skill>=7&&skill<=16){GuardianPlayerSkills.cast(p,skill-7);return;}
         if(skill==6){Skills.peel(p);return;}
         if(skill>=0&&skill<6)Skills.cast(p,skill);

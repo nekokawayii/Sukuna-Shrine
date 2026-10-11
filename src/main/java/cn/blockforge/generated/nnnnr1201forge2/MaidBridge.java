@@ -47,7 +47,7 @@ public final class MaidBridge {
         if(victim instanceof BuddhaEntity)flag="BuddhaDefeated";
         else if(victim instanceof YujiEntity y&&!y.decoy()&&!y.familyMember())flag="YujiDefeated";
         else if(victim instanceof BrokenMahitoEntity)flag="BrokenMahitoDefeated";
-        else if(victim instanceof VoidBossEntity)flag="VoidBossDefeated";
+        else if(victim instanceof GojoEntity)flag="VoidBossDefeated";
         if(flag==null)return;maid.putBoolean(flag,true);
         ServerPlayer owner=owner(actor);if(owner!=null){Curse.data(owner).putBoolean(flag,true);Curse.sync(owner);}
         Curse.sync(actor);

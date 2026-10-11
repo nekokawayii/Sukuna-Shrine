@@ -40,7 +40,6 @@ public final class CreativeRestorer extends Item {
         if(!p.isCreative()||!p.isAlive())return;
         // 先关闭仍会扣费/施加状态的时间轴，最后再清熔断和回满咒力。
         SixfoldFinale.testReset(p);DomainClash.testReset(p);Skills.testReset(p);GuardianPlayerSkills.testReset(p);VoidCombat.testReset(p);
-        for(var entity:p.serverLevel().getAllEntities())if(entity instanceof VoidNodeEntity node)node.releaseTestTarget(p.getUUID());
         VoidJourney.clear(p);
         var progress=Curse.data(p);for(String key:List.copyOf(progress.getAllKeys()))if(RecoveryRules.progressKey(key))progress.remove(key);
         var data=p.getPersistentData();for(String key:List.copyOf(data.getAllKeys()))if(RecoveryRules.entityKey(key))data.remove(key);

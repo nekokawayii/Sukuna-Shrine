@@ -31,6 +31,9 @@ public final class GeneratedMod {
         if(health.getMaxValue()<150000){try{double cap=health.getMaxValue();for(var field:net.minecraft.world.entity.ai.attributes.RangedAttribute.class.getDeclaredFields())if(field.getType()==double.class){field.setAccessible(true);if(field.getDouble(health)==cap){field.setDouble(health,1000000);break;}}if(health.getMaxValue()<150000)throw new IllegalStateException("生命属性上限未能提高");}catch(ReflectiveOperationException ex){throw new IllegalStateException("无法启用即身佛5000生命",ex);}}
         VoidContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         MinecraftForge.EVENT_BUS.register(VoidJourney.class);
+        MinecraftForge.EVENT_BUS.register(GojoEntity.class);
+        MinecraftForge.EVENT_BUS.register(DomainAmplification.class);
+        MinecraftForge.EVENT_BUS.register(GojoCombat.class);
         MinecraftForge.EVENT_BUS.register(VoidCombat.class);
         EternalLove.init();
         MinecraftForge.EVENT_BUS.register(BossTargets.class);

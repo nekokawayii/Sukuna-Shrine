@@ -34,7 +34,7 @@ public final class DomainClash {
     public static int penaltyTicks(Player p){return (int)Math.max(0,Math.min(DomainClashRules.BURNOUT_TICKS,Curse.data(p).getLong("DomainClashPenaltyUntil")-p.level().getGameTime()));}
     public static boolean player(LivingEntity e){return e instanceof ServerPlayer&&!(e instanceof net.minecraftforge.common.util.FakePlayer);}
     public static void opened(LivingEntity owner,Vec3 center,double radius){
-        if(!(player(owner)||owner instanceof MaidBridge.Actor||owner instanceof YujiEntity y&&!y.decoy()&&!y.familyMember()||owner instanceof GuardianEntity g&&!g.friendly()))return;
+        if(!(player(owner)||owner instanceof MaidBridge.Actor||owner instanceof YujiEntity y&&!y.decoy()&&!y.familyMember()||owner instanceof GuardianEntity g&&!g.friendly()||owner instanceof GojoEntity))return;
         if(SixfoldFinale.active(owner)||SixfoldFinale.controlled(owner)||active(owner))return;
         Field previous=fields.get(owner.getUUID());if(previous!=null&&previous.owner==owner&&previous.level==owner.level()&&previous.center.equals(center)&&previous.radius==radius)return;
         fields.put(owner.getUUID(),new Field(owner,owner.level(),center,radius));discover();
@@ -43,9 +43,9 @@ public final class DomainClash {
         LivingEntity e=f.owner;
         if(!e.isAlive()||e.isRemoved()||e.isSpectator()||e.level()!=f.level)return false;
         if(e instanceof MaidBridge.Actor a)return a.maid.level()==f.level&&!EternalLove.settling(a.maid)&&(Skills.clashDomainActive(a)||GuardianPlayerSkills.sustaining(a));
-        if(e instanceof ServerPlayer p)return !p.isCreative()&&p.server.getPlayerList().getPlayer(p.getUUID())==p&&(Skills.clashDomainActive(p)||GuardianPlayerSkills.sustaining(p));
+        if(e instanceof ServerPlayer p)return !p.isCreative()&&p.server.getPlayerList().getPlayer(p.getUUID())==p&&(Skills.clashDomainActive(p)||GuardianPlayerSkills.sustaining(p)||GojoCombat.sustaining(p));
         if(e instanceof YujiEntity y)return y.clashDomainActive();
-        return e instanceof GuardianEntity g&&g.clashDomainActive();
+        return e instanceof GuardianEntity g&&g.clashDomainActive()||e instanceof GojoEntity gojo&&gojo.clashDomainActive();
     }
     private static boolean enemies(Field a,Field b){
         if(a.owner.level()!=b.owner.level())return false;
@@ -73,15 +73,15 @@ public final class DomainClash {
         visual(s.field,false);pin(e,s.anchor);
     }
     private static void visual(Field f,boolean show){
-        if(f.owner instanceof ServerPlayer p){Skills.clashVisual(p,show);GuardianPlayerSkills.clashVisual(p,show);}
+        if(f.owner instanceof ServerPlayer p){Skills.clashVisual(p,show);GuardianPlayerSkills.clashVisual(p,show);GojoCombat.clashVisual(p,show);}
         else if(f.owner instanceof YujiEntity y)y.clashVisual(show);else if(f.owner instanceof GuardianEntity g)g.clashVisual(show);
     }
     private static void extend(Field f,int ticks){
-        if(f.owner instanceof ServerPlayer p){Skills.extendDomain(p,ticks);GuardianPlayerSkills.extendDomain(p,ticks);}
+        if(f.owner instanceof ServerPlayer p){Skills.extendDomain(p,ticks);GuardianPlayerSkills.extendDomain(p,ticks);GojoCombat.extendDomain(p,ticks);}
         else if(f.owner instanceof YujiEntity y)y.extendDomain(ticks);else if(f.owner instanceof GuardianEntity g)g.extendDomain(ticks);
     }
     private static void close(Field f){
-        if(f.owner instanceof ServerPlayer p){Skills.closeDomain(p);GuardianPlayerSkills.closeOwnedDomain(p,false);}
+        if(f.owner instanceof ServerPlayer p){Skills.closeDomain(p);GuardianPlayerSkills.closeOwnedDomain(p,false);GojoCombat.closeDomain(p);}
         else if(f.owner instanceof YujiEntity y)y.clashCloseDomain();else if(f.owner instanceof GuardianEntity g)g.clashCloseDomain();
     }
     public static void press(ServerPlayer p,UUID id,boolean down){
@@ -92,7 +92,7 @@ public final class DomainClash {
     private static int clicks(Side s,int age){
         if(player(s.field.owner))return s.input.drain();
         if(s.field.owner instanceof MaidBridge.Actor){s.cps=5;s.credit+=s.cps;int n=s.credit/20;s.credit%=20;return n;}
-        if((age-DomainClashRules.READY_TICKS)%20==0)s.cps=DomainClashRules.bossCps(s.field.owner instanceof GuardianEntity,s.field.owner.getRandom().nextInt(100000));
+        if((age-DomainClashRules.READY_TICKS)%20==0)s.cps=DomainClashRules.bossCps(s.field.owner instanceof GuardianEntity,s.field.owner instanceof GojoEntity,s.field.owner.getRandom().nextInt(100000));
         s.credit+=s.cps;int n=s.credit/20;s.credit%=20;return n;
     }
     @SubscribeEvent(priority=EventPriority.HIGHEST) public static void tick(TickEvent.ServerTickEvent event){

@@ -73,7 +73,7 @@ public final class SukunaConfigScreen extends Screen {
         stage("即身佛融合", GrowthConfig.BODY);
         stage("九相图融合", GrowthConfig.NINE);
         stage("虎杖残影通关", GrowthConfig.SOUL);
-        stage("虚无相通关", GrowthConfig.VOID);
+        stage("五条悟通关", GrowthConfig.VOID);
         stage("净土通关", GrowthConfig.GUARDIAN);
     }
 

@@ -60,7 +60,7 @@ public final class Journey {
     public static String guide(Player p){
         if(Uraume.unlocked(p)&&!unlocked(p))return "里梅 · 冰鱼 "+Uraume.fish(p)+" 条 · 冰伤 +"+Uraume.fish(p)+"% · 技能强化 "+Uraume.upgrades(p)+" 次；长按 N 选冰凝咒法";
         if(GuardianCombat.awakened(p))return "阶段7 · 传承已吸收 · 蓝色觉醒 · 守护者技能与术式反转外放已解锁";
-        if(!unlocked(p)&&VoidJourney.defeated(p))return "虚无相已通关 · 未吃宿傩记忆，不直接获得术式；虚空相咒胎可留给灵魂御厨子阶段的女仆";
+        if(!unlocked(p)&&VoidJourney.defeated(p))return "五条悟已通关 · 未吃宿傩记忆，不直接获得术式；虚空相咒胎可留给灵魂御厨子阶段的女仆";
         if(!unlocked(p)&&maidCleared(p,"BrokenMahitoDefeated"))return "女仆已完成真人任务 · 可前往岩手区域；吃下记忆后才解锁术式奖励";
         if(!unlocked(p)&&maidCleared(p,"YujiDefeated"))return "女仆已完成虎杖残影任务 · 可前往真人或虚空聚合体；吃下记忆后才解锁术式奖励";
         if(!unlocked(p))return "起始 · 吃下宿傩记忆，解锁术式与成长任务";
@@ -68,8 +68,8 @@ public final class Journey {
         if(!Curse.data(p).getBoolean("BuddhaDefeated")||!Curse.awakened(p))return "阶段2 · 击败即身佛并吞噬肉体；空旷处右键即身佛召唤香（前方留8格）";
         if(!nine(p)){int i=page(p);if(i==9)return "阶段3 · 九胎齐全：在工作台合成咒胎九相图并吃下";double divisor=i==0||i==3||i==7?20:1;return "阶段3 · "+PAGES[i]+"："+CONDITIONS[i]+" ["+(int)(value(p,i)/divisor)+"/"+(int)(GOALS[i]/divisor)+"]";}
         if(VoidJourney.evolved(p))return "阶段6 · 虚空御厨子 · "+mahitoGuide(p)+" · 前往岩手挑战守护者并吸收传承 · 灵魂进食 "+Curse.data(p).getInt("SoulFeasts")+"/300";
-        if(SoulJourney.evolved(p)&&VoidJourney.defeated(p))return "阶段5已通关 · "+mahitoGuide(p)+" · 虚无相已击败 · 吃下虚空相咒胎进入阶段6，或喂给灵魂御厨子阶段的女仆";
-        if(SoulJourney.evolved(p))return "阶段5 · 灵魂御厨子 · "+mahitoGuide(p)+" · 右键虚空钥匙挑战虚无相 · 灵魂进食 "+Curse.data(p).getInt("SoulFeasts")+"/300 · 咒胎受肉 "+SoulCombat.layers(p)+"/9";
+        if(SoulJourney.evolved(p)&&VoidJourney.defeated(p))return "阶段5已通关 · "+mahitoGuide(p)+" · 五条悟已击败 · 吃下虚空相咒胎进入阶段6，或喂给灵魂御厨子阶段的女仆";
+        if(SoulJourney.evolved(p))return "阶段5 · 灵魂御厨子 · "+mahitoGuide(p)+" · 右键虚空钥匙挑战五条悟 · 灵魂进食 "+Curse.data(p).getInt("SoulFeasts")+"/300 · 咒胎受肉 "+SoulCombat.layers(p)+"/9";
         if(SoulJourney.ready(p))return "阶段5 · 残秽凝练完成，击败虎杖残影后吃下灵魂御厨子碎片 · 咒胎受肉 "+SoulCombat.layers(p)+"/9";
         return "阶段4 · 残秽凝练 "+residuePercent(p)+"/100%；食用残秽每个永久伤害+3%，击杀0.1%掉落";
     }

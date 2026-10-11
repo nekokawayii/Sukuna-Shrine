@@ -20,16 +20,16 @@ public final class VoidJourney {
     public static boolean evolved(Player p){return Curse.data(p).getBoolean("VoidShrine");}
     public static void enter(ServerPlayer p){
         if(p.level().dimension()==ARENA){leave(p);return;}
-        if(!SoulJourney.evolved(p)&&!Journey.maidCleared(p,"YujiDefeated")){p.sendSystemMessage(Component.literal("先击败虎杖残影，觉醒灵魂御厨子，再挑战虚空聚合体。"));return;}
+        if(!SoulJourney.evolved(p)&&!Journey.maidCleared(p,"YujiDefeated")){p.sendSystemMessage(Component.literal("先击败虎杖残影，觉醒灵魂御厨子，再挑战五条悟。"));return;}
         if(p.level().getDifficulty()==net.minecraft.world.Difficulty.PEACEFUL){p.sendSystemMessage(Component.literal("请将难度改为简单、普通或困难。"));return;}
         ServerLevel l=p.server.getLevel(ARENA);if(l==null){p.sendSystemMessage(Component.literal("虚空竞技场尚未载入，请重新打开存档。"));return;}
         var d=Curse.data(p);d.putString("VoidReturnDimension",p.level().dimension().location().toString());d.putDouble("VoidReturnX",p.getX());d.putDouble("VoidReturnY",p.getY());d.putDouble("VoidReturnZ",p.getZ());
         for(int x=-3;x<=3;x++)for(int z=-3;z<=3;z++)l.getChunk(x,z);
         Skills.closeDomain(p);Skills.cancelCharge(p);p.teleportTo(l,0.5,-59,32.5,180,0);
-        if(l.getEntitiesOfClass(VoidBossEntity.class,new AABB(-64,-64,-64,64,0,64),VoidBossEntity::isAlive).isEmpty()){
-            VoidBossEntity b=VoidContent.BOSS.get().create(l);if(b!=null){b.moveTo(0.5,-59,0.5,0,0);b.setTarget(p);l.addFreshEntity(b);b.setHealth(b.getMaxHealth());}
+        if(l.getEntitiesOfClass(GojoEntity.class,new AABB(-64,-64,-64,64,0,64),GojoEntity::isAlive).isEmpty()){
+            GojoEntity b=VoidContent.GOJO.get().create(l);if(b!=null){b.moveTo(0.5,-59,0.5,0,0);b.setTarget(p);l.addFreshEntity(b);b.setHealth(b.getMaxHealth());}
         }
-        p.sendSystemMessage(Component.literal("虚空竞技场 · 基岩层 Y=-60 · 构筑咒胎受肉：虚无相。右键虚空钥匙或 /sukuna void leave 返回。"));
+        p.sendSystemMessage(Component.literal("虚空竞技场 · 基岩层 Y=-60 · 最强咒术师：五条悟。右键虚空钥匙或 /sukuna void leave 返回。"));
     }
     public static void leave(ServerPlayer p){
         if(p.level().dimension()!=ARENA)return;var d=Curse.data(p);ServerLevel l=null;
@@ -39,13 +39,13 @@ public final class VoidJourney {
     }
     public static boolean defeated(Player p){return Curse.data(p).getBoolean("VoidBossDefeated");}
     private static void addCredit(java.util.Map<java.util.UUID,ServerPlayer> credited,ServerPlayer p){if(p!=null)credited.put(p.getUUID(),p);}
-    public static void reward(VoidBossEntity boss,net.minecraft.world.damagesource.DamageSource source){
+    public static void reward(net.minecraft.world.entity.LivingEntity boss,net.minecraft.world.damagesource.DamageSource source){
         if(!(boss.level() instanceof ServerLevel level))return;
         java.util.Map<java.util.UUID,ServerPlayer> credited=new java.util.LinkedHashMap<>();
         addCredit(credited,CombatSettings.caster(source));
         if(source.getEntity() instanceof net.minecraft.world.entity.LivingEntity living)addCredit(credited,MaidBridge.progression(living));
-        if(boss.getKillCredit()!=null)addCredit(credited,MaidBridge.progression(boss.getKillCredit()));
-        for(java.util.UUID id:boss.participants())addCredit(credited,MaidBridge.find(level,id));
+        if(boss instanceof GojoEntity gojo&&gojo.getKillCredit()!=null)addCredit(credited,MaidBridge.progression(gojo.getKillCredit()));
+        if(boss instanceof GojoEntity gojo)for(java.util.UUID id:gojo.participants())addCredit(credited,MaidBridge.find(level,id));
         // 参与女仆和主人都记通关；主人无需先吃记忆，也不因此直接获得术式。
         for(ServerPlayer p:java.util.List.copyOf(credited.values()))if(p instanceof MaidBridge.Actor actor){
             MaidBridge.recordBossDefeat(actor,boss);addCredit(credited,MaidBridge.owner(actor));
@@ -53,16 +53,18 @@ public final class VoidJourney {
         for(ServerPlayer p:credited.values()){
             Curse.data(p).putBoolean("VoidBossDefeated",true);
             Curse.data(p).putBoolean("VoidSettlementR60",true);Curse.sync(p);
-            p.sendSystemMessage(Component.literal("虚无相已击败，通关已记录！首领掉落1个虚空相咒胎；自己吃下或喂给已觉醒灵魂御厨子的女仆，才能觉醒虚空御厨子。"));
+            p.sendSystemMessage(Component.literal("五条悟已击败，通关已记录！首领掉落1个虚空相咒胎与1枚六眼；咒胎需先觉醒灵魂御厨子再吸收，六眼右键吃下即获得五条悟技能轮盘（无阶段要求，也可潜行右键喂给女仆）。"));
         }
         // 每个真正死亡的首领只掉一份；掉落不再取决于最后一击者是否觉醒。
         var drop=boss.spawnAtLocation(StageFood.VOID.get());
         if(drop!=null){drop.setInvulnerable(true);drop.setExtendedLifetime();if(level.dimension()==ARENA&&drop.getY()<-59)drop.setPos(0.5,-58,0.5);}
+        var fragment=boss.spawnAtLocation(VoidContent.FRAGMENT.get());
+        if(fragment!=null){fragment.setInvulnerable(true);fragment.setExtendedLifetime();if(level.dimension()==ARENA&&fragment.getY()<-59)fragment.setPos(0.5,-58,0.5);}
     }
     public static void repairOldVictory(ServerPlayer p){
         if(!p.isAlive())return;
         var d=Curse.data(p);if(d.getBoolean("VoidSettlementR60"))return;
-        boolean recorded=defeated(p)||evolved(p)||(!(p instanceof MaidBridge.Actor)&&p.getStats().getValue(net.minecraft.stats.Stats.ENTITY_KILLED,VoidContent.BOSS.get())>0);
+        boolean recorded=defeated(p)||evolved(p)||(!(p instanceof MaidBridge.Actor)&&p.getStats().getValue(net.minecraft.stats.Stats.ENTITY_KILLED,VoidContent.GOJO.get())>0);
         if(!recorded)return;
         boolean compensate=!evolved(p);ServerPlayer recipient=p;
         if(p instanceof MaidBridge.Actor actor){
@@ -75,7 +77,7 @@ public final class VoidJourney {
         d.putBoolean("VoidBossDefeated",true);d.putBoolean("VoidSettlementR60",true);
         if(compensate){
             Journey.give(recipient,new ItemStack(StageFood.VOID.get()));
-            recipient.sendSystemMessage(Component.literal("旧版虚无相通关记录已修复，补发1个虚空相咒胎（仅一次）；自己或女仆需先觉醒灵魂御厨子才能吸收。"));
+            recipient.sendSystemMessage(Component.literal("旧版五条悟通关记录已修复，补发1个虚空相咒胎（仅一次）；自己或女仆需先觉醒灵魂御厨子才能吸收。"));
         }
         Curse.sync(p);
     }
@@ -100,5 +102,16 @@ public final class VoidJourney {
         .then(Commands.literal("enter").executes(c->{enter(c.getSource().getPlayerOrException());return 1;}))
         .then(Commands.literal("leave").executes(c->{leave(c.getSource().getPlayerOrException());return 1;}))
         .then(Commands.literal("key").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();if(!SoulJourney.evolved(p)&&!Journey.maidCleared(p,"YujiDefeated"))return 0;if(!p.getInventory().contains(new ItemStack(VoidContent.KEY.get())))Journey.give(p,new ItemStack(VoidContent.KEY.get()));return 1;}))
-        .then(Commands.literal("status").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();repairOldVictory(p);p.sendSystemMessage(Component.literal(evolved(p)?"虚空御厨子已解锁":defeated(p)?"虚无相已击败，通关已记录；自己或女仆先觉醒灵魂御厨子，再吃下虚空相咒胎":"尚未记录虚无相通关：击败首领掉落虚空相咒胎，灵魂御厨子阶段食用后觉醒虚空御厨子"));return 1;}))));}
+        .then(Commands.literal("gojo")
+            .then(Commands.literal("status").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();
+                p.sendSystemMessage(Component.literal("六眼："+(GojoPlayer.unlocked(p)?"已睁开 · 右侧轮盘应显示":"未睁开 · 右键使用六眼即为睁开（无阶段要求）")));
+                p.sendSystemMessage(Component.literal("咒力："+BalanceRules.number(Curse.energy(p))+" / "+BalanceRules.number(Curse.maximum(p))
+                    +" · 熔断："+(Curse.burnout(p)?"是":"否")+" · 对拼惩罚："+((DomainClash.penaltyTicks(p)+19)/20)+"秒 · 对拼中："+(DomainClash.active(p)?"是":"否")));
+                p.sendSystemMessage(Component.literal("无量空处："+(GojoCombat.domainTicks(p)>0?"展开中 · 剩余 "+((GojoCombat.domainTicks(p)+19)/20)+" 秒":"未展开")
+                    +" · 冷却 "+GojoCombat.cooldownSeconds(p,7)+" 秒 · 当前消耗 "+BalanceRules.number(GojoPlayer.COST[7])+" 咒力"));
+                StringBuilder sb=new StringBuilder("冷却：");
+                for(int i=0;i<GojoPlayer.COUNT;i++)sb.append(GojoPlayer.NAMES[i]).append(" ").append(GojoCombat.cooldownSeconds(p,i)).append("s ");
+                p.sendSystemMessage(Component.literal(sb.toString().trim()));return 1;}))
+            .then(Commands.literal("clear").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();Curse.data(p).remove("GojoMemory");Curse.sync(p);p.sendSystemMessage(Component.literal("已收回六眼记录，右侧轮盘隐藏"));return 1;})))
+        .then(Commands.literal("status").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();repairOldVictory(p);p.sendSystemMessage(Component.literal(evolved(p)?"虚空御厨子已解锁":defeated(p)?"五条悟已击败，通关已记录；自己或女仆先觉醒灵魂御厨子，再吃下虚空相咒胎":"尚未记录五条悟通关：击败首领掉落虚空相咒胎，灵魂御厨子阶段食用后觉醒虚空御厨子"));return 1;}))));}
 }

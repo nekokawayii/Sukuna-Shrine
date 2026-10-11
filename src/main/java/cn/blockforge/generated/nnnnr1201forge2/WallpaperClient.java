@@ -50,12 +50,27 @@ public final class WallpaperClient {
         catch(IOException ex){tell("壁纸设置无法保存，重新进入游戏后可能再次询问。");}
     }
     public static void tell(String text){var p=Minecraft.getInstance().player;if(p!=null)p.displayClientMessage(Component.literal(text),false);}
+    /** 关键提示同时走动作栏：聊天框被隐藏/刷屏时也能看见。 */
+    public static void tellBar(String text){var p=Minecraft.getInstance().player;if(p!=null)p.displayClientMessage(Component.literal(text),true);}
     private static void revoke(){
         generation++;allowed=false;uploads.clear();if(Minecraft.getInstance().getConnection()!=null)Network.CHANNEL.sendToServer(new WallpaperPackets.Consent(false));
         var p=Minecraft.getInstance().player;if(p!=null)forget(p.getUUID());
     }
     public static void choose(boolean on,boolean remember){
         preference=remember?(on?"on":"off"):"ask";mode=preference;save();apply(on);
+    }
+    public static boolean autoShareEdition(){return "on".equals(WallpaperPolicy.DEFAULT_MODE);}
+    public static String editionName(){return autoShareEdition()?"自动共享版":"询问版";}
+    /** 每次进世界都报一次身份与当前状态：自动共享版也必须有明确提示，不允许"悄悄分享"。 */
+    private static void announce(){
+        boolean auto=autoShareEdition();
+        String state=mode.equals("on")?"开启分享":mode.equals("off")?"关闭分享":"等待你确认";
+        tell("【斩击壁纸】"+(auto?"自动共享版":"询问版")+" · 保存选项 "+preference+" · 本次 "+state);        if(auto)tell("自动共享版说明：默认把你本机的**静态壁纸**分享给同服玩家（只读图片文件、绝不截屏、随时可关）；/sukuna_wallpaper off 关闭，/sukuna_wallpaper status 查看，/sukuna_wallpaper default 改回跟随版本默认。");
+        else tell("询问版说明：进入世界会弹窗询问是否分享；想固定选择可随时用 /sukuna_wallpaper on|off|default。");
+        if(auto&&!preference.equals("default"))
+            tell("注意：你的配置里保存的是「"+preference+"」，以你的选择为准（要恢复本版的自动共享，用 /sukuna_wallpaper default）。");
+        tellBar("斩击壁纸："+(auto?"自动共享版":"询问版")+" · "+state);
+        LogUtils.getLogger().info("[斩击壁纸] 本版默认={} 保存选项={} 本次模式={} 自动共享={} 配置={}",WallpaperPolicy.DEFAULT_MODE,preference,mode,auto,configPath());
     }
     private static void apply(boolean on){
         promptPending=false;revoke();allowed=on;
@@ -84,7 +99,7 @@ public final class WallpaperClient {
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut e){clear();}
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent e){
         if(e.phase!=TickEvent.Phase.END)return;var mc=Minecraft.getInstance();if(mc.player==null||mc.level==null||mc.getConnection()==null)return;tick++;
-        if(!initialized){initialized=true;load();if(mode.equals("on"))apply(true);else if(mode.equals("off"))apply(false);else promptPending=true;}
+        if(!initialized){initialized=true;load();announce();if(mode.equals("on"))apply(true);else if(mode.equals("off"))apply(false);else promptPending=true;}
         if(promptPending&&mc.screen==null&&!FinaleClient.local()){promptPending=false;mc.setScreen(new WallpaperConsentScreen());}
         if(allowed)for(int i=0;i<2&&!uploads.isEmpty();i++){
             if(uploads.peek().index()==0){if(tick<nextUploadTick)break;nextUploadTick=tick+120;}
@@ -144,6 +159,9 @@ public final class WallpaperClient {
         root.then(Commands.literal("on").executes(c->{revoke();promptPending=true;tell("请在弹窗中确认分享；选择始终开启可保存。");return 1;}));
         root.then(Commands.literal("off").executes(c->{choose(false,true);return 1;}));
         root.then(Commands.literal("ask").executes(c->{preference=mode="ask";save();revoke();promptPending=true;return 1;}));
+        // 跟随所装版本的默认值：自动共享版回到"默认分享"，询问版回到"每次询问"。
+        root.then(Commands.literal("default").executes(c->{preference="default";save();revoke();load();if(mode.equals("on"))apply(true);else if(mode.equals("off"))apply(false);else promptPending=true;
+            tell("已改为跟随本版默认："+(autoShareEdition()?"自动共享版 → 默认分享":"询问版 → 每次询问"));return 1;}));
         root.then(Commands.literal("reload").executes(c->{revoke();load();if(mode.equals("on"))apply(true);else if(mode.equals("off"))apply(false);else promptPending=true;return 1;}));
         root.then(Commands.literal("status").executes(c->{tell("壁纸分享："+(allowed?"本次开启":"本次关闭")+"；保存选项："+preference+"；本版默认："+WallpaperPolicy.DEFAULT_MODE+"；配置：config/sukuna-wallpaper.properties");return 1;}));
         e.getDispatcher().register(root);

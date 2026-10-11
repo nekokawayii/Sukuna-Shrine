@@ -36,3 +36,17 @@ def autoShareJar = tasks.register('autoShareJar', Jar) {
     reproducibleFileOrder = true
 }
 tasks.named('assemble') { dependsOn autoShareJar }
+
+// 每次 assemble/build 结束后，把两版发行 jar 同步到本地打包目录。
+// 目录默认取桌面下的「打包」，不存在时按需创建；没有桌面目录的机器直接跳过。
+// 需要改位置时用：./gradlew build -PdistDir=某路径
+def distDir = new File((project.findProperty('distDir') ?: "${System.getProperty('user.home')}/Desktop/打包") as String)
+def copyToDist = tasks.register('copyToDist', Copy) {
+    dependsOn autoShareJar
+    onlyIf { distDir.isDirectory() || distDir.parentFile?.isDirectory() && distDir.mkdirs() }
+    from(tasks.named('jar').flatMap { it.archiveFile })
+    from(autoShareJar.flatMap { it.archiveFile })
+    into distDir
+    doLast { logger.lifecycle("已同步发行 jar 到 ${distDir}") }
+}
+tasks.named('assemble') { finalizedBy copyToDist }

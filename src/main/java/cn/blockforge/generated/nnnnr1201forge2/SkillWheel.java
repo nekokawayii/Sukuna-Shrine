@@ -19,11 +19,12 @@ public final class SkillWheel extends Screen {
         if(!Client.availableSkill(current))current=Client.progress.sukuna()?0:BranchRules.FROST;
     }
     private boolean ice(){return Client.progress.uraume();}
+    private boolean gojo(){return Client.progress.gojo();}
     private boolean pages(){return Client.progress.sukuna()&&Client.progress.pureLandVictory();}
-    private int centerX(){return WheelSideSlots.centerX(width,height,ice());}
+    private int centerX(){return WheelSideSlots.centerX(width,height,ice(),gojo());}
     private int count(){return page==1?GUARDIAN_WHEEL.length:Client.baseWheelCount();}
     private int global(int index){return page==1?GUARDIAN_WHEEL[index]+7:index;}
-    private String shortName(int skill){if(CombatExpansionRules.branch(skill))return CombatExpansionRules.name(skill).replace("解 · ","").replace("捌 · ","");if(skill>=24)return SlashFormRules.name(skill).replace("解 · ","").replace("捌 · ","");return skill==22?"霜凪":skill==23?"直瀑":skill>=7&&skill<17?GuardianPlayerSkills.SHORT[skill-7]:skill>=17?BranchRules.name(skill):SHORT[skill];}
+    private String shortName(int skill){if(skill>=34)return GojoPlayer.SHORT[GojoPlayer.WHEEL[skill-34]];if(CombatExpansionRules.branch(skill))return CombatExpansionRules.name(skill).replace("解 · ","").replace("捌 · ","");if(skill>=24)return SlashFormRules.name(skill).replace("解 · ","").replace("捌 · ","");return skill==22?"霜凪":skill==23?"直瀑":skill>=7&&skill<17?GuardianPlayerSkills.SHORT[skill-7]:skill>=17?BranchRules.name(skill):SHORT[skill];}
     private Button modeButton;
     @Override protected void init(){
         if(Client.progress.sukuna())modeButton=addRenderableWidget(Button.builder(Component.literal(modeText()),b->Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.TOGGLE_DISMANTLE))).bounds(centerX()-76,3,152,20).build());
@@ -37,7 +38,7 @@ public final class SkillWheel extends Screen {
     @Override public boolean mouseScrolled(double x,double y,double delta){if(delta!=0&&pages()){changePage();return true;}return super.mouseScrolled(x,y,delta);}
     @Override public boolean keyPressed(int key,int scan,int mods){if((key==GLFW.GLFW_KEY_LEFT||key==GLFW.GLFW_KEY_RIGHT||key==GLFW.GLFW_KEY_PAGE_UP||key==GLFW.GLFW_KEY_PAGE_DOWN)&&pages()){changePage();return true;}return super.keyPressed(key,scan,mods);}
     @Override public boolean isPauseScreen(){return false;}
-    private int outerRadius(){return WheelSideSlots.radius(width,height,ice());}
+    private int outerRadius(){return WheelSideSlots.radius(width,height,ice(),gojo());}
     private int[] branches(){if(page!=0||!Client.progress.sukuna())return new int[0];if(current==0)return Client.progress.awakened()?new int[]{18,24,26,27,28,29}:new int[]{24,26,28,29};if(current==1&&Client.progress.awakened())return new int[]{17,21};if(current==2&&Client.progress.fingers()>=5)return new int[]{19,20,25,32};if(current==3&&Client.voidStage())return new int[]{30};if(current==5&&Client.progress.awakened())return new int[]{31};return new int[0];}
     private WheelSideSlots.Box branchBox(int i){int n=branches().length,step=Math.min(34,Math.max(18,(height-94)/Math.max(1,n)));return new WheelSideSlots.Box(centerX()+outerRadius()+4,height/2-n*step/2+i*step,74,step-3);}
     private int skillAt(double x,double y){return BranchRules.wheelSkill(true,false,page,count(),x,y);}
@@ -72,6 +73,7 @@ public final class SkillWheel extends Screen {
     @Override public void mouseMoved(double mx,double my){
         if(Client.wheelHeld()){
             if(ice()&&WheelSideSlots.iceContains(width,height,mx,my))current=my<height/2.0?BranchRules.FROST:BranchRules.ICEFALL;
+            else if(gojo()&&WheelSideSlots.gojoContains(width,height,mx,my))current=34+WheelSideSlots.gojoSector(width,height,mx,my);
             else if(Client.progress.sukuna()&&!branchCorridor(mx,my)){
                 double x=mx-centerX(),y=my-height/2.0,r=x*x+y*y;int outer=outerRadius();
                 if(r>=outer*outer/4.0&&r<=outer*outer)current=skillAt(x,y);
@@ -79,7 +81,8 @@ public final class SkillWheel extends Screen {
         }
         updateHover(mx,my);super.mouseMoved(mx,my);
     }
-    private int cost(int skill){if(skill==FinaleRules.SKILL)return (int)Client.progress.energy();if(skill==29||skill==32)return Curse.COST[0];if(skill==30)return Curse.COST[3];if(skill==31)return 2000;if(skill==28)return Curse.COST[0];if(skill>=24)return skill==24?120:skill==25?180:skill==26?0:2000;if(skill==22||skill==23)return Uraume.cost(skill);if(skill==19)return 180;if(skill==20)return 120;if(skill==21)return BranchRules.wallCost(Client.progress.wallSpacing());if(NetBranchRules.branch(skill))return NetBranchRules.cost(skill);return skill<7?Curse.COST[skill]:GuardianPlayerSkills.COST[skill-7];}
+    private int cost(int skill){if(skill>=34)return GojoPlayer.COST[GojoPlayer.WHEEL[skill-34]];if(skill==FinaleRules.SKILL)return (int)Client.progress.energy();if(skill==29||skill==32)return Curse.COST[0];if(skill==30)return Curse.COST[3];if(skill==31)return 2000;if(skill==28)return Curse.COST[0];if(skill>=24)return skill==24?120:skill==25?180:skill==26?0:2000;if(skill==22||skill==23)return Uraume.cost(skill);if(skill==19)return 180;if(skill==20)return 120;if(skill==21)return BranchRules.wallCost(Client.progress.wallSpacing());if(NetBranchRules.branch(skill))return NetBranchRules.cost(skill);return skill<7?Curse.COST[skill]:GuardianPlayerSkills.COST[skill-7];}
+    private static final String[] GOJO_DESC={"引力拉扯：把敌人吸向蓝色光球并施加缓慢","红色斥力球：高伤害与超级击退","蓄力3秒后打出圆柱激光，沿直线贯穿并击飞","双手合十5秒，苍与赫对撞成紫球后打出","念完四句咒词后原地引爆，范围48格 · 反噬自己40%生命","向准星方向瞬移最多8格","近距离三连拳，命中减速","领域展开：范围内敌人无法行动并持续受伤","长按引导：光球每秒5格跟随准星，松手后停留5秒"};
     private String desc(int skill){return switch(skill){
         case 33->"蓄力8秒 → 五阶段终结 · 耗尽咒力 · 停恢复60秒 · 熔断180秒";
         case 24->"随机形状 · 每道间隔0.1秒 · 跟随顶部剑气/斩击模式";
@@ -104,8 +107,16 @@ public final class SkillWheel extends Screen {
         case 4->"粉尘焚爆，领域或觉醒后可用";
         case 5->"开放领域 · 半径200格 · 密集60～120格斩击";
         case 6->"灵魂剥离 · 单体虚弱5秒 · 冷却90秒";
-        default->GuardianPlayerSkills.DESC[skill-7];
+        default->skill>=34?GojoPlayer.desc(skill-34):GuardianPlayerSkills.DESC[skill-7];
     };}
+    private void gojoRing(GuiGraphics g,int cx,int cy,int outer){
+        int inner=outer/2;
+        for(int y=-outer;y<=outer;y++){int start=-1,last=-1;for(int x=-outer;x<=outer+1;x++){
+            int sector=-1;double r=x*x+y*y;
+            if(x<=outer&&r<=outer*outer&&r>=inner*inner)sector=WheelSideSlots.gojoSector(width,height,cx+x,cy+y);
+            if(sector!=last){if(last>=0)g.fill(cx+start,cy+y,cx+x,cy+y+1,34+last==current?0xE9C98A3A:0xD22A2136);start=x;last=sector;}
+        }}
+    }
     private void ring(GuiGraphics g,int cx,int cy,int outer,boolean iceRing){
         int inner=outer/2;
         for(int y=-outer;y<=outer;y++){int start=-1,last=-1;for(int x=-outer;x<=outer+1;x++){
@@ -134,13 +145,32 @@ public final class SkillWheel extends Screen {
             g.drawCenteredString(font,"冰凝咒法",ix,cy-ir-14,0xFFBEEFFF);
             g.drawCenteredString(font,"冰鱼 "+Client.progress.iceFish(),ix,cy+ir+7,0xFFAEE3F1);
         }
+        if(gojo()){
+            int gx=WheelSideSlots.gojoX(width,height),gr=WheelSideSlots.gojoRadius(width,height);
+            gojoRing(g,gx,cy,gr);
+            int sel=current-34;
+            // 扇区 i 覆盖 [-π/2+i*2π/7, +2π/7)，标签必须放在扇区**中心**（多加半格），
+            // 否则每个字都会压在两条扇区的分界线上，看起来就是"轮盘和字错位"。
+            for(int i=0;i<GojoPlayer.SLOTS;i++){
+                double a=-Math.PI/2+(i+0.5)*Math.PI*2/GojoPlayer.SLOTS;
+                int lx=gx+(int)Math.round(Math.cos(a)*gr*0.75),ly=cy+(int)Math.round(Math.sin(a)*gr*0.75);
+                String name=GojoPlayer.SHORT[GojoPlayer.WHEEL[i]];
+                boolean on=34+i==current;
+                if(on){int w=font.width(name);g.fill(lx-w/2-3,ly-6,lx+w/2+3,ly+6,0x99000000);} // 选中格加个底片，明确"这个字属于这一格"
+                g.drawCenteredString(font,name,lx,ly-4,on?0xFFFFFFFF:0xFFE6DCE6);
+            }
+            g.drawCenteredString(font,sel>=0&&sel<GojoPlayer.SLOTS?GojoPlayer.SHORT[GojoPlayer.WHEEL[sel]]:"五条悟",gx,cy-4,0xFFFFFFFF);
+            g.drawCenteredString(font,"六眼",gx,cy+8,0xFF9FC7F0);
+            g.drawCenteredString(font,"五条悟技能",gx,cy-gr-14,0xFFBEE0FF);
+            g.drawCenteredString(font,"碎片已食用 · 7 式（苍/赫长按为最大功率）",gx,cy+gr+7,0xFFA9C8F1);
+        }
         if(Client.progress.sukuna()&&page==1){int x=cx+outer+4,y=cy-24;g.fill(x,y,x+74,y+48,outputHover?0xD6348A74:0xCC17322B);g.drawCenteredString(font,"术式反转",x+37,y+7,0xFFE2FFF2);g.drawCenteredString(font,"外放 · "+Client.energyText(100),x+37,y+25,0xFFA9DBC8);}
         int[] branches=branches();for(int i=0;i<branches.length;i++){var box=branchBox(i);int id=branches[i];g.fill(box.x(),box.y(),box.x()+box.width(),box.y()+box.height(),branchHover==id?0xEE9D263B:0xDD321722);g.drawCenteredString(font,shortName(id),box.x()+37,box.y()+(box.height()<27?3:4),0xFFFFE6DE);if(box.height()>=27)g.drawCenteredString(font,id==21?Client.wallSize()+"×"+Client.wallSize()+"格":id==26?"1咒力/像素":Client.energyText(cost(id))+"咒力",box.x()+37,box.y()+17,0xFFDCC1F4);}
         int detailX=Client.progress.sukuna()?cx:width/2;
         g.drawCenteredString(font,Client.skillName(skill),detailX,Math.max(28,cy-outer-23),0xFFFFDDD1);
         g.drawCenteredString(font,skill==26?"每像素消耗1咒力 · 上限2000像素":"消耗 "+Client.energyText(cost(skill))+((skill==2&&!Client.voidStage()||skill==5)?" 咒力/秒":" 咒力/次"),detailX,Math.max(39,cy-outer-11),0xFFCB9BF0);
         g.drawCenteredString(font,desc(skill),width/2,height-40,0xFFE8D8DA);
-        String pageText=pages()?"宿傩第 "+(page+1)+"/2 页 · 滚轮/方向键翻页":Client.progress.sukuna()?"宿傩第1页 · 净土通关后可翻页":"冰伤 +"+Client.progress.iceFish()+"%";
+        String pageText=pages()?"宿傩第 "+(page+1)+"/2 页 · 滚轮/方向键翻页":Client.progress.sukuna()?"宿傩第1页 · 净土通关后可翻页":gojo()?"五条悟技能轮盘已解锁":"冰伤 +"+Client.progress.iceFish()+"%";
         g.drawCenteredString(font,pageText,width/2,height-26,0xFFAEE3F1);
         g.drawCenteredString(font,"长按 "+Client.WHEEL.getTranslatedKeyMessage().getString()+" 移动选择，松手确定 · "+Client.CAST.getTranslatedKeyMessage().getString()+" 释放",width/2,height-14,0xFFE2D7DC);super.render(g,mx,my,partial);
     }

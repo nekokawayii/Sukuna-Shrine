@@ -53,7 +53,19 @@ public final class SoulClient {
     public static void draw(BufferBuilder b,PoseStack ps,Vec3 cam,float partial){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         for(Visual v:effects){Network.Effect e=v.e;SlashAppearance.use(e);float age=time-v.start+partial,fade=Math.max(0,1-age/Math.max(1,e.life()));Vec3 p=e.position(),q=e.direction();int alpha=(int)(220*fade);
-            if(e.kind()==125){SlashStyle.draw(b,ps,p,q,.12,fade,cam);}
+            // 超新星：红色弹幕。弹头按本刻位移前进，拖一段同色短尾，不再走斩击剑气与壁纸通路。
+            if(e.kind()==125){
+                Vec3 step=q.subtract(p),head=step.lengthSqr()<1e-8?p:p.lerp(q,Math.min(1,age));
+                Vec3 dir=step.lengthSqr()<1e-8?new Vec3(0,1,0):step.normalize();
+                Vec3 tail=head.subtract(dir.scale(0.4+0.6*fade));
+                int glow=(Math.max(1,(int)(alpha*0.4))<<24)|0x8A0A12,body=(alpha<<24)|0xD81C14,core=(alpha<<24)|0xFF5038;
+                ribbon(b,ps,tail,head,0.30,glow,cam);
+                ribbon(b,ps,tail.lerp(head,0.30),head,0.16,body,cam);
+                ribbon(b,ps,tail.lerp(head,0.62),head,0.06,core,cam);
+                Vec3 normal=cam.subtract(head);if(normal.lengthSqr()<1e-8)normal=new Vec3(0,0,1);
+                GuardianVisuals.disc(b,ps,head,normal,0.26,0.055,body,cam);
+                GuardianVisuals.disc(b,ps,head,normal,0.13,0.035,core,cam);
+            }
             if(e.kind()==126){double r=e.size();for(int i=-8;i<=8;i++){double n=i*r/8;for(int y=GuardianGridSlash.FIRST_LINE_HEIGHT;y<=GuardianGridSlash.LAST_LINE_HEIGHT;y+=GuardianGridSlash.LINE_HEIGHT_STEP){SlashStyle.draw(b,ps,p.add(-r,y,n),p.add(r,y,n),.1,fade,cam);SlashStyle.draw(b,ps,p.add(n,y,-r),p.add(n,y,r),.1,fade,cam);}}}
             if(e.kind()==127){var target=mc.level.getEntity(e.owner());if(target!=null)p=target.getPosition(partial).add(0,1,0);for(int i=0;i<8;i++){double a=i*Math.PI/4+age*0.3;Vec3 s=p.add(Math.cos(a)*0.85,(i%3-1)*0.55,Math.sin(a)*0.85);ribbon(b,ps,s,s.add(-Math.sin(a)*0.5,0.15,Math.cos(a)*0.5),0.025,(alpha<<24)|0xC6EEFF,cam);}}
             if(e.kind()==80){if(e.size()==2||e.size()==5){ring(b,ps,p.add(0,0.08,0),1+age*0.025,0.025,(alpha<<24)|0xCDBDC7,cam);}}

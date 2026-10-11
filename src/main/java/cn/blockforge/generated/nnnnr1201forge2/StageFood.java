@@ -60,6 +60,6 @@ public final class StageFood extends Item {
             for(var entity:level.getAllEntities())if(entity instanceof LivingEntity living&&living.distanceToSqr(y)<128*128&&y.participated(living.getUUID())){ServerPlayer participant=MaidBridge.progression(living);if(participant!=null&&SoulJourney.ready(participant))eligible=true;}
             if(eligible)victim.spawnAtLocation(SOUL.get());
         }
-        // 虚无相在确认死亡后统一结算任务和实物；不再按最后一击的成长阶段漏掉掉落。
+        // 五条悟在确认死亡后统一结算任务和实物；不再按最后一击的成长阶段漏掉掉落。
     }
 }

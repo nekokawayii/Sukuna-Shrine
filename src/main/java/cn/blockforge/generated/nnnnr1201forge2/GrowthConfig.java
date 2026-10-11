@@ -28,7 +28,7 @@ public final class GrowthConfig {
         BODY=stage(b,"body","即身佛肉体融合，仅一次",GrowthRules.DEFAULTS[1]);
         NINE=stage(b,"nine","九相图融合，仅一次",GrowthRules.DEFAULTS[2]);
         SOUL=stage(b,"soul","击败虎杖残影，仅一次",GrowthRules.DEFAULTS[3]);
-        VOID=stage(b,"void","击败虚无相，仅一次",GrowthRules.DEFAULTS[4]);
+        VOID=stage(b,"void","击败五条悟，仅一次",GrowthRules.DEFAULTS[4]);
         GUARDIAN=stage(b,"guardian","净土通关，仅一次",GrowthRules.DEFAULTS[5]);
         RESIDUE_ATTACK=b.comment("每次残魂凝练的额外普攻，保留原有成长").defineInRange("residueAttack",3.0,0.0,10000.0);
         RESIDUE_SPELL=b.comment("每次残魂凝练的额外术式伤害").defineInRange("residueSpell",3.0,0.0,10000.0);

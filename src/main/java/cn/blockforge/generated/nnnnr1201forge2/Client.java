@@ -25,10 +25,11 @@ public final class Client {
     public static final KeyMapping RELATIONS=gameplayKey("key.sukuna.relations",GLFW.GLFW_KEY_O);
     public static final KeyMapping FIST=gameplayKey("key.sukuna.fist",GLFW.GLFW_KEY_DELETE);
     public static final KeyMapping STREAM=gameplayKey("key.sukuna.stream",GLFW.GLFW_KEY_HOME);
+    public static final KeyMapping AMPLIFY=gameplayKey("key.sukuna.amplify",GLFW.GLFW_KEY_G);
     private static boolean castHeld,charging,cleaveHeld;
     private static long chargeBorn;
     public static int selected;
-    public static Network.Progress progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false);
+    public static Network.Progress progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false,false,false);
     public static String energyText(double amount){return BalanceRules.number(amount);}
     public static int wallSize(){return BranchRules.wallSize(progress.nine(),progress.soulShrine(),progress.voidShrine(),progress.pureLandVictory());}
     public static boolean voidStage(){return progress.voidShrine();}
@@ -36,8 +37,15 @@ public final class Client {
     public static int wheelPage;
     public static int wheelCount(){return wheelPage==1&&progress.pureLandVictory()?GuardianPlayerSkills.COUNT-1:baseWheelCount();}
     public static int baseWheelCount(){return voidStage()||soulStage()?7:6;}
-    public static boolean availableSkill(int skill){if(skill==FinaleRules.SKILL)return FinaleClient.ready()||FinaleClient.local();if(skill==22||skill==23)return progress.uraume();if(!progress.sukuna())return false;if(CombatExpansionRules.branch(skill))return skill==CombatExpansionRules.PURPLE_FURNACE?progress.voidShrine():skill==CombatExpansionRules.DRAGON_STAR?progress.awakened():skill!=CombatExpansionRules.CLEAVE_LINGER||progress.fingers()>=5;if(skill==SlashFormRules.SHAPE||skill==SlashFormRules.FREEHAND||skill==DismantleMotionRules.RING_SKILL)return true;if(skill==SlashFormRules.CROSS_FLIGHT)return progress.fingers()>=5;if(skill==SlashFormRules.WORLD)return progress.awakened();if(skill==19||skill==20)return progress.fingers()>=5;if(skill==21||NetBranchRules.branch(skill))return progress.awakened();return skill>=0&&(skill<baseWheelCount()||progress.pureLandVictory()&&skill>=7&&skill<17);}
-    public static String skillName(int i){if(i==FinaleRules.SKILL)return FinaleRules.NAME;if(CombatExpansionRules.branch(i))return CombatExpansionRules.name(i);if(i>=24)return SlashFormRules.name(i);if(i==0)return progress.dismantleQi()?"解 · 剑气模式":"解 · 斩击模式";if(i>=19&&i<=23)return BranchRules.name(i);if(NetBranchRules.branch(i))return (i==18?"解 · ":"网 · ")+NetBranchRules.name(i);if(i>=7&&i<17)return GuardianPlayerSkills.NAMES[i-7];if(voidStage())return i==5&&progress.pureLandVictory()?"领域展开 · 虚空御厨子（蓝）":VoidCombat.NAMES[i];return i==5&&soulStage()?"领域展开 · 灵魂御厨子":(progress.awakened()?Skills.AWAKENED:Skills.NAMES)[i];}
+    /** 当前选择不可用时退回一套自己真能用的：宿傩→里梅→六眼。只吃六眼的玩家也能直接开打。 */
+    public static int fallbackSkill(){
+        if(progress.sukuna())return 0;
+        if(progress.uraume())return BranchRules.FROST;
+        if(progress.gojo())return 34;
+        return 0;
+    }
+    public static boolean availableSkill(int skill){if(skill==FinaleRules.SKILL)return FinaleClient.ready()||FinaleClient.local();if(skill==22||skill==23)return progress.uraume();if(skill>=34&&skill<41)return progress.gojo();if(!progress.sukuna())return false;if(CombatExpansionRules.branch(skill))return skill==CombatExpansionRules.PURPLE_FURNACE?progress.voidShrine():skill==CombatExpansionRules.DRAGON_STAR?progress.awakened():skill!=CombatExpansionRules.CLEAVE_LINGER||progress.fingers()>=5;if(skill==SlashFormRules.SHAPE||skill==SlashFormRules.FREEHAND||skill==DismantleMotionRules.RING_SKILL)return true;if(skill==SlashFormRules.CROSS_FLIGHT)return progress.fingers()>=5;if(skill==SlashFormRules.WORLD)return progress.awakened();if(skill==19||skill==20)return progress.fingers()>=5;if(skill==21||NetBranchRules.branch(skill))return progress.awakened();return skill>=0&&(skill<baseWheelCount()||progress.pureLandVictory()&&skill>=7&&skill<17);}
+    public static String skillName(int i){if(i==FinaleRules.SKILL)return FinaleRules.NAME;if(CombatExpansionRules.branch(i))return CombatExpansionRules.name(i);if(i>=34)return GojoPlayer.NAMES[GojoPlayer.WHEEL[i-34]];if(i>=24)return SlashFormRules.name(i);if(i==0)return progress.dismantleQi()?"解 · 剑气模式":"解 · 斩击模式";if(i>=19&&i<=23)return BranchRules.name(i);if(NetBranchRules.branch(i))return (i==18?"解 · ":"网 · ")+NetBranchRules.name(i);if(i>=7&&i<17)return GuardianPlayerSkills.NAMES[i-7];if(voidStage())return i==5&&progress.pureLandVictory()?"领域展开 · 虚空御厨子（蓝）":VoidCombat.NAMES[i];return i==5&&soulStage()?"领域展开 · 灵魂御厨子":(progress.awakened()?Skills.AWAKENED:Skills.NAMES)[i];}
     public static double growth(){return 1;}
     private static long shakeUntil,flashUntil,transitionUntil,eyesUntil;
     private static float reflected;
@@ -85,13 +93,13 @@ public final class Client {
     @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)
     public static class Registration {
         @SubscribeEvent public static void setup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent e){e.enqueueWork(()->{ItemBlockRenderTypes.setRenderLayer(SoulContent.THREAD.get(),RenderType.cutout());ItemBlockRenderTypes.setRenderLayer(SoulContent.RICE.get(),RenderType.cutout());});}
-        @SubscribeEvent public static void keys(RegisterKeyMappingsEvent e){e.register(WHEEL);e.register(CAST);e.register(GUIDE);e.register(ROTATE);e.register(RELATIONS);e.register(FIST);e.register(STREAM);Network.aimReceiver=AimAssistClient::receive;Network.testResetReceiver=Client::testReset;WallpaperPackets.receiver=WallpaperClient::receive;Network.motionReceiver=DismantleMotionClient::receive;Network.drawReceiver=FreehandClient::receive;Network.clashReceiver=DomainClashClient::receive;Network.clientReceiver=Client::receive;Network.progressReceiver=p->progress=p;Network.combatReceiver=FinaleClient::state;Network.relationsReceiver=p->{if(Minecraft.getInstance().screen instanceof RelationsScreen screen)screen.receive(p);};Network.controllerReceiver=p->{if(Minecraft.getInstance().screen instanceof VoidControllerScreen screen)screen.receive(p);else if(Minecraft.getInstance().screen instanceof AimOptionsScreen screen)screen.receive(p);};}
-        @SubscribeEvent public static void entities(EntityRenderersEvent.RegisterRenderers e){e.registerEntityRenderer(VoidContent.BOSS.get(),VoidBossRenderer::new);e.registerEntityRenderer(VoidContent.NODE.get(),VoidBossRenderer::new);e.registerEntityRenderer(SoulContent.YUJI.get(),YujiRenderer::new);e.registerEntityRenderer(SoulContent.GUARDIAN.get(),GuardianRenderer::new);e.registerEntityRenderer(Content.DAITIAN.get(),DaitianRenderer::new);e.registerEntityRenderer(Content.BROKEN_MAHITO.get(),BrokenMahitoRenderer::new);e.registerEntityRenderer(Content.MAHITO_LIMB.get(),net.minecraft.client.renderer.entity.NoopRenderer::new);e.registerEntityRenderer(Content.BUDDHA.get(),BuddhaRenderer::new);e.registerEntityRenderer(Content.PARASITE.get(),BuddhaRenderer::new);e.registerEntityRenderer(Content.MOTHER.get(),BuddhaRenderer::new);}
+        @SubscribeEvent public static void keys(RegisterKeyMappingsEvent e){e.register(WHEEL);e.register(CAST);e.register(GUIDE);e.register(ROTATE);e.register(RELATIONS);e.register(FIST);e.register(STREAM);e.register(AMPLIFY);Network.aimReceiver=AimAssistClient::receive;Network.testResetReceiver=Client::testReset;WallpaperPackets.receiver=WallpaperClient::receive;Network.motionReceiver=DismantleMotionClient::receive;Network.drawReceiver=FreehandClient::receive;Network.clashReceiver=DomainClashClient::receive;Network.clientReceiver=Client::receive;Network.progressReceiver=p->progress=p;Network.combatReceiver=FinaleClient::state;Network.relationsReceiver=p->{if(Minecraft.getInstance().screen instanceof RelationsScreen screen)screen.receive(p);};Network.controllerReceiver=p->{if(Minecraft.getInstance().screen instanceof VoidControllerScreen screen)screen.receive(p);else if(Minecraft.getInstance().screen instanceof AimOptionsScreen screen)screen.receive(p);};}
+        @SubscribeEvent public static void entities(EntityRenderersEvent.RegisterRenderers e){e.registerEntityRenderer(VoidContent.GOJO.get(),GojoRenderer::new);e.registerEntityRenderer(SoulContent.YUJI.get(),YujiRenderer::new);e.registerEntityRenderer(SoulContent.GUARDIAN.get(),GuardianRenderer::new);e.registerEntityRenderer(Content.DAITIAN.get(),DaitianRenderer::new);e.registerEntityRenderer(Content.BROKEN_MAHITO.get(),BrokenMahitoRenderer::new);e.registerEntityRenderer(Content.MAHITO_LIMB.get(),net.minecraft.client.renderer.entity.NoopRenderer::new);e.registerEntityRenderer(Content.BUDDHA.get(),BuddhaRenderer::new);e.registerEntityRenderer(Content.PARASITE.get(),BuddhaRenderer::new);e.registerEntityRenderer(Content.MOTHER.get(),BuddhaRenderer::new);}
     }
     public static boolean wheelHeld(){return ClientInput.held(WHEEL);}
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut e){clear();world=null;}
     private static void testReset(){FinaleClient.clear();TechniqueInputClient.clear();DomainClashClient.clear();DismantleMotionClient.clear();FreehandClient.clear();NetBranchVisuals.clear();SoulClient.clear();CastHands.clear();charging=cleaveHeld=false;}
-    private static void clear(){AimAssistClient.clear();FinaleClient.clear();TechniqueInputClient.clear();ExpansionVisuals.clear();ClientInput.clear();DomainClashClient.clear();DismantleMotionClient.clear();FreehandClient.clear();SlashFormVisuals.clear();BranchVisuals.clear();NetBranchVisuals.clear();Network.clientModpackMode=null;selected=0;wheelPage=0;VoidTechniqueClient.clear();VoidBossClient.clear();CastHands.clear();RuinClient.clear();SoulClient.clear();FistAura.clear();cleaveHeld=false;VoidVisuals.clear();supreme.clear();for(Visual v:visuals)PhotonBridge.stop(v.handle);for(Transient t:transients)PhotonBridge.stop(t.handle);visuals.clear();transients.clear();domains.clear();auras.clear();heldLast=false;castHeld=false;charging=false;generated=0;window=0;shakeUntil=flashUntil=transitionUntil=eyesUntil=0;progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false);}
+    private static void clear(){AimAssistClient.clear();FinaleClient.clear();TechniqueInputClient.clear();ExpansionVisuals.clear();ClientInput.clear();DomainClashClient.clear();DismantleMotionClient.clear();FreehandClient.clear();SlashFormVisuals.clear();BranchVisuals.clear();NetBranchVisuals.clear();Network.clientModpackMode=null;selected=0;wheelPage=0;VoidTechniqueClient.clear();VoidBossClient.clear();GojoFx.clear();CastHands.clear();RuinClient.clear();SoulClient.clear();FistAura.clear();cleaveHeld=false;VoidVisuals.clear();supreme.clear();for(Visual v:visuals)PhotonBridge.stop(v.handle);for(Transient t:transients)PhotonBridge.stop(t.handle);visuals.clear();transients.clear();domains.clear();auras.clear();heldLast=false;castHeld=false;charging=false;generated=0;window=0;shakeUntil=flashUntil=transitionUntil=eyesUntil=0;progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false,false,false);}
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent e){
         if(e.phase!=TickEvent.Phase.END)return;
         Minecraft mc=Minecraft.getInstance();if(world!=mc.level){clear();world=mc.level;}ClientInput.tick();TechniqueInputClient.tick();ExpansionVisuals.tick();
@@ -100,7 +108,7 @@ public final class Client {
             if(mc.player!=null)Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.CANCEL_CHARGE));
             charging=cleaveHeld=false;
         }
-        if(mc.level==null||mc.player==null||mc.isPaused())return;if(progress.unlocked()&&!availableSkill(selected))selected=progress.sukuna()?0:BranchRules.FROST;tick++;DismantleMotionClient.tick();SlashFormVisuals.tick();FreehandClient.tick(selected==SlashFormRules.FREEHAND&&FreehandClient.keyDown());BranchVisuals.tick();NetBranchVisuals.tick();VoidTechniqueClient.tick();VoidBossClient.tick();SoulClient.tick();VoidVisuals.tick();if(charging&&tick-chargeBorn>200)charging=false;
+        if(mc.level==null||mc.player==null||mc.isPaused())return;if(progress.unlocked()&&!availableSkill(selected))selected=fallbackSkill();tick++;DismantleMotionClient.tick();SlashFormVisuals.tick();FreehandClient.tick(selected==SlashFormRules.FREEHAND&&FreehandClient.keyDown());BranchVisuals.tick();NetBranchVisuals.tick();VoidTechniqueClient.tick();VoidBossClient.tick();GojoFx.tick();SoulClient.tick();VoidVisuals.tick();if(charging&&tick-chargeBorn>200)charging=false;
         if(tick-window>=20){window=tick;generated=0;}
         if(FinaleClient.local()||DomainClashClient.active()||NetBranchVisuals.locked()||DismantleMotionClient.locked()){
             charging=cleaveHeld=false;castHeld=ClientInput.held(CAST);heldLast=wheelHeld();
@@ -108,7 +116,7 @@ public final class Client {
         }else{
         boolean down=wheelHeld();
         if(progress.unlocked()&&down&&!heldLast&&mc.screen==null){
-            if(!availableSkill(selected))selected=progress.sukuna()?0:BranchRules.FROST;
+            if(!availableSkill(selected))selected=fallbackSkill();
             wheelPage=selected>=7&&selected<17?1:0;
             mc.setScreen(new SkillWheel());
         }
@@ -123,6 +131,7 @@ public final class Client {
         if(progress.unlocked()&&mc.screen==null){
             // 释放键由 TechniqueInputClient 独立处理；失焦时也能取消服务端按住状态。
             while(STREAM.consumeClick())if(mc.isWindowActive()&&mc.mouseHandler.isMouseGrabbed())Network.CHANNEL.sendToServer(new Network.StreamToggle());
+            while(AMPLIFY.consumeClick())if(mc.screen==null&&mc.isWindowActive()&&mc.mouseHandler.isMouseGrabbed())Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.DOMAIN_AMPLIFICATION));
         }
         castHeld=pressed;while(CAST.consumeClick()){}
         }
@@ -178,6 +187,7 @@ public final class Client {
     public static void collectSlashes(Vec3 center,double radius,List<Vec3> out){visuals.removeIf(v->{if(!slashEffect(v.e.kind()))return false;Vec3 at=v.e.position();if(at.distanceToSqr(center)>radius*radius)return false;if(out.size()<6000)out.add(at);PhotonBridge.stop(v.handle);return true;});}
     public static void receive(Network.Effect e){
         if(Minecraft.getInstance().level==null)return;
+        if(e.kind()>=GojoFx.BLOCK&&e.kind()<=GojoFx.DOMAIN_CLOSE){GojoFx.receive(e);return;}
         if(e.kind()>=FinaleRules.FX_STATE&&e.kind()<=FinaleRules.FX_ABSORB){FinaleClient.receive(e);return;}
         if(slashEffect(e.kind())&&FinaleClient.absorbing(e.position()))return;
         if(e.kind()==CombatExpansionRules.FX_BLADE_STOP){SlashFormVisuals.stop(e);return;}
@@ -272,6 +282,7 @@ public final class Client {
         g.drawString(mc.font,"咒力 "+(int)progress.energy()+" / "+(int)progress.maximum()+(progress.sukuna()?"  手指 "+progress.fingers()+"/20":"  冰鱼 "+progress.iceFish()),12,h-97,0xFFEED5FF);
         if(voidStage())g.drawString(mc.font,progress.pureLandVictory()?"蓝色虚空术式 · 生命+200 · 普攻+20 · 术式+200":"虚空术式 · 解/捌造裂隙 → 灶点燃 → 开引爆",12,h-115,progress.pureLandVictory()?0xFF53CFFF:0xFFBE7CEF);
         else if(progress.awakened())g.drawString(mc.font,"肉体融合 · 解长按连发 · 世界斩在分支中选择",12,h-115,0xFFFF5774);
+        if(progress.amplification())g.drawString(mc.font,"领域展延 · 每秒 "+BalanceRules.number(DomainAmplification.COST_PER_SECOND)+" 咒力 · 术式穿透无下限 · "+AMPLIFY.getTranslatedKeyMessage().getString()+" 关闭",12,h-160,0xFF9FE8FF);
         if(progress.fist())g.drawString(mc.font,"咒力附拳 · 黑红咒力与击退 · 15根手指自动触发解",12,h-130,0xFFE04DCE);
         if(progress.fingers()>=15)g.drawString(mc.font,"反转术式 · "+WHEEL.getTranslatedKeyMessage().getString()+" 轮盘左侧 · 松手治疗",12,h-145,0xFF80FFD4);
         if(progress.burnout())g.drawCenteredString(mc.font,progress.clashPenaltyTicks()>0?"对拼熔断 "+((progress.clashPenaltyTicks()+19)/20)+"秒 · 治疗55%咒力 · 不可修复":"术式熔断：术式伤害 -30% · 只能反转/修复",w/2,h-62,0xFFFF4F65);
@@ -312,7 +323,6 @@ public final class Client {
         ExpansionVisuals.draw(b,ps,cam,e.getPartialTick());
         FinaleClient.draw(b,ps,cam,e.getPartialTick());
         VoidVisuals.render(b,ps,cam,e.getPartialTick());
-        VoidBossClient.draw(b,ps,cam,e.getPartialTick());
         VoidTechniqueClient.draw(b,ps,cam,e.getPartialTick());
         SoulClient.draw(b,ps,cam,e.getPartialTick());
         NetBranchVisuals.draw(b,ps,cam,e.getPartialTick());

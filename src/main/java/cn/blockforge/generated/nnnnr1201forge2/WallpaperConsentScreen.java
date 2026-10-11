@@ -29,7 +29,7 @@ public final class WallpaperConsentScreen extends Screen {
         g.drawWordWrap(font,Component.literal(QUESTION),x,y,panel,0xFFFFFFFF);y+=font.split(Component.literal(QUESTION),panel).size()*9+8;
         g.drawWordWrap(font,Component.literal(NOTICE),x,y,panel,0xFFD8E5F1);y+=font.split(Component.literal(NOTICE),panel).size()*9+8;
         g.drawWordWrap(font,Component.literal(WARNING),x,y,panel,0xFFFFAD89);y+=font.split(Component.literal(WARNING),panel).size()*9+8;
-        if(y+12<height-60)g.drawWordWrap(font,Component.literal("随时输入 /sukuna_wallpaper 修改，无须管理员权限。"),x,y,panel,0xFFA8D9C6);
+        if(y+12<height-60)g.drawWordWrap(font,Component.literal("随时输入 /sukuna_wallpaper 修改（on/off/ask/default），无须管理员权限。本版为"+WallpaperClient.editionName()+"。"),x,y,panel,0xFFA8D9C6);
         super.render(g,mouseX,mouseY,partial);
     }
 }

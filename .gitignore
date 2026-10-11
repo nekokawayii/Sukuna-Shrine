@@ -7,3 +7,5 @@ research-photon/
 photon-branches.json
 previews/shrine_preview.bbmodel
 .automods/
+# 第三方前置 jar（24MB，按需自备，见 README）
+libs/

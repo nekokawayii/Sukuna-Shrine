@@ -39,16 +39,25 @@ public final class MaidExtension implements ILittleMaid {
         @Override public net.minecraft.nbt.CompoundTag writeSaveData(Boolean value){var tag=new net.minecraft.nbt.CompoundTag();tag.putBoolean("Unlocked",Boolean.TRUE.equals(value));return tag;}
         @Override public Boolean readSaveData(net.minecraft.nbt.CompoundTag tag){return tag.getBoolean("Unlocked");}
     };
+    /** 六眼：与宿傩记忆、里梅记忆并存，互不覆盖；只在女仆任务里切换由谁出手。 */
+    private static final ResourceLocation SIX_EYES_ID=new ResourceLocation("sukuna","six_eyes");
+    private static final com.github.tartaricacid.touhoulittlemaid.api.entity.data.TaskDataKey<Boolean> SIX_EYES=new com.github.tartaricacid.touhoulittlemaid.api.entity.data.TaskDataKey<>(){
+        @Override public ResourceLocation getKey(){return new ResourceLocation("sukuna","six_eyes_memory");}
+        @Override public net.minecraft.nbt.CompoundTag writeSaveData(Boolean value){var tag=new net.minecraft.nbt.CompoundTag();tag.putBoolean("Unlocked",Boolean.TRUE.equals(value));return tag;}
+        @Override public Boolean readSaveData(net.minecraft.nbt.CompoundTag tag){return tag.getBoolean("Unlocked");}
+    };
     public MaidExtension(){MinecraftForge.EVENT_BUS.register(this);}
-    @Override public void registerTaskData(com.github.tartaricacid.touhoulittlemaid.entity.data.TaskDataRegister register){register.register(MEMORY);register.register(ICE_MEMORY);}
-    @Override public void addMaidTask(TaskManager manager){manager.add(new ShrineTask());manager.add(new IceTask());}
+    @Override public void registerTaskData(com.github.tartaricacid.touhoulittlemaid.entity.data.TaskDataRegister register){register.register(MEMORY);register.register(ICE_MEMORY);register.register(SIX_EYES);}
+    @Override public void addMaidTask(TaskManager manager){manager.add(new ShrineTask());manager.add(new IceTask());manager.add(new SixEyesTask());}
     @Override public void bindMaidBauble(com.github.tartaricacid.touhoulittlemaid.item.bauble.BaubleManager manager){
         manager.bind(EternalLove.TRUE_FALSE,new com.github.tartaricacid.touhoulittlemaid.api.bauble.IMaidBauble(){});
     }
     private static void syncMemory(EntityMaid maid){
-        boolean unlocked=maid.getPersistentData().getCompound("SukunaProgress").getBoolean("Memory");
+        var progress=maid.getPersistentData().getCompound("SukunaProgress");
+        boolean unlocked=progress.getBoolean("Memory");
         if(!Objects.equals(maid.getData(MEMORY),unlocked))maid.setAndSyncData(MEMORY,unlocked);
-        boolean ice=maid.getPersistentData().getCompound("SukunaProgress").getBoolean("UraumeMemory");if(!Objects.equals(maid.getData(ICE_MEMORY),ice))maid.setAndSyncData(ICE_MEMORY,ice);
+        boolean ice=progress.getBoolean("UraumeMemory");if(!Objects.equals(maid.getData(ICE_MEMORY),ice))maid.setAndSyncData(ICE_MEMORY,ice);
+        boolean six=progress.getBoolean("GojoMemory");if(!Objects.equals(maid.getData(SIX_EYES),six))maid.setAndSyncData(SIX_EYES,six);
     }
     public static final class ShrineTask implements IAttackTask {
         @Override public ResourceLocation getUid(){return ID;}
@@ -74,6 +83,19 @@ public final class MaidExtension implements ILittleMaid {
         @Override public boolean enableLookAndRandomWalk(EntityMaid maid){return maid.getTarget()==null;}
         @Override public List<String> getDescription(EntityMaid maid){return List.of("task.sukuna.ice_formation.desc");}
     }
+    /** 六眼：与宿傩/里梅任务并列，选中后女仆改用五条悟技能组。 */
+    public static final class SixEyesTask implements IAttackTask {
+        @Override public ResourceLocation getUid(){return SIX_EYES_ID;}
+        @Override public ItemStack getIcon(){return new ItemStack(VoidContent.FRAGMENT.get());}
+        @Override public net.minecraft.network.chat.MutableComponent getName(){return Component.literal("六眼");}
+        @Override public SoundEvent getAmbientSound(EntityMaid maid){return null;}
+        @Override public List<Pair<Integer,BehaviorControl<? super EntityMaid>>> createBrainTasks(EntityMaid maid){return List.of();}
+        @Override public boolean isWeapon(EntityMaid maid,ItemStack stack){return true;}
+        @Override public boolean canAttack(EntityMaid maid,LivingEntity target){return !maid.level().isClientSide&&CombatSettings.canHit(MaidBridge.actor(maid),target);}
+        @Override public boolean isEnable(EntityMaid maid){return maid.level().isClientSide?Boolean.TRUE.equals(maid.getData(SIX_EYES)):maid.getPersistentData().getCompound("SukunaProgress").getBoolean("GojoMemory");}
+        @Override public boolean enableLookAndRandomWalk(EntityMaid maid){return maid.getTarget()==null;}
+        @Override public List<String> getDescription(EntityMaid maid){return List.of("task.sukuna.six_eyes.desc");}
+    }
     @SubscribeEvent(priority=EventPriority.HIGHEST) public void feed(PlayerInteractEvent.EntityInteract event){
         if(!(event.getTarget() instanceof EntityMaid maid)||!event.getEntity().isShiftKeyDown()||!maid.isOwnedBy(event.getEntity()))return;
         event.setCanceled(true);event.setCancellationResult(InteractionResult.SUCCESS);
@@ -88,6 +110,15 @@ public final class MaidExtension implements ILittleMaid {
         if(stack.is(IceContent.FISH.get())){
             if(Uraume.feedFish(actor)){if(!owner.isCreative())stack.shrink(1);owner.sendSystemMessage(Component.literal("女仆冰鱼："+Uraume.fish(actor)+" 条，冰伤 +"+Uraume.fish(actor)+"%，咒力上限 +"+BalanceRules.number(EnergyRules.ICE_FISH_BONUS)+"（现为 "+BalanceRules.number(Curse.maximum(actor))+"）"));}
             else owner.displayClientMessage(Component.literal("只有选择里梅的女仆能吃冰鱼成长"),true);return;
+        }
+        if(stack.is(VoidContent.FRAGMENT.get())){
+            // 六眼：没有任何阶段要求，潜行右键自家女仆即可
+            if(GojoPlayer.consume(actor)){
+                if(!owner.isCreative())stack.shrink(1);
+                owner.sendSystemMessage(Component.literal("女仆已睁开六眼：请在女仆任务里选择「六眼」。"));
+                Curse.sync(actor);
+            }else owner.displayClientMessage(Component.literal("这位女仆已经睁开过六眼了"),true);
+            syncMemory(maid);return;
         }
         if(stack.is(ProgressionContent.MEMORY.get())){
             if(MaidBridge.consumeMemory(actor)){if(!owner.isCreative())stack.shrink(1);owner.sendSystemMessage(Component.literal("女仆已吃下宿傩记忆，伏魔御厨子任务开启。"));Curse.sync(actor);}
@@ -105,8 +136,13 @@ public final class MaidExtension implements ILittleMaid {
         syncMemory(maid);
         if(EternalLove.settling(maid)||NetBranches.locked(maid)||Uraume.locked(maid)||CombatExpansion.controlled(maid))return;
         var progress=maid.getPersistentData().getCompound("SukunaProgress");
-        if(!progress.getBoolean("Memory")&&!progress.getBoolean("UraumeMemory"))return;
+        if(!progress.getBoolean("Memory")&&!progress.getBoolean("UraumeMemory")&&!progress.getBoolean("GojoMemory"))return;
         MaidBridge.Actor actor=MaidBridge.actor(maid);
+        boolean sixTask=maid.getTask().getUid().equals(SIX_EYES_ID);
+        // 任务切走时收干净：领域、引导、飞行物都不留在场上
+        if(!sixTask&&(GojoCombat.busy(actor)||GojoCombat.sustaining(actor))){if(GojoCombat.sustaining(actor))GojoCombat.closeDomain(actor);GojoCombat.cancel(actor);}
+        // 六眼任务优先：只要选中「六眼」，不论她还吃没吃过宿傩记忆，都用五条悟技能组出手
+        if(progress.getBoolean("GojoMemory")&&sixTask){gojoTick(maid,actor);return;}
         if(Uraume.unlocked(actor)){iceTick(maid,actor);return;}
         Curse.data(actor).putBoolean("MemoryGiven",true);
         if(maid.tickCount%ShrineRules.ACTION_INTERVAL==0){absorbOrb(maid,actor);MaidBridge.rememberCondensed(actor);}
@@ -175,6 +211,39 @@ public final class MaidExtension implements ILittleMaid {
         if(Uraume.available(actor,skill)){stopMoving(maid);Uraume.cast(actor,skill);}else{if(!Curse.canSpend(actor,Math.min(Uraume.cost(BranchRules.FROST),Uraume.cost(BranchRules.ICEFALL))))Curse.data(actor).putBoolean("MaidRecovering",true);melee(maid,actor,target);}
     }
     private static void stopMoving(EntityMaid maid){maid.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);maid.getNavigation().stop();}
+    /** 六眼：女仆按距离与场上局面自选五条悟招式，冷却与咒力都由 GojoCombat 自己结算。 */
+    private static void gojoTick(EntityMaid maid,MaidBridge.Actor actor){
+        if(maid.isMaidInSittingPose()){GojoCombat.cancel(actor);actor.aim=null;return;}
+        if(DomainClash.active(actor)){stopMoving(maid);return;}
+        if(maid.tickCount%ShrineRules.ACTION_INTERVAL!=0)return;
+        absorbOrb(maid,actor);actor.syncPosition();MaidBridge.apply(actor);
+        boolean recovering=ShrineRules.recovering(MaidBridge.recovering(actor),Curse.energy(actor),Curse.maximum(actor));
+        Curse.data(actor).putBoolean("MaidRecovering",recovering);Curse.data(actor).putBoolean("Fist",false);
+        LivingEntity target=maid.getTarget();
+        if(target==null||!CombatSettings.canHit(actor,target)||maid.distanceToSqr(target)>4096||!maid.hasLineOfSight(target))
+            target=maid.level().getEntitiesOfClass(LivingEntity.class,maid.getBoundingBox().inflate(48),e->CombatSettings.canHit(actor,e)&&maid.hasLineOfSight(e)).stream().min(Comparator.comparingDouble(maid::distanceToSqr)).orElse(null);
+        actor.aim=target;
+        if(target==null){maid.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);return;}
+        maid.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET,target);maid.getBrain().setMemory(MemoryModuleType.LOOK_TARGET,new EntityTracker(target,true));maid.getLookControl().setLookAt(target,90,90);actor.syncPosition();
+        if(recovering){melee(maid,actor,target);return;}
+        if(GojoCombat.busy(actor)){stopMoving(maid);return;} // 正在蓄力/引导，别自己打断
+        List<Integer> skills=new ArrayList<>();
+        for(int skill:new int[]{0,1,3,6,5,7,4,2})if(GojoCombat.available(actor,skill))skills.add(skill);
+        if(skills.isEmpty()){melee(maid,actor,target);return;}
+        stopMoving(maid);
+        GojoCombat.cast(actor,chooseGojo(actor,skills,maid.distanceToSqr(target)));
+    }
+    /** 近身打体术；场上有苍就用赫撞出无限制茈；远距离先开无量空处；其余随机。 */
+    private static int chooseGojo(MaidBridge.Actor actor,List<Integer> skills,double distanceSqr){
+        if(distanceSqr<=16&&skills.contains(6))return 6;
+        if(GojoCombat.hasBlue(actor)&&skills.contains(1))return 1;
+        if(distanceSqr>144&&skills.contains(7))return 7;
+        if(skills.contains(3)&&actor.getRandom().nextBoolean())return 3; // 茈优先，但别每轮都放
+        List<Integer> pool=new ArrayList<>(skills);
+        pool.remove((Integer)5); // 瞬移留给脱身，不主动乱闪
+        if(pool.isEmpty())pool=skills;
+        return pool.get(actor.getRandom().nextInt(pool.size()));
+    }
     private static void melee(EntityMaid maid,MaidBridge.Actor actor,LivingEntity target){
         if(target==null){stopMoving(maid);return;}
         maid.getNavigation().moveTo(target,1.0);

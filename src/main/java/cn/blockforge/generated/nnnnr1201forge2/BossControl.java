@@ -21,10 +21,10 @@ public final class BossControl extends SavedData {
     public static boolean war(LivingEntity boss){return value(boss,"AllHostile",0)>0;}
     public static CompoundTag guardian(MinecraftServer server){CompoundTag tag=get(server).values.getCompound("Guardian").copy();GuardianSettings.defaults(tag);return tag;}
     public void guardian(MinecraftServer server,String key,double value){CompoundTag tag=guardian(server);tag.putDouble(key,value);values.put("Guardian",tag);setDirty();for(ServerLevel level:server.getAllLevels())for(var e:level.getAllEntities())if(e instanceof GuardianEntity g)g.refreshSettings(tag,key);}
-    // 五条悟按规格固定 150000 原值，不受控制器遗留值影响。
-    private static String healthKey(LivingEntity boss){return boss instanceof GojoEntity?null:boss instanceof YujiEntity?"YujiHealth":boss instanceof BuddhaEntity?"BuddhaHealth":null;}
+    // 五条悟固定 150000、魔虚罗固定 400000 原值（普通模式按10%生效），都不受控制器遗留值影响。
+    private static String healthKey(LivingEntity boss){return boss instanceof GojoEntity||boss instanceof MahoragaEntity?null:boss instanceof YujiEntity?"YujiHealth":boss instanceof BuddhaEntity?"BuddhaHealth":null;}
     private static boolean managed(LivingEntity boss){return BossTargets.managed(boss);}
-    private static boolean excluded(LivingEntity boss){return boss instanceof GuardianEntity g&&g.friendly()||boss instanceof YujiEntity y&&(y.decoy()||y.familyMember());}
+    private static boolean excluded(LivingEntity boss){return boss instanceof GuardianEntity g&&g.friendly()||boss instanceof YujiEntity y&&(y.decoy()||y.familyMember())||boss instanceof MahoragaEntity m&&m.ally();} // 友方魔虚罗固定 800 血，不受控制面板缩放
     private static void resize(LivingEntity boss,double raw,boolean fill){
         var a=boss.getAttribute(Attributes.MAX_HEALTH);if(a==null)return;
         double expected=BalanceRules.health(raw);float oldMax=boss.getMaxHealth(),old=boss.getHealth();
@@ -47,10 +47,11 @@ public final class BossControl extends SavedData {
         // 兼容r63强化母体：旧档只有480生命的属性，第一次加载时补上身份标记。
         if(mother&&boss.getAttribute(Attributes.MAX_HEALTH).getBaseValue()==480)boss.getPersistentData().putBoolean("SukunaRevealedMother",true);
         boolean enhanced=mother&&boss.getPersistentData().getBoolean("SukunaRevealedMother");
-        double health=boss instanceof GojoEntity?150000:boss instanceof YujiEntity?30000:boss instanceof BuddhaEntity?5000:boss instanceof DaitianEntity?200:boss instanceof BrokenMahitoEntity?20000:mother?(enhanced?480:160):12;
+        double health=boss instanceof GojoEntity?150000:boss instanceof MahoragaEntity?MahoragaEntity.HEALTH:boss instanceof YujiEntity?30000:boss instanceof BuddhaEntity?5000:boss instanceof DaitianEntity?200:boss instanceof BrokenMahitoEntity?20000:mother?(enhanced?480:160):12;
         String key=healthKey(boss);resize(boss,key==null?health:value(boss,key,health),fill);
-        double attack=boss instanceof DaitianEntity?5:boss instanceof BuddhaEntity?10:boss instanceof YujiEntity?5:boss instanceof BrokenMahitoEntity?40:mother?(enhanced?24:12):2;
+        double attack=boss instanceof MahoragaEntity?30:boss instanceof DaitianEntity?5:boss instanceof BuddhaEntity?10:boss instanceof YujiEntity?5:boss instanceof BrokenMahitoEntity?40:mother?(enhanced?24:12):2;
         attribute(boss,Attributes.ATTACK_DAMAGE,attack);
+        if(boss instanceof MahoragaEntity)attribute(boss,Attributes.ARMOR,MahoragaEntity.ARMOR);
         if(boss instanceof BrokenMahitoEntity)attribute(boss,Attributes.ARMOR,20);
     }
     public static void revealedMother(ParasiteEntity mother){mother.getPersistentData().putBoolean("SukunaRevealedMother",true);stats(mother,true);}

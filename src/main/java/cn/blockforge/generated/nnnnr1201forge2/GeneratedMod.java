@@ -32,6 +32,7 @@ public final class GeneratedMod {
         VoidContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         MinecraftForge.EVENT_BUS.register(VoidJourney.class);
         MinecraftForge.EVENT_BUS.register(GojoEntity.class);
+        MinecraftForge.EVENT_BUS.register(MahoragaEntity.class);
         MinecraftForge.EVENT_BUS.register(DomainAmplification.class);
         MinecraftForge.EVENT_BUS.register(GojoCombat.class);
         MinecraftForge.EVENT_BUS.register(VoidCombat.class);

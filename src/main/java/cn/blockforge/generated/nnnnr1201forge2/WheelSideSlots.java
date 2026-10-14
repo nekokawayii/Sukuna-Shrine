@@ -9,12 +9,13 @@ public final class WheelSideSlots {
     public static int iceX(int width,int height){return 8+iceRadius(width,height);}
     public static boolean iceContains(int width,int height,double x,double y){int r=iceRadius(width,height);double dx=x-iceX(width,height),dy=y-height/2.0,d=dx*dx+dy*dy;return d>=r*r/4.0&&d<=r*r;}
     public static int radius(int width,int height){return radius(width,height,false,false);}
-    /** 五条悟有 8 格，圆环比里梅那圈放大一档，字才排得开。 */
+    /** 五条悟有 9 格，圆环比里梅那圈放大一档，字才排得开。 */
     public static int gojoRadius(int width,int height){return Math.max(30,Math.min(68,Math.min(width/7,height/2-64)));}
     public static int gojoX(int width,int height){return width-8-gojoRadius(width,height);}
     public static boolean gojoContains(int width,int height,double x,double y){int r=gojoRadius(width,height);double dx=x-gojoX(width,height),dy=y-height/2.0,d=dx*dx+dy*dy;return d>=r*r/4.0&&d<=r*r;}
-    /** 右侧五条悟圆环：正上方为「苍」，顺时针等分 7 格（最大功率两式改为长按）。 */
-    public static int gojoSector(int width,int height,double x,double y){double dx=x-gojoX(width,height),dy=y-height/2.0;double a=Math.atan2(dy,dx)+Math.PI/2;if(a<0)a+=Math.PI*2;return (int)Math.floor(a/(Math.PI*2/7))%7;}
+    /** 右侧五条悟圆环：正上方为「苍」，顺时针等分 9 格 —— 一格一个技能，34+i 就是技能号。 */
+    public static int gojoSectors(){return GojoPlayer.SLOTS;} // 7 格：最大功率两式不占格
+    public static int gojoSector(int width,int height,double x,double y){double dx=x-gojoX(width,height),dy=y-height/2.0;double a=Math.atan2(dy,dx)+Math.PI/2;if(a<0)a+=Math.PI*2;int n=Math.max(1,gojoSectors());return (int)Math.floor(a/(Math.PI*2/n))%n;}
     public static int radius(int width,int height,boolean ice){return radius(width,height,ice,false);}
     public static int radius(int width,int height,boolean ice,boolean gojo){
         int left=ice?8+2*iceRadius(width,height)+76:82;

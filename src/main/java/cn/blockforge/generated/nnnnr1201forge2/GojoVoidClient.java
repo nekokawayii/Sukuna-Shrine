@@ -29,9 +29,13 @@ public final class GojoVoidClient {
     private static long end,time;
     private static PhotonFx.Handle canvas;
     private static int canvasLife,canvasDuration;
+    /** 关闭时刻：关闭后的 3 秒内屏蔽迟到的领域心跳，避免"已经收起了又被一包数据放回来"。
+     *  初值取极小，保证刚进服/刚清空时不会误判成"刚关闭"而看不到别人开着的领域。 */
+    private static long closedAt=Long.MIN_VALUE/4;
     /** 展开：记下施法者，之后每刻跟着他走。 */
     public static void open(int owner,Vec3 at,Vec3 face,double r,int life){
         ownerId=owner;center=at;anchor=at;radius=Math.max(16,r);end=time+Math.max(20,life);
+        closedAt=Long.MIN_VALUE/4; // 重新开启：解除关闭后的屏蔽窗口
         Vec3 flat=new Vec3(face.x,0,face.z);
         if(flat.lengthSqr()<1e-4)flat=new Vec3(1,0,0);
         flat=flat.normalize();
@@ -42,6 +46,7 @@ public final class GojoVoidClient {
     }
     /** 心跳 / 对拼延长：只延寿命与校正锚点，画布本身不重建。 */
     public static void refresh(int owner,Vec3 at,double r,int life){
+        if(time-closedAt<60)return; // 刚收起：3 秒内的心跳一律当迟到包丢掉
         if(center==null)return;
         ownerId=owner;center=at;
         double old=radius;
@@ -54,16 +59,24 @@ public final class GojoVoidClient {
         }
         end=time+Math.max(20,life);
     }
-    public static void close(){ownerId=Integer.MIN_VALUE;center=null;anchor=null;holeAt=null;holeOffset=null;radius=0;end=0;dropCanvas();}
+    public static void close(){ownerId=Integer.MIN_VALUE;center=null;anchor=null;holeAt=null;holeOffset=null;radius=0;end=0;closedAt=time;dropCanvas();}
     public static boolean active(){return anchor!=null;}
+    /** 刚收起不久（3 秒内）：心跳包一律当迟到数据丢掉。 */
+    public static boolean recentlyClosed(){return time-closedAt<60;}
     public static Vec3 center(){return anchor;}
     public static double radius(){return radius;}
     private static void dropCanvas(){if(canvas!=null)PhotonFx.stop(canvas);canvas=null;canvasLife=0;canvasDuration=0;}
     public static void tick(){
         time++;
-        if(center==null){return;}
+        if(center==null){if(canvas!=null)dropCanvas();return;}
         if(time>end){close();return;}
         updateAnchor();
+        // 兜底：施法者本人都从客户端世界里没了（死亡/换维度/下线），画布不许挂在天上
+        if(ownerId!=Integer.MIN_VALUE){
+            var mc=Minecraft.getInstance();
+            Entity owner=mc.level==null?null:mc.level.getEntity(ownerId);
+            if(owner==null||!owner.isAlive()){close();return;}
+        }
         if(canvas==null)buildCanvas();
         else PhotonFx.move(canvas,anchor);
     }

@@ -15,6 +15,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 /** 玩家侧五条悟技能组：吃下碎片后可用，各自独立冷却，与右侧小轮盘一一对应。 */
 public final class GojoCombat {
     public static final int COUNT=GojoPlayer.COUNT;
+    /** 茈与无限制茈打魔虚罗的伤害倍率：这两个术式对魔虚罗特攻 3 倍（其余目标不受影响）。 */
+    public static final float MAHORAGA_DAMAGE=3f;
     private static final Map<UUID,Orb> guiding=new HashMap<>();
     private static final class State {
         final ServerPlayer p;final ServerLevel level;
@@ -28,6 +30,8 @@ public final class GojoCombat {
     private static final class Orb {
         final ServerPlayer owner;final ServerLevel level;final boolean blue;final boolean purple;
         Vec3 pos,dir;UUID target;int age,life;final int id;boolean guide;boolean dead;
+        /** 已经结算过的目标：茈会穿透，途中碰到的每一只都吃伤害，但同一只只吃一次。 */
+        final java.util.Set<UUID> struck=new java.util.HashSet<>();
         Orb(ServerPlayer owner,boolean blue,boolean purple,Vec3 pos,Vec3 dir,UUID target,int life){this.owner=owner;this.level=owner.serverLevel();this.blue=blue;this.purple=purple;this.pos=pos;this.dir=dir;this.target=target;this.life=life;this.id=++orbId;}
     }
     private record Beam(ServerPlayer owner,ServerLevel level,Vec3 from,Vec3 dir,double length,float damage){}
@@ -59,14 +63,42 @@ public final class GojoCombat {
     public static int domainTicks(ServerPlayer p){State s=states.get(p.getUUID());return s==null?0:(int)Math.max(0,s.domainUntil-p.level().getGameTime());}
     /** 该技能剩余冷却秒数（向上取整）。 */
     public static int cooldownSeconds(ServerPlayer p,int skill){return (int)(Math.max(0,Curse.data(p).getLong(key(skill))-p.level().getGameTime())+19)/20;}
+    /** 无量空处是否正在展开（心跳期间保持 true）。 */
+    public static boolean domainOpen(ServerPlayer p){State s=states.get(p.getUUID());return s!=null&&s.domainUntil>p.level().getGameTime();}
+    /** 无量空处此刻能不能展开：不能就**逐条说清原因**（不再静默失败）。返回 true = 可以继续 cast。 */
+    private static boolean domainReady(ServerPlayer p){
+        if(!GojoPlayer.unlocked(p)){CastFeedback.tell(p,"尚未睁开六眼：右键使用六眼即可，无需任何阶段");return false;}
+        if(!p.isAlive()||p.isSpectator()){CastFeedback.tell(p,"当前状态无法展开领域");return false;}
+        if(DomainClash.active(p)){CastFeedback.tell(p,"领域对拼中，无法展开无量空处");return false;}
+        if(DomainClash.penalized(p)){CastFeedback.tell(p,"领域对拼败北熔断 · 剩余 "+((DomainClash.penaltyTicks(p)+19)/20)+" 秒 · 不能提前修复");return false;}
+        if(Curse.burnout(p)){CastFeedback.tell(p,"术式熔断 · 剩余 "+((Curse.burnoutTicks(p)+19)/20)+" 秒：用术式反转或修复熔断解除");return false;}
+        if(MaidBridge.recovering(p)){CastFeedback.tell(p,"女仆恢复中，无法展开领域");return false;}
+        if(SoulCombat.suppressed(p)){CastFeedback.tell(p,"灵魂压制中，无法展开领域");return false;}
+        if(GuardianPlayerSkills.casting(p)){CastFeedback.tell(p,"守护者术式动作未结束，请稍候");return false;}
+        if(GuardianPlayerSkills.sustaining(p)||Skills.sustaining(p)){CastFeedback.tell(p,"正在维持另一个领域，先把它收起来");return false;}
+        long left=Curse.data(p).getLong(key(7))-p.level().getGameTime();
+        if(left>0){CastFeedback.tell(p,"无量空处冷却中 · 剩余 "+(left+19)/20+" 秒");return false;}
+        if(!Curse.canSpend(p,GojoPlayer.COST[7])){CastFeedback.tell(p,"无量空处需要 "+BalanceRules.number(GojoPlayer.COST[7])+" 咒力（当前 "+BalanceRules.number(Curse.energy(p))+"）");return false;}
+        return true;
+    }
+    /** 无量空处按下：开着就收起、没开就展开。返回 true = 这一次输入已经被消耗掉。
+     *  收起必须排在**所有**门槛（冷却/熔断/对拼/其他动作）之前，否则一旦被别的状态挡住，
+     *  玩家看到的就是"按了不收、再按又放一遍"。 */
+    public static boolean toggleDomain(ServerPlayer p){
+        if(domainOpen(p)){closeDomain(p);p.displayClientMessage(Component.literal("无量空处已收起 · 术式熔断可修复"),true);return true;}
+        if(!domainReady(p))return true;
+        cast(p,7);
+        // 成功展开时留一条聊天栏记录：动作栏提示容易看漏，出问题时也方便对照
+        if(domainOpen(p))p.sendSystemMessage(Component.literal("无量空处已展开 · 半径 "+BalanceRules.number(GojoFx.DOMAIN_RADIUS)+" 格 · "
+            +Math.max(0,domainTicks(p)/20)+" 秒 · 再按一次收起（收起后 120 秒熔断，可修复）"));
+        else if(!available(p,7))reject(p,7); // 理论上不会走到：兜底把原因说出来
+        return true;
+    }
     /** 苍/赫 按下：记录按住起点；越过长按阈值后才进入最大功率（按住期间持续引导/蓄力）。 */
     public static void chargeStart(ServerPlayer p,int slot){
         int skill=slot>=0&&slot<GojoPlayer.SLOTS?GojoPlayer.WHEEL[slot]:-1;
-        // 无量空处：领域开着时再点一次就是收起，必须先于冷却/咒力检查
-        if(skill==7){
-            State cur=states.get(p.getUUID());
-            if(cur!=null&&cur.domainUntil>p.level().getGameTime()){closeDomain(p);p.displayClientMessage(Component.literal("无量空处已收起"),true);return;}
-        }
+        // 无量空处：领域开着时再点一次就是收起，必须先于冷却/咒力/对拼检查
+        if(skill==7){toggleDomain(p);return;}
         if(skill<0)return;
         if(!available(p,skill)){reject(p,skill);return;} // 不再静默失败：直接说明是哪一道门槛
         State s=states.computeIfAbsent(p.getUUID(),k->new State(p));
@@ -93,9 +125,9 @@ public final class GojoCombat {
     }
     public static void cast(ServerPlayer p,int skill){
         // 收起无量空处必须排在冷却检查之前：否则 60 秒冷却会让"再点一次解除"永远进不来
-        State existing=states.get(p.getUUID());
-        if(skill==7&&existing!=null&&existing.domainUntil>p.level().getGameTime()){
-            closeDomain(p);p.displayClientMessage(Component.literal("无量空处已收起"),true);return;
+        if(skill==7){
+            if(domainOpen(p)){closeDomain(p);p.displayClientMessage(Component.literal("无量空处已收起 · 术式熔断可修复"),true);return;}
+            if(!domainReady(p))return; // 展不开就逐条说明原因，绝不静默失败
         }
         if(!available(p,skill)){reject(p,skill);return;}
         State s=states.computeIfAbsent(p.getUUID(),k->new State(p));
@@ -180,12 +212,12 @@ public final class GojoCombat {
         Orb o=guiding.remove(p.getUUID());
         if(o!=null){o.guide=false;o.life=o.age+100;}
     }
-    /** 无限制茈：48 格内 999 伤害，反噬自己 40% 最大生命。念咒版与对撞版数值一致。 */
+    /** 无限制茈：48 格内 999 伤害（打魔虚罗 ×3），反噬自己 40% 最大生命。念咒版与对撞版数值一致。 */
     public static void unlimited(ServerPlayer p,Vec3 at){unlimited(p,at,"赫与苍对撞");}
     public static void unlimited(ServerPlayer p,Vec3 at,String reason){
         double radius=48;
         fx(p,GojoFx.UNLIMITED,at,Vec3.ZERO,(float)radius,60,0);
-        for(LivingEntity victim:Skills.targets(p.serverLevel(),p,at,radius))if(victim.position().distanceToSqr(at)<=radius*radius)hit(p,victim,999,false); // 无限制茈 999
+        for(LivingEntity victim:Skills.targets(p.serverLevel(),p,at,radius))if(victim.position().distanceToSqr(at)<=radius*radius)hit(p,victim,999,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE); // 无限制茈 999（打魔虚罗 ×3）
         p.invulnerableTime=0;
         p.hurt(p.serverLevel().damageSources().indirectMagic(p,p),Math.max(1,p.getMaxHealth()*0.4f));
         p.displayClientMessage(Component.literal(reason+" · 无限制茈（反噬 40% 最大生命）"),true);
@@ -202,10 +234,16 @@ public final class GojoCombat {
     }
     public static void clashVisual(ServerPlayer p,boolean show){State s=states.get(p.getUUID());if(s==null||s.domainUntil<=0)return;if(show)fx(p,GojoFx.DOMAIN,s.center,p.getLookAngle(),GojoFx.DOMAIN_RADIUS,400,0);else fx(p,GojoFx.DOMAIN_CLOSE,s.center,Vec3.ZERO,1,4,0);}
     public static void extendDomain(ServerPlayer p,int ticks){State s=states.get(p.getUUID());if(s!=null&&s.domainUntil>0)s.domainUntil+=ticks;}
-    private static boolean hit(ServerPlayer p,LivingEntity target,double damage,boolean knock){
+    private static boolean hit(ServerPlayer p,LivingEntity target,double damage,boolean knock){return hit(p,target,damage,knock,1f,AttackTypes.MAGIC);}
+    /** 命中结算。{@code bossMultiplier} 只对<b>魔虚罗</b>生效：茈与无限制茈打它要 3 倍（{@link #MAHORAGA_DAMAGE}）；
+     *  {@code type} 是这次的适应占位：苍/赫/茈各自一条进度（{@link AttackTypes#MAGIC_BLUE} 等）。 */
+    private static boolean hit(ServerPlayer p,LivingEntity target,double damage,boolean knock,float bossMultiplier,String type){
         if(target==null||!CombatSettings.canHit(p,target))return false;
         target.invulnerableTime=0;
-        boolean hurt=CombatSettings.hurt(p,target,p.serverLevel().damageSources().indirectMagic(p,p),CombatSettings.spellDamage(p,(float)damage));
+        float amount=CombatSettings.spellDamage(p,(float)damage);
+        if(bossMultiplier!=1f&&target instanceof MahoragaEntity)amount*=bossMultiplier;
+        AttackTypes.mark(type);
+        boolean hurt=CombatSettings.hurt(p,target,p.serverLevel().damageSources().indirectMagic(p,p),amount);
         if(hurt&&knock){Vec3 push=target.position().subtract(p.position()).multiply(1,0,1).normalize();target.push(push.x*5,1.6,push.z*5);target.hurtMarked=true;}
         return hurt;
     }
@@ -261,7 +299,7 @@ public final class GojoCombat {
             case 6->{ // 三连拳
                 if(age==1||age==8||age==15){
                     LivingEntity victim=t!=null&&p.distanceToSqr(t)<=16?t:null;
-                    if(victim!=null&&hit(p,victim,18,false))victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,60,1));
+                    if(victim!=null&&hit(p,victim,18,false,1f,AttackTypes.MAGIC))victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,60,1));
                     else fx(p,GojoFx.HIT,p.getEyePosition().add(p.getLookAngle().scale(2)),Vec3.ZERO,1.1f,8,0);
                 }
                 if(age>=22)s.casting=-1;
@@ -285,7 +323,7 @@ public final class GojoCombat {
                     if(VoidLock.immune(p,victim))continue; // 自己/盟友与默认玩家/宠物/女仆/永恒挚爱：绝对不生效
                     if(DomainClash.active(p))break;
                     VoidLock.hold(victim,now); // 强制控制：拴在原地，绝对无法移动
-                    if(now%20==0)hit(p,victim,8,false);
+                    if(now%20==0)hit(p,victim,8,false,1f,AttackTypes.MAGIC); // 无量空处持续伤害：基础「魔法」
                 }
             }
             chargeTick(s);
@@ -302,7 +340,7 @@ public final class GojoCombat {
                     if(d<0.6||d>24)continue;
                     BossTargets.move(victim,victim.position().add(pull.normalize().scale(Math.min(1.1,6.0/Math.max(1,d)))));
                     if(d<6){victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,40,1));victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS,40,0));}
-                    if(o.age%20==0)hit(o.owner,victim,10,false); // 苍：每秒 10
+                    if(o.age%20==0)hit(o.owner,victim,10,false,1f,AttackTypes.MAGIC_BLUE); // 苍：每秒 10（独立适应）
                 }
                 if(o.age>=o.life){fx(o.owner,GojoFx.BLUE_END,o.pos,Vec3.ZERO,5,4,o.id);it.remove();}
                 continue;
@@ -322,18 +360,21 @@ public final class GojoCombat {
             boolean hitSomething=false;
             for(LivingEntity victim:Skills.targets(o.level,o.owner,o.pos,5)){
                 if(victim.getBoundingBox().inflate(0.7).distanceToSqr(o.pos)>2.25)continue;
+                if(o.purple&&!o.struck.add(victim.getUUID()))continue; // 茈：同一只只结算一次，然后继续飞
                 // 命中演出：变大 + 渐隐，纯视觉效果，不再附带溅射伤害
                 if(o.purple){
                     fx(o.owner,GojoFx.PURPLE_BURST,o.pos,Vec3.ZERO,12,30,o.id);
-                    hit(o.owner,victim,500,false); // 茈 500（只结算直接命中的目标）
+                    hit(o.owner,victim,500,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE); // 茈 500（打魔虚罗 ×3，独立适应）
                 }else{
                     fx(o.owner,GojoFx.RED_END,o.pos,Vec3.ZERO,7,30,o.id);
-                    hit(o.owner,victim,60,true); // 赫 60
+                    hit(o.owner,victim,60,true,1f,AttackTypes.MAGIC_RED); // 赫 60（独立适应）
                 }
-                hitSomething=true;break;
+                if(o.purple)continue; // 茈穿透：继续撞后面的目标
+                hitSomething=true;break; // 赫：打到就停
             }
-            if(hitSomething||o.age>=o.life){
-                if(!hitSomething)fx(o.owner,o.purple?GojoFx.PURPLE_BURST:GojoFx.RED_END,o.pos,Vec3.ZERO,0,4,o.id); // 自然消散：只消失，不爆
+            if(o.age>=o.life||(hitSomething&&!o.purple)){ // 茈只在飞满生命周期后消散
+                if(!hitSomething&&!o.purple)fx(o.owner,GojoFx.RED_END,o.pos,Vec3.ZERO,0,4,o.id); // 自然消散：只消失，不爆
+                if(o.purple)fx(o.owner,GojoFx.PURPLE_BURST,o.pos,Vec3.ZERO,0,4,o.id);
                 it.remove();
             }
         }

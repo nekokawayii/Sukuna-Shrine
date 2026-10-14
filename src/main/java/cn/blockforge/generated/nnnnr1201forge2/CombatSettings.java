@@ -39,6 +39,7 @@ public final class CombatSettings {
     public static float fixedSpellDamage(Player p,double base,boolean domain){return BalanceRules.damage(CasterDamageRules.fixed(base,domain?Curse.domainSpellBonus(p):Curse.spellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),MaidBridge.isCaster(p)));}
     public static boolean canHit(ServerPlayer owner,LivingEntity target){
         if(target==owner||!target.isAlive()||target.isSpectator()||EternalLove.protects(owner,target))return false;
+        if(MahoragaAdaptStore.friendlyTo(owner,target))return false; // 友方魔虚罗：绝对友方，术式不伤它
         if(owner instanceof MaidBridge.Actor actor)return MaidBridge.canHit(actor,target);
         if(target instanceof net.minecraft.world.entity.TamableAnimal maid&&EternalLove.duel(maid)&&owner.getUUID().equals(maid.getOwnerUUID()))return true;
         if(target instanceof net.minecraft.world.entity.TamableAnimal tame&&owner.getUUID().equals(tame.getOwnerUUID()))return false;
@@ -68,7 +69,7 @@ public final class CombatSettings {
             var cause=target instanceof Player?null:actor.maid;
             source=new net.minecraft.world.damagesource.DamageSource(source.typeHolder(),actor.maid,cause,actor.maid.position());spellOwners.put(source,owner);
         }
-        try{boolean accepted=target.hurt(source,amount);if(accepted&&amount>0&&!source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)&&!source.is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK))SkillDestruction.impact(owner,target.position(),1);return accepted;}finally{spellOwners.remove(source);}
+        try{boolean accepted=target.hurt(source,amount);if(accepted&&amount>0&&!source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)&&!source.is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK))SkillDestruction.impact(owner,target.position(),1);return accepted;}finally{AttackTypes.consume();spellOwners.remove(source);}
     }
     /** 同队禁伤会早于LivingDamageEvent返回，只为明确标敌的咒术近战补上入口。 */
     @SubscribeEvent(priority=net.minecraftforge.eventbus.api.EventPriority.LOWEST)
@@ -127,7 +128,11 @@ public final class CombatSettings {
             c.getSource().sendSuccess(()->Component.literal((BalanceRules.modpackMode()?"整合包模式：开启，强度100%":"整合包模式：关闭，强度10%（降低90%）")+"。咒力上限、恢复、消耗始终使用原值；持续时间、冷却、数量和范围不变。配置：config/sukuna-growth.toml 的 [balance] modpackMode，修改后重启。"),false);return 1;
         })));
         event.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("damage")
-            .executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();p.sendSystemMessage(Component.literal("当前术式伤害倍率："+multiplier(p)+" 倍；设置用 /sukuna damage 数字（0.001～10000）"));return 1;})
+            .executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();
+                p.sendSystemMessage(Component.literal("当前术式伤害倍率："+multiplier(p)+" 倍（/sukuna damage 数字 可改，1 为原倍率）"));
+                p.sendSystemMessage(Component.literal("通用因子：模式强度 x"+BalanceRules.factor()+" · 术式基础 0.6 · 成长加成 +"+Curse.spellBonus(p)+" · 状态 x"+Curse.damageFactor(p)+" · 残渣 x"+Curse.residueFactor(p)));
+                p.sendSystemMessage(Component.literal("苍(每秒) 原值10 → "+BalanceRules.number(spellDamage(p,10))+" · 赫 原值60 → "+BalanceRules.number(spellDamage(p,60))+" · 茈 原值500 → "+BalanceRules.number(spellDamage(p,500))+"（打魔虚罗 x"+GojoCombat.MAHORAGA_DAMAGE+"） · 无限制茈 原值999 → "+BalanceRules.number(spellDamage(p,999))+"（打魔虚罗 x"+GojoCombat.MAHORAGA_DAMAGE+"）"));
+                return 1;})
             .then(Commands.argument("multiplier",DoubleArgumentType.doubleArg(0.001,10000)).requires(s->s.hasPermission(2)).executes(c->{
                 ServerPlayer p=c.getSource().getPlayerOrException();double value=DoubleArgumentType.getDouble(c,"multiplier");
                 if(!Double.isFinite(value)||value<0.001||value>10000){c.getSource().sendFailure(Component.literal("倍率必须是 0.001～10000 之间的有效数字。"));return 0;}

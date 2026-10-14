@@ -41,6 +41,8 @@ public final class Skills {
     }
     private record Furnace(ServerPlayer owner,ServerLevel level,long due){}
     private static final List<Furnace> furnaces=new ArrayList<>();
+    /** 剑气弹幕的基础飞行速度（格/刻）：原来硬编码 2，现在提成常量，"斩击速度 −70%"就是乘 0.3。 */
+    public static final double SLASH_SPEED=2;
     private static final List<Slash> slashes=new ArrayList<>();
     private static final Map<UUID,Aura> auras=new HashMap<>();
     private static final Map<UUID,Domain> domains=new HashMap<>();
@@ -117,7 +119,9 @@ public final class Skills {
     }
     private static class Slash {
         ServerPlayer owner;ServerLevel level;Vec3 pos,dir,axis;float size,power;int age,life;boolean world,space;Set<UUID> hit=new HashSet<>();
-        Slash(ServerPlayer p,Vec3 pos,Vec3 dir,Vec3 axis,float size){owner=p;level=p.serverLevel();this.pos=pos;this.dir=dir;this.axis=axis;this.size=size;power=(float)Curse.power(p);world=Curse.awakened(p);life=(int)(400*Curse.scale(p));}
+        /** 每刻飞行格数：**这就是"斩击速度"**（剑气弹幕的飞行速度）。手持生成了才定型，中途换手不影响已经在飞的。 */
+        double speed=SLASH_SPEED;
+        Slash(ServerPlayer p,Vec3 pos,Vec3 dir,Vec3 axis,float size){owner=p;level=p.serverLevel();this.pos=pos;this.dir=dir;this.axis=axis;this.size=size;power=(float)Curse.power(p);world=Curse.awakened(p);life=(int)(400*Curse.scale(p));speed=SLASH_SPEED*(Hiten.holding(p)?Hiten.SLASH_SLOW:1);}
     }
     private record Charge(ServerLevel level,long start){}
     private static final Map<UUID,Charge> charges=new HashMap<>();
@@ -256,6 +260,8 @@ public final class Skills {
         if(skill==4&&!awakened&&!domains.containsKey(p.getUUID())){p.displayClientMessage(Component.literal("灶需要先展开伏魔御厨子积聚粉尘"),true);return;}
         if(VoidJourney.evolved(p)&&!VoidCombat.ready(p,skill))return;
         if(!Curse.spend(p,Curse.COST[skill]))return;
+        // 记下这一招的适应细分：解 / 捌 / 灵魂剥离（延迟命中的伤害靠它分类）
+        AttackTypes.prepare(skill==2?AttackTypes.CLEAVE:skill==6?AttackTypes.MAGIC_SOUL:AttackTypes.DISMANTLE);
         fx(p,67,p.position(),Vec3.ZERO,Journey.nine(p)?1:0,1,0);SkillSounds.cast(p,skill);
         if(skill!=3)fx(p,70,p.position(),p.getLookAngle(),skill,skill==5?30:12,skill);
         times[skill]=now+(long)Math.ceil(COOLDOWN[skill]*SoulCombat.cooldown(p)*(Curse.active(p,"Siphon")?1.3:1)*(tier>=4?0.8:1));
@@ -303,12 +309,12 @@ public final class Skills {
     private static void hitEffectSoul(ServerLevel l,ServerPlayer caster,LivingEntity target){if(!target.isAlive())return;Vec3 center=target.getBoundingBox().getCenter();Network.send(l,new Network.Effect(93,target.getId(),center,Vec3.ZERO,Math.max(1,target.getBbHeight()),12,target.getRandom().nextLong()).fromCaster(caster));}
     private static double projection(LivingEntity e,Vec3 axis){return (Math.abs(axis.x)+Math.abs(axis.z))*e.getBbWidth()/2+Math.abs(axis.y)*e.getBbHeight()/2;}
     private static boolean canHit(ServerPlayer p,LivingEntity e){return CombatSettings.canHit(p,e);}
-    private static boolean damage(ServerLevel l,ServerPlayer p,LivingEntity e,float n,boolean world,boolean slash,boolean soulSlash,boolean domain){if(DomainClash.active(p)||DomainClash.active(e)||!canHit(p,e))return false;soulSlash=soulSlash||SoulJourney.evolved(p)&&slash;if(soulSlash){n+=Curse.soulSlashBonus(p);e.getPersistentData().putUUID("SukunaSoulSlashOwner",p.getUUID());e.getPersistentData().putBoolean("SukunaNoHeal",true);}n=domain?CombatSettings.domainSpellDamage(p,n):CombatSettings.spellDamage(p,n);if(domain&&slash)n*=(float)SlashFormRules.DAMAGE;float before=e.getHealth()+e.getAbsorptionAmount();e.invulnerableTime=0;boolean accepted=CombatSettings.hurt(p,e,world?l.damageSources().sonicBoom(p):l.damageSources().indirectMagic(p,p),n);if(accepted&&e instanceof BuddhaEntity boss&&world)boss.interruptSiphon();boolean hurt=accepted&&e.getHealth()+e.getAbsorptionAmount()<before;if(hurt&&slash&&Journey.nine(p)&&e.isAlive())joint(p,e);if(hurt&&soulSlash)SoulCombat.soulHit(p,e);return hurt;}
+    private static boolean damage(ServerLevel l,ServerPlayer p,LivingEntity e,float n,boolean world,boolean slash,boolean soulSlash,boolean domain){if(DomainClash.active(p)||DomainClash.active(e)||!canHit(p,e))return false;soulSlash=soulSlash||SoulJourney.evolved(p)&&slash;AttackTypes.markPendingDefault(soulSlash?AttackTypes.SOUL:(world||slash||domain?AttackTypes.SLASH:AttackTypes.MAGIC));if(soulSlash){n+=Curse.soulSlashBonus(p);e.getPersistentData().putUUID("SukunaSoulSlashOwner",p.getUUID());e.getPersistentData().putBoolean("SukunaNoHeal",true);}n=domain?CombatSettings.domainSpellDamage(p,n):CombatSettings.spellDamage(p,n);if(domain&&slash)n*=(float)SlashFormRules.DAMAGE;float before=e.getHealth()+e.getAbsorptionAmount();e.invulnerableTime=0;boolean accepted=CombatSettings.hurt(p,e,world?l.damageSources().sonicBoom(p):l.damageSources().indirectMagic(p,p),n);if(accepted&&e instanceof BuddhaEntity boss&&world)boss.interruptSiphon();boolean hurt=accepted&&e.getHealth()+e.getAbsorptionAmount()<before;if(hurt&&slash&&Journey.nine(p)&&e.isAlive())joint(p,e);if(hurt&&soulSlash)SoulCombat.soulHit(p,e);return hurt;}
     static List<LivingEntity> targets(ServerLevel l,ServerPlayer p,Vec3 c,double r){if(r<=128)return l.getEntitiesOfClass(LivingEntity.class,new AABB(c,c).inflate(r),e->canHit(p,e));List<LivingEntity> found=new ArrayList<>();for(var entity:l.getAllEntities())if(entity instanceof LivingEntity e&&canHit(p,e)&&e.position().distanceToSqr(c)<=r*r)found.add(e);return found;}
     private static boolean damage(ServerLevel l,ServerPlayer p,LivingEntity e,float n,boolean world){return damage(l,p,e,n,world,true,false);}
     private static boolean damage(ServerLevel l,ServerPlayer p,LivingEntity e,float n,boolean world,boolean slash){return damage(l,p,e,n,world,slash,false);}
     private static boolean damage(ServerLevel l,ServerPlayer p,LivingEntity e,float n,boolean world,boolean slash,boolean soulSlash){return scaledDamage(l,p,e,n,world,slash,soulSlash,1);}
-    private static boolean scaledDamage(ServerLevel l,ServerPlayer p,LivingEntity e,float n,boolean world,boolean slash,boolean soulSlash,double fraction){if(DomainClash.active(p)||DomainClash.active(e)||!canHit(p,e))return false;soulSlash=soulSlash||SoulJourney.evolved(p)&&slash;if(soulSlash){n+=Curse.soulSlashBonus(p);e.getPersistentData().putUUID("SukunaSoulSlashOwner",p.getUUID());e.getPersistentData().putBoolean("SukunaNoHeal",true);}n=(float)(CombatSettings.spellDamage(p,n)*fraction);float before=e.getHealth()+e.getAbsorptionAmount();e.invulnerableTime=0;boolean accepted=CombatSettings.hurt(p,e,world?l.damageSources().sonicBoom(p):l.damageSources().indirectMagic(p,p),n);if(accepted&&e instanceof BuddhaEntity boss&&world)boss.interruptSiphon();boolean hurt=accepted&&e.getHealth()+e.getAbsorptionAmount()<before;if(hurt&&slash&&Journey.nine(p)&&e.isAlive())joint(p,e);if(hurt&&soulSlash)SoulCombat.soulHit(p,e);return hurt;}
+    private static boolean scaledDamage(ServerLevel l,ServerPlayer p,LivingEntity e,float n,boolean world,boolean slash,boolean soulSlash,double fraction){if(DomainClash.active(p)||DomainClash.active(e)||!canHit(p,e))return false;soulSlash=soulSlash||SoulJourney.evolved(p)&&slash;AttackTypes.markPendingDefault(soulSlash?AttackTypes.SOUL:(world||slash?AttackTypes.SLASH:AttackTypes.MAGIC));if(soulSlash){n+=Curse.soulSlashBonus(p);e.getPersistentData().putUUID("SukunaSoulSlashOwner",p.getUUID());e.getPersistentData().putBoolean("SukunaNoHeal",true);}n=(float)(CombatSettings.spellDamage(p,n)*fraction);float before=e.getHealth()+e.getAbsorptionAmount();e.invulnerableTime=0;boolean accepted=CombatSettings.hurt(p,e,world?l.damageSources().sonicBoom(p):l.damageSources().indirectMagic(p,p),n);if(accepted&&e instanceof BuddhaEntity boss&&world)boss.interruptSiphon();boolean hurt=accepted&&e.getHealth()+e.getAbsorptionAmount()<before;if(hurt&&slash&&Journey.nine(p)&&e.isAlive())joint(p,e);if(hurt&&soulSlash)SoulCombat.soulHit(p,e);return hurt;}
     private static boolean hitDamage(ServerLevel l,ServerPlayer p,LivingEntity e,float n,boolean world){return damage(l,p,e,n*(float)Curse.power(p),world);}
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event){
         if(event.phase!=TickEvent.Phase.END)return;
@@ -317,7 +323,7 @@ public final class Skills {
             MeleeCut cut=it.next();if(!valid(cut.owner,cut.level)){it.remove();continue;}if(cut.level.getGameTime()<cut.due)continue;it.remove();
             if(cut.level.getEntity(cut.target) instanceof LivingEntity target&&canHit(cut.owner,target)){
                 fx(cut.owner,72,target.getBoundingBox().getCenter(),cut.owner.getLookAngle(),Math.max(4,target.getBbHeight()*2),SlashMotion.LIFE,cut.owner.getRandom().nextInt(360));
-                target.invulnerableTime=0;CombatSettings.hurt(cut.owner,target,cut.level.damageSources().sonicBoom(cut.owner),CombatSettings.casterDamage(cut.owner,cut.amount)*(float)SlashFormRules.DAMAGE);
+                target.invulnerableTime=0;AttackTypes.mark(AttackTypes.DISMANTLE);CombatSettings.hurt(cut.owner,target,cut.level.damageSources().sonicBoom(cut.owner),CombatSettings.casterDamage(cut.owner,cut.amount)*(float)SlashFormRules.DAMAGE);
             }
         }
         burns.entrySet().removeIf(entry->entry.getKey().isRemoved()||!entry.getKey().isAlive()||!entry.getKey().isOnFire()||entry.getKey().level().getGameTime()>entry.getValue().until);
@@ -346,12 +352,12 @@ public final class Skills {
         for(Iterator<Furnace> it=furnaces.iterator();it.hasNext();){
             Furnace f=it.next();if(!valid(f.owner,f.level)){it.remove();continue;}if(f.level.getGameTime()<f.due)continue;it.remove();ServerPlayer p=f.owner;
             boolean domain=domains.containsKey(p.getUUID());if(!domain&&!Curse.awakened(p))continue;double radius=domain?200:50;
-            for(LivingEntity target:targets(f.level,p,p.position(),radius))if(target.distanceToSqr(p)<=radius*radius){damage(f.level,p,target,16*(float)Curse.power(p)*(domain?1.5f:1),false,false,false,domain);ignite(p,target,12);fx(p,4,target.getBoundingBox().getCenter(),Vec3.ZERO,4,30,f.due);}
+            for(LivingEntity target:targets(f.level,p,p.position(),radius))if(target.distanceToSqr(p)<=radius*radius){AttackTypes.mark(AttackTypes.FIRE);damage(f.level,p,target,16*(float)Curse.power(p)*(domain?1.5f:1),false,false,false,domain);ignite(p,target,12);fx(p,4,target.getBoundingBox().getCenter(),Vec3.ZERO,4,30,f.due);}
             fx(p,23,p.position(),Vec3.ZERO,(float)radius,45,f.due);
         }
         for(Iterator<Joint> it=joints.values().iterator();it.hasNext();){Joint j=it.next();if(!valid(j.owner,j.level)){it.remove();continue;}if(j.level.getGameTime()<j.due)continue;it.remove();var entity=j.level.getEntity(j.target);if(entity instanceof LivingEntity target&&canHit(j.owner,target)){damage(j.level,j.owner,target,j.power,true,false);fx(j.owner,59,target.getBoundingBox().getCenter(),Vec3.ZERO,4,20,target.getId());SkillSounds.play(j.owner,"fetus_joint");}}
         tickRifts();
-        for(Iterator<Slash> it=slashes.iterator();it.hasNext();){Slash s=it.next();if(++s.age>s.life||!valid(s.owner,s.level)){it.remove();continue;}Vec3 old=s.pos;s.pos=s.pos.add(s.dir.scale(2));if(CombatExpansion.collideSlash(s.owner,s.pos.subtract(s.axis.scale(s.size/2)),s.pos.add(s.axis.scale(s.size/2)),s.dir)){it.remove();continue;}SkillDestruction.line(s.owner,s.pos.subtract(s.axis.scale(s.size/2)),s.pos.add(s.axis.scale(s.size/2)),0.6);AABB swept=new AABB(old,s.pos).inflate(s.size/2+1);
+        for(Iterator<Slash> it=slashes.iterator();it.hasNext();){Slash s=it.next();if(++s.age>s.life||!valid(s.owner,s.level)){it.remove();continue;}Vec3 old=s.pos;s.pos=s.pos.add(s.dir.scale(s.speed));if(CombatExpansion.collideSlash(s.owner,s.pos.subtract(s.axis.scale(s.size/2)),s.pos.add(s.axis.scale(s.size/2)),s.dir)){it.remove();continue;}SkillDestruction.line(s.owner,s.pos.subtract(s.axis.scale(s.size/2)),s.pos.add(s.axis.scale(s.size/2)),0.6);AABB swept=new AABB(old,s.pos).inflate(s.size/2+1);
             for(LivingEntity e:targets(s.level,s.owner,s.pos,s.size/2+3)){if(!e.getBoundingBox().intersects(swept))continue;Vec3 q=e.getBoundingBox().getCenter().subtract(old.lerp(s.pos,0.5));double a=q.dot(s.axis),b=q.dot(s.dir);Vec3 normal=s.axis.cross(s.dir).normalize();double halfThickness=0.45;float amount=s.space?(float)((YujiEntity.percent(e,e.getMaxHealth()*0.25f)+300)*Journey.bonus(s.owner)*(Curse.active(s.owner,"Disorder")?0.8:1)):(s.world?12:6)*s.power;boolean soul=SoulJourney.evolved(s.owner);if(Math.abs(a)<s.size/2+projection(e,s.axis)&&Math.abs(b)<1+projection(e,s.dir)&&Math.abs(q.dot(normal))<halfThickness+projection(e,normal)&&(Journey.rotation(s.owner)||s.hit.add(e.getUUID()))&&scaledDamage(s.level,s.owner,e,amount,s.world,true,soul,SlashFormRules.DAMAGE)){if(soul)hitEffectSoul(s.level,s.owner,e);else hitEffect(s.level,s.owner,e,7,s.world);}}
         }
         for(Iterator<Aura> it=auras.values().iterator();it.hasNext();){Aura a=it.next();long now=a.level.getGameTime(),age=now-a.start;ServerPlayer p=a.owner;
@@ -392,12 +398,12 @@ public final class Skills {
             Vec3 aim=target.getBoundingBox().getCenter().subtract(r.pos).normalize();
             if(r.age==12||r.age%5==0||target.getBoundingBox().getCenter().distanceToSqr(r.pos)<36){Vec3 side=new Vec3(-aim.z,0,aim.x).normalize();double zig=r.age<37&&target.getBoundingBox().getCenter().distanceToSqr(r.pos)>=36?((r.age/5)%2==0?1.8:-1.8):0;r.dir=aim.add(side.scale(zig)).normalize();}
             Vec3 next=r.pos.add(r.dir.scale(2.4));boolean hit=false;
-            for(LivingEntity victim:targets(r.level,r.owner,r.pos,4))if(victim.getBoundingBox().inflate(0.25).clip(r.pos,next).isPresent()||victim.getBoundingBox().inflate(0.25).contains(r.pos)){damage(r.level,r.owner,victim,8*r.power,true,false);fx(r.owner,64,victim.getBoundingBox().getCenter(),r.dir,3,18,r.id);hit=true;break;}
+            for(LivingEntity victim:targets(r.level,r.owner,r.pos,4))if(victim.getBoundingBox().inflate(0.25).clip(r.pos,next).isPresent()||victim.getBoundingBox().inflate(0.25).contains(r.pos)){AttackTypes.mark(AttackTypes.VOID);damage(r.level,r.owner,victim,8*r.power,true,false);fx(r.owner,64,victim.getBoundingBox().getCenter(),r.dir,3,18,r.id);hit=true;break;}
             if(hit){Network.send(r.level,new Network.Effect(63,r.owner.getId(),r.pos,Vec3.ZERO,0,1,r.id));it.remove();continue;}
             r.pos=next;Network.send(r.level,new Network.Effect(62,r.owner.getId(),r.pos,r.dir,1,2,r.id));
         }
     }
     private static void detonate(ServerPlayer p,ServerLevel l,Vec3 pos,float radius){detonate(p,l,pos,radius,false);}
-    private static void detonate(ServerPlayer p,ServerLevel l,Vec3 pos,float radius,boolean purple){Network.send(l,new Network.Effect(purple?CombatExpansionRules.FX_PURPLE:4,p.getId(),pos,Vec3.ZERO,radius,30,purple?2:l.getGameTime()));if(purple)SkillDestruction.impact(p,pos,4);l.playSound(null,pos.x,pos.y,pos.z,SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,3,0.7f);for(LivingEntity e:targets(l,p,pos,radius))if(e.position().distanceToSqr(pos)<=radius*radius){damage(l,p,e,16*(float)Curse.power(p),false,false);if(purple){Curse.permanentSoulFire(p,e);fx(p,CombatExpansionRules.FX_PURPLE,e.getBoundingBox().getCenter(),new Vec3(0,1,0),1,20,0);}else ignite(p,e,8);Vec3 push=e.position().subtract(pos).normalize().scale(1.5);e.push(push.x,0.4,push.z);}}
+    private static void detonate(ServerPlayer p,ServerLevel l,Vec3 pos,float radius,boolean purple){AttackTypes.mark(AttackTypes.FIRE);Network.send(l,new Network.Effect(purple?CombatExpansionRules.FX_PURPLE:4,p.getId(),pos,Vec3.ZERO,radius,30,purple?2:l.getGameTime()));if(purple)SkillDestruction.impact(p,pos,4);l.playSound(null,pos.x,pos.y,pos.z,SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,3,0.7f);for(LivingEntity e:targets(l,p,pos,radius))if(e.position().distanceToSqr(pos)<=radius*radius){damage(l,p,e,16*(float)Curse.power(p),false,false);if(purple){Curse.permanentSoulFire(p,e);fx(p,CombatExpansionRules.FX_PURPLE,e.getBoundingBox().getCenter(),new Vec3(0,1,0),1,20,0);}else ignite(p,e,8);Vec3 push=e.position().subtract(pos).normalize().scale(1.5);e.push(push.x,0.4,push.z);}}
     @SubscribeEvent public static void stop(ServerStoppedEvent e){slashes.clear();auras.clear();domains.clear();bows.clear();fires.clear();detonations.clear();cooldowns.clear();charges.clear();cleaveCharges.clear();cleaveMemory.clear();impacts.clear();meleeCuts.clear();strikes.clear();soulCuts.clear();furnaces.clear();joints.clear();rifts.clear();airCuts.clear();burns.clear();nextRift=0;}
 }

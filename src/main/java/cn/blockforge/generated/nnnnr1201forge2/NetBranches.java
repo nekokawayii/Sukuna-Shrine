@@ -51,6 +51,7 @@ public final class NetBranches {
             if(target!=null&&(SixfoldFinale.active(target)||SixfoldFinale.controlled(target)||locked(target)||Uraume.locked(target)||DomainClash.active(target)))target=null;
         }
         if(!Curse.spend(p,NetBranchRules.cost(skill)))return;
+        AttackTypes.prepare(AttackTypes.NET_BRANCH); // 解·网分支（十字斩/剑气）
         Curse.status(p,cooldownKey(skill),NetBranchRules.cooldown(skill));
         CombatExpansion.afterCast(p,skill);
         SkillSounds.cast(p,0);
@@ -85,7 +86,7 @@ public final class NetBranches {
     private static void hit(ServerPlayer p,LivingEntity target,double fraction){
         if(!valid(p,p.serverLevel())||DomainClash.active(p)||DomainClash.active(target)||!CombatSettings.canHit(p,target))return;
         float amount=(float)(dismantleDamage(p,target)*fraction);target.invulnerableTime=0;
-        CombatSettings.hurt(p,target,p.serverLevel().damageSources().sonicBoom(p),amount);
+        AttackTypes.mark(AttackTypes.pending()!=null?AttackTypes.pending():AttackTypes.NET_BRANCH);CombatSettings.hurt(p,target,p.serverLevel().damageSources().sonicBoom(p),amount);
     }
     private static void qiEffect(Qi q){Network.send(q.level,new Network.Effect(NetBranchRules.FX_QI,q.owner.getId(),q.position,q.direction,(float)NetBranchRules.QI_RADIUS,Math.min(10,NetBranchRules.QI_LIFE-q.age),q.id));}
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event){

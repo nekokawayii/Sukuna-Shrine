@@ -74,7 +74,7 @@ public final class Uraume {
     private static void hurt(ServerPlayer p,LivingEntity t,double base){
         if(!CombatSettings.canHit(p,t)||DomainClash.active(t)||DomainClash.active(p))return;
         t.invulnerableTime=0;var source=new net.minecraft.world.damagesource.DamageSource(p.damageSources().freeze().typeHolder(),MaidBridge.body(p));
-        float damage=(float)(CombatSettings.spellDamage(p,base)*BranchRules.iceDamage(fish(p)));CombatSettings.hurt(p,t,source,damage);
+        float damage=(float)(CombatSettings.spellDamage(p,base)*BranchRules.iceDamage(fish(p)));AttackTypes.mark(AttackTypes.ICE);CombatSettings.hurt(p,t,source,damage);
     }
     private static void freeze(ServerPlayer owner,LivingEntity t){
         if(SixfoldFinale.active(t)||SixfoldFinale.controlled(t)||NetBranches.locked(t)||!CombatSettings.canHit(owner,t)||DomainClash.active(t))return;

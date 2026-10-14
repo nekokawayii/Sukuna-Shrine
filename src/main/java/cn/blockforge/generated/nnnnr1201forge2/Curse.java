@@ -44,6 +44,12 @@ public final class Curse {
     public static double power(Player p){return scale(p)*Journey.bonus(p)*(active(p,"Disorder")?0.8:1);}
     public static boolean active(Player p,String key){return data(p).getLong(key)>p.level().getGameTime();}
     public static boolean burnout(Player p){return active(p,"FinaleBurnout")||DomainClash.penalized(p)||data(p).getBoolean("TechniqueBurnout")&&(data(p).getLong("TechniqueBurnoutUntil")==0||active(p,"TechniqueBurnoutUntil"));}
+    /** 熔断剩余刻数（给"为什么放不出来"的提示用）。 */
+    public static int burnoutTicks(Player p){
+        if(DomainClash.penalized(p))return DomainClash.penaltyTicks(p);
+        long until=data(p).getLong("TechniqueBurnoutUntil");
+        return (int)Math.max(0,until-p.level().getGameTime());
+    }
     public static double reverseHealing(Player p){return BalanceRules.strength(ReverseRules.healing(rawHealthBonus(p)));}
     public static double reverseCost(Player p){return DomainClash.penalized(p)?DomainClashRules.healCost(maximum(p)):ReverseRules.cost(rawHealthBonus(p));}
     public static boolean repaired(Player p){return active(p,"TechniqueRepairedUntil");}

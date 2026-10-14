@@ -46,7 +46,7 @@ public final class SukunaBranches {
         if(!available(p,skill)){CastFeedback.unavailable(p,cost(p,skill));return;}
         if(webs.size()>=128||walls.size()>=128){p.displayClientMessage(Component.literal("当前同时施法过多，请稍后再试"),true);return;}
         if(!Curse.spend(p,cost(p,skill)))return;
-        Curse.status(p,"BranchCooldown"+skill,skill==BranchRules.WEB?240:skill==BranchRules.MULTI?200:160);SkillSounds.cast(p,0);
+        Curse.status(p,"BranchCooldown"+skill,skill==BranchRules.WEB?240:skill==BranchRules.MULTI?200:160);SkillSounds.cast(p,0);AttackTypes.prepare(AttackTypes.NET_BRANCH); // 捌的分支：蜘蛛网/多重斩/墙
         CombatExpansion.afterCast(p,skill);
         if(skill==BranchRules.WEB){web(p);return;}
         if(skill==BranchRules.MULTI){Curse.data(p).putBoolean("MultiArmed",true);p.displayClientMessage(Component.literal("多重斩已就绪：下一次普攻命中敌人追加 "+BranchRules.cuts(stage(p))+" 道解"),true);return;}
@@ -81,7 +81,7 @@ public final class SukunaBranches {
         webs.add(new Web(p,p.serverLevel(),p.level().getGameTime()+20,List.copyOf(lines),center,radius));
     }
     private static boolean near(LivingEntity target,Line line,double radius){AABB box=target.getBoundingBox().inflate(radius);return box.contains(line.from)||box.contains(line.to)||box.clip(line.from,line.to).isPresent();}
-    private static void hit(ServerPlayer p,LivingEntity target,double fraction){if(!CombatSettings.canHit(p,target)||DomainClash.active(p)||DomainClash.active(target))return;target.invulnerableTime=0;CombatSettings.hurt(p,target,p.damageSources().sonicBoom(p),(float)(NetBranches.dismantleDamage(p,target)*fraction));}
+    private static void hit(ServerPlayer p,LivingEntity target,double fraction){if(!CombatSettings.canHit(p,target)||DomainClash.active(p)||DomainClash.active(target))return;target.invulnerableTime=0;AttackTypes.mark(AttackTypes.pending()!=null?AttackTypes.pending():AttackTypes.NET_BRANCH);CombatSettings.hurt(p,target,p.damageSources().sonicBoom(p),(float)(NetBranches.dismantleDamage(p,target)*fraction));}
     @SubscribeEvent(priority=EventPriority.LOWEST) public static void melee(LivingDamageEvent e){
         ServerPlayer p=CombatSettings.caster(e.getSource());if(p==null||e.isCanceled()||e.getAmount()<=0||!Curse.data(p).getBoolean("MultiArmed")||!Curse.canUseTechnique(p)||!CombatSettings.canHit(p,e.getEntity()))return;
         if(!e.getSource().is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)&&!(MaidBridge.isCaster(p)&&e.getSource().is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK)))return;

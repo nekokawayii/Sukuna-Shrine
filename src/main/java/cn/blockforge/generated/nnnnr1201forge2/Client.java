@@ -39,13 +39,20 @@ public final class Client {
     public static int baseWheelCount(){return voidStage()||soulStage()?7:6;}
     /** 当前选择不可用时退回一套自己真能用的：宿傩→里梅→六眼。只吃六眼的玩家也能直接开打。 */
     public static int fallbackSkill(){
+        if(progress.gojo())return 34;   // 只吃六眼的玩家默认落在五条悟轮盘上
         if(progress.sukuna())return 0;
         if(progress.uraume())return BranchRules.FROST;
-        if(progress.gojo())return 34;
         return 0;
     }
-    public static boolean availableSkill(int skill){if(skill==FinaleRules.SKILL)return FinaleClient.ready()||FinaleClient.local();if(skill==22||skill==23)return progress.uraume();if(skill>=34&&skill<41)return progress.gojo();if(!progress.sukuna())return false;if(CombatExpansionRules.branch(skill))return skill==CombatExpansionRules.PURPLE_FURNACE?progress.voidShrine():skill==CombatExpansionRules.DRAGON_STAR?progress.awakened():skill!=CombatExpansionRules.CLEAVE_LINGER||progress.fingers()>=5;if(skill==SlashFormRules.SHAPE||skill==SlashFormRules.FREEHAND||skill==DismantleMotionRules.RING_SKILL)return true;if(skill==SlashFormRules.CROSS_FLIGHT)return progress.fingers()>=5;if(skill==SlashFormRules.WORLD)return progress.awakened();if(skill==19||skill==20)return progress.fingers()>=5;if(skill==21||NetBranchRules.branch(skill))return progress.awakened();return skill>=0&&(skill<baseWheelCount()||progress.pureLandVictory()&&skill>=7&&skill<17);}
-    public static String skillName(int i){if(i==FinaleRules.SKILL)return FinaleRules.NAME;if(CombatExpansionRules.branch(i))return CombatExpansionRules.name(i);if(i>=34)return GojoPlayer.NAMES[GojoPlayer.WHEEL[i-34]];if(i>=24)return SlashFormRules.name(i);if(i==0)return progress.dismantleQi()?"解 · 剑气模式":"解 · 斩击模式";if(i>=19&&i<=23)return BranchRules.name(i);if(NetBranchRules.branch(i))return (i==18?"解 · ":"网 · ")+NetBranchRules.name(i);if(i>=7&&i<17)return GuardianPlayerSkills.NAMES[i-7];if(voidStage())return i==5&&progress.pureLandVictory()?"领域展开 · 虚空御厨子（蓝）":VoidCombat.NAMES[i];return i==5&&soulStage()?"领域展开 · 灵魂御厨子":(progress.awakened()?Skills.AWAKENED:Skills.NAMES)[i];}
+    /** 手持神武解：术式全部不可用（释放键改为充能）。 */
+    public static boolean toolBlocksTechnique(){
+        var p=net.minecraft.client.Minecraft.getInstance().player;
+        return p!=null&&(p.getMainHandItem().is(VoidContent.SHINBUKE.get())||p.getOffhandItem().is(VoidContent.SHINBUKE.get()));
+    }
+    public static boolean availableSkill(int skill){if(toolBlocksTechnique())return false;if(skill==FinaleRules.SKILL)return FinaleClient.ready()||FinaleClient.local();if(skill==22||skill==23)return progress.uraume();if(skill>=34&&skill<34+GojoPlayer.COUNT)return progress.gojo();
+        if(progress.gojo()&&!progress.sukuna())return false; // 只有六眼：其余技能组一律不可选
+        if(!progress.sukuna())return false;if(CombatExpansionRules.branch(skill))return skill==CombatExpansionRules.PURPLE_FURNACE?progress.voidShrine():skill==CombatExpansionRules.DRAGON_STAR?progress.awakened():skill!=CombatExpansionRules.CLEAVE_LINGER||progress.fingers()>=5;if(skill==SlashFormRules.SHAPE||skill==SlashFormRules.FREEHAND||skill==DismantleMotionRules.RING_SKILL)return true;if(skill==SlashFormRules.CROSS_FLIGHT)return progress.fingers()>=5;if(skill==SlashFormRules.WORLD)return progress.awakened();if(skill==19||skill==20)return progress.fingers()>=5;if(skill==21||NetBranchRules.branch(skill))return progress.awakened();return skill>=0&&(skill<baseWheelCount()||progress.pureLandVictory()&&skill>=7&&skill<17);}
+    public static String skillName(int i){if(i==FinaleRules.SKILL)return FinaleRules.NAME;if(CombatExpansionRules.branch(i))return CombatExpansionRules.name(i);if(i>=34)return GojoPlayer.nameOf(i-34);if(i>=24)return SlashFormRules.name(i);if(i==0)return progress.dismantleQi()?"解 · 剑气模式":"解 · 斩击模式";if(i>=19&&i<=23)return BranchRules.name(i);if(NetBranchRules.branch(i))return (i==18?"解 · ":"网 · ")+NetBranchRules.name(i);if(i>=7&&i<17)return GuardianPlayerSkills.NAMES[i-7];if(voidStage())return i==5&&progress.pureLandVictory()?"领域展开 · 虚空御厨子（蓝）":VoidCombat.NAMES[i];return i==5&&soulStage()?"领域展开 · 灵魂御厨子":(progress.awakened()?Skills.AWAKENED:Skills.NAMES)[i];}
     public static double growth(){return 1;}
     private static long shakeUntil,flashUntil,transitionUntil,eyesUntil;
     private static float reflected;
@@ -92,9 +99,9 @@ public final class Client {
     }
     @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)
     public static class Registration {
-        @SubscribeEvent public static void setup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent e){e.enqueueWork(()->{ItemBlockRenderTypes.setRenderLayer(SoulContent.THREAD.get(),RenderType.cutout());ItemBlockRenderTypes.setRenderLayer(SoulContent.RICE.get(),RenderType.cutout());});}
+        @SubscribeEvent public static void setup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent e){e.enqueueWork(()->{ItemBlockRenderTypes.setRenderLayer(SoulContent.THREAD.get(),RenderType.cutout());ItemBlockRenderTypes.setRenderLayer(SoulContent.RICE.get(),RenderType.cutout());MahoragaArmorModel.register();});}
         @SubscribeEvent public static void keys(RegisterKeyMappingsEvent e){e.register(WHEEL);e.register(CAST);e.register(GUIDE);e.register(ROTATE);e.register(RELATIONS);e.register(FIST);e.register(STREAM);e.register(AMPLIFY);Network.aimReceiver=AimAssistClient::receive;Network.testResetReceiver=Client::testReset;WallpaperPackets.receiver=WallpaperClient::receive;Network.motionReceiver=DismantleMotionClient::receive;Network.drawReceiver=FreehandClient::receive;Network.clashReceiver=DomainClashClient::receive;Network.clientReceiver=Client::receive;Network.progressReceiver=p->progress=p;Network.combatReceiver=FinaleClient::state;Network.relationsReceiver=p->{if(Minecraft.getInstance().screen instanceof RelationsScreen screen)screen.receive(p);};Network.controllerReceiver=p->{if(Minecraft.getInstance().screen instanceof VoidControllerScreen screen)screen.receive(p);else if(Minecraft.getInstance().screen instanceof AimOptionsScreen screen)screen.receive(p);};}
-        @SubscribeEvent public static void entities(EntityRenderersEvent.RegisterRenderers e){e.registerEntityRenderer(VoidContent.GOJO.get(),GojoRenderer::new);e.registerEntityRenderer(SoulContent.YUJI.get(),YujiRenderer::new);e.registerEntityRenderer(SoulContent.GUARDIAN.get(),GuardianRenderer::new);e.registerEntityRenderer(Content.DAITIAN.get(),DaitianRenderer::new);e.registerEntityRenderer(Content.BROKEN_MAHITO.get(),BrokenMahitoRenderer::new);e.registerEntityRenderer(Content.MAHITO_LIMB.get(),net.minecraft.client.renderer.entity.NoopRenderer::new);e.registerEntityRenderer(Content.BUDDHA.get(),BuddhaRenderer::new);e.registerEntityRenderer(Content.PARASITE.get(),BuddhaRenderer::new);e.registerEntityRenderer(Content.MOTHER.get(),BuddhaRenderer::new);}
+        @SubscribeEvent public static void entities(EntityRenderersEvent.RegisterRenderers e){e.registerEntityRenderer(VoidContent.GOJO.get(),GojoRenderer::new);e.registerEntityRenderer(VoidContent.MAHORAGA.get(),MahoragaRenderer::new);e.registerEntityRenderer(SoulContent.YUJI.get(),YujiRenderer::new);e.registerEntityRenderer(SoulContent.GUARDIAN.get(),GuardianRenderer::new);e.registerEntityRenderer(Content.DAITIAN.get(),DaitianRenderer::new);e.registerEntityRenderer(Content.BROKEN_MAHITO.get(),BrokenMahitoRenderer::new);e.registerEntityRenderer(Content.MAHITO_LIMB.get(),net.minecraft.client.renderer.entity.NoopRenderer::new);e.registerEntityRenderer(Content.BUDDHA.get(),BuddhaRenderer::new);e.registerEntityRenderer(Content.PARASITE.get(),BuddhaRenderer::new);e.registerEntityRenderer(Content.MOTHER.get(),BuddhaRenderer::new);}
     }
     public static boolean wheelHeld(){return ClientInput.held(WHEEL);}
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut e){clear();world=null;}
@@ -108,7 +115,7 @@ public final class Client {
             if(mc.player!=null)Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.CANCEL_CHARGE));
             charging=cleaveHeld=false;
         }
-        if(mc.level==null||mc.player==null||mc.isPaused())return;if(progress.unlocked()&&!availableSkill(selected))selected=fallbackSkill();tick++;DismantleMotionClient.tick();SlashFormVisuals.tick();FreehandClient.tick(selected==SlashFormRules.FREEHAND&&FreehandClient.keyDown());BranchVisuals.tick();NetBranchVisuals.tick();VoidTechniqueClient.tick();VoidBossClient.tick();GojoFx.tick();SoulClient.tick();VoidVisuals.tick();if(charging&&tick-chargeBorn>200)charging=false;
+        if(mc.level==null||mc.player==null||mc.isPaused())return;if(progress.unlocked()&&!availableSkill(selected))selected=fallbackSkill();tick++;DismantleMotionClient.tick();SlashFormVisuals.tick();FreehandClient.tick(selected==SlashFormRules.FREEHAND&&FreehandClient.keyDown());BranchVisuals.tick();NetBranchVisuals.tick();VoidTechniqueClient.tick();VoidBossClient.tick();GojoFx.tick();MahoragaWheelClient.tick();ShinbukeVisuals.tick();SoulClient.tick();VoidVisuals.tick();if(charging&&tick-chargeBorn>200)charging=false;
         if(tick-window>=20){window=tick;generated=0;}
         if(FinaleClient.local()||DomainClashClient.active()||NetBranchVisuals.locked()||DismantleMotionClient.locked()){
             charging=cleaveHeld=false;castHeld=ClientInput.held(CAST);heldLast=wheelHeld();
@@ -188,6 +195,8 @@ public final class Client {
     public static void receive(Network.Effect e){
         if(Minecraft.getInstance().level==null)return;
         if(e.kind()>=GojoFx.BLOCK&&e.kind()<=GojoFx.DOMAIN_CLOSE){GojoFx.receive(e);return;}
+        if(e.kind()>=MahoragaVisuals.FIRST&&e.kind()<=MahoragaVisuals.LAST){MahoragaVisuals.receive(e);return;}
+        if(e.kind()==ShinbukeVisuals.STRIKE||e.kind()==ShinbukeVisuals.CHARGE){ShinbukeVisuals.receive(e);return;}
         if(e.kind()>=FinaleRules.FX_STATE&&e.kind()<=FinaleRules.FX_ABSORB){FinaleClient.receive(e);return;}
         if(slashEffect(e.kind())&&FinaleClient.absorbing(e.position()))return;
         if(e.kind()==CombatExpansionRules.FX_BLADE_STOP){SlashFormVisuals.stop(e);return;}

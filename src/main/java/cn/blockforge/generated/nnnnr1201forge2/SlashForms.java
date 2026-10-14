@@ -38,6 +38,7 @@ public final class SlashForms {
         return Curse.spend(p,cost);
     }
     public static void cast(ServerPlayer p,int skill){
+        AttackTypes.prepare(AttackTypes.SHAPE_BRANCH); // 解·形状分支（形状斩/十字飞行/纵心/旋转环斩）
         if(skill==SlashFormRules.WORLD){CombatExpansion.worldChant(p,TechniqueInput.intent(p));return;}
         int cost=skill==SlashFormRules.WORLD?2000:skill==SlashFormRules.SHAPE?120:180;
         if(!ready(p,skill,cost))return;
@@ -117,7 +118,7 @@ public final class SlashForms {
     static long pack(Vec3 d){int yaw=(int)Math.round(Math.toDegrees(Math.atan2(d.z,d.x))*100)+18000,pitch=(int)Math.round(Math.asin(d.y)*18000/Math.PI)+9000;return ((long)yaw<<16)|(pitch&65535);}
     public static void exactHit(ServerPlayer p,LivingEntity t,double fraction){
         if(!CombatSettings.canHit(p,t)||DomainClash.active(p)||DomainClash.active(t))return;
-        t.invulnerableTime=0;CombatSettings.hurt(p,t,p.damageSources().sonicBoom(p),(float)(NetBranches.dismantleDamage(p,t)*fraction));
+        t.invulnerableTime=0;AttackTypes.mark(AttackTypes.pending()!=null?AttackTypes.pending():AttackTypes.SHAPE_BRANCH);CombatSettings.hurt(p,t,p.damageSources().sonicBoom(p),(float)(NetBranches.dismantleDamage(p,t)*fraction));
     }
     public static void hit(ServerPlayer p,LivingEntity t,double fraction){
         if(!CombatSettings.canHit(p,t)||DomainClash.active(p)||DomainClash.active(t))return;

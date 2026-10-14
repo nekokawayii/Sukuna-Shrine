@@ -81,7 +81,7 @@ public final class VoidCombat {
         float finalAmount=fixed?CombatSettings.fixedSpellDamage(p,amount,domain):(domain?CombatSettings.domainSpellDamage(p,amount*Curse.power(p)):CombatSettings.spellDamage(p,amount*Curse.power(p)));
         finalAmount*=fraction;
         if(fixed){fixedTarget=target;fixedSource=source;fixedAmount=finalAmount;}
-        try {target.invulnerableTime=0;CombatSettings.hurt(p,target,source,finalAmount);}
+        try {target.invulnerableTime=0;AttackTypes.mark(AttackTypes.VOID);CombatSettings.hurt(p,target,source,finalAmount);}
         finally {dealing=false;fixedTarget=null;fixedSource=null;fixedAmount=0;}
     }
     private static void add(ServerPlayer p,LivingEntity target,boolean dismantle){add(p,target,dismantle,p.getRandom().nextInt(360));}
@@ -163,7 +163,7 @@ public final class VoidCombat {
             double visibility=net.minecraft.world.level.Explosion.getSeenPercent(center,target);
             float amount=BalanceRules.damage(CasterDamageRules.furnaceBlast(distance,visibility,true));
             if(amount<=0)continue;
-            if(CombatSettings.hurt(p,target,level.damageSources().explosion(body,body),amount)){
+            AttackTypes.mark(AttackTypes.VOID);if(CombatSettings.hurt(p,target,level.damageSources().explosion(body,body),amount)){
                 double impact=(1-distance/5)*visibility;Vec3 push=target.getEyePosition().subtract(center).normalize().scale(impact);
                 target.push(push.x,push.y,push.z);target.hurtMarked=true;
             }

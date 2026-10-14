@@ -109,6 +109,17 @@ public final class VoidJourney {
                     +" · 熔断："+(Curse.burnout(p)?"是":"否")+" · 对拼惩罚："+((DomainClash.penaltyTicks(p)+19)/20)+"秒 · 对拼中："+(DomainClash.active(p)?"是":"否")));
                 p.sendSystemMessage(Component.literal("无量空处："+(GojoCombat.domainTicks(p)>0?"展开中 · 剩余 "+((GojoCombat.domainTicks(p)+19)/20)+" 秒":"未展开")
                     +" · 冷却 "+GojoCombat.cooldownSeconds(p,7)+" 秒 · 当前消耗 "+BalanceRules.number(GojoPlayer.COST[7])+" 咒力"));
+                StringBuilder wheel=new StringBuilder("法轮：");
+                if(MahoragaRules.wheelOnHead(p)){
+                    var done=MahoragaAdaptStore.completed(p);
+                    wheel.append("戴在头上 · 已完全适应 ").append(done.size()).append(" 项");
+                    if(!done.isEmpty())wheel.append("（").append(String.join("、",done)).append("）");
+                    var inProgress=new StringBuilder();
+                    var tag=Curse.data(p).getCompound("MahoAdapted");
+                    for(String key:tag.getAllKeys()){int v=tag.getInt(key);if(v>0&&v<MahoragaAdaptStore.CLEAR)inProgress.append(key).append(' ').append(v).append('/').append(MahoragaAdaptStore.CLEAR).append("  ");}
+                    if(inProgress.length()>0)wheel.append(" · 累积中：").append(inProgress.toString().trim());
+                }else wheel.append("未戴在头上（自身适应不生效）");
+                p.sendSystemMessage(Component.literal(wheel.toString()));
                 StringBuilder sb=new StringBuilder("冷却：");
                 for(int i=0;i<GojoPlayer.COUNT;i++)sb.append(GojoPlayer.NAMES[i]).append(" ").append(GojoCombat.cooldownSeconds(p,i)).append("s ");
                 p.sendSystemMessage(Component.literal(sb.toString().trim()));return 1;}))

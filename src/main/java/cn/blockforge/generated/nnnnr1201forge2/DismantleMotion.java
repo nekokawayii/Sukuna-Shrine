@@ -125,7 +125,7 @@ public final class DismantleMotion {
             if(m.level.clip(new net.minecraft.world.level.ClipContext(origin,touch,net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,m.actor)).getType()!=HitResult.Type.MISS)continue;
             m.kicked.add(target.getUUID());int previousInvulnerability=target.invulnerableTime;target.invulnerableTime=0;
             float damage=CombatSettings.spellDamage(m.player,DismantleMotionRules.KICK_DAMAGE);
-            if(!CombatSettings.hurt(m.player,target,m.player.damageSources().indirectMagic(m.actor,m.actor),damage)){target.invulnerableTime=previousInvulnerability;continue;}
+            AttackTypes.mark(AttackTypes.UNARMED);if(!CombatSettings.hurt(m.player,target,m.player.damageSources().indirectMagic(m.actor,m.actor),damage)){target.invulnerableTime=previousInvulnerability;continue;}
             if(!target.isAlive())continue;
             Vec3 oldVelocity=target.getDeltaMovement();
             target.knockback(DismantleMotionRules.KICK_KNOCKBACK,-m.forward.x,-m.forward.z);

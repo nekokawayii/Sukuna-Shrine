@@ -250,7 +250,7 @@ public final class MaidExtension implements ILittleMaid {
         double reach=maid.getBbWidth()*2;
         if(maid.distanceToSqr(target)<=reach*reach+target.getBbWidth()&&maid.hasLineOfSight(target)){
             maid.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
-            CombatSettings.hurt(actor,target,maid.damageSources().mobAttack(maid),(float)maid.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE));
+            AttackTypes.mark(AttackTypes.UNARMED);CombatSettings.hurt(actor,target,maid.damageSources().mobAttack(maid),(float)maid.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE));
         }
     }
     private static void absorbOrb(EntityMaid maid,MaidBridge.Actor actor){

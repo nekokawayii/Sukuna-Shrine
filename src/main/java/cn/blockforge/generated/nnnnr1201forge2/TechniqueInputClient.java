@@ -12,6 +12,16 @@ public final class TechniqueInputClient {
     public static void tick(){
         var mc=Minecraft.getInstance();boolean down=ClientInput.held(Client.CAST);
         boolean valid=mc.player!=null&&mc.player.isAlive()&&mc.screen==null&&mc.isWindowActive()&&mc.mouseHandler.isMouseGrabbed()&&Client.progress.unlocked();
+        // 手持神武解：释放键改为"充能"，与轮盘选择无关（先处理，避免被 selected 校验打断）
+        boolean tool=mc.player!=null&&(mc.player.getMainHandItem().is(VoidContent.SHINBUKE.get())||mc.player.getOffhandItem().is(VoidContent.SHINBUKE.get()));
+        if(tool){
+            if(heldSkill>=0){send(heldSkill,3);heldSkill=-1;}
+            if(down&&!previous)send(Shinbuke.CHARGE_ID,0);
+            else if(!down&&previous)send(Shinbuke.CHARGE_ID,2);
+            else if(down&&++ticks%10==0)send(Shinbuke.CHARGE_ID,1);
+            previous=down;
+            return;
+        }
         if(!valid||heldSkill>=0&&heldSkill!=Client.selected||worldLease>0&&Client.selected!=SlashFormRules.WORLD){cancel();previous=down;return;}
         if(worldLease>0){worldLease--;if(worldLease%10==0)send(SlashFormRules.WORLD,1);}
         // 动作中的输入不能再次启动技能，但仍必须送达松手与取消。

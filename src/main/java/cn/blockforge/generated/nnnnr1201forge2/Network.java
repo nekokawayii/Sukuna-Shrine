@@ -104,6 +104,8 @@ public final class Network {
         CHANNEL.messageBuilder(Cast.class,0,NetworkDirection.PLAY_TO_SERVER).encoder((m,b)->b.writeUtf(m.action().name(),32)).decoder(b->new Cast(SkillAction.valueOf(b.readUtf(32)))).consumerMainThread((m,c)->{
             var p=c.get().getSender();
             if(p!=null&&m.action()==SkillAction.CANCEL_CHARGE){Skills.cancelCharge(p);TechniqueInput.cancel(p);c.get().setPacketHandled(true);return;}
+            // 无量空处的"收起"放行到所有守卫之前：熔断/对拼/其他动作都不能让它变成"按了不收、再按又放一遍"
+            if(p!=null&&m.action()==SkillAction.GOJO_DOMAIN&&GojoCombat.domainOpen(p)){GojoCombat.toggleDomain(p);c.get().setPacketHandled(true);return;}
             if(p!=null&&!SixfoldFinale.active(p)&&!SixfoldFinale.controlled(p)&&!DomainClash.active(p)&&!NetBranches.locked(p)&&!Uraume.locked(p)&&!CombatExpansion.controlled(p)&&!DismantleMotion.active(p)&&!GojoEntity.mindLocked(p)){
                 switch(m.action()){
                     case TOGGLE_DISMANTLE -> SlashForms.toggle(p);

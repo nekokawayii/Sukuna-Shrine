@@ -57,7 +57,7 @@ public final class GuardianPlayerSkills {
         boolean flash=punch&&s.casting!=6&&s.p.getRandom().nextDouble()*100<s.v("FlashChance");
         if(flash)amount=Math.pow(amount,Math.min(5,s.v("FlashExponent")));
         target.invulnerableTime=0;
-        boolean hit=CombatSettings.hurt(s.p,target,s.level.damageSources().sonicBoom(s.p),CombatSettings.spellDamage(s.p,Math.min(1000000,amount)));
+        AttackTypes.mark(AttackTypes.LIGHTNING);boolean hit=CombatSettings.hurt(s.p,target,s.level.damageSources().sonicBoom(s.p),CombatSettings.spellDamage(s.p,Math.min(1000000,amount)));
         if(hit){fx(s,flash?85:81,target.getBoundingBox().getCenter(),Vec3.ZERO,1,12,target.getId());if(punch&&target instanceof ServerPlayer p)SoulCombat.peel(p,false);}
         return hit;
     }
@@ -167,7 +167,7 @@ public final class GuardianPlayerSkills {
                 it.remove();
             }else if(block.getType()!=HitResult.Type.MISS)it.remove();else b.pos=next;
         }
-        for(Iterator<Poison> it=poisons.iterator();it.hasNext();){Poison poison=it.next();var entity=poison.level.getEntity(poison.target);if(!valid(poison.owner,poison.level)||poison.level.getGameTime()>=poison.until||!(entity instanceof LivingEntity t)||!CombatSettings.canHit(poison.owner,t)){if(entity instanceof Player player&&Curse.data(player).getLong("PlayerGuardianPoisonUntil")==poison.until)Curse.data(player).remove("PlayerGuardianPoisonUntil");it.remove();continue;}if(poison.level.getGameTime()%20==0){t.invulnerableTime=0;CombatSettings.hurt(poison.owner,t,poison.level.damageSources().indirectMagic(poison.owner,poison.owner),CombatSettings.casterDamage(poison.owner,poison.damage));}}
+        for(Iterator<Poison> it=poisons.iterator();it.hasNext();){Poison poison=it.next();AttackTypes.mark(AttackTypes.MAGIC);var entity=poison.level.getEntity(poison.target);if(!valid(poison.owner,poison.level)||poison.level.getGameTime()>=poison.until||!(entity instanceof LivingEntity t)||!CombatSettings.canHit(poison.owner,t)){if(entity instanceof Player player&&Curse.data(player).getLong("PlayerGuardianPoisonUntil")==poison.until)Curse.data(player).remove("PlayerGuardianPoisonUntil");it.remove();continue;}if(poison.level.getGameTime()%20==0){t.invulnerableTime=0;CombatSettings.hurt(poison.owner,t,poison.level.damageSources().indirectMagic(poison.owner,poison.owner),CombatSettings.casterDamage(poison.owner,poison.damage));}}
         for(Iterator<Grid> it=grids.iterator();it.hasNext();){Grid grid=it.next();if(!valid(grid.s)){it.remove();continue;}for(LivingEntity t:grid.s.level.getEntitiesOfClass(LivingEntity.class,grid.bounds,e->CombatSettings.canHit(grid.s.p,e)&&!grid.hit.contains(e.getUUID())))if(hit(grid.s,t,grid.s.v("GridDamage"),false))grid.hit.add(t.getUUID());if(--grid.remaining<=0)it.remove();}
     }
     @SubscribeEvent public static void healing(LivingHealEvent event){if(event.getEntity().getPersistentData().getLong("GuardianSkillNoHeal")>event.getEntity().level().getGameTime())event.setCanceled(true);}

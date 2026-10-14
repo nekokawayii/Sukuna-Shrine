@@ -186,7 +186,7 @@ public final class SixfoldFinale {
         int wave=s.age-FinaleRules.TRIGGERS[3];double radius=(wave+1)*15.0;
         for(LivingEntity t:arena(s))if(!s.worldHits.contains(t.getUUID())&&t.position().multiply(1,0,1).distanceToSqr(s.center.multiply(1,0,1))<=radius*radius){
             s.worldHits.add(t.getUUID());t.invulnerableTime=0;float amount=WorldSlashRules.damage(t.getMaxHealth(),NetBranches.dismantleDamage(s.p,t));
-            CombatSettings.hurt(s.p,t,s.level.damageSources().sonicBoom(s.p),amount*.8f);
+            AttackTypes.mark(AttackTypes.FINALE);CombatSettings.hurt(s.p,t,s.level.damageSources().sonicBoom(s.p),amount*.8f);
         }
         for(Entity entity:s.level.getEntities(s.body,new AABB(s.center,s.center).inflate(radius),e->e instanceof Projectile))if(entity.position().distanceToSqr(s.center)<=radius*radius)entity.discard();
         if(!SkillDestruction.enabled(s.level))return;

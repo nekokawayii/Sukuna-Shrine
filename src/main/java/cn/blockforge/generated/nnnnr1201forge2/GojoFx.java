@@ -106,6 +106,8 @@ public final class GojoFx {
                 GojoVoidClient.open(e.owner(),at,e.direction(),e.size(),Math.max(20,e.life()));
             }
             case DOMAIN->{
+                // 收起后的 3 秒内丢掉心跳：迟到的包不许把已经收起的领域再放回来
+                if(GojoVoidClient.recentlyClosed())break;
                 if(GojoVoidClient.active())GojoVoidClient.refresh(e.owner(),at,e.size(),40);
                 else GojoVoidClient.open(e.owner(),at,e.direction(),e.size(),40); // 中途进服也能看到画布
             }

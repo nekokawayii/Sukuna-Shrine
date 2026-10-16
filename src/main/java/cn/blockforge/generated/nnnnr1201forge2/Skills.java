@@ -284,7 +284,7 @@ public final class Skills {
         // 先判条件再清"放下"标记：御厨子的放下标记不能被这条路径吃掉
         if(did&&open){
             released.remove(p.getUUID());
-            noteVoid("收起无量空处（放下后再按一次）"+p.getScoreboardName());
+            noteVoid("收起成功 · 无量空处已关闭（放下后再按一次）"+p.getScoreboardName());
             GojoCombat.closeDomain(p);   // 收起文案与术式熔断仍由 GojoCombat 自己负责
             CastFeedback.tell(p,"无量空处已收起");
             return;
@@ -330,7 +330,7 @@ public final class Skills {
         GojoCombat.controlOnly(p);                          // 仅控制：伤害那一路整段跳过
         released.add(p.getUUID());
         CastFeedback.tell(p,"放下结印 · 无量空处仅剩控制（无伤害） · 再按一次释放键收起领域");
-        noteVoid("放下（仅控制，伤害整段跳过）"+p.getScoreboardName()
+        noteVoid("放下成功 · 仅控制（伤害整段跳过）"+p.getScoreboardName()
             +" 结印在="+(seal!=null)+" 领域在="+GojoCombat.domainOpen(p));
     }
     /** 无量空处关闭（收起/到时/对拼）：清掉它的结印状态（由 GojoCombat.closeDomain 与 cancel 调用）。 */

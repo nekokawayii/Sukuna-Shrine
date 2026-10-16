@@ -29,6 +29,15 @@ public final class GojoPlayer {
         };
     }
     public static String nameOf(int skill){return skill>=0&&skill<NAMES.length?NAMES[skill]:"五条悟";}
+    /** 释放键选的这个技能号是不是「无量空处」。
+     *  <b>输入侧的技能号一律是「34 + 轮盘格」</b>（{@link SkillWheel} 用 {@code 34+gojoSector}，服务端再用
+     *  {@code WHEEL[skill-34]} 换成内部技能号）。无量空处 = 内部 7 = 轮盘第 6 格（{@link #WHEEL} 去掉了不占格
+     *  的两式最大功率），所以客户端实际发来的是 <b>40</b>，不是 41。41 = 「34 + 内部技能号」的历史写法，
+     *  这里一并认下，免得旧路径再踩同一个坑（曾导致"第二次按下既放不下也收不起"）。 */
+    public static boolean voidKey(int skill){
+        if(skill==41)return true;
+        return skill>=34&&skill<34+SLOTS&&WHEEL[skill-34]==7;
+    }
     public static int costOf(int skill){return skill>=0&&skill<COST.length?COST[skill]:0;}
     private static final String[] DESC={"引力拉扯+每秒10伤害 · 长按为苍·最大功率：光球每秒5格跟随准星，松手停留5秒",
         "斥力球 60 伤害与超级击退",

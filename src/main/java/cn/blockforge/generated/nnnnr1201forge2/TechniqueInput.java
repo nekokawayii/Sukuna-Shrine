@@ -39,13 +39,21 @@ public final class TechniqueInput {
         }
         if(SixfoldFinale.active(p))return;
         // 无量空处：开着时再按一次是"收起"，结印中再按一次是"放下/取消"——两条都要排在所有动作守卫之前。
-        // 这里把三档判定用到的状态先落一条日志：以后再出现"按了没反应"，看这条就知道是领域/结印哪一侧判空了。
-        if(input.skill==41&&input.phase==0){
+        // **技能号是「34 + 轮盘格」不是「34 + 内部技能号」**：SkillWheel 发的是 34+gojoSector，格号再经
+        // GojoPlayer.WHEEL 换成内部技能号；无量空处是内部 7、轮盘第 6 格，所以现网发来的是 **40**。
+        // 原来这里判 41（= 34+内部技能号），于是整条接管分支从未命中，第二次按下掉进下面的结印守卫被
+        // 当成"其它术式"吞掉——这就是"再按既放不下也收不起"的根因。判定统一走 GojoPlayer.voidKey。
+        if(GojoPlayer.voidKey(input.skill)&&input.phase==0){
             boolean open=GojoCombat.domainOpen(p),voidSeal=Skills.sealing(p,Skills.SEAL_VOID);
-            if(open||voidSeal){SdLog.w("VOID 释放键 phase=0 已接管 领域在="+open+" 结印在="+voidSeal);GojoCombat.toggleDomain(p);return;}
-            // 领域/结印都判空 = 这一下必然掉到通用守卫里静默返回（skill=41 不是 SkillAction 的技能号）。
-            // 落盘留证：下次再出"按了没反应"，看这条就知道是客户端没发包、还是服务端状态已经对不上。
-            SdLog.w("VOID 释放键 phase=0 未接管 领域在=false 结印在=false 其它结印="+Skills.sealing(p));
+            if(open||voidSeal){
+                voidNote("释放键 phase=0 已接管 skill="+input.skill+" 领域在="+open+" 结印在="+voidSeal+" "+p.getScoreboardName());
+                // 上一次按下遗留的按住记录会挡住这一下（下面 old!=null 会静默返回），接管时一并清掉。
+                holds.remove(p.getUUID());
+                GojoCombat.toggleDomain(p);
+                return;
+            }
+            // 领域与结印都判空 = 第一次按下：不接管，照旧掉到通用路径走"结印起手"（chargeStart → voidPress）。
+            voidNote("释放键 phase=0 未接管（按第一次结印处理）skill="+input.skill+" 其它结印="+Skills.sealing(p)+" "+p.getScoreboardName());
         }
         // 神武解：按住释放键充能，松手打出去；取消（phase 3）只丢充能不打雷
         if(input.skill==Shinbuke.CHARGE_ID){
@@ -56,8 +64,10 @@ public final class TechniqueInput {
             return;
         }
         if(Shinbuke.holding(p)){return;} // 手持神武解：除充能外任何术式都不可用
-        // 结印期间：其余术式一律不理（正在结印的那个领域的释放键除外——第二次按下是"放下"或"取消"）
-        if(Skills.sealing(p)&&input.skill!=5&&!(Skills.sealing(p,Skills.SEAL_VOID)&&input.skill==41)){CastFeedback.tell(p,"结印中：只能再次按释放键（放下/取消）");return;}
+        // 结印期间：其余术式一律不理（正在结印的那个领域的释放键除外——第二次按下是"放下"或"取消"）。
+        // 无量空处这条例外也必须认「34+轮盘格」的 40（见上面 voidKey），否则第二次按下会被这里吞掉，
+        // 连按住心跳(phase1)/松手(phase2)都进不来：日志里表现为 Hold 一直不刷新、100 刻后"Hold 失效"。
+        if(Skills.sealing(p)&&input.skill!=5&&!(Skills.sealing(p,Skills.SEAL_VOID)&&GojoPlayer.voidKey(input.skill))){CastFeedback.tell(p,"结印中：只能再次按释放键（放下/取消）");return;}
         // 简易领域 · 捌：长按维持、松手收招（不走普通 hold 的"松手才结算"路径）
         if(input.wheelSkill()==SimpleDomain.SKILL){
             if(input.phase==0)SimpleDomain.start(p);
@@ -174,5 +184,7 @@ public final class TechniqueInput {
     }
     public static void cancel(ServerPlayer p){holds.remove(p.getUUID());intents.remove(p.getUUID());Skills.cancelCharge(p);CombatExpansion.cancelHeld(p);}
     public static void clear(){holds.clear();intents.clear();}
+    /** 无量空处释放键的埋点：直接写 latest.log（{@link SdLog} 写的是另一个文件，排查时根本看不到）。 */
+    private static void voidNote(String message){com.mojang.logging.LogUtils.getLogger().info("[无量空处] "+message);}
     private TechniqueInput(){}
 }

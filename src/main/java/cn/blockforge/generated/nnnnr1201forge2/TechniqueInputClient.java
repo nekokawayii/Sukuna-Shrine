@@ -38,9 +38,9 @@ public final class TechniqueInputClient {
         if(down&&!previous&&heldSkill<0&&!FinaleClient.local()&&!DomainClashClient.active()&&!NetBranchVisuals.locked()&&!DismantleMotionClient.locked()&&Client.selected!=SlashFormRules.FREEHAND){
             heldSkill=Client.selected;ticks=0;
             if(heldSkill==SlashFormRules.WORLD)worldLease=320;
-            // 无量空处（输入侧技能号 41）的关键键：客户端确实发出去了才落盘 —— 与服务端那条"是否接管"配对看，
-            // 一眼分清"客户端压根没发包"和"发了但服务端状态对不上"。
-            if(heldSkill==41)SdLog.w("VOID 客户端按下 发出 skill=41 phase=0");
+            // 无量空处（输入侧技能号 = 34+轮盘格，无量空处 = 格 6 → 40）的释放键：客户端确实发出去了才落盘 ——
+            // 与服务端那条"是否接管"配对看，一眼分清"客户端压根没发包"和"发了但服务端状态对不上"。
+            if(GojoPlayer.voidKey(heldSkill))com.mojang.logging.LogUtils.getLogger().info("[无量空处] 客户端按下 发出 skill="+heldSkill+" phase=0（再按一次 = 放下/收起）");
             send(heldSkill,0);
         }
         previous=down;

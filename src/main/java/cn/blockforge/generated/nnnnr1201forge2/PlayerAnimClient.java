@@ -92,6 +92,17 @@ public final class PlayerAnimClient {
     public static void forget(UUID id){
         LAYERS.remove(id);
     }
+    /** 这个玩家此刻**真的**在播动画吗（层建好了、动画数据拿到了、播放器还活着）。
+     *
+     *  <p>动作渲染层用它决定要不要退回内置关节姿态：只看"前置是否安装"会误判——装了 PlayerAnimator
+     *  但动画没读到（或层没建）时，光看安装状态会以为"已交给它播"，结果玩家全程直立（"动作没了"的根因）。</p> */
+    public static boolean playing(AbstractClientPlayer player){
+        if(player==null)return false;
+        Layer layer=LAYERS.get(player.getUUID());
+        if(layer==null)return false;
+        KeyframeAnimationPlayer animation=layer.getAnimation();
+        return animation!=null&&animation.isActive();
+    }
     /** 动画层：包一个 {@link KeyframeAnimationPlayer}，时间轴按"动作已过的刻数"对齐。
      *
      *  <p>{@code KeyframeAnimationPlayer} 自己会用 {@code currentTick} 推进，而我们的动作时长以

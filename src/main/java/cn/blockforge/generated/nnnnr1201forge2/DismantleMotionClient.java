@@ -32,6 +32,8 @@ public final class DismantleMotionClient {
         catch(Throwable t){return true;}
     }
     private static final boolean useBuiltinPose=useBuiltinPose();
+    /** 兜底只提示一次，避免刷屏。 */
+    private static boolean fallbackNoted;
     /** 正在维持「简易领域 · 捌」的实体：**每刻有细小斩击包到达就在册**，断包即过期（所以松手自动放下手）。 */
     private static final java.util.Map<Integer,Long> simpleDomain=new java.util.HashMap<>();
     public static boolean simpleDomain(int id){Long t=simpleDomain.get(id);return t!=null&&clock-t<6;}
@@ -145,7 +147,7 @@ public final class DismantleMotionClient {
             super.setupAnim(p,0,0,age,yaw,pitch);
             if(simpleDomain(p.getId())&&states.get(p.getId())==null){
                 PlayerAnimClient.playLoop(p,PlayerAnimClient.SIMPLE_DOMAIN,age-p.tickCount);
-                if(!useBuiltinPose)return;
+                if(PlayerAnimClient.playing(p))return;
                 // 简易领域 · 捌：两手上举、身体微微后仰，腿保持站立
                 leftArm.xRot=rightArm.xRot=SimpleDomainPose.ARM_X;
                 leftArm.zRot=-SimpleDomainPose.ARM_Z;rightArm.zRot=SimpleDomainPose.ARM_Z;
@@ -157,9 +159,13 @@ public final class DismantleMotionClient {
             State s=states.get(p.getId());if(s==null)return;
             double t=age(s,age-p.tickCount);
             // 【前置 PlayerAnimator】骨骼动画交给它播（时间轴按动作已过刻数对齐）；
-            // 没装前置时 useBuiltinPose 为 true，继续用下面的内置关节姿态兜底。
+            // 但**只有它真的在播**才放手：层没建/动画没读到就退回下面的内置关节姿态（否则玩家会一直直立）。
             PlayerAnimClient.play(p,s.packet.kind(),t);
-            if(!useBuiltinPose){crouching=false;return;}
+            if(PlayerAnimClient.playing(p)){crouching=false;return;}
+            if(!useBuiltinPose&&!fallbackNoted){
+                fallbackNoted=true;
+                com.mojang.logging.LogUtils.getLogger().info("[解动作] PlayerAnimator 未就绪（层未建或动画未读到），本次改用内置关节姿态兜底");
+            }
             var pose=DismantlePose.sample(s.packet.kind(),t);crouching=false;
             body.xRot=rad(pose.body());body.yRot=body.zRot=0;body.y=0;
             head.xRot=rad(pose.head());head.yRot=head.zRot=0;head.y=0;head.z=0;

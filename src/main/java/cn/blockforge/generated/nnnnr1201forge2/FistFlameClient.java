@@ -3,9 +3,9 @@ package cn.blockforge.generated.nnnnr1201forge2;
 import java.util.*;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.core.BlockPos;
@@ -16,26 +16,24 @@ import net.minecraftforge.client.event.*;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/** 「咒力附拳」的表现层：**只用用户给的 `sukuna:fx/meleepunch.fx`**（拳击特效），
- *  并且**绑定手臂朝向**——贴在手上、随手臂转动。自绘的咒力光团与旧的 `photon:11` 都已经删掉。
+/** 「咒力附拳」＝挂在**双手**上的用户特效 `ldlib/assets/photon/fx/11.fx`。
  *
- *  <p>机制：渲染层（第三人称/别人看）与第一人称世界层各自算出**手上那一点的世界坐标与朝向**，
- *  起一份 Photon 的 `BlockEffect`：`setOffset(手相对方块中心)` + `setRotation(手臂/相机的四元数)`；
- *  持续期间每 {@link #REFRESH} 刻重起一份（旧的先 `setForcedDeath(true)`，永远只留一份），
- *  附拳关闭或切世界时统一销毁。Photon 是运行时可选依赖，全部走**类名字符串反射**，未装则静默跳过。</p> */
+ *  <p>用户要求（r239）：**一个实例一直存在、每刻更新它的位置/朝向**（这个 fx 没有生命周期，可以一直存在），
+ *  不要"反复创建新的"。所以：开启时每只手起**一份**，之后每刻调 `setOffset(Vector3f)` + `setRotation(Quaternionf)`；
+ *  只有附拳关闭 / 换维度 / 切世界才 `setForcedDeath(true)` 销毁。</p>
+ *
+ *  <p>位置来源：第三人称/别人看＝玩家渲染层里手臂骨骼矩阵（`arm.translateAndRotate` → `translate(0,+9/16,0)` 到手，
+ *  再 `相机位置 + m30/m31/m32` 得世界坐标，旋转取 `Matrix3f.getNormalizedRotation`）；第一人称＝相机基向量估算。
+ *  注意这套 PoseStack 里 **1 单位 = 1 格、1 像素 = 1/16 格**，且**模型 +Y 向下**。</p> */
 @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
 public final class FistFlameClient {
     /** 服务端广播的特效号：附拳期间每 15 刻一条（带 entityId 与寿命）。 */
     public static final int FX=236;
-    /** 用户给的拳击特效：`ldlib/assets/photon/fx/11.fx`（LDLib 文件系统资源目录，用 `photon:11` 取）。 */
+    /** 用户指定的拳击特效（LDLib 文件系统资源目录里的 `photon:fx/11.fx`）。 */
     private static final ResourceLocation PUNCH_FX=new ResourceLocation("photon","11");
     private static final String PHOTON_ROOT="com.lowdragmc.photon.client.";
-    /** 手动生命周期：**每 {@link #REBUILD} 刻销毁旧实例并重起一份**（新的一份立刻起，所以看不出接缝），
-     *  因为这个 fx 的粒子一旦生成就留在世界里，对跑着的实例 `setOffset` 不会让它跟手（r237 实测"特效留在原地"）。
-     *  附拳关闭 / 换维度 / 切世界时才彻底销毁。 */
-    private static final int REBUILD=3;
-    private static final Map<Integer,Long> BORN=new HashMap<>();
     private static final Map<Integer,Long> BURNING=new HashMap<>();
+    /** key = 玩家 id * 2 + 手（0=右手 1=左手），value = Photon 特效实例（**一直存在，只更新位置**）。 */
     private static final Map<Integer,Object> EFFECTS=new HashMap<>();
     private static final Map<Integer,ResourceLocation> LEVELS=new HashMap<>();
     private static Object fx;private static boolean broken;
@@ -46,26 +44,29 @@ public final class FistFlameClient {
         BURNING.put(e.owner(),mc.level.getGameTime()+Math.max(10,e.life()));
         note("客户端收到 kind=236 owner="+e.owner());
     }
-    /** 每刻：过期的玩家把特效销毁（生命周期由我们自己写）。 */
+    /** 每刻：附拳关闭/广播过期 → 销毁特效（生命周期由我们显式掌管）。 */
     public static void tick(){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         long now=mc.level.getGameTime();
         BURNING.entrySet().removeIf(en->now>en.getValue());
         for(Iterator<Map.Entry<Integer,Object>> it=EFFECTS.entrySet().iterator();it.hasNext();){
-            var e=it.next();
-            boolean local=mc.player!=null&&e.getKey()==mc.player.getId();
-            if(local?(Client.progress.fist()&&Client.progress.unlocked()):BURNING.containsKey(e.getKey()))continue;
+            var e=it.next();int pid=e.getKey()/2;
+            boolean local=mc.player!=null&&pid==mc.player.getId();
+            if(local?(Client.progress.fist()&&Client.progress.unlocked()):BURNING.containsKey(pid))continue;
             kill(e.getKey());
             it.remove();
         }
     }
     public static void clear(){
-        for(Integer id:List.copyOf(EFFECTS.keySet()))kill(id);
+        for(Integer k:List.copyOf(EFFECTS.keySet()))kill(k);
+        EFFECTS.clear();LEVELS.clear();BURNING.clear();
     }
-    private static void kill(int id){
-        Object o=EFFECTS.get(id);if(o==null)return;
-        try{rcall(o,"setForcedDeath",true);note("销毁特效（玩家 "+id+"）");}catch(Throwable ignored){}
+    private static void kill(int key){
+        Object o=EFFECTS.get(key);if(o==null)return;
+        try{rcall(o,"setForcedDeath",true);note("销毁特效（"+describe(key)+"）");}catch(Throwable ignored){}
+        EFFECTS.remove(key);LEVELS.remove(key);
     }
+    private static String describe(int key){return "玩家 "+(key/2)+(key%2==1?" 左手":" 右手");}
     private static void note(String what){
         var mc=Minecraft.getInstance();long now=mc.level==null?0:mc.level.getGameTime();
         if(what.equals(lastNote)&&now-lastNoteAt<60)return;
@@ -93,29 +94,32 @@ public final class FistFlameClient {
         }
         return m.invoke(o instanceof Class<?>?null:o,args);
     }
-    /** 手动生命周期：到期（{@link #REBUILD} 刻）或还没起过 / 换维度 → 销毁旧的重起一份；否则什么都不做。 */
-    private static void ensure(int playerId,Vec3 at,org.joml.Quaternionf rot,ResourceLocation level){
-        var mc=Minecraft.getInstance();if(mc.level==null||broken)return;
+    /** **一个实例一直存在**：没起过就起一份，起过就只更新位置与朝向（不重复创建）。 */
+    private static void upsert(int key,Vec3 at,org.joml.Quaternionf rot){
+        var mc=Minecraft.getInstance();if(mc.level==null)return;
         try{
-            long now=mc.level.getGameTime();
-            Object effect=EFFECTS.get(playerId);
-            boolean expired=effect!=null&&now-BORN.getOrDefault(playerId,now)>=REBUILD;
-            if(effect!=null&&(!level.equals(LEVELS.get(playerId))||expired)){kill(playerId);effect=null;}
-            if(effect!=null)return;                                   // 还没到期：不动它（跑着的实例改了也没用）
-            if(fx==null)fx=rcall(Class.forName(PHOTON_ROOT+"fx.FXHelper"),"getFX",PUNCH_FX);
-            if(fx==null)return;
+            ResourceLocation level=mc.level.dimension().location();
+            Object effect=EFFECTS.get(key);
+            if(effect!=null&&!level.equals(LEVELS.get(key))){kill(key);effect=null;}
             BlockPos bp=BlockPos.containing(at);
-            effect=Class.forName(PHOTON_ROOT+"fx.BlockEffect")
-                .getConstructor(Class.forName(PHOTON_ROOT+"fx.FX"),net.minecraft.world.level.Level.class,BlockPos.class)
-                .newInstance(fx,mc.level,bp);
-            rcall(effect,"setOffset",at.x-bp.getX()-0.5,at.y-bp.getY()-0.5,at.z-bp.getZ()-0.5);
-            rcall(effect,"setRotation",rot);
-            rcall(effect,"setAllowMulti",false);
-            rcall(effect,"start");
-            EFFECTS.put(playerId,effect);LEVELS.put(playerId,level);BORN.put(playerId,now);
-            note("起效 11.fx（玩家 "+playerId+"）@ "+String.format(Locale.ROOT,"%.2f/%.2f/%.2f",at.x,at.y,at.z));
+            var off=new org.joml.Vector3f((float)(at.x-bp.getX()-0.5),(float)(at.y-bp.getY()-0.5),(float)(at.z-bp.getZ()-0.5));
+            if(effect==null){
+                if(fx==null)fx=rcall(Class.forName(PHOTON_ROOT+"fx.FXHelper"),"getFX",PUNCH_FX);
+                if(fx==null)return;
+                effect=Class.forName(PHOTON_ROOT+"fx.BlockEffect")
+                    .getConstructor(Class.forName(PHOTON_ROOT+"fx.FX"),net.minecraft.world.level.Level.class,BlockPos.class)
+                    .newInstance(fx,mc.level,bp);
+                rcall(effect,"setOffset",off);rcall(effect,"setRotation",rot);
+                rcall(effect,"setAllowMulti",false);
+                rcall(effect,"start");
+                EFFECTS.put(key,effect);LEVELS.put(key,level);
+                note("起效 11.fx（"+describe(key)+"）@ "+String.format(Locale.ROOT,"%.2f/%.2f/%.2f",at.x,at.y,at.z));
+                return;
+            }
+            rcall(effect,"setOffset",off);      // 一直在跑：只更新位置
+            rcall(effect,"setRotation",rot);    // 与朝向
         }catch(ClassNotFoundException|NoClassDefFoundError e){broken=true;note("未安装 Photon，附拳特效跳过");}
-        catch(Throwable t){fail("起效 11.fx",t);}
+        catch(Throwable t){fail("更新 11.fx",t);}
     }
 
     @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)
@@ -125,30 +129,30 @@ public final class FistFlameClient {
         }
     }
 
-    /** 第三人称/别人看：读出手部世界坐标 + 手臂姿态，交给 meleepunch。 */
+    /** 第三人称/别人看：左右手各读一次（位置 + 姿态）。 */
     private static final class Punch extends RenderLayer<AbstractClientPlayer,PlayerModel<AbstractClientPlayer>> {
         Punch(PlayerRenderer parent){super(parent);}
         @Override public void render(PoseStack ps,net.minecraft.client.renderer.MultiBufferSource source,int light,AbstractClientPlayer player,float limb,float amount,float partial,float age,float yaw,float pitch){
             if(!BURNING.containsKey(player.getId()))return;
             try{
                 var model=getParentModel();
-                handAt(ps,model.rightArm,player.getId(),player);
+                Vec3 forward=player.getLookAngle().scale(0.25);        // 沿视线前移，避免糊在身后
+                handAt(ps,model.rightArm,player.getId(),0,forward);
+                handAt(ps,model.leftArm,player.getId(),1,forward);
             }catch(Throwable t){fail("第三人称取手部姿态",t);}
         }
-        /** 手臂骨骼 → 手（+9/16 格；这套 PoseStack 里 **1 单位 = 1 格**、1 像素 = 1/16 格）
-         *  → 世界坐标 + 姿态四元数；再沿视线前移一点，避免特效糊在身后。 */
-        private static void handAt(PoseStack ps,ModelPart arm,int playerId,AbstractClientPlayer player){
+        private static void handAt(PoseStack ps,ModelPart arm,int playerId,int hand,Vec3 forward){
             ps.pushPose();arm.translateAndRotate(ps);ps.translate(0,9/16.0,0);
             var m=ps.last().pose();
-            var mc=Minecraft.getInstance();
-            var cam=mc.gameRenderer.getMainCamera().getPosition();
-            Vec3 at=cam.add(m.m30(),m.m31(),m.m32()).add(player.getLookAngle().scale(0.25));
+            var cam=Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+            Vec3 at=cam.add(m.m30(),m.m31(),m.m32()).add(forward);
             var rot=new org.joml.Matrix3f(m).getNormalizedRotation(new org.joml.Quaternionf());
-            if(mc.level!=null)ensure(playerId,at,rot,mc.level.dimension().location());
+            upsert(playerId*2+hand,at,rot);
             ps.popPose();
         }
     }
-    /** 第一人称：自己的手不经玩家模型，按相机基向量估算手的世界坐标，姿态取相机朝向。 */
+
+    /** 第一人称：手不经玩家模型，按相机基向量估算双手，朝向取相机姿态。 */
     @SubscribeEvent public static void scene(RenderLevelStageEvent e){
         var mc=Minecraft.getInstance();var p=mc.player;
         if(p==null||mc.level==null||!Client.progress.fist())return;
@@ -157,8 +161,10 @@ public final class FistFlameClient {
         try{
             var cam=e.getCamera();
             Vec3 look=new Vec3(cam.getLookVector()),right=new Vec3(cam.getLeftVector()).scale(-1),up=new Vec3(cam.getUpVector());
-            Vec3 at=cam.getPosition().add(look.scale(0.60)).add(right.scale(0.30)).subtract(up.scale(0.34));
-            ensure(p.getId(),at,new org.joml.Quaternionf(cam.rotation()),mc.level.dimension().location());
+            var rot=new org.joml.Quaternionf(cam.rotation());
+            Vec3 base=cam.getPosition().add(look.scale(0.60)).subtract(up.scale(0.34));
+            upsert(p.getId()*2,base.add(right.scale(0.30)),rot);
+            upsert(p.getId()*2+1,base.subtract(right.scale(0.30)),rot);
         }catch(Throwable t){fail("第一人称起效",t);}
     }
     private FistFlameClient(){}

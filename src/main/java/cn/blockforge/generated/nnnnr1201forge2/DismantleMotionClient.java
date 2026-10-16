@@ -146,9 +146,7 @@ public final class DismantleMotionClient {
         @Override public void setupAnim(AbstractClientPlayer p,float limb,float amount,float age,float yaw,float pitch){
             super.setupAnim(p,0,0,age,yaw,pitch);
             if(simpleDomain(p.getId())&&states.get(p.getId())==null){
-                PlayerAnimClient.playLoop(p,PlayerAnimClient.SIMPLE_DOMAIN,age-p.tickCount);
-                if(PlayerAnimClient.playing(p))return;
-                // 简易领域 · 捌：两手上举、身体微微后仰，腿保持站立
+                // 简易领域 · 捌：两手上举、身体微微后仰，腿保持站立（**自绘姿态，不依赖 PlayerAnimator**）
                 leftArm.xRot=rightArm.xRot=SimpleDomainPose.ARM_X;
                 leftArm.zRot=-SimpleDomainPose.ARM_Z;rightArm.zRot=SimpleDomainPose.ARM_Z;
                 leftArm.yRot=rightArm.yRot=0;leftArm.y=rightArm.y=2;leftArm.z=rightArm.z=0;
@@ -158,13 +156,12 @@ public final class DismantleMotionClient {
             }
             State s=states.get(p.getId());if(s==null)return;
             double t=age(s,age-p.tickCount);
-            // 【前置 PlayerAnimator】骨骼动画交给它播（时间轴按动作已过刻数对齐）；
-            // 但**只有它真的在播**才放手：层没建/动画没读到就退回下面的内置关节姿态（否则玩家会一直直立）。
-            PlayerAnimClient.play(p,s.packet.kind(),t);
-            if(PlayerAnimClient.playing(p)){crouching=false;return;}
-            if(!useBuiltinPose&&!fallbackNoted){
+            // 【自绘动作组】解动作的姿态一律由模组自己的关键帧动作集驱动（{@link DismantlePose}）——
+            // 不再"装了就交给 PlayerAnimator"：前置装没装、动画读没读到都不影响动作表现，
+            // 之前那种写法的后果是前置静默失败时玩家全程直立。
+            if(!fallbackNoted){
                 fallbackNoted=true;
-                com.mojang.logging.LogUtils.getLogger().info("[解动作] PlayerAnimator 未就绪（层未建或动画未读到），本次改用内置关节姿态兜底");
+                com.mojang.logging.LogUtils.getLogger().info("[解动作] 使用模组自绘关键帧动作组（8 段：后翻/飞踢/旋转/跪地/冲拳/滑铲/砸地/简易领域），不依赖 PlayerAnimator");
             }
             var pose=DismantlePose.sample(s.packet.kind(),t);crouching=false;
             body.xRot=rad(pose.body());body.yRot=body.zRot=0;body.y=0;

@@ -1,16 +1,13 @@
 package cn.blockforge.generated.nnnnr1201forge2;
 
 import java.util.*;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
@@ -19,53 +16,60 @@ import net.minecraftforge.client.event.*;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/** 「咒力附拳」的表现层：**小臂到拳头上裹着一大团粉红半透明咒力**（照原作截图：光滑、成团、不是尖火苗）。
+/** 「咒力附拳」的表现层：**只用用户给的 `sukuna:fx/meleepunch.fx`**（拳击特效），
+ *  并且**绑定手臂朝向**——贴在手上、随手臂转动。自绘的咒力光团与旧的 `photon:11` 都已经删掉。
  *
- *  <p>做法＝把 {@code textures/effect/glow.png}（柔和的径向光斑）**整张贴**画成面向相机的大方片，
- *  叠两层（外层暗红大一点、内层亮粉小一点）就得到"一大团咒力"的观感；只在**小臂中段到拳头**铺，
- *  不会包住整个人。</p>
- *
- *  <p>坐标系注意事项（踩过的坑）：骨骼坐标系单位是**模型像素**（1 像素 = 1/16 格），
- *  所以骨骼里画的尺寸要给像素级；贴图**不能**用玩家皮肤（UV 会采到黑色像素 → 变黑烟），
- *  这里统一用 glow 贴图，并让 UV 覆盖 (0,0)~(1,1) 以保留它的柔边。</p> */
+ *  <p>机制：渲染层（第三人称/别人看）与第一人称世界层各自算出**手上那一点的世界坐标与朝向**，
+ *  起一份 Photon 的 `BlockEffect`：`setOffset(手相对方块中心)` + `setRotation(手臂/相机的四元数)`；
+ *  持续期间每 {@link #REFRESH} 刻重起一份（旧的先 `setForcedDeath(true)`，永远只留一份），
+ *  附拳关闭或切世界时统一销毁。Photon 是运行时可选依赖，全部走**类名字符串反射**，未装则静默跳过。</p> */
 @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
 public final class FistFlameClient {
+    /** 服务端广播的特效号：附拳期间每 15 刻一条（带 entityId 与寿命）。 */
     public static final int FX=236;
-    private static final ResourceLocation GLOW=new ResourceLocation("sukuna","textures/effect/glow.png");
+    /** 用户提供的拳击特效（放在 assets/sukuna/fx/meleepunch.fx，gzip NBT）。 */
+    private static final ResourceLocation PUNCH_FX=new ResourceLocation("sukuna","meleepunch");
+    private static final String PHOTON_ROOT="com.lowdragmc.photon.client.";
+    private static final int REFRESH=10;
     private static final Map<Integer,Long> BURNING=new HashMap<>();
-    private static final Map<Integer,Vec3[]> HANDS=new HashMap<>();
-    /** 用哪几种颜色：外层暗红偏黑、中层正红、内层亮粉（照原作那团咒力的层次）。 */
-    private static final int OUTER=0x9A5A0A0A,MID=0xC8C81A18,INNER=0xD8FF7A82;
-    private static final int BLOOM_RED=0xFF8A1208;
-    private static final int SPAWN_INTERVAL=2;
-    private static String lastNote="";
-    private static long lastNoteAt;
+    private static final Map<Integer,Object> EFFECTS=new HashMap<>();
+    private static final Map<Integer,Long> SPAWNED=new HashMap<>();
+    private static Object fx;private static boolean broken;
+    private static String lastNote="";private static long lastNoteAt;
 
     public static void receive(Network.Effect e){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         BURNING.put(e.owner(),mc.level.getGameTime()+Math.max(10,e.life()));
         note("客户端收到 kind=236 owner="+e.owner());
     }
+    /** 每刻：过期的玩家把特效收掉（`setForcedDeath`），并清理登记表。 */
     public static void tick(){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
-        long now=mc.level.getGameTime();BURNING.entrySet().removeIf(en->now>en.getValue());
-        if(now%SPAWN_INTERVAL!=0)return;
-        for(var entry:HANDS.entrySet()){
-            boolean local=mc.player!=null&&entry.getKey()==mc.player.getId();
-            if(local?!Client.progress.fist():!burning(entry.getKey()))continue;
-            for(Vec3 h:entry.getValue())if(h!=null)photon(h);
+        long now=mc.level.getGameTime();
+        BURNING.entrySet().removeIf(en->now>en.getValue());
+        for(Iterator<Map.Entry<Integer,Object>> it=EFFECTS.entrySet().iterator();it.hasNext();){
+            var e=it.next();
+            boolean local=mc.player!=null&&e.getKey()==mc.player.getId();
+            if(local?Client.progress.fist():BURNING.containsKey(e.getKey()))continue;
+            try{rcall(e.getValue(),"setForcedDeath",true);}catch(Throwable ignored){}
+            SPAWNED.remove(e.getKey());it.remove();
         }
     }
-    /** 用 `ldlib/assets/photon/fx/11.fx`（flame+lava+ring）给附拳加一层**绑手臂朝向**的 Photon 特效：
-     *  位置＝手的世界坐标，朝向＝手臂骨骼的姿态（从渲染层矩阵解出四元数），所以它会跟着手臂转。
-     *  每 10 刻刷一次（短命、允许叠加时也只留一份：旧的先强制销毁）。 */
-    private static final ResourceLocation ARM_FX=new ResourceLocation("photon","11");
-    /** Photon 是运行时可选的：只能按类名反射（编译期没有它的类）。 */
-    private static final String PHOTON_ROOT="com.lowdragmc.photon.client.";
-    private static final Map<Integer,Object> ARM_EFFECTS=new HashMap<>();
-    private static Object armFx;
-    private static boolean armBroken;
-    private static long lastArmSpawn;
+    public static void clear(){
+        for(Object o:EFFECTS.values())try{rcall(o,"setForcedDeath",true);}catch(Throwable ignored){}
+        EFFECTS.clear();SPAWNED.clear();BURNING.clear();
+    }
+    private static void note(String what){
+        var mc=Minecraft.getInstance();long now=mc.level==null?0:mc.level.getGameTime();
+        if(what.equals(lastNote)&&now-lastNoteAt<60)return;
+        lastNote=what;lastNoteAt=now;com.mojang.logging.LogUtils.getLogger().info("[附拳] {}",what);
+    }
+    private static void fail(String what,Throwable t){
+        String key="ERR:"+what;
+        if(!key.equals(lastNote)){lastNote=key;com.mojang.logging.LogUtils.getLogger().warn("[附拳] {} 失败：{}",what,t.toString());}
+    }
+
+    // ------------------------------------------------------------ Photon（类名字符串反射）
     private static final Map<String,java.lang.reflect.Method> RM=new HashMap<>();
     private static Object rcall(Object o,String name,Object...args)throws Exception{
         Class<?> c=o instanceof Class<?> cl?cl:o.getClass();
@@ -82,149 +86,72 @@ public final class FistFlameClient {
         }
         return m.invoke(o instanceof Class<?>?null:o,args);
     }
-    /** 在手臂姿态下起一份 11.fx（世界位置 + 手臂朝向）。 */
-    private static void armFx(PoseStack ps,int playerId,double px,double py,double pz){
-        var mc=Minecraft.getInstance();if(mc.level==null||armBroken)return;
+    /** 在给定世界位置与朝向上刷新一份 meleepunch 特效（每 {@link #REFRESH} 刻一次，只留一份）。 */
+    private static void spawn(int playerId,Vec3 at,org.joml.Quaternionf rot){
+        var mc=Minecraft.getInstance();if(mc.level==null||broken)return;
         long now=mc.level.getGameTime();
-        if(now-lastArmSpawn<10)return;
-        lastArmSpawn=now;
+        Long last=SPAWNED.get(playerId);
+        if(last!=null&&now-last<REFRESH)return;
+        SPAWNED.put(playerId,now);
         try{
-            if(armFx==null)armFx=rcall(Class.forName(PHOTON_ROOT+"fx.FXHelper"),"getFX",ARM_FX);
-            if(armFx==null)return;
-            Object old=ARM_EFFECTS.remove(playerId);
+            if(fx==null)fx=rcall(Class.forName(PHOTON_ROOT+"fx.FXHelper"),"getFX",PUNCH_FX);
+            if(fx==null)return;
+            Object old=EFFECTS.remove(playerId);
             if(old!=null)try{rcall(old,"setForcedDeath",true);}catch(Throwable ignored){}
-            BlockPos at=BlockPos.containing(px,py,pz);
+            BlockPos bp=BlockPos.containing(at);
             Object effect=Class.forName(PHOTON_ROOT+"fx.BlockEffect")
                 .getConstructor(Class.forName(PHOTON_ROOT+"fx.FX"),net.minecraft.world.level.Level.class,BlockPos.class)
-                .newInstance(armFx,mc.level,at);
-            rcall(effect,"setOffset",px-at.getX()-0.5,py-at.getY()-0.5,pz-at.getZ()-0.5);
-            // 手臂朝向 → 四元数（渲染层矩阵的旋转部分）
-            var rot=new org.joml.Matrix3f(ps.last().pose()).getNormalizedRotation(new org.joml.Quaternionf());
+                .newInstance(fx,mc.level,bp);
+            rcall(effect,"setOffset",at.x-bp.getX()-0.5,at.y-bp.getY()-0.5,at.z-bp.getZ()-0.5);
             rcall(effect,"setRotation",rot);
             rcall(effect,"setAllowMulti",false);
             rcall(effect,"start");
-            ARM_EFFECTS.put(playerId,effect);
-        }catch(ClassNotFoundException|NoClassDefFoundError e){armBroken=true;note("未安装 Photon，附拳的手臂特效跳过");}
-        catch(Throwable t){fail("手臂 Photon 特效",t);}
-    }
-    public static void clear(){BURNING.clear();HANDS.clear();for(Object o:ARM_EFFECTS.values())try{rcall(o,"setForcedDeath",true);}catch(Throwable ignored){}ARM_EFFECTS.clear();}
-    private static boolean burning(int id){Long until=BURNING.get(id);return until!=null&&Minecraft.getInstance().level!=null&&Minecraft.getInstance().level.getGameTime()<=until;}
-    private static void note(String what){
-        var mc=Minecraft.getInstance();long now=mc.level==null?0:mc.level.getGameTime();
-        if(what.equals(lastNote)&&now-lastNoteAt<60)return;
-        lastNote=what;lastNoteAt=now;com.mojang.logging.LogUtils.getLogger().info("[附拳] {}",what);
-    }
-    private static void fail(String what,Throwable t){
-        String key="ERR:"+what;
-        if(!key.equals(lastNote)){lastNote=key;com.mojang.logging.LogUtils.getLogger().warn("[附拳] {} 失败：{}",what,t.toString());}
-    }
-    /** 附加的 PhotonFx 发光（有 Photon 时给这团咒力加 bloom，没有也不影响主绘制）。 */
-    private static void photon(Vec3 hand){
-        try{
-            PhotonFx.blobs(hand,0.20,0.14,0.10,0xFF5512,BLOOM_RED,0.05,-0.010,5,1,10);
-            PhotonFx.spark(hand,0.12,0.16,0xFF2A10,BLOOM_RED,"textures/effect/glow.png",true,1,7,4,0.2);
-        }catch(Throwable ignored){}
+            EFFECTS.put(playerId,effect);
+            note("已起效 meleepunch（玩家 "+playerId+"）");
+        }catch(ClassNotFoundException|NoClassDefFoundError e){broken=true;note("未安装 Photon，附拳特效跳过");}
+        catch(Throwable t){fail("起效 meleepunch",t);}
     }
 
     @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)
     public static final class Registration {
         @SubscribeEvent public static void layers(EntityRenderersEvent.AddLayers e){
-            for(String skin:e.getSkins()){PlayerRenderer renderer=e.getSkin(skin);if(renderer!=null)renderer.addLayer(new Flames(renderer));}
+            for(String skin:e.getSkins()){PlayerRenderer renderer=e.getSkin(skin);if(renderer!=null)renderer.addLayer(new Punch(renderer));}
         }
     }
 
-    /** 第三人称/别人看：小臂中段到拳头裹两团光斑。单位＝模型像素。 */
-    private static final class Flames extends RenderLayer<AbstractClientPlayer,PlayerModel<AbstractClientPlayer>> {
-        Flames(PlayerRenderer parent){super(parent);}
-        @Override public void render(PoseStack ps,MultiBufferSource source,int light,AbstractClientPlayer player,float limb,float amount,float partial,float age,float yaw,float pitch){
-            if(!burning(player.getId()))return;
+    /** 第三人称/别人看：读出手部世界坐标 + 手臂姿态，交给 meleepunch。 */
+    private static final class Punch extends RenderLayer<AbstractClientPlayer,PlayerModel<AbstractClientPlayer>> {
+        Punch(PlayerRenderer parent){super(parent);}
+        @Override public void render(PoseStack ps,net.minecraft.client.renderer.MultiBufferSource source,int light,AbstractClientPlayer player,float limb,float amount,float partial,float age,float yaw,float pitch){
+            if(!BURNING.containsKey(player.getId()))return;
             try{
                 var model=getParentModel();
-                var b=source.getBuffer(RenderType.entityTranslucent(GLOW));
-                float t=age+partial;
-                Vec3[] store=HANDS.computeIfAbsent(player.getId(),k->new Vec3[2]);
-                arm(ps,b,light,model.rightArm,t,store,0,player);
-                arm(ps,b,light,model.leftArm,t+1.7f,store,1,player);
-            }catch(Throwable t){fail("第三人称绘制",t);}
+                handAt(ps,model.rightArm,player.getId());
+            }catch(Throwable t){fail("第三人称取手部姿态",t);}
         }
-        /** 沿小臂铺：像素 y=4(肘) 与 y=8.5(拳) 两处，每处两层大光斑，随呼吸缩放。 */
-        private static void arm(PoseStack ps,VertexConsumer b,int light,ModelPart part,float t,Vec3[] store,int slot,AbstractClientPlayer player){
-            ps.pushPose();part.translateAndRotate(ps);
-            for(int k=0;k<2;k++){
-                float y=k==0?4.5f:9.0f;
-                double pulse=1.0+0.10*Math.sin(t*0.16+k*2.1f+slot*1.7f);   // 呼吸
-                double len=11.0*pulse,wide=8.5*pulse;
-                if(store!=null&&slot==0&&k==1)store[0]=worldFromPose(ps,y,0);
-                if(k==1){                                                   // 手部那一处：起一份绑手腕朝向的 11.fx
-                    int pid=player==null?-1:player.getId();
-                    Vec3 hp=store!=null&&store[0]!=null?store[0]:null;
-                    if(pid>=0&&hp!=null)armFx(ps,pid,hp.x,hp.y,hp.z);
-                }
-                blob(ps,b,light,0,y,0,wide,len,OUTER);                      // 外层：暗红、更大
-                blob(ps,b,light,0,y,0.06f,wide*0.78,len*0.80,MID);          // 中层：正红
-                blob(ps,b,light,0,y,0.12f,wide*0.50,len*0.55,INNER);        // 内层：亮粉
-            }
+        /** 手臂骨骼 → 手（像素 +9）→ 世界坐标 + 姿态四元数 → 起效。 */
+        private static void handAt(PoseStack ps,ModelPart arm,int playerId){
+            ps.pushPose();arm.translateAndRotate(ps);ps.translate(0,9/16.0,0);
+            var m=ps.last().pose();
+            var cam=Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+            Vec3 at=cam.add(m.m30(),m.m31(),m.m32());
+            var rot=new org.joml.Matrix3f(m).getNormalizedRotation(new org.joml.Quaternionf());
+            spawn(playerId,at,rot);
             ps.popPose();
         }
     }
-
-    /** 第一人称：自己在世界渲染里沿"肘→拳"这段画同样两团光斑（尺寸以格为单位）。 */
+    /** 第一人称：自己的手不经玩家模型，按相机基向量估算手的世界坐标，姿态取相机朝向。 */
     @SubscribeEvent public static void scene(RenderLevelStageEvent e){
         var mc=Minecraft.getInstance();var p=mc.player;
         if(p==null||mc.level==null||!Client.progress.fist())return;
         if(!mc.options.getCameraType().isFirstPerson())return;
         if(e.getStage()!=RenderLevelStageEvent.Stage.AFTER_PARTICLES)return;
         try{
-            var cam=e.getCamera().getPosition();
-            Vec3 look=new Vec3(e.getCamera().getLookVector()),right=new Vec3(e.getCamera().getLeftVector()).scale(-1),up=new Vec3(e.getCamera().getUpVector());
-            Vec3 hand=cam.add(look.scale(0.50)).add(right.scale(0.30)).subtract(up.scale(0.34));
-            Vec3 elbow=cam.add(look.scale(0.34)).add(right.scale(0.30)).subtract(up.scale(0.62));
-            float t=mc.level.getGameTime()+e.getPartialTick();
-            var ps=e.getPoseStack();ps.pushPose();ps.translate(-cam.x,-cam.y,-cam.z);
-            RenderSystem.enableDepthTest();RenderSystem.disableCull();RenderSystem.enableBlend();
-            RenderSystem.defaultBlendFunc();RenderSystem.setShader(GameRenderer::getPositionColorShader);
-            BufferBuilder b=Tesselator.getInstance().getBuilder();b.begin(VertexFormat.Mode.QUADS,DefaultVertexFormat.POSITION_COLOR);
-            for(int k=0;k<2;k++){
-                Vec3 at=k==0?elbow:hand;
-                double pulse=1+0.10*Math.sin(t*0.16+k*2.1);
-                double len=(k==0?0.34:0.30)*pulse,wide=(k==0?0.26:0.24)*pulse;
-                worldBlob(b,ps,at,look,right,up,wide,len,OUTER);
-                worldBlob(b,ps,at,look,right,up,wide*0.78,len*0.80,MID);
-                worldBlob(b,ps,at,look,right,up,wide*0.50,len*0.55,INNER);
-            }
-            BufferUploader.drawWithShader(b.end());
-            RenderSystem.enableCull();RenderSystem.disableBlend();
-            ps.popPose();
-            HANDS.put(p.getId(),new Vec3[]{hand,null});
-            note("第一人称世界层绘制");
-        }catch(Throwable t){fail("第一人称世界层绘制",t);}
-    }
-
-    /** 骨骼坐标系里的一团光斑：竖直方片，UV 覆盖整张 glow（保留柔边）。 */
-    private static void blob(PoseStack ps,VertexConsumer b,int light,float x,float y,float z,double wide,double len,int color){        ps.pushPose();ps.translate(x,y,z);ps.mulPose(com.mojang.math.Axis.XP.rotationDegrees(180));
-        var pose=ps.last();
-        float w=(float)wide,h=(float)len;
-        quad(pose,b,light,-w,0,-h,w,0,h,color,false);
-        ps.popPose();
-    }
-    /** 世界空间里的一团光斑：以相机基向量铺一张面向相机的方片。 */
-    private static void worldBlob(BufferBuilder b,PoseStack ps,Vec3 c,Vec3 look,Vec3 right,Vec3 up,double wide,double len,int color){
-        Vec3 u=up.scale(len),w=right.scale(wide);
-        Client.quad(b,ps,c.subtract(w).subtract(u),c.add(w).subtract(u),c.add(w).add(u),c.subtract(w).add(u),color);
-    }
-    private static void quad(PoseStack.Pose pose,VertexConsumer b,int light,float x0,float y0,float z0,float x1,float y1,float z1,int color,boolean unused){
-        // UV 逐顶点铺满整张贴图：glow 的径向柔边才会显出来（全钉 (0,0) 只会采到透明角 → 看不见）
-        vertex(pose,b,light,x0,y1,z0,color,0f,0f);
-        vertex(pose,b,light,x1,y1,z0,color,1f,0f);
-        vertex(pose,b,light,x1,y0,z1,color,1f,1f);
-        vertex(pose,b,light,x0,y0,z1,color,0f,1f);
-    }
-    private static void vertex(PoseStack.Pose pose,VertexConsumer b,int light,float x,float y,float z,int color,float u,float v){
-        b.vertex(pose.pose(),x,y,z).color(color).uv(u,v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.normal(),0,0,1).endVertex();
-    }
-    private static Vec3 worldFromPose(PoseStack ps,double dy_pixels,double dz_pixels){
-        var m=ps.last().pose();var cam=Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        return cam.add(m.m30(),m.m31()+dy_pixels/16.0,m.m32()+dz_pixels/16.0);
+            var cam=e.getCamera();
+            Vec3 look=new Vec3(cam.getLookVector()),right=new Vec3(cam.getLeftVector()).scale(-1),up=new Vec3(cam.getUpVector());
+            Vec3 at=cam.getPosition().add(look.scale(0.50)).add(right.scale(0.30)).subtract(up.scale(0.34));
+            spawn(p.getId(),at,new org.joml.Quaternionf(cam.rotation()));
+        }catch(Throwable t){fail("第一人称起效",t);}
     }
     private FistFlameClient(){}
 }

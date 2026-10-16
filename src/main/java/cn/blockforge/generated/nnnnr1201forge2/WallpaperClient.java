@@ -38,7 +38,7 @@ import org.lwjgl.system.MemoryStack;
 public final class WallpaperClient {
     public record DesktopRect(float x,float y,float width,float height){}
     /** 刷新间隔（刻）与采集后的最大边长（越小越省显存与带宽，采样按屏幕坐标所以不影响构图）。 */
-    private static final int REFRESH_TICKS=10,MAX_EDGE=1280;
+    private static final int REFRESH_TICKS=10,MAX_EDGE=1280,MINIMIZE_INTERVAL=80;
     /** 第二条抓取通道：AWT Robot（与 GDI **并行**跑，谁抓到有效画面就用谁）。
      *  全屏/GL 窗口下 GDI 常常全黑，这时 Robot 往往还能拿到画面，两条一起跑最稳。 */
     private static final ExecutorService robot=new ThreadPoolExecutor(1,1,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(1),
@@ -59,6 +59,8 @@ public final class WallpaperClient {
     private static String lastSource="-";
     /** 过期内容探针：GDI 帧的指纹与连续未变次数。 */
     private static long gdiHash;private static int gdiSameCount;private static boolean gdiStaleNoted;
+    /** 最近一次两条通道的评分（写日志用）。 */
+    private static double gdiScoreLast=-1,robotScoreLast=-1;
     private static long tick;
 
     private static Path configPath(){return net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get().resolve("sukuna-wallpaper.properties");}
@@ -127,21 +129,41 @@ public final class WallpaperClient {
             if(enabled)announce();
         }
         if(mc.player!=null)self=mc.player.getUUID();
-        if(!enabled||failed||capturing||tick%REFRESH_TICKS!=0)return;
+        // 全屏（窗口≈整块显示器）时：**没法在不打扰的情况下看到桌面**——桌面被游戏完全盖住，
+        // 所以按用户要求走"最小化 → 截图 → 恢复"的显式流程（慢一些，默认 4 秒一次）；
+        // 窗口模式则每 0.5 秒直接抓，不需要打扰窗口。
+        boolean fullscreen=covered();
+        if(!enabled||failed||capturing||tick%(fullscreen?MINIMIZE_INTERVAL:REFRESH_TICKS)!=0)return;
         capturing=true;
         DesktopRect area=desktop();
+        long hwnd=mc.getWindow().getWindow();
         try{
             io.execute(()->{
                 NativeImage frame=null;
-                try{frame=capture(area);}catch(Throwable ex){capturing=false;Minecraft.getInstance().execute(()->fail(ex));return;}
+                try{frame=capture(area,hwnd,fullscreen);}catch(Throwable ex){capturing=false;Minecraft.getInstance().execute(()->fail(ex));return;}
                 NativeImage ready=frame;
-                Minecraft.getInstance().execute(()->{capturing=false;upload(ready);});
+                Minecraft.getInstance().execute(()->{
+                    capturing=false;
+                    if(ready!=null)upload(ready);
+                    else if(blankFrame&&!blankWarned){blankWarned=true;
+                        tell("斩击壁纸：这一轮没抓到画面（全屏下已尝试「最小化→抓→恢复」）。先用上一张；若持续如此请切窗口模式（F11）。");
+                        LogUtils.getLogger().warn("[斩击壁纸] 全屏最小化抓取也没拿到画面");}
+                });
             });
         }catch(RejectedExecutionException busy){capturing=false;}
     }
+    /** 游戏窗口是不是铺满整块显示器（全屏/最大化无边）。 */
+    private static boolean covered(){
+        try{
+            DesktopRect w=window(),d=desktop();
+            return w.width()>=d.width()-2&&w.height()>=d.height()-2;
+        }catch(Throwable ex){return false;}
+    }
     private static void announce(){
         tell("【斩击壁纸 · 本机版】斩击内部显示你**本机的实时桌面**（开着的窗口、任务管理器、壁纸都会出现），"
-            +"画面只在本机生成、**不上传也不分享**；别人的斩击是纯黑。关闭：/sukuna_wallpaper off");
+            +"画面只在本机生成、**不上传也不分享**；别人的斩击是纯黑。"
+            +"全屏模式下会每约 4 秒做一次「**最小化 → 截图 → 恢复**」（窗口会闪一下，这是拿到桌面的唯一办法）；"
+            +"窗口模式下则每 0.5 秒静默抓取。关闭：/sukuna_wallpaper off");
         tellBar("斩击壁纸：本机桌面实时画面 · 仅本地");
         LogUtils.getLogger().info("[斩击壁纸] 本机实时桌面模式 = 开（单文件版，无分享），配置 {}",configPath());
     }
@@ -152,39 +174,44 @@ public final class WallpaperClient {
     }
     /** 后台线程截屏：Windows 走 **GDI BitBlt**（不依赖 AWT，headless 环境下也能用），
      *  其它平台退回 {@code java.awt.Robot}；之后等比缩到 {@link #MAX_EDGE} 以内并转成 NativeImage(ABGR)。 */
-    private static NativeImage capture(DesktopRect area)throws Exception{
+    private static NativeImage capture(DesktopRect area,long hwnd,boolean fullscreen)throws Exception{
         int sx=Math.max(0,Math.round(area.x())),sy=Math.max(0,Math.round(area.y()));
         int sw=Math.max(1,Math.round(area.width())),sh=Math.max(1,Math.round(area.height()));
-        // 两条通道并行：Robot 在另一条线程上同时抓，GDI 在本线程抓，最后按"亮像素占比"择优
-        Future<int[]> robotTask=null;
-        try{if(!robotBroken)robotTask=robot.submit(()->captureRobot(sx,sy,sw,sh));}catch(RejectedExecutionException busy){}
-        int[] gdi=null;String gdiError=null;
-        try{gdi=captureGdi(sx,sy,sw,sh);}catch(Throwable ex){gdiError=ex.getClass().getSimpleName();}
-        int[] shot=null;
-        if(robotTask!=null){
-            try{shot=robotTask.get(700,TimeUnit.MILLISECONDS);}
-            catch(Throwable ex){robotTask.cancel(true);if(ex instanceof ExecutionException)robotBroken=true;}
+        int[] pixels=null;String from="-";
+        if(fullscreen){
+            // 全屏：桌面被游戏盖住，只能"最小化 → 抓 → 恢复"（用户明确要求的做法）
+            try{pixels=captureMinimized(hwnd,sx,sy,sw,sh);from="最小化抓取";}catch(Throwable ex){pixels=null;}
         }
-        double gdiScore=score(gdi),robotScore=score(shot);
-        if(gdi!=null){   // 过期内容探针：GDI 帧连续很多帧完全不变 → 说明拿到的是"卡住的旧画面"
-            long h=0;for(int i=0;i<gdi.length;i+=4096)h=h*31+gdi[i];
-            if(h==gdiHash){if(++gdiSameCount==40&&!gdiStaleNoted){gdiStaleNoted=true;
-                LogUtils.getLogger().info("[斩击壁纸] GDI 通道连续 40 帧画面完全未变：确认拿到的是过期内容（GL 窗口下 GDI/PrintWindow 的通病）");}}
-            else{gdiSameCount=0;gdiHash=h;}
-        }
-        if(robotScore<0&&robotBroken&&robotTask!=null)noteRobotBroken();
-        int[] pixels;String from;
-        if(gdiScore<0&&robotScore<0){
-            if(gdiError!=null)throw new IllegalStateException("两条抓取都失败（GDI:"+gdiError+"）");
-            pixels=gdi==null?(shot==null?new int[sw*sh]:shot):gdi;from="空白";
-        }else if(robotScore>=0&&(gdiScore<0||robotScore>=gdiScore-0.05)){
-            // **Robot 优先**：GDI/PrintWindow 对 GL 窗口只能拿到"过期内容"（比如启动时的 Mojang 画面），
-            // 而"非黑占比"评分判不出过期，所以不能只比分数——有 Robot 就用 Robot。
-            pixels=shot;from="Robot";
-        }else if(gdiScore>=0){
-            pixels=gdi;from="GDI(可能过期)";
+        if(pixels==null||score(pixels)<0.01){
+            // 窗口模式（或最小化抓取失败）：GDI 与 Robot 并行，Robot 优先（它读当前合成画面，GDI 可能过期）
+            int[] gdi=null;String gdiError=null;
+            Future<int[]> robotTask=null;
+            try{if(!robotBroken)robotTask=robot.submit(()->captureRobot(sx,sy,sw,sh));}catch(RejectedExecutionException busy){}
+            try{gdi=captureGdi(sx,sy,sw,sh);}catch(Throwable ex){gdiError=ex.getClass().getSimpleName();}
+            int[] shot=null;
+            if(robotTask!=null){
+                try{shot=robotTask.get(700,TimeUnit.MILLISECONDS);}
+                catch(Throwable ex){robotTask.cancel(true);if(ex instanceof ExecutionException)robotBroken=true;}
+            }
+            double gdiScore=score(gdi),robotScore=score(shot);
+            if(robotScore<0&&robotBroken&&robotTask!=null)noteRobotBroken();
+            if(gdi!=null){   // 过期内容探针：GDI 帧连续很多帧完全不变 → 说明拿到的是"卡住的旧画面"
+                long h=0;for(int i=0;i<gdi.length;i+=4096)h=h*31+gdi[i];
+                if(h==gdiHash){if(++gdiSameCount==40&&!gdiStaleNoted){gdiStaleNoted=true;
+                    LogUtils.getLogger().info("[斩击壁纸] GDI 通道连续 40 帧画面完全未变：确认拿到的是过期内容（GL 窗口下 GDI/PrintWindow 的通病）");}}
+                else{gdiSameCount=0;gdiHash=h;}
+            }
+            if(robotScore>=0&&(gdiScore<0||robotScore>=gdiScore-0.05)){pixels=shot;from=from.equals("-")?"Robot":from+"/Robot";}
+            else if(gdiScore>=0){pixels=gdi;from=from.equals("-")?"GDI(可能过期)":from+"/GDI(可能过期)";}
+            else if(robotScore>=0){pixels=shot;from=from.equals("-")?"Robot":from+"/Robot";}
+            else{
+                if(gdiError!=null)throw new IllegalStateException("两条抓取都失败（GDI:"+gdiError+"）");
+                return null;   // 空白帧：这一轮不上传，保留上一张
+            }
+            blankFrame=false;
+            gdiScoreLast=gdiScore;robotScoreLast=robotScore;
         }else{
-            pixels=shot;from="Robot";
+            gdiScoreLast=score(pixels);robotScoreLast=-1;
         }
         lastSource=from;
         double scale=Math.min(1.0,MAX_EDGE/(double)Math.max(sw,sh));
@@ -204,9 +231,32 @@ public final class WallpaperClient {
             statsLogged=true;
             LogUtils.getLogger().info("[斩击壁纸] 本帧内容统计：{}x{} 来源={} 平均亮度 {} 最亮 {} 非黑占比 {}%（GDI {} / Robot {}）",
                 w,h,from,lum/(double)(w*h),bright,String.format("%.1f",100.0*nonBlack/(w*h)),
-                String.format("%.2f",gdiScore),String.format("%.2f",robotScore));
+                String.format("%.2f",gdiScoreLast),String.format("%.2f",robotScoreLast));
         }
+        blankFrame=false;
         return image;
+    }
+    /** 全屏专用：**最小化游戏窗口 → 让桌面露出来 → 抓一帧 → 恢复窗口**（用户要求的做法）。
+     *  最小化后 GL 窗口不再占屏，BitBlt 就能拿到真实的桌面（窗口/任务管理器/壁纸都在）。
+     *  注意：这是在后台采集线程上做的，不碰渲染线程；无论成功失败都会恢复窗口。 */
+    private static int[] captureMinimized(long handle,int x,int y,int w,int h)throws Exception{
+        var user32=com.sun.jna.platform.win32.User32.INSTANCE;
+        var hwnd=new com.sun.jna.platform.win32.WinDef.HWND(com.sun.jna.Pointer.createConstant(handle));
+        boolean minimized=false;
+        try{
+            user32.ShowWindow(hwnd,com.sun.jna.platform.win32.WinUser.SW_MINIMIZE);
+            minimized=true;
+            Thread.sleep(260);                       // 等合成器把桌面画出来；太短会抓到动画中间态
+            int[] shot=captureGdi(x,y,w,h);
+            if(score(shot)>=0.01)return shot;
+            Thread.sleep(160);                        // 还是黑就再等一会重试一次
+            return captureGdi(x,y,w,h);
+        }finally{
+            if(minimized){
+                user32.ShowWindow(hwnd,com.sun.jna.platform.win32.WinUser.SW_RESTORE);
+                user32.SetForegroundWindow(hwnd);
+            }
+        }
     }
     /** Windows：GetDC → 兼容 DC/位图 → BitBlt → GetDIBits（32bpp 顶向下的 BGRA）。 */
     private static int[] captureGdi(int x,int y,int w,int h){
@@ -230,31 +280,22 @@ public final class WallpaperClient {
             info.bmiHeader.write();
             com.sun.jna.Memory buffer=new com.sun.jna.Memory((long)w*h*4);
             byte[] raw=readDib(gdi32,mem,bmp,w,h,buffer,info);
-            // 全屏 / GL 窗口下 BitBlt 常常整屏全黑：补一次 DWM 合成抓取（PW_RENDERFULLCONTENT=2）
-            blankFrame=false;
-            if(isBlank(raw)){
-                if(user32.PrintWindow(user32.GetDesktopWindow(),mem,2))raw=readDib(gdi32,mem,bmp,w,h,buffer,info);
-                blankFrame=isBlank(raw);
-            }
-            int[] out=new int[w*h];
-            for(int i=0,o=0;i<out.length;i++,o+=4)
-                out[i]=((raw[o+2]&0xFF)<<16)|((raw[o+1]&0xFF)<<8)|(raw[o]&0xFF);   // BGRA → RGB
-            return out;
+            // **不要**用 PrintWindow(PW_RENDERFULLCONTENT) 兜底：对独占全屏的 GL 窗口，
+            // 它会让游戏被系统强制退出全屏（用户看到"截屏时窗口闪一下/最小化"），
+            // 而且返回的是**过期内容**（启动时的 Mojang 画面）。全黑就老实认输，交给 Robot 或提示切窗口模式。
+            return toPixels(raw);
         }finally{
             if(bmp!=null)gdi32.DeleteObject(bmp);
             if(mem!=null)gdi32.DeleteDC(mem);
             user32.ReleaseDC(null,screen);
         }
     }
-    /** 这一帧是不是"全黑"：每 64 个像素抽查一次，够快也能识别全屏黑屏那种情况。 */
-    private static boolean isBlank(byte[] raw){
-        long lit=0;int samples=0;
-        for(int o=0;o+3<raw.length;o+=64*4){
-            int v=((raw[o+2]&0xFF)+((raw[o+1]&0xFF)+(raw[o]&0xFF)))/3;
-            if(v>8)lit++;
-            samples++;
-        }
-        return samples==0||lit*100L/samples<1;   // 亮像素 <1% 视为全黑
+    /** BGRA 原始字节 → 0x00RRGGBB。 */
+    private static int[] toPixels(byte[] raw){
+        int[] out=new int[raw.length/4];
+        for(int i=0,o=0;i<out.length;i++,o+=4)
+            out[i]=((raw[o+2]&0xFF)<<16)|((raw[o+1]&0xFF)<<8)|(raw[o]&0xFF);
+        return out;
     }
     private static byte[] readDib(com.sun.jna.platform.win32.GDI32 gdi32,com.sun.jna.platform.win32.WinDef.HDC mem,
                                   com.sun.jna.platform.win32.WinDef.HBITMAP bmp,int w,int h,com.sun.jna.Memory buffer,
@@ -265,7 +306,7 @@ public final class WallpaperClient {
     }
     /** 上一帧是否全黑（全屏模式下 GDI 抓不到游戏画面时会是 true）。 */
     public static boolean blankFrame(){return blankFrame;}
-    private static boolean blankFrame;
+    private static volatile boolean blankFrame;
     private static final int SRCCOPY=0x00CC0020,CAPTUREBLT=0x40000000;
     /** 非 Windows 兜底：AWT Robot（需要非 headless 环境）。 */
     private static int[] captureRobot(int x,int y,int w,int h){
@@ -290,12 +331,6 @@ public final class WallpaperClient {
             tm.register(next,new DynamicTexture(image));   // DynamicTexture 接管这一帧的像素
             current=next;
             if(old!=null&&old!=next)tm.release(old);       // 释放上一张
-            if(blankFrame()&&!blankWarned){
-                blankWarned=true;
-                tell("斩击壁纸：系统抓到的是**全黑画面**——全屏模式下 GDI 取不到游戏与桌面画面。请把游戏切成**窗口模式**"
-                    +"（视频设置 → 全屏：关，或按 F11）再试；窗口模式下桌面、任务管理器、其他窗口都会出现在斩击里。");
-                LogUtils.getLogger().warn("[斩击壁纸] 抓到全黑帧：BitBlt 与 PrintWindow 都没取到画面，通常是全屏模式所致");
-            }
             if(!captureLogged){
                 captureLogged=true;
                 LogUtils.getLogger().info("[斩击壁纸] 本机桌面采集成功：显示器 {}x{} → 贴图 {}x{}（本机玩家 {}）",

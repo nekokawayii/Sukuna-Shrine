@@ -88,13 +88,17 @@ public final class PhotonFx {
      * 不做句柄移动也不做续期，所以既不会"跳"也不会因重建而闪；飞行体每刻在真实位置点一颗即可。
      */
     public static void spark(Vec3 pos,double radius,double size,int color,int bloom,String texture,boolean additive,int duration,int life,double rate,double orbit){
+        sphere(pos,radius,size,color,bloom,texture,additive,duration,life,rate,orbit);
+    }
+    /** 与 {@link #spark} 同一个球体发射器，但**返回句柄**：需要能随时停掉的大面积光雾（镀色/火球）用这个。 */
+    public static Handle sphere(Vec3 pos,double radius,double size,int color,int bloom,String texture,boolean additive,int duration,int life,double rate,double orbit){
         try{
             Emitter e=emitter(SPHERE,Math.max(0.05,radius),1);Object c=e.config();
             duration(c,duration);particleLife(c,life);size(c,Math.max(0.05,size));rate(c,Math.max(1,rate));
             if(orbit!=0)orbit(c,orbit);
             colour(c,color);render(c,MODE_BILLBOARD,texture,bloom,additive);
-            start(e,pos);
-        }catch(Throwable t){fail(t);}
+            return start(e,pos);
+        }catch(Throwable t){fail(t);return null;}
     }
     private static void size(Object config,double size)throws Exception{tryCall(config,"setStartSize",nums(size,size,size));}
     private static void stretch(Object config,double along,double across)throws Exception{tryCall(config,"setStartSize",nums(along,across,across));}

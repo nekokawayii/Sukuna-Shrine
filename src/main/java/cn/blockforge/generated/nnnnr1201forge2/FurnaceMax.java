@@ -43,7 +43,10 @@ public final class FurnaceMax {
     public static final double RISE_STEP=1.0;
     /** 蓄力期间周围多少格的敌人被点燃、烧多久。 */
     public static final double BURN_RADIUS=15.0;
-    public static final int BURN_SECONDS=4;
+    /** 蓄力时周围敌人的"燃烧"：**每秒一跳火焰伤害 + 客户端 Photon 火云**。
+     *  旧版用 {@code setSecondsOnFire}，会在怪身上刷原版火焰粒子——用户要求"不要原版粒子"，已改掉。 */
+    public static final float BURN_DPS=8f;
+    public static final int BURN_FX_TICKS=25;
     /** 中断（松手/受伤/异常）冷却 30 秒；打出去之后 60 秒。 */
     public static final int CANCEL_COOLDOWN=20*30,FIRE_COOLDOWN=20*60;
     /** 心跳超过这么久没到就认为客户端没了（只作兜底，正常 10 刻一次）。 */
@@ -51,9 +54,8 @@ public final class FurnaceMax {
 
     /** 弓矢：每刻 4 格、最多飞 100 格；命中点半径 100 格的火焰爆炸。 */
     public static final double SHOT_STEP=4.0,SHOT_RANGE=100.0,BLAST_RADIUS=100.0;
-    /** 爆炸伤害原值（与茈 500 / 无限制茈 999 同一口径，再走 {@link CombatSettings#spellDamage}）。 */
+    /** 当前伤害原值（与茈 500 / 无限制茈 999 同一口径，再走 {@link CombatSettings#spellDamage}）。 */
     public static final float BLAST_DAMAGE=2000f;
-    public static final int BLAST_IGNITE=10;
     /** 火柱：40 秒熄灭，柱内每秒 150 点（原值），半径 12 格。 */
     public static final int PILLAR_TICKS=20*40;
     public static final double PILLAR_RADIUS=12.0;
@@ -62,7 +64,7 @@ public final class FurnaceMax {
     public static final double FIELD_RADIUS=60;
 
     /** 特效号（客户端 {@link Client#receive} 全段交给 {@link FurnaceMaxClient}）。 */
-    public static final int FX_CHARGE=230,FX_SHOT=231,FX_BLAST=232,FX_PILLAR=233;
+    public static final int FX_CHARGE=230,FX_SHOT=231,FX_BLAST=232,FX_PILLAR=233,FX_BURN=234;
     private static final String COOLDOWN_KEY="FurnaceMaxCooldown";
     /** 「蓄力期间不能移动」用的移速修饰符：×0（直接改属性，不用缓慢效果）。 */
     private static final UUID FREEZE_ID=UUID.fromString("1f4c7a52-8d33-4a11-9c07-77b2e5d0a902");
@@ -174,7 +176,7 @@ public final class FurnaceMax {
             float amount=CombatSettings.spellDamage(p,BLAST_DAMAGE*(float)Curse.power(p)*(float)falloff
                 *MahoragaRules.bossDamage(t,MahoragaRules.FURNACE_MULTIPLIER));
             CombatSettings.hurt(p,t,level.damageSources().explosion(p,p),amount);
-            t.setSecondsOnFire(BLAST_IGNITE);
+            burnFx(level,t);   // 幸存者身上挂 2 秒 Photon 火云（不用原版着火）
         }
         Network.send(level,new Network.Effect(FX_BLAST,p.getId(),center,Vec3.ZERO,(float)BLAST_RADIUS,0,0));
         level.playSound(null,center.x,center.y,center.z,net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE,
@@ -214,10 +216,15 @@ public final class FurnaceMax {
             c.nextRise=now+RISE_INTERVAL;
             BossTargets.move(body,body.position().add(0,RISE_STEP,0));
         }
-        // 周围 15 格敌人燃烧
+        // 周围 15 格敌人燃烧：伤害走我们自己的火焰跳伤，表现交给客户端 Photon 火云（不出原版火焰粒子）
         if(now>=c.nextBurn){
             c.nextBurn=now+20;
-            for(LivingEntity t:Skills.targets(c.level,p,body.position(),BURN_RADIUS))t.setSecondsOnFire(BURN_SECONDS);
+            for(LivingEntity t:Skills.targets(c.level,p,body.position(),BURN_RADIUS)){
+                AttackTypes.mark(AttackTypes.FIRE);
+                t.invulnerableTime=0;
+                CombatSettings.hurt(p,t,c.level.damageSources().onFire(),CombatSettings.spellDamage(p,BURN_DPS));
+                burnFx(c.level,t);
+            }
         }
         // 蓄力表现：每 4 刻同步一次进度与剩余时间
         if(now>=c.nextFx){
@@ -267,6 +274,11 @@ public final class FurnaceMax {
     }
     private static void sendFx(ServerPlayer p,LivingEntity body,float progress,int remaining){
         Network.send(p.serverLevel(),new Network.Effect(FX_CHARGE,body.getId(),body.position(),body.getLookAngle(),progress,remaining,0));
+    }
+    /** 让客户端在这只生物身上挂一圈 Photon 火云：**纯 Photon 表现**，不刷原版火焰粒子。 */
+    private static void burnFx(ServerLevel level,LivingEntity target){
+        Network.send(level,new Network.Effect(FX_BURN,target.getId(),target.position(),Vec3.ZERO,
+            (float)Math.max(1.0,target.getBbHeight()),BURN_FX_TICKS,0));
     }
     private static void stopChargeFx(Charge c){
         Network.send(c.level,new Network.Effect(FX_CHARGE,c.p.getId(),MaidBridge.body(c.p).position(),Vec3.ZERO,1,0,0));

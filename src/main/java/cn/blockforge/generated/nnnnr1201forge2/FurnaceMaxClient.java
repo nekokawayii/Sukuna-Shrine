@@ -3,46 +3,85 @@ package cn.blockforge.generated.nnnnr1201forge2;
 import java.util.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
-/** 「灶 · 最大功率 · 开」的客户端表现层：**全部由 Photon 粒子发射器拼出来**
- *  （统一走 {@link PhotonBridge}，与既有的阳华/剑气/虚空特效同一套通路）。
- *
+/** 「灶 · 最大功率 · 开」的客户端表现层：**与苍 / 赫 / 茈 走同一条管线**
+ *  （{@link PhotonFx}：球体 / 球壳 / 圆环 / 三维圆柱 / 射线，全部在客户端即时程序化构建），
+ *  不再使用 flame / dust / void_rift 这类"贴图粒子"，因此：
  *  <ul>
- *    <li>**蓄力**：周身火焰不断**向身前汇聚成一把弓**（弓高最终 = 玩家身高的两倍），
- *        弓弦随蓄力**往后拉开**（拉弓），箭搭在弦上；</li>
- *    <li>**镀橙**：蓄力时周身 **60 格**内的方块被镀上橙色——颜色由原色**逐渐变成纯橙**
- *        （3 秒渐变 + 雾气/屏幕橙染），**术式结束后缓慢恢复**，最后**收拢成一个红球消失**；</li>
- *    <li>**弓矢**：出膛后拖一条金色火焰尾迹；</li>
- *    <li>**爆炸**：中心爆燃 + 25/50/75/100 格四道扩散环 + 向外放射的金色光弧（参考图的拉丝感）；</li>
- *    <li>**火柱**：冲天柱体 80 格，40 秒里越烧越矮、越细、越稀。</li>
+ *    <li>不会再有原版粒子味的火苗贴图；</li>
+ *    <li>不会再有 {@code void_rift.png} 那种紫色裂痕（上一版被当成"虚空捌特效"的就是它）。</li>
  *  </ul>
  *
- *  <p>所有位置由服务端给定（本地玩家用实时位置补正）；发射器总量有硬上限，过期立刻 {@link PhotonBridge#stop}。</p> */
+ *  <p>素材只有三张通用光效图，与苍赫茈完全相同：glow（光斑/雾）、ring（冲击波环）、streak（细光线）。</p>
+ *  <ul>
+ *    <li>**蓄力**：金色细线（{@link PhotonFx#ray}）从四周收束进身体 + 身体周围的火光球壳 +
+ *        **三维圆柱（{@link PhotonFx#beam}）拼出的火焰弓**：两段弓臂各 4 节、两节弓弦（随蓄力往后拉开）、一支箭；</li>
+ *    <li>**镀橙**：周身 60 格由橙色光雾球（球体内发射的 glow）铺满 + 雾色橙染，3 秒由原色渐变到纯橙；
+ *        中断时 70 刻缓慢收拢恢复；打出去时立刻清干净并缩成红球，避免和爆炸糊在一起；</li>
+ *    <li>**爆炸**：{@link GojoBlastClient} 的闪光 + 超大冲击波环 + 25/50/75/100 四道扩散环 +
+ *        向外飞散的细光线；</li>
+ *    <li>**火柱**：一根 80 格高的三维圆柱 + 柱底火球，40 秒里越烧越矮越细；</li>
+ *    <li>**燃烧**：蓄力时被点燃的敌人身上挂橙色光斑（取代原版着火粒子）。</li>
+ *  </ul> */
 public final class FurnaceMaxClient {
-    private static final int FLAME=0xFFFF5B0B,FLAME_HOT=0xFFFFE0A8,EMBER=0xFFFF9A3C,GOLD=0xFFFFC24A,
-        DEEP=0xFFE03A08,COAT=0xE0FF7A1E,COAT_HOT=0xFFFFB060,RED=0xFFFF2418,DUST=0x80C9B6A6;
+    /** 火焰配色（argb）：主体橙、亮部近白、边缘金、深部暗红。 */
+    private static final int FIRE=0xB4FF6A14,FIRE_HOT=0xC8FFD9A0,GOLD=0x99FFC24A,DEEP=0xA8E03A08,
+        COAT=0x44FF8A2A,COAT_HOT=0x3CFFB060,RED=0xCCFF2418,SMOOTH=0x30A08878;
+    private static final int BLOOM_FIRE=0xFF7A1206,BLOOM_GOLD=0xFF803010,BLOOM_COAT=0xFF8A4010,BLOOM_RED=0xFF8A0A06;
+    /** 与苍赫茈相同的三张通用光效图。 */
+    private static final String GLOW="textures/effect/glow.png",RING="textures/effect/ring.png",STREAK="textures/effect/streak.png";
     /** 火柱生成高度；弓高（满蓄力）= 玩家身高 1.8 的两倍。 */
     private static final double PILLAR_HEIGHT=80,BOW_HEIGHT=3.6;
-    /** 同时存在的 Photon 发射器上限，以及"镀橙"渐变/收拢/红球的时间。 */
-    private static final int MAX_PUFFS=420,COAT_RAMP=60,COLLAPSE_TICKS=70,BALL_TICKS=34;
+    /** 镀橙渐变 / 收拢（中断 70 刻、打出去 8 刻）/ 红球时长。 */
+    private static final int COAT_RAMP=60,COLLAPSE_TICKS=70,FAST_COLLAPSE=8,BALL_TICKS=22;
 
+    private record Entry(PhotonFx.Handle handle,long end){}
     private static final class Charge{int owner;Vec3 pos=Vec3.ZERO;Vec3 dir=new Vec3(0,0,1);float progress;long end;}
-    /** 方块镀橙用的场：蓄力期间逐渐铺满（COAT_RAMP），术式结束后收拢（COLLAPSE_TICKS）再变红球。 */
     private static final class Field{
-        int owner;Vec3 center=Vec3.ZERO;long start;long holdUntil;long collapseFrom;long nextCoat;boolean collapsed;
-        double intensity;
+        int owner;Vec3 center=Vec3.ZERO;long start;long holdUntil;long collapseFrom;long nextCoat;int collapseTicks=COLLAPSE_TICKS;
+        double intensity;boolean wiped;
     }
     private static final class Pillar{int owner;Vec3 center=Vec3.ZERO;long end;}
     private static final class Ball{Vec3 center;long from;}
-    private static final class Puff{final PhotonBridge.Handle handle;final long end;Puff(PhotonBridge.Handle h,long e){handle=h;end=e;}}
+    private static final class Burn{int entity;long end;Vec3 at=Vec3.ZERO;double height=1.8;}
     private static final Map<Integer,Charge> charges=new LinkedHashMap<>();
     private static final Map<Integer,Field> fields=new LinkedHashMap<>();
     private static final List<Pillar> pillars=new ArrayList<>();
     private static final List<Ball> balls=new ArrayList<>();
-    private static final List<Puff> puffs=new ArrayList<>();
-    private static final Random random=new Random();
-    private static long tick;
+    private static final List<Burn> burns=new ArrayList<>();
+    private static final Map<String,Entry> active=new HashMap<>();
+    private static final Map<String,Long> throttled=new HashMap<>();
+    private static long time;
+
+    // ------------------------------------------------------------------ 句柄生命周期（照搬 GojoFx 的做法）
+    private static void keep(String key,PhotonFx.Handle handle,int life){
+        Entry old=active.remove(key);
+        if(old!=null&&old.handle()!=handle)PhotonFx.stop(old.handle());
+        if(handle!=null)active.put(key,new Entry(handle,time+life));
+    }
+    private static void drop(String key){
+        Entry e=active.remove(key);
+        if(e!=null)PhotonFx.stop(e.handle());
+    }
+    private static void dropPrefix(String prefix){
+        List<String> keys=new ArrayList<>();
+        for(String k:active.keySet())if(k.startsWith(prefix))keys.add(k);
+        for(String k:keys)drop(k);
+    }
+    private static boolean throttle(String key,int gap){
+        Long last=throttled.get(key);
+        if(last!=null&&time-last<gap)return false;
+        throttled.put(key,time);
+        return true;
+    }
+    public static void clear(){
+        for(Entry e:active.values())PhotonFx.stop(e.handle());
+        active.clear();throttled.clear();
+        charges.clear();fields.clear();pillars.clear();balls.clear();burns.clear();time=0;
+    }
 
     // ------------------------------------------------------------------ 收包
     public static void receive(Network.Effect e){
@@ -52,78 +91,116 @@ public final class FurnaceMaxClient {
                 Charge c=charges.computeIfAbsent(e.owner(),k->new Charge());
                 c.owner=e.owner();c.pos=e.position();
                 if(e.direction().lengthSqr()>1e-6)c.dir=e.direction();
-                c.progress=Math.max(0f,Math.min(1f,e.size()));c.end=tick+e.life()+2;
+                c.progress=Math.max(0f,Math.min(1f,e.size()));c.end=time+e.life()+2;
                 Field f=fields.computeIfAbsent(e.owner(),k->new Field());
-                if(f.start==0){f.start=tick;f.nextCoat=tick;}
-                f.owner=e.owner();f.center=e.position();f.holdUntil=tick+e.life();f.collapseFrom=0;f.collapsed=false;
+                if(f.start==0)f.start=time;
+                f.owner=e.owner();f.center=e.position();f.holdUntil=time+e.life();f.collapseFrom=0;
+                f.collapseTicks=COLLAPSE_TICKS;f.wiped=false;
             }else{
                 charges.remove(e.owner());
-                startCollapse(e.owner());
+                dropPrefix("bow/"+e.owner()+"/");
+                collapse(e.owner(),COLLAPSE_TICKS);
             }
             return;
         }
-        if(e.kind()==FurnaceMax.FX_SHOT){    // 弓矢：金色尾迹 + 火星
-            puff(e.position(),FLAME_HOT,1.4,6,6);
-            puff(e.position(),GOLD,1.0,4,8);
-            puff(e.position().add(random.nextGaussian()*0.5,random.nextGaussian()*0.5,random.nextGaussian()*0.5),FLAME,1.1,4,9);
-            streak(e.position(),GOLD,4.5,4,random.nextInt(360));
+        if(e.kind()==FurnaceMax.FX_SHOT){   // 弓矢：一根亮柱 + 金色细线尾迹
+            if(!PhotonFx.ready())return;
+            Vec3 at=e.position(),dir=e.direction().lengthSqr()<1e-6?new Vec3(0,0,1):e.direction().normalize();
+            keep("shot/"+e.owner(),PhotonFx.beam(at.subtract(dir.scale(2.4)),at.add(dir.scale(1.2)),Math.max(0.18,e.size()*0.22),6),8);
+            PhotonFx.ray(at,2.6,0.03,0.9,GOLD,BLOOM_GOLD,true,2,4,14,1.2);
             return;
         }
-        if(e.kind()==FurnaceMax.FX_BLAST){blast(e.position());startCollapse(e.owner());return;}
+        if(e.kind()==FurnaceMax.FX_BLAST){
+            // 爆炸这一刻：橙色镀色**立刻清干净**（不再和爆炸糊在一起），同时缩成红球
+            charges.remove(e.owner());
+            dropPrefix("bow/"+e.owner()+"/");
+            collapse(e.owner(),FAST_COLLAPSE);
+            wipeField(e.owner());
+            balls.add(newBall(playerCenter(e.owner(),e.position())));
+            blast(e.position());
+            return;
+        }
+        if(e.kind()==FurnaceMax.FX_BURN){
+            Burn b=null;
+            for(Burn q:burns)if(q.entity==e.owner()){b=q;break;}
+            if(b==null){b=new Burn();b.entity=e.owner();burns.add(b);}
+            b.end=time+e.life();b.at=e.position();b.height=Math.max(1,e.size());
+            return;
+        }
         if(e.kind()==FurnaceMax.FX_PILLAR){
-            if(e.life()<=0){pillars.removeIf(q->q.owner==e.owner()&&q.center.distanceToSqr(e.position())<9);return;}
+            if(e.life()<=0){
+                pillars.removeIf(q->q.owner==e.owner()&&q.center.distanceToSqr(e.position())<9);
+                drop("pillar/"+e.owner());
+                return;
+            }
             Pillar found=null;
             for(Pillar q:pillars)if(q.owner==e.owner()&&q.center.distanceToSqr(e.position())<9){found=q;break;}
             if(found==null){found=new Pillar();found.owner=e.owner();found.center=e.position();pillars.add(found);}
-            found.end=tick+e.life();
+            found.end=time+e.life();
         }
     }
-    /** 术式结束：不是"啪一下消失"，而是开始收拢（缓慢恢复 + 缩成红球）。 */
-    private static void startCollapse(int owner){
+    private static void collapse(int owner,int ticks){
         Field f=fields.get(owner);
-        if(f!=null&&f.collapseFrom==0)f.collapseFrom=tick;
+        if(f==null)return;
+        f.collapseFrom=time;f.collapseTicks=ticks;   // 后到的（更快的）收拢直接覆盖先前那条
     }
+    /** 立刻清掉某个场的橙色光雾，并禁止再补：保证爆炸不与镀色重叠。 */
+    private static void wipeField(int owner){
+        Field f=fields.get(owner);
+        if(f!=null)f.wiped=true;
+        dropPrefix("coat/"+owner+"/");
+    }
+    private static Vec3 playerCenter(int owner,Vec3 fallback){
+        var player=Minecraft.getInstance().player;
+        return player!=null&&player.getId()==owner?player.position():fallback;
+    }
+    private static Ball newBall(Vec3 center){Ball b=new Ball();b.center=center;b.from=time;return b;}
 
     // ------------------------------------------------------------------ 每刻
     public static void tick(){
         if(Minecraft.getInstance().level==null){clear();return;}
-        tick++;
+        time++;
+        active.values().removeIf(e->{if(time>=e.end()){PhotonFx.stop(e.handle());return true;}return false;});
         var player=Minecraft.getInstance().player;
         for(Iterator<Charge> it=charges.values().iterator();it.hasNext();){
             Charge c=it.next();
-            if(tick>c.end){it.remove();continue;}
+            if(time>c.end){it.remove();continue;}
             Vec3 pos=c.pos,dir=c.dir;
             if(player!=null&&player.getId()==c.owner){pos=player.position();dir=player.getLookAngle();}
-            drawBow(pos,dir,c.progress);
+            drawBow(c.owner,pos,dir,c.progress);
         }
         for(Iterator<Field> it=fields.values().iterator();it.hasNext();){
             Field f=it.next();
             if(player!=null&&player.getId()==f.owner)f.center=player.position();
             if(f.collapseFrom==0){
-                f.intensity=Math.min(1,(tick-f.start)/(double)COAT_RAMP);
-                // 兜底：万一没收到收尾包（丢包/掉线），也自己开始收拢，不留一片永久橙色
-                if(tick>f.holdUntil+12)f.collapseFrom=tick;
+                f.intensity=Math.min(1,(time-f.start)/(double)COAT_RAMP);
+                if(time>f.holdUntil+12)f.collapseFrom=time;   // 兜底：丢包也会自己收
             }else{
-                f.intensity=Math.max(0,1-(tick-f.collapseFrom)/(double)COLLAPSE_TICKS);
-                if(f.intensity<=0){balls.add(newBall(f.center));it.remove();continue;}
+                f.intensity=Math.max(0,1-(time-f.collapseFrom)/(double)f.collapseTicks);
+                if(f.intensity<=0){dropPrefix("coat/"+f.owner+"/");it.remove();continue;}
             }
-            coat(f);
-            sparks(f);
+            if(!f.wiped)coat(f);
         }
         for(Iterator<Ball> it=balls.iterator();it.hasNext();){
             Ball b=it.next();
-            double k=(tick-b.from)/(double)BALL_TICKS;
-            if(k>=1){it.remove();continue;}
-            double size=2.8*(1-k)+0.25;
-            puff(b.center.add(0,1,0),RED,size,8,5);
-            puff(b.center.add((random.nextDouble()-0.5),0.8+random.nextDouble(),(random.nextDouble()-0.5)),DEEP,size*0.7,5,4);
+            double k=(time-b.from)/(double)BALL_TICKS;
+            if(k>=1){dropPrefix("ball/");it.remove();continue;}
+            redBall(b,k);
+        }
+        for(Iterator<Burn> it=burns.iterator();it.hasNext();){
+            Burn b=it.next();
+            if(time>b.end){it.remove();continue;}
+            Entity entity=player==null?null:player.level().getEntity(b.entity);
+            if(entity instanceof LivingEntity living&&living.isAlive())b.at=living.position();
+            if(time%2!=0||!PhotonFx.ready())continue;
+            double h=b.height;
+            PhotonFx.spark(b.at.add(0,h*0.5,0),Math.max(0.5,h*0.7),Math.max(0.6,h*0.45),FIRE,BLOOM_FIRE,GLOW,true,2,5,18,2.0);
+            if(time%4==0)PhotonFx.ray(b.at.add(0,h*0.4,0),1.6,0.02,0.7,GOLD,BLOOM_GOLD,true,2,4,8,-1.2);
         }
         for(Pillar q:pillars)drawPillar(q);
-        puffs.removeIf(x->{if(tick>=x.end){PhotonBridge.stop(x.handle);return true;}return false;});
     }
-    private static Ball newBall(Vec3 center){Ball b=new Ball();b.center=center;b.from=tick;return b;}
 
-    /** 当前"镀橙"强度（0~1）：给雾色与屏幕橙染用。只有**站在场里**（收拢后范围同步变小）才染。 */
+    /** 当前"镀橙"强度（0~1）：给雾色与屏幕橙染用。只有站在场里才染。 */
     public static double intensity(){
         var player=Minecraft.getInstance().player;
         if(player==null)return 0;
@@ -132,7 +209,7 @@ public final class FurnaceMaxClient {
             double reach=FurnaceMax.FIELD_RADIUS*Math.max(0.35,f.intensity);
             if(player.position().distanceToSqr(f.center)<=reach*reach)k=Math.max(k,f.intensity);
         }
-        for(Ball b:balls)if(player.position().distanceToSqr(b.center)<=256)k=Math.max(k,0.35);
+        for(Ball b:balls)if(player.position().distanceToSqr(b.center)<=256)k=Math.max(k,0.3);
         return k;
     }
     /** 世界雾色向橙金靠拢：方块"由原来的颜色慢慢变成纯橙色"主要靠它 + {@link #coat}。 */
@@ -144,150 +221,112 @@ public final class FurnaceMaxClient {
         e.setGreen((float)(e.getGreen()*(1-m)+0.45*m));
         e.setBlue((float)(e.getBlue()*(1-m)+0.10*m));
     }
-    /** 屏幕橙染（很轻，主要交给雾色与粒子，避免"刺眼/花"）。 */
+    /** 屏幕橙染（很轻，主要交给雾色与光雾，避免刺眼）。 */
     public static void overlay(GuiGraphics g){
         double k=intensity();
         if(k<=0.02)return;
         var mc=Minecraft.getInstance();
-        int alpha=(int)Math.min(64,58*k);
+        int alpha=(int)Math.min(60,54*k);
         g.fill(0,0,mc.getWindow().getGuiScaledWidth(),mc.getWindow().getGuiScaledHeight(),(alpha<<24)|0xFF6A14);
     }
 
-    // ------------------------------------------------------------------ 蓄力：汇聚成弓 + 拉弓
-    /** 火焰不断从四周汇到身前，凝成一把弓；弓弦随蓄力往后拉开、箭搭在弦上。 */
-    private static void drawBow(Vec3 pos,Vec3 look,float progress){
-        if(tick%2!=0)return;
+    // ------------------------------------------------------------------ 蓄力：光线收束 + 圆柱拼出的火焰弓
+    private static void drawBow(int owner,Vec3 pos,Vec3 look,float progress){
+        if(time%2!=0||!PhotonFx.ready())return;
         Vec3 fwd=look.lengthSqr()<1e-6?new Vec3(0,0,1):look.normalize();
         Vec3 side=fwd.cross(new Vec3(0,1,0));
         if(side.lengthSqr()<1e-4)side=new Vec3(1,0,0);
         side=side.normalize();
         Vec3 vertical=side.cross(fwd).normalize();
-        double h=BOW_HEIGHT*Math.max(0.15,progress);
+        double h=BOW_HEIGHT*Math.max(0.15,progress),draw=0.95*progress;
         Vec3 center=pos.add(0,1.1,0).add(fwd.scale(0.9));
-        // 汇聚：火焰从四周往身前收（越蓄越快）
-        for(int i=0;i<4;i++){
-            double a=random.nextDouble()*Math.PI*2,r=2.0+random.nextDouble()*3.5,y=(random.nextDouble()-0.5)*2.6;
-            Vec3 at=pos.add(Math.cos(a)*r,1+y,Math.sin(a)*r);
-            Vec3 to=center.subtract(at).scale(0.12);
-            puff(at.add(to),random.nextInt(3)==0?flame():FLAME,0.7+0.5*progress,4,7);
-        }
-        // 弓臂：两段弧，各 3 段（每段 6~10 颗，比上一版更密）
-        for(int i=0;i<3;i++){
-            double t=0.22+0.78*i/2.0;
-            for(int s=-1;s<=1;s+=2){
-                double ty=s*t;
-                Vec3 at=center.add(vertical.scale(h*0.5*ty)).add(fwd.scale(0.55*(1-ty*ty)));
-                puff(at,FLAME,0.85+0.7*progress,7,6);
-                if(random.nextInt(3)==0)puff(at,flame(),0.6+0.5*progress,3,9);
-            }
-        }
-        // 弓弦：中点被拉后 draw 格（拉弓）
-        double draw=0.95*progress;
         Vec3 nock=center.subtract(fwd.scale(0.15+draw));
         Vec3 top=center.add(vertical.scale(h*0.5)),bottom=center.subtract(vertical.scale(h*0.5));
-        for(int i=1;i<=2;i++){
-            double t=i/3.0;
-            puff(top.lerp(nock,t),FLAME_HOT,0.5+0.4*progress,4,5);
-            puff(bottom.lerp(nock,t),FLAME_HOT,0.5+0.4*progress,4,5);
-        }
-        // 搭在弦上的箭
-        puff(nock.add(fwd.scale(0.5)),FLAME_HOT,0.6+0.6*progress,7,6);
-        puff(nock.add(fwd.scale(1.6)),GOLD,0.5+0.5*progress,4,6);
-        // 金色拉丝：参考图里那种细亮弧线
-        if(tick%3==0){
-            for(int i=0;i<2;i++){
-                double a=random.nextDouble()*Math.PI*2,r=3+random.nextDouble()*6;
-                Vec3 at=pos.add(Math.cos(a)*r,0.5+random.nextDouble()*3,Math.sin(a)*r);
-                streak(at,random.nextBoolean()?GOLD:FLAME_HOT,4+random.nextDouble()*3,7+random.nextInt(6),(float)Math.toDegrees(a)+90);
+        String k="bow/"+owner+"/";
+        // 两段弓臂：各 4 节三维圆柱，沿弧线首尾相接
+        for(int limb=0;limb<2;limb++){
+            double sign=limb==0?1:-1;
+            Vec3 prev=null;
+            for(int i=0;i<=4;i++){
+                double t=0.16+0.84*i/4.0,ty=sign*t;
+                Vec3 at=center.add(vertical.scale(h*0.5*ty)).add(fwd.scale(0.55*(1-ty*ty)));
+                if(prev!=null)keep(k+"limb"+limb+"_"+i,PhotonFx.beam(prev,at,0.115+0.05*progress,5),6);
+                prev=at;
             }
+            keep(k+"tip"+limb,PhotonFx.shockwave(sign>0?top:bottom,0x88FFC24A,(float)(0.55+0.5*progress),5),6);
         }
+        // 弓弦：中段被拉后 draw 格（拉弓）
+        keep(k+"stringU",PhotonFx.beam(top,nock,0.055,5),6);
+        keep(k+"stringD",PhotonFx.beam(bottom,nock,0.055,5),6);
+        // 搭在弦上的箭
+        keep(k+"arrow",PhotonFx.beam(nock,nock.add(fwd.scale(2.2+0.6*progress)),0.13+0.05*progress,5),6);
+        // 火焰汇聚：金色细线从四周收进身体 + 火光球 + 每 6 刻一圈脉冲
+        PhotonFx.ray(pos,4.6+1.6*progress,0.028,0.85,GOLD,BLOOM_GOLD,true,2,4,10+ (int)(8*progress),-2.6);
+        PhotonFx.spark(pos.add(0,1.0,0),1.5+0.7*progress,1.0+0.4*progress,FIRE,BLOOM_FIRE,GLOW,true,2,6,16,3.0);
+        if(time%6==0)PhotonFx.shockwave(pos,0x66FF8A2A,(float)(2.2+2.4*progress),12);
     }
-    private static int flame(){return random.nextInt(3)==0?FLAME_HOT:GOLD;}
 
-    // ------------------------------------------------------------------ 镀橙场
-    /** 每 8 刻换一批"镀色云"：旧云自然淡出、新云更靠内 —— 于是收拢时看起来就是整片橙色往身体缩。 */
+    // ------------------------------------------------------------------ 镀橙场（橙色光雾球）
     private static void coat(Field f){
-        if(tick<f.nextCoat)return;
-        f.nextCoat=tick+8;
+        if(time<f.nextCoat)return;
+        f.nextCoat=time+8;
+        if(!PhotonFx.ready())return;
         double k=f.intensity;
-        double spread=FurnaceMax.FIELD_RADIUS*2*Math.max(0.25,k);
-        for(int i=0;i<3;i++){
-            Vec3 at=f.center.add((random.nextDouble()-0.5)*spread*0.7,(random.nextDouble()-0.35)*spread*0.5,(random.nextDouble()-0.5)*spread*0.7);
-            cloud(at,random.nextInt(4)==0?COAT_HOT:COAT,spread*(0.45+0.35*random.nextDouble()),5+7*k,60+(int)(150*k),18+(int)(14*k));
-        }
-    }
-    /** 场里的火星与落灰，让"镀橙"有火气。 */
-    private static void sparks(Field f){
-        double k=f.intensity;
-        if(tick%2!=0)return;
-        double r=FurnaceMax.FIELD_RADIUS*Math.max(0.25,k);
-        for(int i=0;i<2;i++){
-            Vec3 at=f.center.add((random.nextDouble()-0.5)*2*r,(random.nextDouble()-0.1)*r*0.5,(random.nextDouble()-0.5)*2*r);
-            puff(at,random.nextInt(3)==0?flame():EMBER,1.2+0.8*k,3,10+random.nextInt(8));
-        }
+        // 两个不同半径的球体发射器：外圈把 60 格铺满，内圈加厚近处（发射率对齐模组既有特效的量级，不硬堆）
+        keep("coat/"+f.owner+"/outer",PhotonFx.sphere(f.center,FurnaceMax.FIELD_RADIUS*(0.55+0.45*k),7+4*k,COAT,BLOOM_COAT,GLOW,true,10,12,55+85*k,0.5),16);
+        keep("coat/"+f.owner+"/inner",PhotonFx.sphere(f.center,FurnaceMax.FIELD_RADIUS*0.45*k,5+3*k,COAT_HOT,BLOOM_COAT,GLOW,true,10,12,28+45*k,1.2),16);
     }
 
-    // ------------------------------------------------------------------ 火柱
-    /** 火柱：40 秒里越烧越矮、越细、越稀（缓慢熄灭）。 */
+    // ------------------------------------------------------------------ 火柱（一根三维圆柱）
     private static void drawPillar(Pillar q){
-        if(tick%2!=0)return;
-        double remaining=Math.max(0,q.end-tick);
+        if(!PhotonFx.ready())return;
+        double remaining=Math.max(0,q.end-time);
         double k=Math.min(1,remaining/FurnaceMax.PILLAR_TICKS);
-        double height=PILLAR_HEIGHT*(0.35+0.65*k),radius=1.6+3.8*k,size=2.0+3.0*k;
-        int n=k>0.5?4:3;
-        for(int i=0;i<n;i++){
-            double y=Math.pow(random.nextDouble(),0.7)*height;
-            double a=random.nextDouble()*Math.PI*2,r=Math.sqrt(random.nextDouble())*radius*Math.max(0.2,1-0.5*y/height);
-            puff(q.center.add(Math.cos(a)*r,y,Math.sin(a)*r),random.nextInt(4)==0?flame():FLAME,
-                size*Math.max(0.4,1-0.4*y/height),6+(int)(6*k),10+(int)(14*k));
-            if(random.nextInt(5)==0)streak(q.center.add(Math.cos(a)*r*0.6,y,Math.sin(a)*r*0.6),GOLD,4,6+random.nextInt(6),random.nextInt(360));
+        double height=PILLAR_HEIGHT*(0.35+0.65*k),width=2.0+3.4*k;
+        if(throttle("pillarFill",6)){
+            keep("pillar/"+q.owner,PhotonFx.beam(q.center,q.center.add(0,height,0),width,10),12);
+            keep("pillarBase/"+q.owner,PhotonFx.sphere(q.center.add(0,1.5,0),2.0+2.6*k,2.2+2.4*k,FIRE,BLOOM_FIRE,GLOW,true,8,10,50+50*k,1.6),12);
         }
-        if(tick%10==0)puff(q.center.add(0,1,0),FLAME_HOT,2.2+5*k,14,18);
+        if(time%4==0){
+            PhotonFx.ray(q.center.add(0,1,0),Math.max(2,width*1.6),0.035,1.6,GOLD,BLOOM_GOLD,true,3,5,14,3.0);
+            PhotonFx.spark(q.center.add(0,height*0.6,0),Math.max(1.5,width),1.6+1.4*k,FIRE_HOT,BLOOM_FIRE,GLOW,true,3,6,26,1.0);
+        }
     }
 
-    /** 半径 100 格的火焰爆炸：中心爆燃 + 四道扩散环 + 向外放射的金色光弧。 */
+    // ------------------------------------------------------------------ 收尾红球
+    private static void redBall(Ball b,double k){
+        if(!PhotonFx.ready()||time%2!=0)return;
+        double radius=1.8*(1-k)+0.25,size=2.2*(1-k)+0.3;
+        PhotonFx.spark(b.center.add(0,1,0),radius,size,RED,BLOOM_RED,GLOW,true,2,5,42,0.4);
+        if(time%6==0)PhotonFx.shockwave(b.center.add(0,1,0),0x88FF2418,Math.max(0.5,radius*2.4),10);
+        if(k<0.4)keep("ball/"+b.center+"/smoke",PhotonFx.sphere(b.center.add(0,1,0),radius*2.4,3.0,SMOOTH,0,GLOW,true,3,8,26,0.8),12);
+    }
+
+    // ------------------------------------------------------------------ 爆炸
     private static void blast(Vec3 center){
-        puff(center,FLAME_HOT,11,90,26);
-        puff(center,FLAME,17,70,34);
+        if(!PhotonFx.ready())return;
+        GojoBlastClient.spawn(center,26,0xFFB060);
+        keep("blastRing",PhotonFx.shockwave(center,0xE0FF7A20,(float)FurnaceMax.BLAST_RADIUS,34),40);
+        // 25/50/75/100 四道扩散环
         for(int ring=1;ring<=4;ring++){
             double r=FurnaceMax.BLAST_RADIUS*ring/4.0;
             for(int i=0;i<6;i++){
                 double a=i*Math.PI/3+random.nextDouble()*0.3;
                 Vec3 at=center.add(Math.cos(a)*r,(random.nextDouble()-0.35)*4,Math.sin(a)*r);
-                puff(at,ring<=2?flame():EMBER,3.2+ring*1.8,9,20+ring*4);
+                PhotonFx.spark(at,4.0+ring*2.0,3.0+ring*1.4,ring<=2?FIRE:FIRE_HOT,BLOOM_FIRE,GLOW,true,4,10,60,1.5);
             }
         }
-        for(int i=0;i<24;i++){   // 放射拉丝：参考图里最抢眼的那层
+        // 向外飞散的细光线（参考图里最抢眼的那层）
+        for(int i=0;i<18;i++){
             double a=random.nextDouble()*Math.PI*2,elev=(random.nextDouble()-0.3)*0.8;
-            Vec3 at=center.add(Math.cos(a)*8,elev*8,Math.sin(a)*8);
-            streak(at,random.nextInt(3)==0?GOLD:FLAME_HOT,5+random.nextDouble()*4,10+random.nextInt(10),(float)Math.toDegrees(a)+90);
+            Vec3 dir=new Vec3(Math.cos(a),elev,Math.sin(a)).normalize();
+            Vec3 a1=center.add(dir.scale(8+random.nextDouble()*10));
+            keep("burst/"+i,PhotonFx.beam(a1,a1.add(dir.scale(10+random.nextDouble()*16)),0.10,12),14);
         }
-        for(int i=0;i<10;i++){
-            double a=random.nextDouble()*Math.PI*2,r=2+random.nextDouble()*FurnaceMax.BLAST_RADIUS;
-            puff(center.add(Math.cos(a)*r,random.nextDouble()*2,Math.sin(a)*r),DUST,2.8,6,16);
-        }
+        PhotonFx.ray(center,70,0.02,1.6,0xAAFFD9A0,BLOOM_GOLD,true,3,5,26,5.5);
+        PhotonFx.spark(center,26,7,DEEP,BLOOM_FIRE,GLOW,true,4,12,90,0.6);
     }
 
-    // ------------------------------------------------------------------ 工具
-    private static void puff(Vec3 at,int color,double size,int count,int life){
-        if(puffs.size()>=MAX_PUFFS)return;
-        PhotonBridge.Handle handle=PhotonBridge.spawn(at,color,size,count,life);
-        if(handle!=null)puffs.add(new Puff(handle,tick+life+2));
-    }
-    private static void cloud(Vec3 at,int color,double spread,double size,int count,int life){
-        if(puffs.size()>=MAX_PUFFS)return;
-        PhotonBridge.Handle handle=PhotonBridge.cloud(at,color,spread,size,count,life);
-        if(handle!=null)puffs.add(new Puff(handle,tick+life+2));
-    }
-    private static void streak(Vec3 at,int color,double size,int life,float angle){
-        if(puffs.size()>=MAX_PUFFS)return;
-        PhotonBridge.Handle handle=PhotonBridge.streak(at,color,size,life,angle);
-        if(handle!=null)puffs.add(new Puff(handle,tick+life+2));
-    }
-
-    public static void clear(){
-        for(Puff p:puffs)PhotonBridge.stop(p.handle);
-        puffs.clear();charges.clear();fields.clear();pillars.clear();balls.clear();tick=0;
-    }
+    private static final Random random=new Random();
     private FurnaceMaxClient(){}
 }

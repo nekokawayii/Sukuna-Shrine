@@ -24,11 +24,12 @@ public final class CastHands {
     public static void clear(){poses.clear();}
     public static void receive(Network.Effect e){var l=Minecraft.getInstance().level;if(l!=null)poses.put(e.owner(),new Pose(e.kind(),(int)e.size(),l.getGameTime(),e.life()));}
     private static Pose active(int id){if(FinaleClient.active(id)||MotionRenderCompat.externalPlayerModels()||DismantleMotionClient.active(id))return null;var mc=Minecraft.getInstance();Pose pose=poses.get(id);if(mc.level==null||pose==null)return null;if(mc.level.getGameTime()-pose.start>=pose.life){poses.remove(id);return null;}return pose;}
-    /** 御厨子结印姿态还在吗（kind=70 且 size=5）：本地玩家据此锁住左键空挥/攻击。 */
+    /** 领域结印姿态还在吗（御厨子 kind=70/size=5、无量空处 kind=71/size=7）：本地玩家据此锁住左键空挥/攻击。 */
     public static boolean sealing(){
         var mc=Minecraft.getInstance();
         Pose pose=mc.player==null||mc.level==null?null:poses.get(mc.player.getId());
-        return pose!=null&&pose.kind==70&&pose.skill==5&&mc.level.getGameTime()-pose.start<pose.life;
+        if(pose==null||mc.level.getGameTime()-pose.start>=pose.life)return false;
+        return pose.kind==70&&pose.skill==5||pose.kind==71&&pose.skill==7;
     }
     /** 结印期间不能攻击：连空挥一起取消（与动作锁同一套做法）。 */
     @SubscribeEvent public static void interaction(InputEvent.InteractionKeyMappingTriggered e){if(sealing()){e.setCanceled(true);e.setSwingHand(false);}}
@@ -43,6 +44,7 @@ public final class CastHands {
         @Override public void render(PoseStack ps,MultiBufferSource source,int light,AbstractClientPlayer player,float limb,float amount,float partial,float age,float yaw,float pitch){
             Pose pose=active(player.getId());if(pose==null)return;var m=getParentModel();float lx=m.leftArm.xRot,ly=m.leftArm.yRot,rx=m.rightArm.xRot,ry=m.rightArm.yRot;
             if(pose.kind==2){m.leftArm.xRot=-1.55f;m.leftArm.yRot=0.25f;m.rightArm.xRot=-1.4f;m.rightArm.yRot=-0.8f;}
+            else if(pose.kind==71){m.rightArm.xRot=-2.7f;m.rightArm.yRot=-0.3f;}   // 无量空处：右臂竖直举在脸前（左手不动）
             else if(pose.kind==70&&pose.skill==3){m.leftArm.xRot=-0.3f;m.leftArm.yRot=0.15f;m.rightArm.xRot=-2.4f;m.rightArm.yRot=-0.25f;}
             else {m.leftArm.xRot=m.rightArm.xRot=-1.2f;m.leftArm.yRot=0.6f;m.rightArm.yRot=-0.6f;}
             m.leftSleeve.copyFrom(m.leftArm);m.rightSleeve.copyFrom(m.rightArm);
@@ -59,11 +61,18 @@ public final class CastHands {
         var ps=e.getPoseStack();var renderer=(PlayerRenderer)mc.getEntityRenderDispatcher().getRenderer(mc.player);
         float draw=Math.min(1,age/Math.max(1,pose.life));
         for(int side:new int[]{-1,1}){
+            if(pose.kind==71&&side<0)continue;   // 无量空处是单手印：只渲染右手
             ps.pushPose();
-            if(pose.kind==2){ps.translate(side<0?-0.42:0.32,-0.38,side<0?-0.95:-0.62+draw*0.28);ps.mulPose(Axis.YP.rotationDegrees(side<0?22:-30));ps.mulPose(Axis.ZP.rotationDegrees(side<0?-12:25));}
-            else if(pose.kind==70&&pose.skill==3){ps.translate(side>0?0.32:-0.42,side>0?-0.08:-0.55,side>0?-0.7:-0.52);ps.mulPose(Axis.YP.rotationDegrees(side*-12));ps.mulPose(Axis.ZP.rotationDegrees(side>0?-20:8));}
-            else {double sweep=pose.skill==5?0:Math.sin(draw*Math.PI)*0.18;ps.translate(side*(pose.skill==5?0.13:0.3)+sweep,-0.4,-0.72);ps.mulPose(Axis.YP.rotationDegrees(side*-24));ps.mulPose(Axis.ZP.rotationDegrees(side*(pose.skill==5?38:18)));}
-            ps.mulPose(Axis.XP.rotationDegrees(-75));
+            if(pose.kind==71){
+                // 第一人称单手竖印：右手抬到屏幕正中央（x 先把右臂枢轴的 -5/16 偏移抵消掉），几乎不旋转、只轻微前倾
+                ps.translate(0.375,-0.5,-0.55);
+                ps.mulPose(Axis.XP.rotationDegrees(-15));
+            }else{
+                if(pose.kind==2){ps.translate(side<0?-0.42:0.32,-0.38,side<0?-0.95:-0.62+draw*0.28);ps.mulPose(Axis.YP.rotationDegrees(side<0?22:-30));ps.mulPose(Axis.ZP.rotationDegrees(side<0?-12:25));}
+                else if(pose.kind==70&&pose.skill==3){ps.translate(side>0?0.32:-0.42,side>0?-0.08:-0.55,side>0?-0.7:-0.52);ps.mulPose(Axis.YP.rotationDegrees(side*-12));ps.mulPose(Axis.ZP.rotationDegrees(side>0?-20:8));}
+                else {double sweep=pose.skill==5?0:Math.sin(draw*Math.PI)*0.18;ps.translate(side*(pose.skill==5?0.13:0.3)+sweep,-0.4,-0.72);ps.mulPose(Axis.YP.rotationDegrees(side*-24));ps.mulPose(Axis.ZP.rotationDegrees(side*(pose.skill==5?38:18)));}
+                ps.mulPose(Axis.XP.rotationDegrees(-75));
+            }
             if(side>0)renderer.renderRightHand(ps,e.getMultiBufferSource(),e.getPackedLight(),mc.player);else renderer.renderLeftHand(ps,e.getMultiBufferSource(),e.getPackedLight(),mc.player);
             ps.popPose();
         }

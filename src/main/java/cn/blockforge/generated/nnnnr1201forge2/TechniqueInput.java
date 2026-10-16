@@ -38,8 +38,8 @@ public final class TechniqueInput {
             return;
         }
         if(SixfoldFinale.active(p))return;
-        // 无量空处的收起不受任何动作守卫限制：正在对拼/熔断/别的动作里也必须能收掉自己的领域
-        if(input.skill==41&&input.phase==0&&GojoCombat.domainOpen(p)){GojoCombat.toggleDomain(p);return;}
+        // 无量空处：开着时再按一次是"收起"，结印中再按一次是"放下/取消"——两条都要排在所有动作守卫之前
+        if(input.skill==41&&input.phase==0&&(GojoCombat.domainOpen(p)||Skills.sealing(p,Skills.SEAL_VOID))){GojoCombat.toggleDomain(p);return;}
         // 神武解：按住释放键充能，松手打出去；取消（phase 3）只丢充能不打雷
         if(input.skill==Shinbuke.CHARGE_ID){
             if(input.phase==0)Shinbuke.beginCharge(p);
@@ -49,8 +49,8 @@ public final class TechniqueInput {
             return;
         }
         if(Shinbuke.holding(p)){return;} // 手持神武解：除充能外任何术式都不可用
-        // 御厨子结印期间：其余术式一律不理（释放键本身除外——第二次按下是"放下"或"取消"）
-        if(Skills.sealing(p)&&input.skill!=5){CastFeedback.tell(p,"结印中：只能再次按释放键（放下/取消）");return;}
+        // 结印期间：其余术式一律不理（正在结印的那个领域的释放键除外——第二次按下是"放下"或"取消"）
+        if(Skills.sealing(p)&&input.skill!=5&&!(Skills.sealing(p,Skills.SEAL_VOID)&&input.skill==41)){CastFeedback.tell(p,"结印中：只能再次按释放键（放下/取消）");return;}
         // 简易领域 · 捌：长按维持、松手收招（不走普通 hold 的"松手才结算"路径）
         if(input.wheelSkill()==SimpleDomain.SKILL){
             if(input.phase==0)SimpleDomain.start(p);

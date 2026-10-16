@@ -29,6 +29,8 @@ public final class GojoCombat {
     private static final class State {
         final ServerPlayer p;final ServerLevel level;
         int casting=-1,age;UUID target;Vec3 center=Vec3.ZERO;long domainUntil;int chargeSkill=-1;long chargeAt;boolean chargeFired;
+        /** 结印"放下"后 = true：无量空处只控制、**不再造成伤害**（下一次展开时复位）。 */
+        boolean controlOnly;
         State(ServerPlayer p){this.p=p;level=p.serverLevel();}
     }
     /** 无量空处：持续 **90 秒**（1 分半）。 */
@@ -95,18 +97,36 @@ public final class GojoCombat {
         if(!Curse.canSpend(p,GojoPlayer.COST[7])){CastFeedback.tell(p,"无量空处需要 "+BalanceRules.number(GojoPlayer.COST[7])+" 咒力（当前 "+BalanceRules.number(Curse.energy(p))+"）");return false;}
         return true;
     }
-    /** 无量空处按下：开着就收起、没开就展开。返回 true = 这一次输入已经被消耗掉。
-     *  收起必须排在**所有**门槛（冷却/熔断/对拼/其他动作）之前，否则一旦被别的状态挡住，
-     *  玩家看到的就是"按了不收、再按又放一遍"。 */
+    /** 无量空处释放键：三档循环（结印 → 放下仅控制 → 收起）统一由 {@link Skills#voidPress} 处理——
+     *  它持有与御厨子**同一套**结印状态机（Seal/freeze/pose/released）。返回值保持"这次输入已被消耗"。 */
     public static boolean toggleDomain(ServerPlayer p){
-        if(domainOpen(p)){closeDomain(p);p.displayClientMessage(Component.literal("无量空处已收起 · 术式熔断可修复"),true);return true;}
-        if(!domainReady(p))return true;
-        cast(p,7);
-        // 成功展开时留一条聊天栏记录：动作栏提示容易看漏，出问题时也方便对照
-        if(domainOpen(p))p.sendSystemMessage(Component.literal("无量空处已展开 · 半径 "+BalanceRules.number(GojoFx.DOMAIN_RADIUS)+" 格 · "
-            +Math.max(0,domainTicks(p)/20)+" 秒 · 再按一次收起（收起后 120 秒熔断，可修复）"));
-        else if(!available(p,7))reject(p,7); // 理论上不会走到：兜底把原因说出来
+        Skills.voidPress(p);
         return true;
+    }
+    /** 无量空处结印起手：门槛沿用 {@link #domainReady}（逐条说明原因），扣费与冷却沿用原来 cast 里的写法。 */
+    public static boolean payVoidSeal(ServerPlayer p){
+        if(!domainReady(p))return false;
+        if(!Curse.spend(p,GojoPlayer.COST[7]))return false;
+        if(GojoPlayer.COOLDOWN[7]>0)Curse.status(p,key(7),GojoPlayer.COOLDOWN[7]);
+        return true;
+    }
+    /** 第 80 刻（4 秒）：领域真正生成——原 case 7 的整段逻辑原样搬到这里。 */
+    public static void openVoidDomain(ServerPlayer p){
+        State s=states.computeIfAbsent(p.getUUID(),k->new State(p));
+        if(s.p!=p||s.level!=p.level())states.put(p.getUUID(),s=new State(p));
+        s.controlOnly=false;   // 新一次展开：伤害恢复
+        s.center=p.position();s.domainUntil=p.level().getGameTime()+UNLIMITED_TICKS;
+        // direction 带上朝向：客户端把白边黑洞摆在正前方
+        Network.send(p.serverLevel(),new Network.Effect(GojoFx.DOMAIN_OPEN,p.getId(),s.center,p.getLookAngle(),GojoFx.DOMAIN_RADIUS,400,0));
+        DomainClash.opened(p,s.center,GojoFx.DOMAIN_RADIUS);
+        p.displayClientMessage(Component.literal("领域展开 · 无量空处：情报灌输，范围内敌人无法行动 · 再按释放键放下（放下后仅控制）"),true);
+        p.sendSystemMessage(Component.literal("无量空处已展开 · 半径 "+(int)GojoFx.DOMAIN_RADIUS+" 格 · "+(UNLIMITED_TICKS/20)+" 秒 · 再按=放下(仅控制) · 放下后再按一次=收起（收起后 120 秒熔断，可修复）"));
+        s.casting=-1;
+    }
+    /** 放下结印：领域与控制照旧，只是**伤害那一路整段跳过**（见 tick 里的 now%2==0）。 */
+    public static void controlOnly(ServerPlayer p){
+        State s=states.get(p.getUUID());
+        if(s!=null&&s.domainUntil>p.level().getGameTime())s.controlOnly=true;
     }
     /** 苍/赫 按下：记录按住起点；越过长按阈值后才进入最大功率（按住期间持续引导/蓄力）。 */
     public static void chargeStart(ServerPlayer p,int slot){
@@ -138,11 +158,8 @@ public final class GojoCombat {
         cast(s.p,s.chargeSkill==0?8:2);
     }
     public static void cast(ServerPlayer p,int skill){
-        // 收起无量空处必须排在冷却检查之前：否则 60 秒冷却会让"再点一次解除"永远进不来
-        if(skill==7){
-            if(domainOpen(p)){closeDomain(p);p.displayClientMessage(Component.literal("无量空处已收起 · 术式熔断可修复"),true);return;}
-            if(!domainReady(p))return; // 展不开就逐条说明原因，绝不静默失败
-        }
+        // 无量空处不再按下即展开：走 Skills 里那一套结印时间轴（按下=结印，第 80 刻才真正展开）
+        if(skill==7){Skills.voidPress(p);return;}
         if(!available(p,skill)){reject(p,skill);return;}
         State s=states.computeIfAbsent(p.getUUID(),k->new State(p));
         if(s.p!=p||s.level!=p.level()){states.put(p.getUUID(),s=new State(p));}
@@ -200,14 +217,7 @@ public final class GojoCombat {
                 p.displayClientMessage(Component.literal("苍·最大功率：按住引导，松开后停留 5 秒"),true);
                 s.casting=-1;
             }
-            case 7->{ // 无量空处
-                s.center=p.position();s.domainUntil=p.level().getGameTime()+UNLIMITED_TICKS;
-                // direction 带上朝向：客户端把白边黑洞摆在正前方
-                Network.send(p.serverLevel(),new Network.Effect(GojoFx.DOMAIN_OPEN,p.getId(),s.center,p.getLookAngle(),GojoFx.DOMAIN_RADIUS,400,0));
-                DomainClash.opened(p,s.center,GojoFx.DOMAIN_RADIUS);
-                p.displayClientMessage(Component.literal("领域展开 · 无量空处：情报灌输，范围内敌人无法行动"),true);
-                s.casting=-1;
-            }
+            case 7->s.casting=-1; // 无量空处不在这里展开：见 openVoidDomain（结印第 80 刻）
             default->s.casting=-1;
         }
         if(skill!=5&&skill!=7)SkillSounds.play(p,"guardian_"+((skill%6)+4));
@@ -241,7 +251,9 @@ public final class GojoCombat {
     public static void closeDomain(ServerPlayer p){
         State s=states.get(p.getUUID());
         if(s==null||s.domainUntil<=0)return;
-        s.domainUntil=0;fx(p,GojoFx.DOMAIN_CLOSE,s.center,Vec3.ZERO,1,4,0);
+        s.domainUntil=0;s.controlOnly=false;
+        Skills.endVoidSeal(p); // 领域关闭：无量空处的结印状态（解冻/手势/放下标记）一并清掉
+        fx(p,GojoFx.DOMAIN_CLOSE,s.center,Vec3.ZERO,1,4,0);
         // 只进入普通熔断：不写 DomainClashPenaltyUntil，因此可以用"修复熔断"解除
         Curse.enterBurnout(p,DomainClashRules.BURNOUT_TICKS);
         p.sendSystemMessage(Component.literal("无量空处关闭 · 术式熔断 "+BalanceRules.number(DomainClashRules.BURNOUT_TICKS/20)+" 秒（可用修复熔断解除）"));
@@ -338,7 +350,8 @@ public final class GojoCombat {
                     if(VoidLock.immune(p,victim))continue; // 自己/盟友与默认玩家/宠物/女仆/永恒挚爱：绝对不生效
                     if(DomainClash.active(p))break;
                     VoidLock.hold(victim,now); // 强制控制：拴在原地，绝对无法移动
-                    if(now%2==0)hit(p,victim,UNLIMITED_DAMAGE,false,1f,AttackTypes.MAGIC); // 每 0.1 秒 2 点（基础「魔法」）
+                    // 每 0.1 秒 2 点（基础「魔法」）；结印"放下"（controlOnly）后这一段整段跳过，只留控制
+                    if(!s.controlOnly&&now%2==0)hit(p,victim,UNLIMITED_DAMAGE,false,1f,AttackTypes.MAGIC);
                 }
             }
             chargeTick(s);
@@ -409,6 +422,6 @@ public final class GojoCombat {
     }
     @SubscribeEvent public static void stop(ServerStoppedEvent event){states.clear();orbs.clear();beams.clear();}
     @SubscribeEvent public static void logout(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event){if(event.getEntity() instanceof ServerPlayer p){states.remove(p.getUUID());orbs.removeIf(o->o.owner==p);beams.removeIf(b->b.owner()==p);}}
-    public static void cancel(ServerPlayer p){State s=states.remove(p.getUUID());if(s!=null)s.casting=-1;orbs.removeIf(o->o.owner==p);beams.removeIf(b->b.owner()==p);}
+    public static void cancel(ServerPlayer p){State s=states.remove(p.getUUID());if(s!=null)s.casting=-1;Skills.endVoidSeal(p);orbs.removeIf(o->o.owner==p);beams.removeIf(b->b.owner()==p);}
     private GojoCombat(){}
 }

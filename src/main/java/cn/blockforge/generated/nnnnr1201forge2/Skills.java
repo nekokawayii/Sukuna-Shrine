@@ -50,8 +50,10 @@ public final class Skills {
     private static final List<Slash> slashes=new ArrayList<>();
     private static final Map<UUID,Aura> auras=new HashMap<>();
     private static final Map<UUID,Domain> domains=new HashMap<>();
-    /** 御厨子结印状态（技能5）：按下起 3 秒不能移动，80 刻领域出现，再按释放键取消/放下。 */
+    /** 领域结印状态（技能5 伏魔御厨子 / 五条悟技能7 无量空处共用同一套）：按下起 3 秒不能移动，80 刻领域出现，再按释放键取消/放下。 */
     private static final Map<UUID,Seal> seals=new HashMap<>();
+    /** 结印类型：{@link #SEAL_SHRINE}=伏魔御厨子（技能5），{@link #SEAL_VOID}=无量空处（五条悟技能7）。 */
+    public static final int SEAL_SHRINE=0,SEAL_VOID=1;
     /** 跳神龛的飞行状态（三击空格）。 */
     private static final List<Leap> leaps=new ArrayList<>();
     /** 「结印期间不能移动」用的移速修饰符：×0（与灶·最大功率同一套做法，UUID 必须独立）。 */
@@ -154,11 +156,18 @@ public final class Skills {
     // ---------------------------------------------------------------- 技能5 · 伏魔御厨子（结印 → 展开 → 放下）
     /** 结印中（从按下到"放下"或领域结束）：不能释放其它术式、不能攻击。 */
     public static boolean sealing(ServerPlayer p){return seals.containsKey(p.getUUID());}
+    /** 该类型的结印是否正在进行（释放键只让对应那一路的输入进来）。 */
+    public static boolean sealing(ServerPlayer p,int type){Seal s=seals.get(p.getUUID());return s!=null&&s.type==type;}
     /** 状态转换一律落盘（这个项目的规矩：静默失败必须能在日志里查）。 */
     private static void note(String message){com.mojang.logging.LogUtils.getLogger().info("[御厨子] "+message);}
+    /** 无量空处同样"状态转换一律落盘"，只是前缀不同。 */
+    private static void noteVoid(String message){com.mojang.logging.LogUtils.getLogger().info("[无量空处] "+message);}
     private static String where(Vec3 v){return String.format(Locale.ROOT,"(%.1f, %.1f, %.1f)",v.x,v.y,v.z);}
-    /** 结印手势：kind=70/size=5 走 CastHands 的"双掌合于身前"分支；life=0 = 放下（立刻失效）。 */
-    private static void pose(ServerPlayer p,int life){fx(p,70,p.position(),p.getLookAngle(),5,life,5);}
+    /** 结印手势：御厨子 kind=70/size=5 走 CastHands 的"双掌合于身前"，无量空处 kind=71/size=7 走"单手竖在屏幕正中央"；life=0 = 放下（立刻失效）。 */
+    private static void pose(ServerPlayer p,int type,int life){
+        if(type==SEAL_VOID)fx(p,71,p.position(),p.getLookAngle(),7,life,7);
+        else fx(p,70,p.position(),p.getLookAngle(),5,life,5);
+    }
     /** 「结印期间不能移动」：移速 ×0 的属性修饰符（不用缓慢效果，抄灶·最大功率的写法）。 */
     private static void freeze(ServerPlayer p){
         var attr=MaidBridge.body(p).getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
@@ -172,13 +181,19 @@ public final class Skills {
     }
     /** 释放键（技能5）循环：①结印 ②再按=放下(伤害50%) ③**放下后再按一次=收起领域**。 */
     private static void domainPress(ServerPlayer p){
-        if(released.remove(p.getUUID())&&domains.containsKey(p.getUUID())){
+        // 先判条件再清"放下"标记：另一条领域的放下标记不能被这条路径吃掉
+        if(released.contains(p.getUUID())&&domains.containsKey(p.getUUID())){
+            released.remove(p.getUUID());
             note("收起御厨子（放下后再按一次）");
             closeDomain(p,true);CastFeedback.tell(p,"御厨子已收起");
             return;
         }
         Seal seal=seals.get(p.getUUID());
-        if(seal!=null){if(seal.opened)release(p);else cancelSeal(p,"再次按下释放键");return;}
+        if(seal!=null){
+            if(seal.type!=SEAL_SHRINE){CastFeedback.tell(p,"无量空处正在结印中，无法展开御厨子");return;}
+            if(seal.opened)release(p,SEAL_SHRINE);else cancelSeal(p,"再次按下释放键");
+            return;
+        }
         if(domains.containsKey(p.getUUID())){CastFeedback.tell(p,"御厨子已展开 · 再按=放下(伤害50%) · 放下后再按一次=收起 · 三击空格跳上神龛");return;}
         startSeal(p);
     }
@@ -198,24 +213,31 @@ public final class Skills {
         if(!Curse.spend(p,Curse.COST[5]))return;
         AttackTypes.prepare(AttackTypes.DISMANTLE);
         times[5]=now+(long)Math.ceil(COOLDOWN[5]*SoulCombat.cooldown(p)*(Curse.active(p,"Siphon")?1.3:1)*(Curse.tier(p)>=4?0.8:1));
-        seals.put(p.getUUID(),new Seal(p));
+        seals.put(p.getUUID(),new Seal(p,SEAL_SHRINE));
         freeze(p);
         fx(p,67,p.position(),Vec3.ZERO,Journey.nine(p)?1:0,1,0);SkillSounds.cast(p,5);
-        pose(p,ShrineRules.domainTicks(MaidBridge.isCaster(p))+ShrineRules.DOMAIN_OPEN_TICKS+400);
+        pose(p,SEAL_SHRINE,ShrineRules.domainTicks(MaidBridge.isCaster(p))+ShrineRules.DOMAIN_OPEN_TICKS+400);
         CastFeedback.tell(p,"伏魔御厨子 · 结印中 · "+(ShrineRules.DOMAIN_FREEZE_TICKS/20)+" 秒无法移动 · 再按释放键取消");
         note("结印开始 "+p.getScoreboardName()+" 冻结"+ShrineRules.DOMAIN_FREEZE_TICKS+"刻 "+ShrineRules.DOMAIN_OPEN_TICKS+"刻后展开");
     }
     /** 领域还没出现就再次按下：整体取消本次结印（不生成领域，按 30 秒冷却处理）。 */
     private static void cancelSeal(ServerPlayer p,String why){
-        if(seals.remove(p.getUUID())==null)return;
-        unfreeze(p);pose(p,0);Curse.cooldownDomain(p);
+        Seal seal=seals.remove(p.getUUID());if(seal==null)return;
+        unfreeze(p);pose(p,seal.type,0);Curse.cooldownDomain(p);
         CastFeedback.tell(p,"结印取消 · 御厨子冷却"+(ShrineRules.DOMAIN_COOLDOWN_TICKS/20)+" 秒");
         note("结印取消（"+why+"）"+p.getScoreboardName());
     }
-    /** 放下：手势失效、可以自由行动，但御厨子伤害降到 50%，领域继续存在。 */
-    private static void release(ServerPlayer p){
-        if(seals.remove(p.getUUID())==null)return;
-        unfreeze(p);pose(p,0);
+    /** 放下：手势失效、可以自由行动；御厨子伤害降到 50%，无量空处转为"仅控制"（不再造成伤害），领域都继续存在。 */
+    private static void release(ServerPlayer p,int type){
+        Seal seal=seals.remove(p.getUUID());if(seal==null)return;
+        unfreeze(p);pose(p,seal.type,0);
+        if(seal.type==SEAL_VOID){
+            GojoCombat.controlOnly(p);
+            CastFeedback.tell(p,"放下结印 · 无量空处仅剩控制（无伤害） · 再按一次释放键收起领域");
+            if(GojoCombat.domainOpen(p))released.add(p.getUUID());
+            noteVoid("放下（仅控制，伤害整段跳过）"+p.getScoreboardName());
+            return;
+        }
         Domain d=domains.get(p.getUUID());if(d!=null)d.damageScale=ShrineRules.DOMAIN_RELEASE_SCALE;
         CastFeedback.tell(p,"放下结印 · 御厨子伤害降至"+(int)(ShrineRules.DOMAIN_RELEASE_SCALE*100)+"% · 再按一次释放键收起领域");
         if(domains.containsKey(p.getUUID()))released.add(p.getUUID());
@@ -224,8 +246,8 @@ public final class Skills {
     /** 领域结束或异常：收起结印状态（解冻 + 放下手势）。 */
     private static void endSeal(ServerPlayer p){
         released.remove(p.getUUID());
-        if(seals.remove(p.getUUID())==null)return;
-        unfreeze(p);pose(p,0);
+        Seal seal=seals.remove(p.getUUID());if(seal==null)return;
+        unfreeze(p);pose(p,seal.type,0);
     }
     /** 结印第 80 刻：领域效果出现（原 case 5 的整段逻辑，原样搬过来）。 */
     private static void openDomain(ServerPlayer p){
@@ -235,7 +257,7 @@ public final class Skills {
         if(VoidJourney.evolved(p))syncVoidShrine(d);
         fx(p,1,d.center,d.shrineOffset,(float)d.radius,duration,SoulJourney.evolved(p)?-now:now);
         fx(p,25,p.position(),Vec3.ZERO,CombatSettings.voidFloor(p)?1:0,10,0);
-        pose(p,duration+400);
+        pose(p,SEAL_SHRINE,duration+400);
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.BEACON_ACTIVATE,SoundSource.PLAYERS,4,0.5f);
         p.displayClientMessage(Component.literal(VoidJourney.evolved(p)?"虚空御厨子 · "+(duration/20)+"秒 · 半径200格 · 五裂共鸣 · 结束闭合爆发":"领域展开 · 半径200格 · 每秒70咒力 · 再按释放键放下（伤害50%）"),true);
         DomainClash.opened(p,domainCenter(p),200);
@@ -247,11 +269,56 @@ public final class Skills {
         for(Seal seal:List.copyOf(seals.values())){
             if(!seals.containsKey(seal.owner.getUUID()))continue;   // 本轮已被取消或放下
             ServerPlayer p=seal.owner;long now=seal.level.getGameTime(),age=now-seal.start;
-            if(!valid(p,seal.level)){seals.remove(p.getUUID());unfreeze(p);pose(p,0);continue;}
+            if(!valid(p,seal.level)){seals.remove(p.getUUID());unfreeze(p);pose(p,seal.type,0);continue;}
             if(age<ShrineRules.DOMAIN_FREEZE_TICKS)freeze(p);   // 每刻重挂一次（幂等）
             else unfreeze(p);                                   // 3 秒后可以移动，手势保持
-            if(!seal.opened&&age>=ShrineRules.DOMAIN_OPEN_TICKS){seal.opened=true;openDomain(p);}
+            if(!seal.opened&&age>=ShrineRules.DOMAIN_OPEN_TICKS){seal.opened=true;if(seal.type==SEAL_VOID)openVoidDomain(p);else openDomain(p);}
         }
+    }
+    // ---------------------------------------------------------------- 五条悟技能7 · 无量空处（同一套 Seal：结印 → 80 刻展开 → 放下仅控制 → 收起）
+    /** 释放键循环：①结印 ②再按=放下(此后仅控制、无伤害) ③**放下后再按一次=收起领域**。 */
+    public static void voidPress(ServerPlayer p){
+        // 先判条件再清"放下"标记：御厨子的放下标记不能被这条路径吃掉
+        if(released.contains(p.getUUID())&&GojoCombat.domainOpen(p)){
+            released.remove(p.getUUID());
+            noteVoid("收起无量空处（放下后再按一次）");
+            GojoCombat.closeDomain(p);   // 收起文案与术式熔断仍由 GojoCombat 自己负责
+            CastFeedback.tell(p,"无量空处已收起");
+            return;
+        }
+        Seal seal=seals.get(p.getUUID());
+        if(seal!=null&&seal.type==SEAL_VOID){if(seal.opened)release(p,SEAL_VOID);else cancelVoidSeal(p,"再次按下释放键");return;}
+        if(GojoCombat.domainOpen(p)){CastFeedback.tell(p,"无量空处已展开 · 再按=放下(仅控制) · 放下后再按一次=收起");return;}
+        startVoidSeal(p);
+    }
+    /** 结印起手：门槛与扣费仍走 GojoCombat 原本那套（逐条说明原因），这里只管冻结与姿态。 */
+    private static void startVoidSeal(ServerPlayer p){
+        if(seals.containsKey(p.getUUID())){CastFeedback.tell(p,"另一种领域正在结印中");return;}
+        if(!GojoCombat.payVoidSeal(p))return;
+        seals.put(p.getUUID(),new Seal(p,SEAL_VOID));
+        freeze(p);
+        pose(p,SEAL_VOID,GojoCombat.UNLIMITED_TICKS+ShrineRules.DOMAIN_OPEN_TICKS+400);
+        CastFeedback.tell(p,"无量空处 · 结印中 · "+(ShrineRules.DOMAIN_FREEZE_TICKS/20)+" 秒无法移动 · 再按释放键取消");
+        noteVoid("结印开始 "+p.getScoreboardName()+" 冻结"+ShrineRules.DOMAIN_FREEZE_TICKS+"刻 "+ShrineRules.DOMAIN_OPEN_TICKS+"刻后展开");
+    }
+    /** 领域还没出现就再次按下：取消本次结印（扣掉的咒力与冷却不退，与御厨子的取消一致）。 */
+    private static void cancelVoidSeal(ServerPlayer p,String why){
+        if(!sealing(p,SEAL_VOID))return;
+        endSeal(p);
+        CastFeedback.tell(p,"结印取消 · 无量空处冷却"+GojoCombat.cooldownSeconds(p,7)+" 秒");
+        noteVoid("结印取消（"+why+"）"+p.getScoreboardName());
+    }
+    /** 无量空处第 80 刻：领域真正出现（GojoCombat 里原来按下就执行的那段逻辑），单手结印姿态保持到领域结束。 */
+    private static void openVoidDomain(ServerPlayer p){
+        pose(p,SEAL_VOID,GojoCombat.UNLIMITED_TICKS+400);   // 先摆姿态再生成：对拼当场结算时会反过来收起结印状态
+        GojoCombat.openVoidDomain(p);
+        noteVoid("领域生成 "+p.getScoreboardName()+" 中心"+where(p.position())+" 半径"+(int)GojoFx.DOMAIN_RADIUS+"格 "+GojoCombat.UNLIMITED_TICKS+"刻");
+    }
+    /** 无量空处关闭（收起/到时/对拼）：清掉它的结印状态（由 GojoCombat.closeDomain 与 cancel 调用）。 */
+    public static void endVoidSeal(ServerPlayer p){
+        Seal seal=seals.get(p.getUUID());
+        if(seal!=null&&seal.type!=SEAL_VOID)return;   // 御厨子的结印不归这条路径管
+        endSeal(p);
     }
     /** 三击空格：沿二次贝塞尔飞到"领域中心 + 神龛偏移 + 站立高度"，落点站住。 */
     public static void leapToShrine(ServerPlayer p){
@@ -358,12 +425,13 @@ public final class Skills {
         float damageScale=1f;
         Domain(ServerPlayer owner,ServerLevel level,Vec3 center,Vec3 shrineOffset,long start,long end,double radius){this.owner=owner;this.level=level;this.center=center;this.shrineOffset=shrineOffset;this.start=start;this.end=end;this.radius=radius;}
     }
-    /** 结印中的玩家：{@code start} 起 3 秒不能移动，{@code DOMAIN_OPEN_TICKS} 刻后领域出现。 */
-    /** 已经"放下"过（姿态解除、伤害 50%）但领域仍在的玩家：再按一次释放键即收起领域。 */
+    /** 已经"放下"过（姿态解除、御厨子伤害 50% / 无量空处仅控制）但领域仍在的玩家：再按一次释放键即收起领域。 */
     private static final java.util.Set<UUID> released=new java.util.HashSet<>();
+    /** 结印中的玩家：{@code start} 起 3 秒不能移动，{@code DOMAIN_OPEN_TICKS} 刻后领域出现。
+     *  {@code type} 区分伏魔御厨子与无量空处（两者共用这一套状态机与手势/冻结机制）。 */
     private static final class Seal {
-        final ServerPlayer owner;final ServerLevel level;final long start;boolean opened;
-        Seal(ServerPlayer p){owner=p;level=p.serverLevel();start=level.getGameTime();}
+        final ServerPlayer owner;final ServerLevel level;final long start;final int type;boolean opened;
+        Seal(ServerPlayer p,int type){owner=p;level=p.serverLevel();start=level.getGameTime();this.type=type;}
     }
     /** 跳神龛：起点→上方控制点→神龛落点的二次贝塞尔，逐刻 teleport 让客户端平滑跟。 */
     private static final class Leap {

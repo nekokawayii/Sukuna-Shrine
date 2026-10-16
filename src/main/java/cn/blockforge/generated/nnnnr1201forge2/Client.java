@@ -223,7 +223,7 @@ public final class Client {
         if(e.kind()>=113&&e.kind()<=121){VoidTechniqueClient.receive(e);return;}
         if(e.kind()>=100&&e.kind()<=112){VoidBossClient.receive(e);return;}
         if(e.kind()==97){RuinClient.receive(e);return;}
-        if(e.kind()==2||e.kind()==70)CastHands.receive(e);
+        if(e.kind()==2||e.kind()==70||e.kind()==71)CastHands.receive(e);   // 71 = 无量空处的单手结印姿态
         // 手臂动作与炎弓独立恢复，屏幕切割和释放法阵保持关闭。
         if(e.kind()==50||e.kind()==52||e.kind()==53||e.kind()==71)return;
         if(e.kind()>=80&&e.kind()<=95||e.kind()>=125&&e.kind()<=127){SoulClient.receive(e);return;}

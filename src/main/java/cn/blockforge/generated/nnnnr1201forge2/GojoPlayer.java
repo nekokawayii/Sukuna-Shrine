@@ -37,7 +37,7 @@ public final class GojoPlayer {
         "念完四句咒词原地引爆 48 格 · 999 伤害（打魔虚罗 3 倍） · 反噬自己 40% 生命",
         "向准星方向瞬移最多 8 格，遇墙停止",
         "近距离三连拳，命中附加缓慢",
-        "领域展开：范围内敌人无法行动并持续受伤 · 再按一次收起（关闭后术式熔断，可修复）",
+        "领域展开：结印 4 秒后展开，范围内敌人无法行动并持续受伤 · 再按=放下(仅控制、无伤害) · 放下后再按一次=收起（关闭后术式熔断，可修复）",
         "苍·最大功率：长按引导的光球，松手后停留 5 秒（长按苍也能进）"};
     public static String desc(int skill){return skill>=0&&skill<DESC.length?DESC[skill]:"";}
     public static boolean unlocked(Player p){return Curse.data(p).getBoolean("GojoMemory");}

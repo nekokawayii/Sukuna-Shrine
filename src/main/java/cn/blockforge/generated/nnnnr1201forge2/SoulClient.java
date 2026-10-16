@@ -39,32 +39,28 @@ public final class SoulClient {
         if(progress.nine())g.drawString(mc.font,"咒胎受肉 "+layers+" / 9"+(stacks>0?"  灵魂僵直 "+stacks+"层 · 移速 -"+(stacks*15)+"% · 冷却 +"+(stacks*10)+"%":""),12,h-144,0xFFC7DCE7);
         if(time<gapEnd){g.fill(0,0,w,h,0x7003060C);g.drawCenteredString(mc.font,"灵魂间隙 · 禁止领域与治疗 · "+((gapEnd-time+19)/20)+"秒",w/2,h/2-50,0xFFE1E2EA);}
         Domain d=inside();if(d!=null)g.drawCenteredString(mc.font,"领域展开 · 岩手观光 · "+((d.end-time+19)/20)+"秒",w/2,36,0xFFFFE5B7);
-        // 黑闪的屏幕演出：**竖着的黑色闪电，以准星（屏幕正中）为中心**。
-        // 每条闪电沿竖直方向推进、每 4 像素横向抖动一次、越到两端越细越淡；后面垫一层更宽的红色辉光（光污染），
-        // 正中再补一条亮红细芯。每段独立闪烁（波谷整段跳过）做出"炸断"的张力。
+        // 黑闪的屏幕演出：**以准星（屏幕正中）为圆心，黑色火花围成一个圆环向外扩散，圆心处再簇拥一小撮火花**。
+        // 每颗火花＝外面一层红色辉光 + 里面一颗近黑火花，逐颗独立闪烁（波谷整颗跳过）做出"噼啪炸开"的张力。
         if(time<crackEnd){ScreenSeverance.draw(g,37,(crackEnd-time)/16f);
             float life=Math.max(0,Math.min(1,(crackEnd-time)/16f));
             int cx=w/2,cy=h/2;
-            for(int i=0;i<5;i++){
-                int len=(int)(h*(i<2?0.50:i<4?0.38:0.26));
-                int jitter=(i-2)*10;                                  // 每条整体错开一点，避免完全重叠
-                int seed=i*53;
-                for(int y=cy-len;y<cy+len;y+=4){
-                    double t=(y-(cy-len))/(double)(2*len);
-                    int wob=(int)(Math.sin(y*0.11+seed+time*0.9)*7+Math.sin(y*0.037+seed)*11)+jitter;
-                    int half=Math.max(1,(int)(3.0*(0.35+0.65*Math.sin(Math.PI*Math.min(1,Math.max(0,t))))));
-                    double wave=Math.sin((y*0.05+time)*1.9+seed);
-                    if(wave<-0.30)continue;                           // 炸断：整段跳过
-                    int a=(int)((0.18+0.82*Math.abs(wave))*215*life);
-                    g.fill(cx+wob-half-2,y,cx+wob+half+2,y+4,(int)(a*0.42)<<24|0xFF2A18);   // 红色辉光（更宽）
-                    g.fill(cx+wob-half,y,cx+wob+half,y+4,(a<<24)|0x0A0A0A);                // 芯：近黑
-                }
-                int coreA=(int)(200*life);
-                for(int y=cy-len;y<cy+len;y+=4){
-                    int wob=(int)(Math.sin(y*0.11+seed+time*0.9)*7+Math.sin(y*0.037+seed)*11)+jitter;
-                    if(Math.sin((y*0.05+time)*1.9+seed)<-0.30)continue;
-                    g.fill(cx+wob-1,y,cx+wob+1,y+4,(coreA<<24)|0xFF991D36);                // 正中亮红细芯
-                }
+            double rad=(0.10+0.90*(1-life))*Math.min(w,h)*0.62;      // 半径随演出扩散
+            int dots=28;
+            for(int i=0;i<dots;i++){
+                double ang=i*Math.PI*2/dots+time*0.05;
+                int x=(int)(cx+Math.cos(ang)*rad),y=(int)(cy+Math.sin(ang)*rad);
+                if(Math.sin(time*1.9+i*3.1)<-0.30)continue;           // 整颗跳过 = 闪烁
+                int a=(int)((0.30+0.70*Math.abs(Math.sin(time*1.9+i*3.1)))*225*life);
+                g.fill(x-4,y-4,x+4,y+4,((int)(a*0.35)<<24)|0xFF2A18);   // 红色辉光（光污染）
+                g.fill(x-2,y-2,x+2,y+2,(a<<24)|0x0A0A0A);               // 近黑火花
+            }
+            for(int i=0;i<10;i++){                                   // 圆心：一小撮火花
+                double ang=i*Math.PI*2/10+time*0.11,rr=6+((i%3)*5);
+                int x=(int)(cx+Math.cos(ang)*rr),y=(int)(cy+Math.sin(ang)*rr);
+                if(Math.sin(time*2.3+i*1.7)<-0.25)continue;
+                int a=(int)(215*life);
+                g.fill(x-3,y-3,x+3,y+3,((int)(a*0.40)<<24)|0xFF2A18);
+                g.fill(x-1,y-1,x+1,y+1,(a<<24)|0x0A0A0A);
             }
         }
         if(time<whiteEnd)g.fill(0,0,w,h,((int)(150*(whiteEnd-time)/7.0)<<24)|0xFFF5DC);

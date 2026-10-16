@@ -5,67 +5,57 @@ import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 
-/** 黑闪表现层（客户端，**纯顶点通路自绘**，不用 Photon、不用任何 .fx）。
+/** 黑闪表现层（客户端，**纯顶点通路自绘** + 少量 Photon 加法发光）。
  *
- *  <p>按用户设定：**黑红闪电 + 拳风**，闪电**从敌人身上迸发**。</p>
+ *  <p>按用户设定：**以准星（命中点）为圆心，黑色火花围成圆环向外扩散；圆环中间是拳风 + 黑色火花**。</p>
  *  <ul>
- *    <li><b>黑红闪电</b>：12 道从敌人胸口迸发的折线闪电，每道 5~7 段、段间随机折角，外宽内尖；
- *        每段先画一层**红**（更宽、作外发光），再叠一层**黑**（更窄、作芯），所以整道是黑芯红边的黑红闪电；
- *        方向以"背离拳击方向"为主 + 随机散布，逐刻抖动折角、亮度闪烁，约 9 刻淡出。</li>
- *    <li><b>拳风</b>：沿出拳方向铺一圈向外扩张的**半透明风环** + 一层扇形风幕，
- *        白灰色、逐刻变大变淡，约 7 刻；没有方向（direction 为零）时不出拳风。</li>
- *    <li><b>黑色余闪</b>：命中点一下极短的暗闪（3 刻），把"黑"字点出来。</li>
+ *    <li><b>黑色火花圆环</b>：28 颗黑芯火花排在一个**垂直于视线的圆**上（所以从玩家视角看就是一个圆），
+ *        半径从 0.6 格扩散到 5.2 格；每颗火花＝外面一层红色辉光 + 里面一颗近黑火花，逐颗独立闪烁（波谷整颗跳过）。</li>
+ *    <li><b>圆心（准星处）</b>：拳风的四层风环沿出拳方向推出去 + 一圈向内簇拥的黑色火花（10 颗）。</li>
+ *    <li><b>光污染</b>：Photon 加法混合两处——命中点发光点（bloom）+ 拳风光环；顶点通路的红色辉光层负责其余光晕。</li>
  *  </ul>
  *
- *  <p>全部是实心面片（POSITION_COLOR + 普通混合），没有贴图、没有发射器：既不会残留，也不吃显存/粒子内存。</p> */
+ *  <p>没有贴图、没有长寿命发射器：不会残留，也不吃显存/粒子内存。</p> */
 public final class BlackFlashRender {
-    private record Bolt(double[] yaw,double[] pitch,int seg){}
+    /** 一颗火花：环上角度、半径比例（0~1）、离面抖动、大小倍率。 */
+    private record Spark(double ang,double rad,double tilt,double size){}
     private static final class Flash {
-        final Vec3 pos,dir;final long born;final List<Bolt> bolts=new ArrayList<>();
+        final Vec3 pos,dir;final long born;final List<Spark> ring=new ArrayList<>(),core=new ArrayList<>();
         Flash(Vec3 pos,Vec3 dir,long born,Random rnd){
             this.pos=pos;this.dir=dir;this.born=born;
-            for(int i=0;i<BOLTS;i++){
-                double[] y=new double[SEG+1],p=new double[SEG+1];
-                // **竖过来**：一半朝上、一半朝下（俯仰角约 63°~89°），水平方向只做锯齿抖动 → 整体是竖着的雷电柱
-                double up=i%2==0?1:-1;
-                double yaw=rnd.nextDouble()*Math.PI*2,pitch=up*(1.10+rnd.nextDouble()*0.45);
-                for(int s=0;s<=SEG;s++){
-                    y[s]=yaw;p[s]=pitch;
-                    yaw+=(rnd.nextDouble()-0.5)*0.85;      // 水平锯齿
-                    pitch=up*(1.10+Math.abs(pitch)/22.0)+(rnd.nextDouble()-0.5)*0.22;   // 竖向偶尔回折
-                }
-                bolts.add(new Bolt(y,p,SEG));
+            for(int i=0;i<SPARKS;i++){
+                double ang=(i+ rnd.nextDouble()*0.5)*Math.PI*2/SPARKS;
+                ring.add(new Spark(ang,0.9+rnd.nextDouble()*0.2,(rnd.nextDouble()-0.5)*0.5,0.8+rnd.nextDouble()*0.5));
             }
+            for(int i=0;i<CORE_SPARKS;i++)
+                core.add(new Spark(rnd.nextDouble()*Math.PI*2,rnd.nextDouble()*0.45,(rnd.nextDouble()-0.5)*0.8,0.7+rnd.nextDouble()*0.6));
         }
     }
     private static final List<Flash> FLASHES=new ArrayList<>();
     private static final Random RND=new Random();
-    /** 参数都集中在这里，方便按手感调。 */
-    private static final int BOLTS=22,SEG=7,LIFE=13,WIND_LIFE=10,DARK_LIFE=4;
-    private static final double BOLT_LEN=6.6,BOLT_WIDTH=0.24,WIND_RADIUS=4.2;
-    private static final int RED=0xFFE02418,BLACK=0xFF050505,WIND=0xFFE6ECF2,DARK=0xFF000000;
-    /** Photon 加法发光的 bloom 色（真 bloom 靠这条，用量小、寿命短，不会堆积）。 */
+    /** 可调参数。 */
+    private static final int SPARKS=28,CORE_SPARKS=10,LIFE=12,WIND_LIFE=10;
+    private static final double RING_MIN=0.6,RING_MAX=5.2,SPARK_SIZE=0.26,WIND_RADIUS=4.2;
+    private static final int RED=0xFFE02418,BLACK=0xFF060606,WIND=0xFFE6ECF2;
     private static final int BLOOM_RED=0xFF8A1208;
     private static final String GLOW="textures/effect/glow.png";
 
-    /** 命中点触发：{@code pos} = 敌人身上（胸口附近），{@code dir} = 出拳方向（可为 {@link Vec3#ZERO}）。 */
+    /** 命中点（＝准星指向处）触发。{@code dir} = 出拳方向（可为 {@link Vec3#ZERO}）。 */
     public static void play(Vec3 pos,Vec3 dir){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         Vec3 d=dir==null||dir.lengthSqr()<1e-6?Vec3.ZERO:dir.normalize();
         FLASHES.add(new Flash(pos,d,mc.level.getGameTime(),RND));
-        if(FLASHES.size()>16)FLASHES.remove(0);   // 连打时只留最近的，绝不无限堆积
-        // 一层 Photon 加法发光：真 bloom（顶点通路的普通混合做不出光晕）；寿命都很短，不会长期占用
-        // 光污染：一处加法发光给整场戏"打光" + 一拳的风压光环（都短命，不堆积）
+        if(FLASHES.size()>16)FLASHES.remove(0);
+        // 光污染：命中点 bloom 发光 + 拳风处加法光环（都短命）
         try{
-            PhotonFx.spark(pos,0.5,0.40,0xFF2A10,BLOOM_RED,GLOW,true,1,8,22,0.5);
-            if(d.lengthSqr()>1e-6)PhotonFx.ring(pos.add(d.scale(1.6)),2.2,0.75,0xFFD8E6F2,BLOOM_RED,26,2,9);
+            PhotonFx.spark(pos,0.5,0.40,0xFF2A10,BLOOM_RED,GLOW,true,1,8,20,0.5);
+            if(d.lengthSqr()>1e-6)PhotonFx.ring(pos.add(d.scale(1.6)),2.4,0.8,0xFFD8E6F2,BLOOM_RED,26,2,9);
         }catch(Throwable ignored){}
         Client.shake(12);
     }
     public static void tick(){}
     public static void clear(){FLASHES.clear();}
 
-    /** 世界渲染（在 {@link SoulClient#draw} 的同一批里画；坐标已由上层减去相机）。 */
     public static void draw(BufferBuilder b,PoseStack ps,Vec3 cam,float partial){
         if(FLASHES.isEmpty())return;
         var mc=Minecraft.getInstance();if(mc.level==null)return;
@@ -73,27 +63,16 @@ public final class BlackFlashRender {
             double age=mc.level.getGameTime()-f.born+partial;
             if(age<0||age>LIFE)continue;
             double life=Math.max(0,1-age/LIFE);
-            // ---- 黑红闪电：从敌人身上迸发 ----
-            for(Bolt bolt:f.bolts){
-                Vec3 from=f.pos;
-                for(int s=0;s<bolt.seg();s++){
-                    double yaw=bolt.yaw()[s]+Math.sin((age+s)*1.7)*0.10;      // 逐刻抖动
-                    double pitch=bolt.pitch()[s]+Math.cos((age+s)*1.3)*0.10;
-                    Vec3 step=new Vec3(Math.cos(yaw)*Math.cos(pitch),Math.sin(pitch),Math.sin(yaw)*Math.cos(pitch)).scale(BOLT_LEN/bolt.seg());
-                    Vec3 to=from.add(step);
-                    double taper=(1-s/(double)bolt.seg());
-                    // 张力：整段闪电会**突然熄灭再亮起**（每段独立判定），比单纯改透明度更有电击感
-                    double wave=Math.sin((age*1.9+s)*2.3);
-                    if(wave<-0.35&&age>1.5){from=to;continue;}
-                    int flick=(int)(190+65*Math.abs(wave));
-                    int redA=(int)((175*flick/255.0)*life)<<24,blkA=(int)((250*flick/255.0)*life)<<24;
-                    ribbon(b,ps,from,to,BOLT_WIDTH*4.6*taper+0.05,(int)(redA*0.5)<<24|((RED>>1)&0x7F7F7F),cam);  // 最外：红色辉光（光污染层）
-                    ribbon(b,ps,from,to,BOLT_WIDTH*2.6*taper+0.02,redA|(RED&0xFFFFFF),cam);                       // 外：红
-                    ribbon(b,ps,from,to,BOLT_WIDTH*1.4*taper+0.01,blkA|(BLACK&0xFFFFFF),cam);                     // 芯：黑
-                    from=to;
-                }
-            }
-            // ---- 拳风：沿出拳方向扩张的风环（**更明显**：四层、更粗更亮更大） ----
+            // 圆环所在平面：垂直于视线（玩家看过去就是一圈）
+            Vec3 n=cam.subtract(f.pos);n=n.lengthSqr()<1e-6?new Vec3(0,0,1):n.normalize();
+            Vec3 ref=Math.abs(n.y)>0.9?new Vec3(1,0,0):new Vec3(0,1,0);
+            Vec3 e1=n.cross(ref).normalize(),e2=n.cross(e1).normalize();
+            // ---- 黑色火花圆环：半径扩散 ----
+            double rad=RING_MIN+(RING_MAX-RING_MIN)*DismantleMotionRules.phase(age,0,LIFE*0.8);
+            for(Spark s:f.ring)spark(b,ps,f.pos,e1,e2,s,rad,life,age);
+            // ---- 圆心：向内簇拥的黑色火花 ----
+            for(Spark s:f.core)spark(b,ps,f.pos,e1,e2,s,RING_MIN*0.9+s.rad()*1.4,life,age);
+            // ---- 圆心：拳风四层风环（沿出拳方向推出去） ----
             if(f.dir.lengthSqr()>1e-6&&age<=WIND_LIFE){
                 double wl=Math.max(0,1-age/WIND_LIFE),r=WIND_RADIUS*(0.35+0.85*(age/WIND_LIFE));
                 int a=(int)(185*wl*wl)<<24;
@@ -105,14 +84,19 @@ public final class BlackFlashRender {
         }
     }
 
-    // ------------------------------------------------------------ 基础画法（相机朝向面片）
-    private static void ribbon(BufferBuilder b,PoseStack ps,Vec3 a,Vec3 z,double half,int color,Vec3 cam){
-        Vec3 mid=a.lerp(z,.5),across=z.subtract(a).cross(cam.subtract(mid));
-        if(across.lengthSqr()<1e-8)across=new Vec3(0,1,0);
-        Vec3 side=across.normalize().scale(half);
-        Client.quad(b,ps,a.add(side),z.add(side),z.subtract(side),a.subtract(side),color);
+    /** 画一颗火花：红色辉光 + 近黑芯，逐颗独立闪烁。 */
+    private static void spark(BufferBuilder b,PoseStack ps,Vec3 center,Vec3 e1,Vec3 e2,Spark s,double rad,double life,double age){
+        double wave=Math.sin(age*1.9+s.ang()*3.1);
+        if(wave<-0.30)return;                                     // 整颗跳过 = 闪烁的"炸断"感
+        double a=(0.25+0.75*Math.abs(wave))*life;
+        Vec3 p=center.add(e1.scale(Math.cos(s.ang())*rad)).add(e2.scale(Math.sin(s.ang())*rad)).add(0,s.tilt(),0);
+        double size=SPARK_SIZE*s.size();
+        quad(b,ps,p,size*2.4,(int)(a*70)<<24|(RED&0xFFFFFF));     // 外：红色辉光（光污染）
+        quad(b,ps,p,size,(int)(a*235)<<24|(BLACK&0xFFFFFF));      // 内：近黑火花
     }
-    private static void quad(BufferBuilder b,PoseStack ps,Vec3 c,double r,Vec3 cam,int color){
+    /** 相机朝向的方形面片。 */
+    private static void quad(BufferBuilder b,PoseStack ps,Vec3 c,double r,int color){
+        var cam=Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         Vec3 n=cam.subtract(c);n=n.lengthSqr()<1e-6?new Vec3(0,0,1):n.normalize();
         Vec3 up=new Vec3(0,1,0).subtract(n.scale(new Vec3(0,1,0).dot(n)));
         if(up.lengthSqr()<1e-4)up=new Vec3(1,0,0).subtract(n.scale(n.x));
@@ -120,7 +104,7 @@ public final class BlackFlashRender {
         Vec3 u=up.scale(r).add(right.scale(r)),w=up.scale(r).subtract(right.scale(r));
         Client.quad(b,ps,c.add(u),c.add(w),c.subtract(u),c.subtract(w),color);
     }
-    /** 垂直于 {@code dir} 的圆环（用 16 段面片拼，避免依赖 Photon）。 */
+    /** 垂直于 {@code dir} 的圆环（16 段面片拼成，不依赖 Photon）。 */
     private static void windRing(BufferBuilder b,PoseStack ps,Vec3 c,Vec3 dir,double r,double thick,int color,Vec3 cam){
         Vec3 n=dir.normalize();
         Vec3 ref=Math.abs(n.y)>0.9?new Vec3(1,0,0):new Vec3(0,1,0);
@@ -130,8 +114,10 @@ public final class BlackFlashRender {
             double a0=i*Math.PI*2/seg,a1=(i+1)*Math.PI*2/seg;
             Vec3 p0=c.add(e1.scale(Math.cos(a0)*r)).add(e2.scale(Math.sin(a0)*r));
             Vec3 p1=c.add(e1.scale(Math.cos(a1)*r)).add(e2.scale(Math.sin(a1)*r));
-            Vec3 mid=p0.lerp(p1,.5);
-            ribbon(b,ps,p0,p1,thick,color,cam.add(mid.scale(0)));   // 用 ribbon 拼成环
+            Vec3 mid=p0.lerp(p1,.5),across=p1.subtract(p0).cross(cam.subtract(mid));
+            if(across.lengthSqr()<1e-8)continue;
+            Vec3 side=across.normalize().scale(thick);
+            Client.quad(b,ps,p0.add(side),p1.add(side),p1.subtract(side),p0.subtract(side),color);
         }
     }
     private BlackFlashRender(){}

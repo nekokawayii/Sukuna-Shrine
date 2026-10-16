@@ -39,7 +39,25 @@ public final class SoulClient {
         if(progress.nine())g.drawString(mc.font,"咒胎受肉 "+layers+" / 9"+(stacks>0?"  灵魂僵直 "+stacks+"层 · 移速 -"+(stacks*15)+"% · 冷却 +"+(stacks*10)+"%":""),12,h-144,0xFFC7DCE7);
         if(time<gapEnd){g.fill(0,0,w,h,0x7003060C);g.drawCenteredString(mc.font,"灵魂间隙 · 禁止领域与治疗 · "+((gapEnd-time+19)/20)+"秒",w/2,h/2-50,0xFFE1E2EA);}
         Domain d=inside();if(d!=null)g.drawCenteredString(mc.font,"领域展开 · 岩手观光 · "+((d.end-time+19)/20)+"秒",w/2,36,0xFFFFE5B7);
-        if(time<crackEnd){ScreenSeverance.draw(g,37,(crackEnd-time)/16f);for(int i=0;i<7;i++){g.pose().pushPose();g.pose().translate(w*0.5,h*0.5,0);g.pose().mulPose(com.mojang.math.Axis.ZP.rotationDegrees(i*51+time));g.fill(0,-2,w/2,2,0xC0100312);g.fill(w/5,-3,w/3,0,0xFF991D36);g.pose().popPose();}}
+        // 黑闪的屏幕演出：原来是 7 条绕屏幕中心旋转的**实心矩形**（0xC0100312 黑紫 + 0xFF991D36 红），
+        // 看起来就是一坨黑紫方块。改成**由粗到细、由淡到亮的收尖尖刺**（外层黑紫内芯亮红），像闪电一样扎出去。
+        if(time<crackEnd){ScreenSeverance.draw(g,37,(crackEnd-time)/16f);
+            float life=Math.max(0,Math.min(1,(crackEnd-time)/16f));
+            for(int i=0;i<7;i++){
+                g.pose().pushPose();g.pose().translate(w*0.5,h*0.5,0);g.pose().mulPose(com.mojang.math.Axis.ZP.rotationDegrees(i*51+time));
+                int seg=6;double len=w*0.5;
+                for(int s=0;s<seg;s++){
+                    double t0=s/(double)seg,t1=(s+1)/(double)seg;
+                    int x0=(int)(len*t0),x1=(int)(len*t1);
+                    int half=Math.max(1,(int)(3.2*(1-t0)));          // 越往外越细
+                    int a=(int)((0.10+0.85*t0)*255*life);            // 越往外越亮（但整体随演出淡出）
+                    g.fill(x0,-half,x1,half,(a<<24)|0x100312);       // 外壳：黑紫
+                }
+                int coreA=(int)(230*life);
+                g.fill((int)(len*0.05),-1,(int)(len*0.42),1,(coreA<<24)|0xFF991D36);  // 内芯：亮红
+                g.pose().popPose();
+            }
+        }
         if(time<whiteEnd)g.fill(0,0,w,h,((int)(150*(whiteEnd-time)/7.0)<<24)|0xFFF5DC);
     }
     @SubscribeEvent public static void scene(RenderLevelStageEvent e){var mc=Minecraft.getInstance();Domain d=inside();if(d==null||mc.level==null||e.getStage()!=RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS)return;

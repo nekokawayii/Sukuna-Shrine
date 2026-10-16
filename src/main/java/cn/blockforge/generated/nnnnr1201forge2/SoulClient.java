@@ -21,11 +21,11 @@ public final class SoulClient {
     private static long time,gapEnd,crackEnd,whiteEnd;private static int gapBoss,layers,stacks;
     public static void collect(Vec3 center,double radius,List<Vec3> out){effects.removeIf(v->{if(v.e.kind()!=93&&v.e.kind()!=125&&v.e.kind()!=126||v.e.position().distanceToSqr(center)>radius*radius)return false;if(out.size()<6000)out.add(v.e.position());return true;});}
     public static void clear(){effects.clear();domains.clear();time=gapEnd=crackEnd=whiteEnd=0;layers=stacks=0;}
-    public static void tick(){time++;effects.removeIf(v->time-v.start>=v.e.life());domains.values().removeIf(d->time>=d.end);BlackFlashFx.tick();}
+    public static void tick(){time++;effects.removeIf(v->time-v.start>=v.e.life());domains.values().removeIf(d->time>=d.end);BlackFlashRender.tick();}
     public static void receive(Network.Effect e){var mc=Minecraft.getInstance();if(mc.player==null)return;
         if(e.kind()==89){layers=(int)e.seed();stacks=e.life();return;}
         if(e.kind()==82&&e.owner()==mc.player.getId()){gapEnd=time+e.life();gapBoss=(int)e.seed();return;}
-        if(e.kind()==85){BlackFlashFx.play(e.position());if(e.seed()==mc.player.getId())crackEnd=time+e.life();}
+        if(e.kind()==85){BlackFlashRender.play(e.position());if(e.seed()==mc.player.getId())crackEnd=time+e.life();}
         if(e.kind()==90){Domain old=domains.get(e.owner());if(old==null&&mc.player.distanceToSqr(e.position())<48*48)whiteEnd=time+7;domains.put(e.owner(),new Domain(e.position(),time+e.life(),old==null?time:old.born,e.size(),e.seed()==1));return;}
         if(e.kind()==91){domains.remove(e.owner());return;}
         if(e.kind()==94)return;
@@ -71,6 +71,7 @@ public final class SoulClient {
     }
     public static void draw(BufferBuilder b,PoseStack ps,Vec3 cam,float partial){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
+        BlackFlashRender.draw(b,ps,cam,partial);   // 黑闪的纯黑核心（自绘，不依赖 .fx）
         for(Visual v:effects){Network.Effect e=v.e;SlashAppearance.use(e);float age=time-v.start+partial,fade=Math.max(0,1-age/Math.max(1,e.life()));Vec3 p=e.position(),q=e.direction();int alpha=(int)(220*fade);
             // 超新星：红色弹幕。弹头按本刻位移前进，拖一段同色短尾，不再走斩击剑气与壁纸通路。
             if(e.kind()==125){

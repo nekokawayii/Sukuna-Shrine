@@ -271,8 +271,29 @@ public final class PhotonFx {
             start(e,pos);
         }catch(Throwable t){fail(t);}
     }
-    /** 茈：紫黑球体，内部像银河一样转动。 */
-    public static Handle purple(Vec3 pos,double radius,int life){
+    /** **带物理的丝线**：一组从球壳沿径向运动的细长粒子——{@code speed<0} 向球心收束（火焰飞向弓）、
+     *  {@code speed>0} 向外飞散（爆炸拉丝）；{@code gravity>0} 时会被重力压弯，{@code life} 决定飞多远。
+     *  {@code cylinder=true} 时用圆柱壳体 + 轴向运动（火柱火星上飘）。 */
+    public static Handle lines(Vec3 pos,double shell,double thin,double longSide,int color,int bloom,double speed,double gravity,double rate,int duration,int life,boolean cylinder){
+        return flow(pos,shell,thin,longSide,color,bloom,speed,gravity,rate,duration,life,cylinder,false);
+    }
+    /** **带物理的火团**：与 {@link #lines} 同一套，但换成 glow 贴图、短粗（一小团火焰）。 */
+    public static Handle blobs(Vec3 pos,double shell,double thin,double longSide,int color,int bloom,double speed,double gravity,double rate,int duration,int life){
+        return flow(pos,shell,thin,longSide,color,bloom,speed,gravity,rate,duration,life,false,true);
+    }
+    private static Handle flow(Vec3 pos,double shell,double thin,double longSide,int color,int bloom,double speed,double gravity,double rate,int duration,int life,boolean cylinder,boolean glow){
+        try{
+            Emitter e=emitter(cylinder?CYLINDER:SHELL,Math.max(0.2,shell),cylinder?1:0.06);Object c=e.config();
+            duration(c,duration);particleLife(c,life);
+            stretch(c,Math.max(0.008,thin),Math.max(0.06,longSide));
+            rate(c,Math.max(1,rate));
+            if(speed!=0)speed(c,speed);
+            colour(c,color);render(c,MODE_BILLBOARD,glow?"textures/effect/glow.png":STREAK,bloom,true);
+            if(gravity!=0)tryCall(field(c,"physics"),"setGravity",num(gravity));
+            return start(e,pos);
+        }catch(Throwable t){fail(t);return null;}
+    }
+    /** 茈：紫黑球体，内部像银河一样转动。 */    public static Handle purple(Vec3 pos,double radius,int life){
         try{
             Emitter galaxy=emitter(SPHERE,radius,1);Object g=galaxy.config();
             lifetime(g,life);size(g,radius*0.95);rate(g,Math.max(3,radius*4.5));orbit(g,1.2);colour(g,0xB4FFFFFF);

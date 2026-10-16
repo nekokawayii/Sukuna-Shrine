@@ -129,8 +129,11 @@ public final class FurnaceMaxClient {
         }
         if(e.kind()==FurnaceMax.FX_PILLAR){
             if(e.life()<=0){
+                // 火柱烧完：不是直接消失，而是缩成一颗红球再散掉
                 pillars.removeIf(q->q.owner==e.owner()&&q.center.distanceToSqr(e.position())<9);
-                drop("pillar/"+e.owner());
+                drop("pillar/"+e.owner());drop("pillarBase/"+e.owner());
+                drop("pillarFlow/"+e.owner());drop("pillarFlow2/"+e.owner());
+                balls.add(newBall(e.position().add(0,1,0)));
                 return;
             }
             Pillar found=null;
@@ -195,7 +198,8 @@ public final class FurnaceMaxClient {
             if(time%2!=0||!PhotonFx.ready())continue;
             double h=b.height;
             PhotonFx.spark(b.at.add(0,h*0.5,0),Math.max(0.5,h*0.7),Math.max(0.6,h*0.45),FIRE,BLOOM_FIRE,GLOW,true,2,5,18,2.0);
-            if(time%4==0)PhotonFx.ray(b.at.add(0,h*0.4,0),1.6,0.02,0.7,GOLD,BLOOM_GOLD,true,2,4,8,-1.2);
+            // 身上的火苗往上飘（带物理的火团）
+            if(time%4==0)PhotonFx.blobs(b.at.add(0,h*0.35,0),Math.max(0.6,h*0.6),0.30,0.50,FIRE,BLOOM_FIRE,1.1,0.01,14,3,6);
         }
         for(Pillar q:pillars)drawPillar(q);
     }
@@ -260,7 +264,10 @@ public final class FurnaceMaxClient {
         keep(k+"stringD",PhotonFx.beam(bottom,nock,0.055,5),6);
         // 搭在弦上的箭
         keep(k+"arrow",PhotonFx.beam(nock,nock.add(fwd.scale(2.2+0.6*progress)),0.13+0.05*progress,5),6);
-        // 火焰汇聚：金色细线从四周收进身体 + 火光球 + 每 6 刻一圈脉冲
+        // 小团火焰飞向"身前"汇聚成弓：球壳上生成的小火团沿径向飞入弓心（带物理，会拖着短尾）
+        keep(k+"flow",PhotonFx.blobs(center,6.0+1.8*progress,0.30,0.46,FIRE,BLOOM_FIRE,-1.9,0,30,2,6),8);
+        keep(k+"flow2",PhotonFx.blobs(center,3.0+1.0*progress,0.22,0.34,GOLD,BLOOM_GOLD,-1.4,0,18,2,5),7);
+        // 金色细线从四周收进身体 + 身体火光 + 每 6 刻一圈脉冲
         PhotonFx.ray(pos,4.6+1.6*progress,0.028,0.85,GOLD,BLOOM_GOLD,true,2,4,10+ (int)(8*progress),-2.6);
         PhotonFx.spark(pos.add(0,1.0,0),1.5+0.7*progress,1.0+0.4*progress,FIRE,BLOOM_FIRE,GLOW,true,2,6,16,3.0);
         if(time%6==0)PhotonFx.shockwave(pos,0x66FF8A2A,(float)(2.2+2.4*progress),12);
@@ -282,7 +289,8 @@ public final class FurnaceMaxClient {
         if(!PhotonFx.ready())return;
         double remaining=Math.max(0,q.end-time);
         double k=Math.min(1,remaining/FurnaceMax.PILLAR_TICKS);
-        double height=PILLAR_HEIGHT*(0.35+0.65*k),width=2.0+3.4*k;
+        // 越接近烧完缩得越快（k² 曲线），最后正好缩进柱底那颗红球里
+        double height=PILLAR_HEIGHT*(0.12+0.88*k*k),width=1.6+3.6*k;
         if(throttle("pillarFill",6)){
             keep("pillar/"+q.owner,PhotonFx.beam(q.center,q.center.add(0,height,0),width,10),12);
             keep("pillarBase/"+q.owner,PhotonFx.sphere(q.center.add(0,1.5,0),2.0+2.6*k,2.2+2.4*k,FIRE,BLOOM_FIRE,GLOW,true,8,10,50+50*k,1.6),12);
@@ -290,6 +298,9 @@ public final class FurnaceMaxClient {
         if(time%4==0){
             PhotonFx.ray(q.center.add(0,1,0),Math.max(2,width*1.6),0.035,1.6,GOLD,BLOOM_GOLD,true,3,5,14,3.0);
             PhotonFx.spark(q.center.add(0,height*0.6,0),Math.max(1.5,width),1.6+1.4*k,FIRE_HOT,BLOOM_FIRE,GLOW,true,3,6,26,1.0);
+            // 火星往上飘：径向初速 + 一点点重力（丝线物理）
+            keep("pillarFlow/"+q.owner,PhotonFx.lines(q.center.add(0,1,0),Math.max(1.6,width*1.1),0.05,1.5,GOLD,BLOOM_GOLD,2.6,0.05,20,4,10,false),12);
+            keep("pillarFlow2/"+q.owner,PhotonFx.blobs(q.center.add(0,2,0),Math.max(1.4,width*0.9),0.40,0.60,FIRE,BLOOM_FIRE,1.6,0.03,16,4,9),12);
         }
     }
 
@@ -316,13 +327,9 @@ public final class FurnaceMaxClient {
                 PhotonFx.spark(at,4.0+ring*2.0,3.0+ring*1.4,ring<=2?FIRE:FIRE_HOT,BLOOM_FIRE,GLOW,true,4,10,60,1.5);
             }
         }
-        // 向外飞散的细光线（参考图里最抢眼的那层）
-        for(int i=0;i<18;i++){
-            double a=random.nextDouble()*Math.PI*2,elev=(random.nextDouble()-0.3)*0.8;
-            Vec3 dir=new Vec3(Math.cos(a),elev,Math.sin(a)).normalize();
-            Vec3 a1=center.add(dir.scale(8+random.nextDouble()*10));
-            keep("burst/"+i,PhotonFx.beam(a1,a1.add(dir.scale(10+random.nextDouble()*16)),0.10,12),14);
-        }
+        // 向外飞散的丝线：**带物理**——径向初速 + 重力，飞出去会往下坠
+        keep("burst",PhotonFx.lines(center,12,0.055,2.4,GOLD,BLOOM_GOLD,6.5,0.09,64,8,16,false),24);
+        keep("burst2",PhotonFx.lines(center,6,0.035,1.4,0xFFF0C0,BLOOM_GOLD,9.0,0.12,40,6,12,false),18);
         PhotonFx.ray(center,70,0.02,1.6,0xAAFFD9A0,BLOOM_GOLD,true,3,5,26,5.5);
         PhotonFx.spark(center,26,7,DEEP,BLOOM_FIRE,GLOW,true,4,12,90,0.6);
     }

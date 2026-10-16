@@ -56,8 +56,8 @@ public final class FurnaceMax {
     public static final double SHOT_STEP=4.0,SHOT_RANGE=100.0,BLAST_RADIUS=100.0;
     /** 当前伤害原值（与茈 500 / 无限制茈 999 同一口径，再走 {@link CombatSettings#spellDamage}）。 */
     public static final float BLAST_DAMAGE=2000f;
-    /** 火柱：40 秒熄灭，柱内每秒 150 点（原值），半径 12 格。 */
-    public static final int PILLAR_TICKS=20*40;
+    /** 火柱：烧 15 秒，柱内每秒 150 点（原值）、半径 12 格；烧完缩成红球消失（客户端表现）。 */
+    public static final int PILLAR_TICKS=20*15;
     public static final double PILLAR_RADIUS=12.0;
     public static final float PILLAR_DPS=150f;
     /** 蓄力时"周身方块被镀上橙色"的作用半径（客户端表现，见 {@link FurnaceMaxClient}）。 */

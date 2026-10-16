@@ -109,9 +109,9 @@ public final class FistFlameClient {
             var pose=ps.last();
             for(int i=0;i<FLAMES;i++){
                 float ph=i*1.3f;
-                double drift=Math.sin(t*0.18+ph)*0.055,sway=Math.cos(t*0.13+ph*1.4)*0.045,h=0.10+0.05*Math.abs(Math.sin(t*0.22+ph));
-                float x=(float)(sway+(i%3-1)*0.055),z=(float)(drift+(i%2)*0.02),half=0.045f+0.012f*(i%2);
-                int alpha=(int)((0.30+0.35*Math.abs(Math.sin(t*0.25+ph)))*255);
+                double drift=Math.sin(t*0.18+ph)*0.065,sway=Math.cos(t*0.13+ph*1.4)*0.055,h=0.15+0.07*Math.abs(Math.sin(t*0.22+ph));
+                float x=(float)(sway+(i%3-1)*0.065),z=(float)(drift+(i%2)*0.028),half=0.070f+0.020f*(i%2);
+                int alpha=(int)((0.45+0.45*Math.abs(Math.sin(t*0.25+ph)))*255);
                 flame(pose,b,light,x,half,z,h,alpha);
             }
             ps.popPose();
@@ -126,7 +126,8 @@ public final class FistFlameClient {
         try{
         float t=mc.level.getGameTime()+e.getPartialTick();
         var ps=e.getPoseStack();ps.pushPose();
-        ps.translate(0.02,-0.22,-0.12);                                   // 稍微往手心方向挪一点
+        // 不再猜偏移：直接用手持事件矩阵的原点（那就是这只手的位置），只沿局部 +Y 稍微抬起一点点
+        ps.translate(0,-0.02,0);
         var cam=mc.gameRenderer.getMainCamera();
         Vec3 eye=cam.getPosition(),look=new Vec3(cam.getLookVector()),right=new Vec3(cam.getLeftVector()).scale(-1),up=new Vec3(cam.getUpVector());
         HANDS.put(p.getId(),new Vec3[]{eye.add(look.scale(0.42)).add(right.scale(0.34)).subtract(up.scale(0.24)),null});
@@ -135,9 +136,9 @@ public final class FistFlameClient {
         var pose=ps.last();
         for(int i=0;i<FLAMES;i++){
             float ph=i*1.3f;
-            double drift=Math.sin(t*0.18+ph)*0.045,sway=Math.cos(t*0.13+ph*1.4)*0.04,h=0.09+0.05*Math.abs(Math.sin(t*0.22+ph));
-            float x=(float)(sway+(i%3-1)*0.05),z=(float)(drift+(i%2)*0.015),half=0.042f+0.012f*(i%2);
-            int alpha=(int)((0.28+0.35*Math.abs(Math.sin(t*0.25+ph)))*255);
+            double drift=Math.sin(t*0.18+ph)*0.05,sway=Math.cos(t*0.13+ph*1.4)*0.045,h=0.13+0.06*Math.abs(Math.sin(t*0.22+ph));
+            float x=(float)(sway+(i%3-1)*0.06),z=(float)(drift+(i%2)*0.02),half=0.065f+0.018f*(i%2);
+            int alpha=(int)((0.45+0.45*Math.abs(Math.sin(t*0.25+ph)))*255);
             flame(pose,b,e.getPackedLight(),x,half,z,h,alpha);
         }
         ps.popPose();

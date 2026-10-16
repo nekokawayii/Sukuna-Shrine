@@ -23,6 +23,13 @@ public final class BlackFlashFx {
     /** 资源缺失的 .fx 只尝试一次，避免每次触发都抛异常。 */
     private static final Set<String> MISSING=new HashSet<>();
     private static boolean broken;
+    /** 本次触发起的特效句柄与到期时刻：到点强制销毁（Photon 的 IFXEffect#setForcedDeath）。
+     *  不加这一步，那些 .fx 里的长寿命发射器会**一直留在世界里**（用户实测：黑闪的两块黑紫方块
+     *  从命中一直待到演出结束之后），而且每次黑闪都新建 4 个特效、只增不减，内存会持续上涨。 */
+    private static final List<Object> ALIVE=new ArrayList<>();
+    private static final List<Long> DUE=new ArrayList<>();
+    /** 特效寿命（毫秒）：最长的一段跑完就收，够看完全部演出。 */
+    private static final long LIFETIME_MS=2200;
 
     // ------------------------------------------------------------ 反射底座（对照 Photon 1.1.17 公开 API）
     private static Class<?> type(String n)throws Exception{return Class.forName(ROOT+n);}
@@ -55,10 +62,21 @@ public final class BlackFlashFx {
             call(effect,"setAllowMulti",true);
             call(effect,"setOffset",pos.x-bp.getX()-0.5,pos.y-bp.getY()-0.5,pos.z-bp.getZ()-0.5);
             call(effect,"start");
+            ALIVE.add(effect);DUE.add(System.currentTimeMillis()+LIFETIME_MS);
         }catch(Throwable t){
             if(t instanceof ClassNotFoundException||t instanceof NoClassDefFoundError){
                 if(!broken){broken=true;LogUtils.getLogger().warn("[黑闪] 未安装 Photon，黑闪特效已跳过（音效不受影响）");}
             }else if(MISSING.add(name))LogUtils.getLogger().warn("[黑闪] 特效文件缺失或不可用，已跳过：sukuna:fx/{}.fx",name);
+        }
+    }
+    /** 每刻由 SoulClient.tick 调用：把到期的特效强制销毁，别让它们赖在世界里。 */
+    public static void tick(){
+        if(ALIVE.isEmpty())return;
+        long now=System.currentTimeMillis();
+        for(int i=ALIVE.size()-1;i>=0;i--){
+            if(now<DUE.get(i))continue;
+            try{call(ALIVE.get(i),"setForcedDeath",true);}catch(Throwable ignored){}
+            ALIVE.remove(i);DUE.remove(i);
         }
     }
     private BlackFlashFx(){}

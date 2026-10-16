@@ -21,7 +21,7 @@ public final class SoulClient {
     private static long time,gapEnd,crackEnd,whiteEnd;private static int gapBoss,layers,stacks;
     public static void collect(Vec3 center,double radius,List<Vec3> out){effects.removeIf(v->{if(v.e.kind()!=93&&v.e.kind()!=125&&v.e.kind()!=126||v.e.position().distanceToSqr(center)>radius*radius)return false;if(out.size()<6000)out.add(v.e.position());return true;});}
     public static void clear(){effects.clear();domains.clear();time=gapEnd=crackEnd=whiteEnd=0;layers=stacks=0;}
-    public static void tick(){time++;effects.removeIf(v->time-v.start>=v.e.life());domains.values().removeIf(d->time>=d.end);}
+    public static void tick(){time++;effects.removeIf(v->time-v.start>=v.e.life());domains.values().removeIf(d->time>=d.end);BlackFlashFx.tick();}
     public static void receive(Network.Effect e){var mc=Minecraft.getInstance();if(mc.player==null)return;
         if(e.kind()==89){layers=(int)e.seed();stacks=e.life();return;}
         if(e.kind()==82&&e.owner()==mc.player.getId()){gapEnd=time+e.life();gapBoss=(int)e.seed();return;}

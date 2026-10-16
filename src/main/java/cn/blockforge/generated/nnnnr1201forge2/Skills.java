@@ -263,7 +263,7 @@ public final class Skills {
     public static void cast(ServerPlayer p,int skill){
         if(skill<0||skill>=6||!p.isAlive()||p.isSpectator()||!Journey.unlocked(p))return;
         // 简易领域接管期间（维持中或它的冷却中）不走通用冷却：这条技不属于宿傩六式那套 times[] 冷却。
-        if(SimpleDomain.owns(p))return;
+        if(SimpleDomain.owns(p)||FurnaceMax.active(p))return;
         if(!Curse.canUseTechnique(p)){p.displayClientMessage(Component.literal("术式熔断中：只能使用术式反转或修复熔断"),true);return;}
         long now=p.serverLevel().getGameTime();long[] times=cooldowns.computeIfAbsent(p.getUUID(),k->new long[7]);
         if(skill==2&&Curse.fingers(p)<5){p.displayClientMessage(Component.literal("捌需要先吃下5根宿傩手指"),true);return;}

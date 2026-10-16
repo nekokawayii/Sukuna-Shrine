@@ -15,7 +15,7 @@ public final class SkillWheel extends Screen {
     private static final String[] SHORT={"解","网","捌","开","灶","领域","剥离"};
     public SkillWheel(){
         super(Component.literal("咒术 · 技能轮盘"));page=Client.selected>=7&&Client.selected<17&&Client.progress.pureLandVictory()?1:0;Client.wheelPage=page;
-        current=Client.selected;current=switch(current){case 17,21->1;case 18,24,26,27,28,29->0;case 19,20,25,32->2;case 30->3;case 31->5;case 33->0;default->current;};
+        current=Client.selected;current=switch(current){case 17,21->1;case 18,24,26,27,28,29->0;case 19,20,25,32->2;case 30->3;case FurnaceMax.SKILL->3;case 31->5;case 33->0;default->current;};
         if(!Client.availableSkill(current))current=Client.progress.sukuna()?0:BranchRules.FROST;
     }
     private boolean ice(){return Client.progress.uraume();}
@@ -24,7 +24,7 @@ public final class SkillWheel extends Screen {
     private int centerX(){return WheelSideSlots.centerX(width,height,ice(),gojo());}
     private int count(){return page==1?GUARDIAN_WHEEL.length:Client.baseWheelCount();}
     private int global(int index){return page==1?GUARDIAN_WHEEL[index]+7:index;}
-    private String shortName(int skill){if(skill==SimpleDomain.SKILL)return "简易领域 · 捌";if(skill>=34)return GojoPlayer.shortName(skill-34);if(CombatExpansionRules.branch(skill))return CombatExpansionRules.name(skill).replace("解 · ","").replace("捌 · ","");if(skill>=24)return SlashFormRules.name(skill).replace("解 · ","").replace("捌 · ","");return skill==22?"霜凪":skill==23?"直瀑":skill>=7&&skill<17?GuardianPlayerSkills.SHORT[skill-7]:skill>=17?BranchRules.name(skill):SHORT[skill];}
+    private String shortName(int skill){if(skill==FurnaceMax.SKILL)return FurnaceMax.SHORT;if(skill==SimpleDomain.SKILL)return "简易领域 · 捌";if(skill>=34)return GojoPlayer.shortName(skill-34);if(CombatExpansionRules.branch(skill))return CombatExpansionRules.name(skill).replace("解 · ","").replace("捌 · ","");if(skill>=24)return SlashFormRules.name(skill).replace("解 · ","").replace("捌 · ","");return skill==22?"霜凪":skill==23?"直瀑":skill>=7&&skill<17?GuardianPlayerSkills.SHORT[skill-7]:skill>=17?BranchRules.name(skill):SHORT[skill];}
     private Button modeButton;
     @Override protected void init(){
         if(Client.progress.sukuna())modeButton=addRenderableWidget(Button.builder(Component.literal(modeText()),b->Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.TOGGLE_DISMANTLE))).bounds(centerX()-76,3,152,20).build());
@@ -39,7 +39,7 @@ public final class SkillWheel extends Screen {
     @Override public boolean keyPressed(int key,int scan,int mods){if((key==GLFW.GLFW_KEY_LEFT||key==GLFW.GLFW_KEY_RIGHT||key==GLFW.GLFW_KEY_PAGE_UP||key==GLFW.GLFW_KEY_PAGE_DOWN)&&pages()){changePage();return true;}return super.keyPressed(key,scan,mods);}
     @Override public boolean isPauseScreen(){return false;}
     private int outerRadius(){return WheelSideSlots.radius(width,height,ice(),gojo());}
-    private int[] branches(){if(page!=0||!Client.progress.sukuna())return new int[0];if(current==0)return Client.progress.awakened()?new int[]{18,24,26,27,28,29}:new int[]{24,26,28,29};if(current==1&&Client.progress.awakened())return new int[]{17,21};if(current==2&&Client.progress.fingers()>=5)return new int[]{19,20,25,32,SimpleDomain.SKILL};if(current==3&&Client.voidStage())return new int[]{30};if(current==5&&Client.progress.awakened())return new int[]{31};return new int[0];}
+    private int[] branches(){if(page!=0||!Client.progress.sukuna())return new int[0];if(current==0)return Client.progress.awakened()?new int[]{18,24,26,27,28,29}:new int[]{24,26,28,29};if(current==1&&Client.progress.awakened())return new int[]{17,21};if(current==2&&Client.progress.fingers()>=5)return new int[]{19,20,25,32,SimpleDomain.SKILL};if(current==3&&Client.voidStage())return new int[]{30,FurnaceMax.SKILL};if(current==5&&Client.progress.awakened())return new int[]{31};return new int[0];}
     private WheelSideSlots.Box branchBox(int i){int n=branches().length,step=Math.min(34,Math.max(18,(height-94)/Math.max(1,n)));return new WheelSideSlots.Box(centerX()+outerRadius()+4,height/2-n*step/2+i*step,74,step-3);}
     private int skillAt(double x,double y){return BranchRules.wheelSkill(true,false,page,count(),x,y);}
     private void updateHover(double mx,double my){
@@ -81,7 +81,7 @@ public final class SkillWheel extends Screen {
         }
         updateHover(mx,my);super.mouseMoved(mx,my);
     }
-    private int cost(int skill){if(skill==SimpleDomain.SKILL)return 150;if(skill>=34)return GojoPlayer.costOf(skill-34);if(skill==FinaleRules.SKILL)return (int)Client.progress.energy();if(skill==29||skill==32)return Curse.COST[0];if(skill==30)return Curse.COST[3];if(skill==31)return 2000;if(skill==28)return Curse.COST[0];if(skill>=24)return skill==24?120:skill==25?180:skill==26?0:2000;if(skill==22||skill==23)return Uraume.cost(skill);if(skill==19)return 180;if(skill==20)return 120;if(skill==21)return BranchRules.wallCost(Client.progress.wallSpacing());if(NetBranchRules.branch(skill))return NetBranchRules.cost(skill);return skill<7?Curse.COST[skill]:GuardianPlayerSkills.COST[skill-7];}
+    private int cost(int skill){if(skill==FurnaceMax.SKILL)return FurnaceMax.COST;if(skill==SimpleDomain.SKILL)return 150;if(skill>=34)return GojoPlayer.costOf(skill-34);if(skill==FinaleRules.SKILL)return (int)Client.progress.energy();if(skill==29||skill==32)return Curse.COST[0];if(skill==30)return Curse.COST[3];if(skill==31)return 2000;if(skill==28)return Curse.COST[0];if(skill>=24)return skill==24?120:skill==25?180:skill==26?0:2000;if(skill==22||skill==23)return Uraume.cost(skill);if(skill==19)return 180;if(skill==20)return 120;if(skill==21)return BranchRules.wallCost(Client.progress.wallSpacing());if(NetBranchRules.branch(skill))return NetBranchRules.cost(skill);return skill<7?Curse.COST[skill]:GuardianPlayerSkills.COST[skill-7];}
     private static final String[] GOJO_DESC={"引力拉扯：把敌人吸向蓝色光球并施加缓慢","红色斥力球：高伤害与超级击退","蓄力3秒后打出圆柱激光，沿直线贯穿并击飞","双手合十5秒，苍与赫对撞成紫球后打出","念完四句咒词后原地引爆，范围48格 · 反噬自己40%生命","向准星方向瞬移最多8格","近距离三连拳，命中减速","领域展开：范围内敌人无法行动并持续受伤","长按引导：光球每秒5格跟随准星，松手后停留5秒"};
     private String desc(int skill){return switch(skill){
         case 33->"蓄力8秒 → 五阶段终结 · 耗尽咒力 · 停恢复60秒 · 熔断180秒";
@@ -91,6 +91,7 @@ public final class SkillWheel extends Screen {
         case 27->"公开咏唱：龙鳞·反发·成双之流星 · 冷却120秒";
         case 29,32->"短按普通解 · 长按随准星2格/秒 · 松手停15秒 · 碰敌10斩";
         case 30->"虚空阶段保留灵魂炎弓效果 · 紫色灶火与爆炸";
+        case FurnaceMax.SKILL->"长按蓄力20秒 · 蓄力中无法移动、前10秒每秒上升1格、周围15格燃烧 · 松手或受伤中断（冷却30秒）· 半径100格火焰爆炸 + 火柱40秒熄灭（柱内150/s）";
         case 31->"半秒内逐按六笔成星，最后长按咏唱 · 龙与120颗小行星 · 熔断75秒";
         case 28->"原地旋转 · 向四周释放水平斩击圈 · 动作后恢复视角";
         case 17->"上下八角向中心 · 每道原版40%解 · 冷却50秒";

@@ -56,7 +56,9 @@ public final class SimpleDomain {
     /** 斩击本身的伤害系数：0 = 只作表现（伤害由 {@link #DAMAGE_INTERVAL} 那条 tick 结算）。 */
     public static final float CUT_DAMAGE_SCALE=0f;
     /** 单次释放的最长时长（刻），防止无限按住。 */
-    public static final int MAX_HOLD=200;
+    /** 单次长按上限（刻）：到点自动收招，不能再无限按着。
+     *  200 刻 = 10 秒太宽松，改成 100 刻 = **5 秒**；想更短/更长直接改这个数（如 60=3 秒、150=7.5 秒）。 */
+    public static final int MAX_HOLD=100;
 
     private static final class Field {
         final ServerPlayer p;final ServerLevel level;final UUID body;
@@ -89,7 +91,8 @@ public final class SimpleDomain {
         Field f=fields.get(p.getUUID());
         if(f==null){start(p);return;}
         LivingEntity body=MaidBridge.body(p);
-        if(!body.isAlive()||body.level()!=f.level||!TechniqueInput.allowed(p)||f.level.getGameTime()-f.start>MAX_HOLD){release(p);return;}
+        if(f.level.getGameTime()-f.start>MAX_HOLD){CastFeedback.tell(p,"简易领域 · 捌 已达单次上限 "+BalanceRules.number(MAX_HOLD/20.0)+" 秒 · 自动收招");release(p);return;}
+        if(!body.isAlive()||body.level()!=f.level||!TechniqueInput.allowed(p)){release(p);return;}
         body.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,SLOW_REFRESH,1,false,false,false));
         f.slowUntil=(int)(f.level.getGameTime()+SLOW_REFRESH);
         net.minecraft.util.RandomSource rnd=p.getRandom();

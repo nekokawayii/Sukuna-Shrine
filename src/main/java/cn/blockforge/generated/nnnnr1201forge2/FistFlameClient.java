@@ -2,6 +2,13 @@ package cn.blockforge.generated.nnnnr1201forge2;
 
 import java.util.*;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.vertex.BufferUploader;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -38,6 +45,12 @@ public final class FistFlameClient {
     private static final int ARM_POINTS=3;
     /** 拖尾滞后：按实体位移往回拖多少刻（以及最大拖出多少格），挥拳时咒力会拖在后面。 */
     private static final double DRAG_TICKS=1.6,DRAG_MAX=0.35;
+    // ---------- 「包覆手臂的咒力」自绘层（复刻 jujutsu-vfx 那套观感：逐帧自绘、裹住整条手臂、随出拳放大） ----------
+    private static final ResourceLocation GLOW=new ResourceLocation("sukuna","textures/effect/glow.png");
+    private static final ResourceLocation AURA_FX_TEXTURE=GLOW;
+    private static final int AURA_SEG=5;                       // 每条手臂几段
+    private static final double AURA_WIDTH=0.42,AURA_LEN=0.24; // 单段尺寸（格）；手臂本体只有 0.25 格宽，所以这是"裹一圈"
+    private static final int AURA_OUT=0x73C81414,AURA_IN=0x8CFF6A72,AURA_CORE=0x66FFD0D6;
     private record Where(Vec3 at,org.joml.Quaternionf rot,ResourceLocation level,long seen){}
     private static final Map<Integer,Long> BURNING=new HashMap<>();
     /** 渲染路径写、tick 路径读：key = 玩家id*2+手（0右 1左）。 */
@@ -156,7 +169,48 @@ public final class FistFlameClient {
                 Vec3 forward=player.getLookAngle().scale(0.25).add(drag);
                 armPoints(ps,model.rightArm,player.getId(),0,forward);
                 armPoints(ps,model.leftArm,player.getId(),1,forward);
+                // 自绘的包覆层：两条手臂各画一遍（用 render 事件给的 buffer，不碰 Photon 状态）
+                var vb=source.getBuffer(net.minecraft.client.renderer.RenderType.entityTranslucent(AURA_FX_TEXTURE));
+                float power=power(player,partial);
+                aura(ps,vb,model.rightArm,light,power);
+                aura(ps,vb,model.leftArm,light,power);
             }catch(Throwable t){fail("第三人称取手部姿态",t);}
+        }
+        /** 出拳强度曲线：静止时轻轻起伏，挥拳（`getAttackAnim`）时明显放大。 */
+        private static float power(AbstractClientPlayer player,float partial){
+            float t=player.tickCount+partial;
+            float swing=player.getAttackAnim(partial);
+            return (float)(0.70+0.18*Math.sin(t*0.16)+0.55*swing*swing);
+        }
+        /** 包覆层：沿手臂每段画两张交叉的柔光面片（XY 面 + ZY 面），从任何角度看都"裹"在手臂上。 */
+        private static void aura(PoseStack ps,com.mojang.blaze3d.vertex.VertexConsumer vb,ModelPart arm,int light,float power){
+            ps.pushPose();arm.translateAndRotate(ps);
+            var pose=ps.last();
+            for(int s=0;s<AURA_SEG;s++){
+                float y=1.5f+ (s/(float)Math.max(1,AURA_SEG-1))*7.0f;      // 像素：前臂→拳
+                float w=(float)(AURA_WIDTH*power),h=(float)(AURA_LEN*power);
+                float fy=y/16f;
+                quad(pose,vb,light,-w,fy-h,0,w,fy+h,0,AURA_OUT,AURA_IN,AURA_CORE);
+                quad(pose,vb,light,0,fy-h,-w,0,fy+h,w,AURA_OUT,AURA_IN,AURA_CORE);
+            }
+            ps.popPose();
+        }
+        /** 一张柔光面片：三层（外暗红 → 中亮粉 → 内芯），UV 铺满整张 glow 保留柔边。 */
+        private static void quad(PoseStack.Pose pose,com.mojang.blaze3d.vertex.VertexConsumer vb,int light,float x0,float y0,float z0,float x1,float y1,float z1,int outer,int mid,int core){
+            layer(pose,vb,light,x0,y0,z0,x1,y1,z1,outer,1.35f);
+            layer(pose,vb,light,x0,y0,z0,x1,y1,z1,mid,1.0f);
+            layer(pose,vb,light,x0,y0,z0,x1,y1,z1,core,0.6f);
+        }
+        private static void layer(PoseStack.Pose pose,com.mojang.blaze3d.vertex.VertexConsumer vb,int light,float x0,float y0,float z0,float x1,float y1,float z1,int color,float scale){
+            float cx=(x0+x1)/2,cy=(y0+y1)/2,cz=(z0+z1)/2;
+            float hx=(x1-x0)/2*scale,hy=(y1-y0)/2*scale,hz=(z1-z0)/2*scale;
+            vertex(pose,vb,light,cx-hx,cy+hy,cz-hz,color,0,0);
+            vertex(pose,vb,light,cx+hx,cy+hy,cz+hz,color,1,0);
+            vertex(pose,vb,light,cx+hx,cy-hy,cz+hz,color,1,1);
+            vertex(pose,vb,light,cx-hx,cy-hy,cz-hz,color,0,1);
+        }
+        private static void vertex(PoseStack.Pose pose,com.mojang.blaze3d.vertex.VertexConsumer vb,int light,float x,float y,float z,int color,float u,float v){
+            vb.vertex(pose.pose(),x,y,z).color(color).uv(u,v).overlayCoords(4194304).uv2(light).normal(pose.normal(),0,0,1).endVertex();
         }
         /** 沿**整条手臂**均匀取 ARM_POINTS 个点（玩家手臂箱体固定为肩下 -2~10 像素，取 1~9.5 像素＝前臂到拳头）。
          *  注：`ModelPart.cubes` 是 private，那个参考模组是带 Mixin/AT 才读到方块几何的；玩家模型尺寸固定，直接用像素范围更稳。 */
@@ -199,7 +253,35 @@ public final class FistFlameClient {
                     want((p.getId()*2+hand1)*8+i,at,rot);
                 }
             }
+            // 第一人称的自绘包覆层：沿"肘→拳"画一串柔光面片（贴图通道，尺寸以格为单位）
+            float power=(float)(0.70+0.18*Math.sin((p.tickCount+e.getPartialTick())*0.16)+0.55*p.getAttackAnim(e.getPartialTick())*p.getAttackAnim(e.getPartialTick()));
+            RenderSystem.enableDepthTest();RenderSystem.disableCull();RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexShader);
+            RenderSystem.setShaderTexture(0,AURA_FX_TEXTURE);
+            BufferBuilder b=Tesselator.getInstance().getBuilder();
+            b.begin(VertexFormat.Mode.QUADS,DefaultVertexFormat.POSITION_TEX_COLOR);
+            for(int hand1=0;hand1<2;hand1++){
+                Vec3 side=hand1==0?right.scale(0.30):right.scale(-0.30);
+                for(int s=0;s<AURA_SEG;s++){
+                    double t=(s+0.5)/AURA_SEG;
+                    Vec3 at=elbow.lerp(hand,t).add(side).add(drag);
+                    double w=AURA_WIDTH*power*0.9,h=AURA_LEN*power;
+                    worldQuad(b,at,right,up,w,h,AURA_OUT,1.35);   // 外层
+                    worldQuad(b,at,right,up,w,h,AURA_IN,1.0);     // 中层
+                    worldQuad(b,at,right,up,w,h,AURA_CORE,0.6);   // 内芯
+                }
+            }
+            BufferUploader.drawWithShader(b.end());
+            RenderSystem.enableCull();RenderSystem.disableBlend();
         }catch(Throwable t){fail("第一人称取手部位置",t);}
+    }
+    /** 第一人称世界层里的一张柔光面片（面向相机，贴图通道，尺寸单位＝格）。 */
+    private static void worldQuad(BufferBuilder b,Vec3 c,Vec3 right,Vec3 up,double w,double h,int color,double scale){
+        Vec3 u=up.scale(h*scale),r=right.scale(w*scale);
+        b.vertex(c.x-r.x-u.x,c.y-r.y-u.y,c.z-r.z-u.z).uv(0,0).color(color).endVertex();
+        b.vertex(c.x+r.x-u.x,c.y+r.y-u.y,c.z+r.z-u.z).uv(1,0).color(color).endVertex();
+        b.vertex(c.x+r.x+u.x,c.y+r.y+u.y,c.z+r.z+u.z).uv(1,1).color(color).endVertex();
+        b.vertex(c.x-r.x+u.x,c.y-r.y+u.y,c.z-r.z+u.z).uv(0,1).color(color).endVertex();
     }
     private FistFlameClient(){}
 }

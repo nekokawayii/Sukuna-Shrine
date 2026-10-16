@@ -112,31 +112,72 @@ public final class WallpaperClient {
     }
     private static void fail(Throwable ex){
         failed=true;
-        tell("无法截取本机桌面（"+ex.getClass().getSimpleName()+"），斩击保持纯黑。");
+        tell("无法截取本机桌面（"+ex.getMessage()+"），斩击保持纯黑。");
         LogUtils.getLogger().warn("斩击壁纸：本机桌面截取失败",ex);
     }
-    /** 后台线程：截屏 → 等比缩小 → NativeImage（ABGR，DirectByteBuffer 之外的普通内存）。 */
+    /** 后台线程截屏：Windows 走 **GDI BitBlt**（不依赖 AWT，headless 环境下也能用），
+     *  其它平台退回 {@code java.awt.Robot}；之后等比缩到 {@link #MAX_EDGE} 以内并转成 NativeImage(ABGR)。 */
     private static NativeImage capture(DesktopRect area)throws Exception{
-        int sx=Math.max(1,Math.round(area.x())),sy=Math.max(1,Math.round(area.y()));
+        int sx=Math.max(0,Math.round(area.x())),sy=Math.max(0,Math.round(area.y()));
         int sw=Math.max(1,Math.round(area.width())),sh=Math.max(1,Math.round(area.height()));
-        BufferedImage raw=new Robot().createScreenCapture(new Rectangle(sx,sy,sw,sh));
+        int[] pixels=com.sun.jna.Platform.isWindows()?captureGdi(sx,sy,sw,sh):captureRobot(sx,sy,sw,sh);
         double scale=Math.min(1.0,MAX_EDGE/(double)Math.max(sw,sh));
         int w=Math.max(1,(int)Math.round(sw*scale)),h=Math.max(1,(int)Math.round(sh*scale));
-        BufferedImage scaled=new BufferedImage(w,h,BufferedImage.TYPE_INT_RGB);
-        Graphics2D g=scaled.createGraphics();
-        try{g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-            g.drawImage(raw,0,0,w,h,null);}finally{g.dispose();raw.flush();}
         NativeImage image=new NativeImage(NativeImage.Format.RGBA,w,h,false);
-        int[] row=new int[w];
         for(int y=0;y<h;y++){
-            scaled.getRGB(0,y,w,1,row,0,w);
+            int srcY=(int)((long)y*sh/h)*sw;
             for(int x=0;x<w;x++){
-                int argb=row[x];
-                image.setPixelRGBA(x,y,(argb&0xFF000000)|((argb&0xFF)<<16)|(argb&0xFF00)|((argb>>16)&0xFF));
+                int argb=pixels[srcY+(int)((long)x*sw/w)];
+                image.setPixelRGBA(x,y,(0xFF000000)|((argb&0xFF)<<16)|(argb&0xFF00)|((argb>>16)&0xFF));
             }
         }
-        scaled.flush();
         return image;
+    }
+    /** Windows：GetDC → 兼容 DC/位图 → BitBlt → GetDIBits（32bpp 顶向下的 BGRA）。 */
+    private static int[] captureGdi(int x,int y,int w,int h){
+        var user32=com.sun.jna.platform.win32.User32.INSTANCE;
+        var gdi32=com.sun.jna.platform.win32.GDI32.INSTANCE;
+        com.sun.jna.platform.win32.WinDef.HDC screen=user32.GetDC(null);
+        if(screen==null)throw new IllegalStateException("GetDC 失败");
+        com.sun.jna.platform.win32.WinDef.HDC mem=null;
+        com.sun.jna.platform.win32.WinDef.HBITMAP bmp=null;        try{
+            mem=gdi32.CreateCompatibleDC(screen);
+            bmp=gdi32.CreateCompatibleBitmap(screen,w,h);
+            if(mem==null||bmp==null)throw new IllegalStateException("创建位图失败");
+            gdi32.SelectObject(mem,bmp);   // 位图选进临时 DC；DC 随后整体删掉，不需要恢复原对象
+            if(!gdi32.BitBlt(mem,0,0,w,h,screen,x,y,SRCCOPY|CAPTUREBLT))throw new IllegalStateException("BitBlt 失败");
+            var info=new com.sun.jna.platform.win32.WinGDI.BITMAPINFO();
+            info.bmiHeader.biWidth=w;
+            info.bmiHeader.biHeight=-h;                 // 负数 = 顶向下，取出来的行序和屏幕一致
+            info.bmiHeader.biPlanes=1;
+            info.bmiHeader.biBitCount=(short)32;
+            info.bmiHeader.biCompression=com.sun.jna.platform.win32.WinGDI.BI_RGB;
+            info.bmiHeader.write();
+            com.sun.jna.Memory buffer=new com.sun.jna.Memory((long)w*h*4);
+            if(gdi32.GetDIBits(mem,bmp,0,h,buffer,info,com.sun.jna.platform.win32.WinGDI.DIB_RGB_COLORS)==0)
+                throw new IllegalStateException("GetDIBits 失败");
+            byte[] raw=buffer.getByteArray(0,w*h*4);
+            int[] out=new int[w*h];
+            for(int i=0,o=0;i<out.length;i++,o+=4)
+                out[i]=((raw[o+2]&0xFF)<<16)|((raw[o+1]&0xFF)<<8)|(raw[o]&0xFF);   // BGRA → RGB
+            return out;
+        }finally{
+            if(bmp!=null)gdi32.DeleteObject(bmp);
+            if(mem!=null)gdi32.DeleteDC(mem);
+            user32.ReleaseDC(null,screen);
+        }
+    }
+    private static final int SRCCOPY=0x00CC0020,CAPTUREBLT=0x40000000;
+    /** 非 Windows 兜底：AWT Robot（需要非 headless 环境）。 */
+    private static int[] captureRobot(int x,int y,int w,int h){
+        try{
+            BufferedImage raw=new Robot().createScreenCapture(new Rectangle(x,y,w,h));
+            int[] out=raw.getRGB(0,0,w,h,null,0,w);
+            raw.flush();
+            return out;
+        }catch(AWTException|HeadlessException ex){
+            throw new IllegalStateException("系统拒绝了截屏（headless）",ex);
+        }
     }
     /** 主线程：三张纹理轮转——注册新的一帧，随后释放上一张（GL 纹理与像素一起回收，不积压）。 */
     private static void upload(NativeImage image){

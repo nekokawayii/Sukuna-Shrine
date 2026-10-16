@@ -25,10 +25,10 @@ import net.minecraft.world.phys.Vec3;
 public final class FurnaceMaxClient {
     /** 火焰配色（argb）。 */
     private static final int FIRE=0xC8FF6A14,FIRE_HOT=0xD8FFD9A0,GOLD=0x99FFC24A,DEEP=0xB8E03A08,
-        COAT=0x40FF8A2A,COAT_HOT=0x38FFB060,RED=0xD8FF2418,SMOOTH=0x30A08878;
-    private static final int BLOOM_FIRE=0xFF7A1206,BLOOM_GOLD=0xFF803010,BLOOM_COAT=0xFF8A4010,BLOOM_RED=0xFF8A0A06;
+        RED=0xD8FF2418,SMOOTH=0x30A08878;
+    private static final int BLOOM_FIRE=0xFF7A1206,BLOOM_GOLD=0xFF803010,BLOOM_RED=0xFF8A0A06;
     private static final String GLOW="textures/effect/glow.png";
-    private static final double PILLAR_HEIGHT=80,BOW_HEIGHT=3.6;
+    private static final double BOW_HEIGHT=3.6;
     /** 镀橙渐变 / 收拢（中断 70 刻、打出去 8 刻）/ 红球时长。 */
     private static final int COAT_RAMP=60,COLLAPSE_TICKS=70,FAST_COLLAPSE=8,BALL_TICKS=22;
 
@@ -37,7 +37,7 @@ public final class FurnaceMaxClient {
     private record Spare(PhotonFx.Handle handle,long end,String group){}
     private static final class Charge{int owner;Vec3 pos=Vec3.ZERO;Vec3 dir=new Vec3(0,0,1);float progress;long end;}
     private static final class Field{
-        int owner;Vec3 center=Vec3.ZERO;long start;long holdUntil;long collapseFrom;long nextCoat;int collapseTicks=COLLAPSE_TICKS;
+        int owner;Vec3 center=Vec3.ZERO;long start;long holdUntil;long collapseFrom;int collapseTicks=COLLAPSE_TICKS;
         double intensity;boolean wiped;
     }
     private static final class Pillar{int owner;Vec3 center=Vec3.ZERO;long born;long end;}
@@ -231,13 +231,8 @@ public final class FurnaceMaxClient {
         e.setGreen((float)(e.getGreen()*(1-m)+0.45*m));
         e.setBlue((float)(e.getBlue()*(1-m)+0.10*m));
     }
-    public static void overlay(GuiGraphics g){
-        double k=intensity();
-        if(k<=0.02)return;
-        var mc=Minecraft.getInstance();
-        int alpha=(int)Math.min(30,26*k);
-        g.fill(0,0,mc.getWindow().getGuiScaledWidth(),mc.getWindow().getGuiScaledHeight(),(alpha<<24)|0xFF6A14);
-    }
+    /** 屏幕橙染已按要求删除（蓄力的光污染）。 */
+    public static void overlay(GuiGraphics g){}
 
     // ------------------------------------------------------------------ 蓄力：左侧凝成火弓
     /** 火**一团一团**凝成弓：点位都在玩家的**左手边**，颜色/大小/上飘都带抖动＝燃烧感。
@@ -274,9 +269,7 @@ public final class FurnaceMaxClient {
         // 搭在弦上的箭
         flameCluster(nock.add(fwd.scale(0.4)),0.30,1.0);
         flameCluster(nock.add(fwd.scale(1.5+0.7*progress)),0.26,1.2);
-        // 一点金色收束线：只给形状一点定义，不做光雾
-        spawn("bow/"+owner+"/spine",PhotonFx.lines(center,h*0.55,0.028,0.85,GOLD,BLOOM_GOLD,0,0,5,2,4,false),7);
-        if(time%6==0)PhotonFx.ray(pos.add(left.scale(0.9)),2.8,0.02,0.55,GOLD,BLOOM_GOLD,true,2,4,6,-1.4);
+        // 金色收束线/收束射线**已按要求删除**：蓄力期间只有"火团凝成弓"这一件事
     }
     /** 一小团火：大小/颜色随机 + 轻微外扩 + 上飘火星＝燃烧感。 */
     private static void flameCluster(Vec3 at,double size,double rate){
@@ -285,33 +278,44 @@ public final class FurnaceMaxClient {
             0.012,Math.max(5,(int)(10*rate)),2,5+random.nextInt(3));
     }
 
-    // ------------------------------------------------------------------ 镀橙场
+    // ------------------------------------------------------------------ 镀橙场（只留"方块变橙"，不放光雾）
+    /** 蓄力期间的**光污染已按要求删掉**：这里不再生成任何橙色光雾粒子，
+     *  只用雾色把周身 60 格的方块由原色渐变到纯橙（见 {@link #fog}）。 */
     private static void coat(Field f){
-        if(time<f.nextCoat||f.wiped)return;
-        f.nextCoat=time+8;
-        if(!PhotonFx.ready())return;
-        double k=f.intensity;
-        spawn("coat/"+f.owner+"/outer",PhotonFx.sphere(f.center,FurnaceMax.FIELD_RADIUS*(0.55+0.45*k),7+4*k,COAT,BLOOM_COAT,GLOW,true,10,12,45+60*k,0.5),16);
-        spawn("coat/"+f.owner+"/inner",PhotonFx.sphere(f.center,FurnaceMax.FIELD_RADIUS*0.45*k,5+3*k,COAT_HOT,BLOOM_COAT,GLOW,true,10,12,22+30*k,1.2),16);
+        if(f.wiped)return;   // 光雾已移除：保留接口，收拢逻辑改由 intensity 驱动雾色
     }
 
-    // ------------------------------------------------------------------ 火柱
-    /** 火团堆成的柱体 + 一根内核圆柱；15 秒里越烧越矮越细（k² 曲线），最后缩进柱底红球。 */
+    // ------------------------------------------------------------------ 火柱＝"刚爆炸的样子"保持 15 秒
+    /** 不再收成一根细柱：**爆炸那一刻的火海原样保持 15 秒**——持续翻腾的大火球 +
+     *  不断上飘的火团 + 每 20 刻一圈向外扩散的冲击环 + 持续向外飞散的丝线，最后 2 秒收缩进红球。 */
     private static void drawPillar(Pillar q){
         if(!PhotonFx.ready())return;
         double remaining=Math.max(0,q.born+FurnaceMax.PILLAR_TICKS-time);
         double k=Math.min(1,remaining/FurnaceMax.PILLAR_TICKS);
-        double height=PILLAR_HEIGHT*(0.12+0.88*k*k),width=1.4+3.2*k;
-        if(throttle("pillarCore",6))spawn("pillar/"+q.owner+"/core",PhotonFx.beam(q.center,q.center.add(0,height,0),width*0.55,12),16);
-        if(time%2==0){
-            for(int i=0;i<3;i++){
-                double y=Math.pow(random.nextDouble(),0.75)*height;
-                double a=random.nextDouble()*Math.PI*2,r=Math.sqrt(random.nextDouble())*width*Math.max(0.2,1-0.45*y/height);
-                flameCluster(q.center.add(Math.cos(a)*r,y,Math.sin(a)*r),0.32+0.26*k,1.2);
-            }
-            if(time%8==0)spawn("pillar/"+q.owner+"/base",PhotonFx.sphere(q.center.add(0,1.5,0),1.8+2.4*k,2.0+2.2*k,FIRE,BLOOM_FIRE,GLOW,true,8,10,45+45*k,1.6),12);
+        double shrink=k<0.16?k/0.16:1;               // 只有最后 ~2.4 秒才收缩
+        // 火海本体：两层大火球持续补，保持"刚爆炸"的体积
+        if(time%6==0){
+            spawn("pillar/"+q.owner+"/sea",PhotonFx.sphere(q.center.add(0,5*shrink,0),30*shrink,10*shrink,FIRE,BLOOM_FIRE,GLOW,true,12,12,150*shrink,0.7),20);
+            spawn("pillar/"+q.owner+"/sea2",PhotonFx.sphere(q.center.add(0,2*shrink,0),13*shrink,6*shrink,FIRE_HOT,BLOOM_FIRE,GLOW,true,10,10,95*shrink,1.3),18);
         }
-        if(time%4==0)PhotonFx.lines(q.center.add(0,1,0),Math.max(1.6,width*1.2),0.05,1.4,GOLD,BLOOM_GOLD,2.4,0.04,18,4,10,false);
+        // 火团持续上飘 / 向四周翻滚
+        if(time%2==0){
+            for(int i=0;i<7;i++){
+                double a=random.nextDouble()*Math.PI*2,r=Math.sqrt(random.nextDouble())*30*shrink;
+                flameCluster(q.center.add(Math.cos(a)*r,random.nextDouble()*26*shrink,Math.sin(a)*r),0.42+0.3*k,1.8);
+            }
+        }
+        // 每 20 刻一圈向外扩散的环 + 闪一下：让"爆炸还在继续"
+        if(time%20==0){
+            spawn("pillar/"+q.owner+"/pulse",PhotonFx.shockwave(q.center.add(0,1,0),0xE0FF7A20,(float)(12+34*shrink),28),36);
+            PhotonFx.ray(q.center.add(0,2,0),40*shrink,0.02,1.6,0xAAFFD9A0,BLOOM_GOLD,true,4,6,30,6.0);
+            Client.flash(4);Client.shake(5);
+        }
+        // 持续向外飞散的丝线（带物理）
+        if(time%8==0){
+            spawn("pillar/"+q.owner+"/ray",PhotonFx.lines(q.center.add(0,3*shrink,0),18*shrink,0.06,2.4,GOLD,BLOOM_GOLD,6.0,0.10,60,10,18,false),30);
+            spawn("pillar/"+q.owner+"/ray2",PhotonFx.lines(q.center.add(0,2*shrink,0),9*shrink,0.04,1.5,0xFFF0C0,BLOOM_GOLD,9.0,0.14,40,8,14,false),24);
+        }
     }
 
     // ------------------------------------------------------------------ 收尾红球
@@ -326,30 +330,33 @@ public final class FurnaceMaxClient {
     // ------------------------------------------------------------------ 爆炸（往"光污染"方向堆）
     private static void blast(Vec3 center){
         if(!PhotonFx.ready())return;
-        Client.shake(28);Client.flash(9);
-        GojoBlastClient.spawn(center,40,0xFFC070);
+        Client.shake(36);Client.flash(14);
+        GojoBlastClient.spawn(center,54,0xFFC070);
+        GojoBlastClient.spawn(center.add(0,6,0),26,0xFFE8B0);
         spawn("blast/",PhotonFx.shockwave(center,0xF0FF7A20,(float)FurnaceMax.BLAST_RADIUS,40),46);
         spawn("blast/",PhotonFx.shockwave(center,0xC0FFD9A0,(float)(FurnaceMax.BLAST_RADIUS*0.62),34),40);
         spawn("blast/",PhotonFx.shockwave(center,0xA0FF3A10,(float)(FurnaceMax.BLAST_RADIUS*1.06),54),60);
+        spawn("blast/",PhotonFx.shockwave(center,0xFFE0A8,(float)(FurnaceMax.BLAST_RADIUS*0.34),28),34);
         for(int ring=1;ring<=6;ring++){                       // 六道火环
             double r=FurnaceMax.BLAST_RADIUS*ring/6.0;
             for(int i=0;i<8;i++){
                 double a=i*Math.PI/4+random.nextDouble()*0.3;
                 Vec3 at=center.add(Math.cos(a)*r,(random.nextDouble()-0.35)*6,Math.sin(a)*r);
-                PhotonFx.spark(at,4.5+ring*1.8,3.2+ring*1.2,ring<=3?FIRE:FIRE_HOT,BLOOM_FIRE,GLOW,true,5,11,34,1.6);
+                PhotonFx.spark(at,5.0+ring*1.8,3.6+ring*1.2,ring<=3?FIRE:FIRE_HOT,BLOOM_FIRE,GLOW,true,5,11,40,1.6);
             }
         }
-        // 三层带物理的放射丝线（飞出去会被重力压弯）
-        spawn("blast/",PhotonFx.lines(center,14,0.06,2.6,GOLD,BLOOM_GOLD,7.5,0.10,60,10,18,false),28);
-        spawn("blast/",PhotonFx.lines(center,7,0.04,1.6,0xFFF0C0,BLOOM_GOLD,11.0,0.14,40,8,14,false),22);
-        spawn("blast/",PhotonFx.lines(center,20,0.09,3.4,DEEP,BLOOM_FIRE,5.0,0.06,30,12,22,false),32);
-        PhotonFx.ray(center,90,0.02,1.8,0xAAFFD9A0,BLOOM_GOLD,true,4,6,26,6.5);
-        spawn("blast/",PhotonFx.sphere(center,22,8,FIRE,BLOOM_FIRE,GLOW,true,22,14,80,0.8),38);
-        spawn("blast/",PhotonFx.sphere(center,9,5,FIRE_HOT,BLOOM_FIRE,GLOW,true,18,10,50,1.4),32);
-        for(int i=0;i<14;i++){                                // 抛洒大块火团
-            double a=random.nextDouble()*Math.PI*2,r=random.nextDouble()*70;
-            Vec3 at=center.add(Math.cos(a)*r,(random.nextDouble()-0.3)*10,Math.sin(a)*r);
-            PhotonFx.blobs(at,6,0.5,0.9,FIRE,BLOOM_FIRE,3.5,0.10,20,6,16);
+        // 四层带物理的放射丝线（飞出去会被重力压弯）
+        spawn("blast/",PhotonFx.lines(center,14,0.06,2.6,GOLD,BLOOM_GOLD,7.5,0.10,70,10,18,false),28);
+        spawn("blast/",PhotonFx.lines(center,7,0.04,1.6,0xFFF0C0,BLOOM_GOLD,11.0,0.14,50,8,14,false),22);
+        spawn("blast/",PhotonFx.lines(center,20,0.09,3.4,DEEP,BLOOM_FIRE,5.0,0.06,40,12,22,false),32);
+        spawn("blast/",PhotonFx.lines(center,30,0.11,4.2,0xB0FF3A10,BLOOM_FIRE,3.2,0.05,30,14,24,false),36);
+        PhotonFx.ray(center,110,0.02,1.8,0xAAFFD9A0,BLOOM_GOLD,true,5,7,34,7.0);
+        spawn("blast/",PhotonFx.sphere(center,30,10,FIRE,BLOOM_FIRE,GLOW,true,28,14,120,0.8),44);
+        spawn("blast/",PhotonFx.sphere(center,12,6,FIRE_HOT,BLOOM_FIRE,GLOW,true,22,10,80,1.4),36);
+        for(int i=0;i<18;i++){                                // 抛洒大块火团
+            double a=random.nextDouble()*Math.PI*2,r=random.nextDouble()*80;
+            Vec3 at=center.add(Math.cos(a)*r,(random.nextDouble()-0.3)*12,Math.sin(a)*r);
+            PhotonFx.blobs(at,6.5,0.5,0.9,FIRE,BLOOM_FIRE,3.8,0.10,18,6,16);
         }
     }
 

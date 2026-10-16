@@ -49,7 +49,7 @@ public final class SimpleDomain {
     /** 冷却地板：只防止"零冷却连按"，2 刻 = 0.1 秒；旧值 10 刻（0.5 秒）会把轻点也锁半秒，表现为"卡冷却"。 */
     public static final int COOLDOWN_MIN=2;
     /** 每刻在圆柱内补几道随机斩击（r155 的节奏：一批一批出）。 */
-    public static final int CUTS_PER_TICK=30;   // 密度减半（原 60）
+    public static final int CUTS_PER_TICK=15;   // 再减半（60 → 30 → 15）
     /** 每道斩击的尺寸（长度）与寿命。 */
     public static final float CUT_SIZE=10f;
     public static final int CUT_LIFE=12;   // 与 r155 一致

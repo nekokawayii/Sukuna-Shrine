@@ -52,12 +52,9 @@ public final class BlackFlashRender {
         FLASHES.add(new Flash(pos,d,mc.level.getGameTime(),RND));
         if(FLASHES.size()>16)FLASHES.remove(0);   // 连打时只留最近的，绝不无限堆积
         // 一层 Photon 加法发光：真 bloom（顶点通路的普通混合做不出光晕）；寿命都很短，不会长期占用
-        try{
-            PhotonFx.spark(pos,0.55,0.42,0xFF2A10,BLOOM_RED,GLOW,true,1,10,26,0.55);      // 爆发光点（加法）
-            PhotonFx.ring(pos,1.5,0.52,0xFFFF3A18,BLOOM_RED,30,2,8);                     // 红色光环保留
-            PhotonFx.shockwave(pos,0xFF3A18,3.2,8);                                      // 冲击波
-        }catch(Throwable ignored){/* 没装 Photon：下面的顶点通路部分照常 */}
-        Client.shake(10);
+        // 只留一处 Photon 加法发光给整场戏"打光"（真 bloom 只能靠加法混合）；除此之外不生成任何别的特效
+        try{PhotonFx.spark(pos,0.5,0.40,0xFF2A10,BLOOM_RED,GLOW,true,1,8,22,0.5);}catch(Throwable ignored){}
+        Client.shake(12);
     }
     public static void tick(){}
     public static void clear(){FLASHES.clear();}
@@ -79,11 +76,14 @@ public final class BlackFlashRender {
                     Vec3 step=new Vec3(Math.cos(yaw)*Math.cos(pitch),Math.sin(pitch),Math.sin(yaw)*Math.cos(pitch)).scale(BOLT_LEN/bolt.seg());
                     Vec3 to=from.add(step);
                     double taper=(1-s/(double)bolt.seg());
-                    int flick=(int)(175+80*Math.abs(Math.sin((age+s)*2.3)));
-                    int redA=(int)((165*flick/255.0)*life)<<24,blkA=(int)((245*flick/255.0)*life)<<24;
-                    ribbon(b,ps,from,to,BOLT_WIDTH*4.2*taper+0.04,(int)(redA*0.45)<<24|((RED>>1)&0x7F7F7F),cam);  // 最外：红色光晕
-                    ribbon(b,ps,from,to,BOLT_WIDTH*2.6*taper+0.02,redA|(RED&0xFFFFFF),cam);                        // 外：红
-                    ribbon(b,ps,from,to,BOLT_WIDTH*1.3*taper+0.01,blkA|(BLACK&0xFFFFFF),cam);                      // 芯：黑
+                    // 张力：整段闪电会**突然熄灭再亮起**（每段独立判定），比单纯改透明度更有电击感
+                    double wave=Math.sin((age*1.9+s)*2.3);
+                    if(wave<-0.35&&age>1.5){from=to;continue;}
+                    int flick=(int)(190+65*Math.abs(wave));
+                    int redA=(int)((175*flick/255.0)*life)<<24,blkA=(int)((250*flick/255.0)*life)<<24;
+                    ribbon(b,ps,from,to,BOLT_WIDTH*4.6*taper+0.05,(int)(redA*0.5)<<24|((RED>>1)&0x7F7F7F),cam);  // 最外：红色辉光（光污染层）
+                    ribbon(b,ps,from,to,BOLT_WIDTH*2.6*taper+0.02,redA|(RED&0xFFFFFF),cam);                       // 外：红
+                    ribbon(b,ps,from,to,BOLT_WIDTH*1.4*taper+0.01,blkA|(BLACK&0xFFFFFF),cam);                     // 芯：黑
                     from=to;
                 }
             }
@@ -93,18 +93,7 @@ public final class BlackFlashRender {
                 int a=(int)(120*wl*wl)<<24;
                 windRing(b,ps,f.pos.add(f.dir.scale(0.6+r*0.5)),f.dir,r,0.30,a|(WIND&0xFFFFFF),cam);
                 windRing(b,ps,f.pos.add(f.dir.scale(0.4+r)),f.dir,r*0.72,0.16,a|(WIND&0xFFFFFF),cam);
-                windRing(b,ps,f.pos.add(f.dir.scale(0.2+r*0.35)),f.dir,r*1.25,0.10,(int)(a*0.55)<<24|(RED&0xFFFFFF),cam);
-                windRing(b,ps,f.pos.add(f.dir.scale(0.8+r*1.2)),f.dir,r*1.6,0.07,(int)(a*0.35)<<24|(WIND&0xFFFFFF),cam);
             }
-            // ---- 黑色余闪 + 红色光晕（顶点通路里的"光污染"层） ----
-            if(age<=DARK_LIFE){
-                double dl=1-age/DARK_LIFE;int a=(int)(170*dl)<<24;
-                quad(b,ps,f.pos,0.55+0.5*(1-dl),cam,a|(DARK&0xFFFFFF));
-            }
-            // 红色光晕（顶点通路里的"光污染"层）：外层大而淡，内层小而亮
-            double gr=1.4+2.6*(age/LIFE);
-            quad(b,ps,f.pos,gr,cam,((int)(95*life*life)<<24)|(RED&0xFFFFFF));
-            quad(b,ps,f.pos,gr*0.55,cam,((int)(150*life*life)<<24)|0xFF3A2A);
         }
     }
 

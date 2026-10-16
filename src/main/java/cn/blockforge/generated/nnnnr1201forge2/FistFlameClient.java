@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -55,7 +56,58 @@ public final class FistFlameClient {
             for(Vec3 h:entry.getValue())if(h!=null)photon(h);
         }
     }
-    public static void clear(){BURNING.clear();HANDS.clear();}
+    /** 用 `ldlib/assets/photon/fx/11.fx`（flame+lava+ring）给附拳加一层**绑手臂朝向**的 Photon 特效：
+     *  位置＝手的世界坐标，朝向＝手臂骨骼的姿态（从渲染层矩阵解出四元数），所以它会跟着手臂转。
+     *  每 10 刻刷一次（短命、允许叠加时也只留一份：旧的先强制销毁）。 */
+    private static final ResourceLocation ARM_FX=new ResourceLocation("photon","11");
+    /** Photon 是运行时可选的：只能按类名反射（编译期没有它的类）。 */
+    private static final String PHOTON_ROOT="com.lowdragmc.photon.client.";
+    private static final Map<Integer,Object> ARM_EFFECTS=new HashMap<>();
+    private static Object armFx;
+    private static boolean armBroken;
+    private static long lastArmSpawn;
+    private static final Map<String,java.lang.reflect.Method> RM=new HashMap<>();
+    private static Object rcall(Object o,String name,Object...args)throws Exception{
+        Class<?> c=o instanceof Class<?> cl?cl:o.getClass();
+        String key=c.getName()+"/"+name+"/"+args.length;
+        var m=RM.get(key);
+        if(m==null){
+            outer:for(var v:c.getMethods()){if(!v.getName().equals(name)||v.getParameterCount()!=args.length)continue;
+                Class<?>[] p=v.getParameterTypes();
+                for(int i=0;i<p.length;i++){Class<?> t=p[i];Object a=args[i];
+                    if(t==int.class?!(a instanceof Integer):t==boolean.class?!(a instanceof Boolean):t==double.class?!(a instanceof Double):t==float.class?!(a instanceof Float):!t.isInstance(a))continue outer;}
+                m=v;break;}
+            if(m==null)throw new NoSuchMethodException(key);
+            RM.put(key,m);
+        }
+        return m.invoke(o instanceof Class<?>?null:o,args);
+    }
+    /** 在手臂姿态下起一份 11.fx（世界位置 + 手臂朝向）。 */
+    private static void armFx(PoseStack ps,int playerId,double px,double py,double pz){
+        var mc=Minecraft.getInstance();if(mc.level==null||armBroken)return;
+        long now=mc.level.getGameTime();
+        if(now-lastArmSpawn<10)return;
+        lastArmSpawn=now;
+        try{
+            if(armFx==null)armFx=rcall(Class.forName(PHOTON_ROOT+"fx.FXHelper"),"getFX",ARM_FX);
+            if(armFx==null)return;
+            Object old=ARM_EFFECTS.remove(playerId);
+            if(old!=null)try{rcall(old,"setForcedDeath",true);}catch(Throwable ignored){}
+            BlockPos at=BlockPos.containing(px,py,pz);
+            Object effect=Class.forName(PHOTON_ROOT+"fx.BlockEffect")
+                .getConstructor(Class.forName(PHOTON_ROOT+"fx.FX"),net.minecraft.world.level.Level.class,BlockPos.class)
+                .newInstance(armFx,mc.level,at);
+            rcall(effect,"setOffset",px-at.getX()-0.5,py-at.getY()-0.5,pz-at.getZ()-0.5);
+            // 手臂朝向 → 四元数（渲染层矩阵的旋转部分）
+            var rot=new org.joml.Matrix3f(ps.last().pose()).getNormalizedRotation(new org.joml.Quaternionf());
+            rcall(effect,"setRotation",rot);
+            rcall(effect,"setAllowMulti",false);
+            rcall(effect,"start");
+            ARM_EFFECTS.put(playerId,effect);
+        }catch(ClassNotFoundException|NoClassDefFoundError e){armBroken=true;note("未安装 Photon，附拳的手臂特效跳过");}
+        catch(Throwable t){fail("手臂 Photon 特效",t);}
+    }
+    public static void clear(){BURNING.clear();HANDS.clear();for(Object o:ARM_EFFECTS.values())try{rcall(o,"setForcedDeath",true);}catch(Throwable ignored){}ARM_EFFECTS.clear();}
     private static boolean burning(int id){Long until=BURNING.get(id);return until!=null&&Minecraft.getInstance().level!=null&&Minecraft.getInstance().level.getGameTime()<=until;}
     private static void note(String what){
         var mc=Minecraft.getInstance();long now=mc.level==null?0:mc.level.getGameTime();
@@ -91,18 +143,23 @@ public final class FistFlameClient {
                 var b=source.getBuffer(RenderType.entityTranslucent(GLOW));
                 float t=age+partial;
                 Vec3[] store=HANDS.computeIfAbsent(player.getId(),k->new Vec3[2]);
-                arm(ps,b,light,model.rightArm,t,store,0);
-                arm(ps,b,light,model.leftArm,t+1.7f,store,1);
+                arm(ps,b,light,model.rightArm,t,store,0,player);
+                arm(ps,b,light,model.leftArm,t+1.7f,store,1,player);
             }catch(Throwable t){fail("第三人称绘制",t);}
         }
         /** 沿小臂铺：像素 y=4(肘) 与 y=8.5(拳) 两处，每处两层大光斑，随呼吸缩放。 */
-        private static void arm(PoseStack ps,VertexConsumer b,int light,ModelPart part,float t,Vec3[] store,int slot){
+        private static void arm(PoseStack ps,VertexConsumer b,int light,ModelPart part,float t,Vec3[] store,int slot,AbstractClientPlayer player){
             ps.pushPose();part.translateAndRotate(ps);
             for(int k=0;k<2;k++){
                 float y=k==0?4.5f:9.0f;
                 double pulse=1.0+0.10*Math.sin(t*0.16+k*2.1f+slot*1.7f);   // 呼吸
                 double len=11.0*pulse,wide=8.5*pulse;
                 if(store!=null&&slot==0&&k==1)store[0]=worldFromPose(ps,y,0);
+                if(k==1){                                                   // 手部那一处：起一份绑手腕朝向的 11.fx
+                    int pid=player==null?-1:player.getId();
+                    Vec3 hp=store!=null&&store[0]!=null?store[0]:null;
+                    if(pid>=0&&hp!=null)armFx(ps,pid,hp.x,hp.y,hp.z);
+                }
                 blob(ps,b,light,0,y,0,wide,len,OUTER);                      // 外层：暗红、更大
                 blob(ps,b,light,0,y,0.06f,wide*0.78,len*0.80,MID);          // 中层：正红
                 blob(ps,b,light,0,y,0.12f,wide*0.50,len*0.55,INNER);        // 内层：亮粉

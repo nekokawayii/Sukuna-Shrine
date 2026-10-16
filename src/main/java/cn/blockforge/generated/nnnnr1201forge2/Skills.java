@@ -273,7 +273,9 @@ public final class Skills {
         if(skill==5&&domains.containsKey(p.getUUID())){closeDomain(p,true);return;}
         if(skill==5&&!MaidBridge.domainReady(p))return;
         if(SoulCombat.suppressed(p)&&!(skill==5&&Curse.active(p,"Iwate")&&!Curse.active(p,"SoulGap")&&p.getPersistentData().getLong("VoidCaptured")<=now)){p.displayClientMessage(Component.literal("灵魂剥离或灵魂压制中，无法使用术式"),true);return;}
-        if(now<times[skill]){p.displayClientMessage(Component.literal(NAMES[skill]+" 冷却中 · "+String.format(Locale.ROOT,"%.1f",(times[skill]-now)/20.0)+" 秒"),true);return;}
+        if(now<times[skill]){
+            SdLog.w("通用冷却拦截 skill="+skill+"("+NAMES[skill]+") 剩="+String.format(Locale.ROOT,"%.2f",(times[skill]-now)/20.0)+"秒 领域接管="+SimpleDomain.owns(p)+" 维持中="+SimpleDomain.active(p));
+            p.displayClientMessage(Component.literal(NAMES[skill]+" 冷却中 · "+String.format(Locale.ROOT,"%.1f",(times[skill]-now)/20.0)+" 秒"),true);return;}
         boolean awakened=Curse.awakened(p);int tier=Curse.tier(p);double scale=Curse.scale(p);
         if(skill==4&&!awakened&&!domains.containsKey(p.getUUID())){p.displayClientMessage(Component.literal("灶需要先展开伏魔御厨子积聚粉尘"),true);return;}
         if(VoidJourney.evolved(p)&&!VoidCombat.ready(p,skill))return;

@@ -63,6 +63,8 @@ public final class SimpleDomain {
     private static final class Field {
         final ServerPlayer p;final ServerLevel level;final UUID body;
         final long start;long last;int nextDamage;int slowUntil;int hits;
+        /** 客户端明确松手/取消后置位：只有它为 true 才允许"非显式"退出。 */
+        boolean released;
         Field(ServerPlayer p){this.p=p;level=p.serverLevel();body=MaidBridge.body(p).getUUID();start=level.getGameTime();last=start;}
         Vec3 center(){return MaidBridge.body(p).position();}
     }
@@ -95,8 +97,8 @@ public final class SimpleDomain {
         Field f=fields.get(p.getUUID());
         if(f==null){start(p);return;}
         LivingEntity body=MaidBridge.body(p);
-        if(f.level.getGameTime()-f.start>MAX_HOLD){release(p);return;} // 1 小时安全阀，正常玩不到
-        if(!body.isAlive()||body.level()!=f.level||!TechniqueInput.allowed(p)){release(p);return;}
+        if(f.level.getGameTime()-f.start>MAX_HOLD){SdLog.w("SD.hold 触到安全阀");release(p);return;}
+        if(!body.isAlive()||body.level()!=f.level||!TechniqueInput.allowed(p)){SdLog.w("SD.hold 校验失败 alive="+body.isAlive()+" allowed="+TechniqueInput.allowed(p));f.released=true;release(p);return;}
         body.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,SLOW_REFRESH,1,false,false,false));
         f.slowUntil=(int)(f.level.getGameTime()+SLOW_REFRESH);
         net.minecraft.util.RandomSource rnd=p.getRandom();
@@ -138,6 +140,10 @@ public final class SimpleDomain {
     public static void release(ServerPlayer p){
         Field f=fields.remove(p.getUUID());
         if(f==null)return;
+        f.released=true;
+        SdLog.w("SD.release 持续="+((f.level.getGameTime()-f.start))+"刻 冷却起="+Curse.data(p).getLong("SimpleDomainCooldown"));
+        p.serverLevel().getServer().getPlayerList().broadcastSystemMessage(
+            net.minecraft.network.chat.Component.literal("[诊断] 简易领域退出：持续 "+(f.level.getGameTime()-f.start)+" 刻"),false);
         long held=Math.max(1,f.level.getGameTime()-f.start);
         int cooldown=Math.max(COOLDOWN_MIN,(int)Math.round(held*COOLDOWN_SHARE)); // 释放时间 ×70%，仅保留 2 刻地板
         Curse.data(p).putLong("SimpleDomainCooldown",f.level.getGameTime()+cooldown);

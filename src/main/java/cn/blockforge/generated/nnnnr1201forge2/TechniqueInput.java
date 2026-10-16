@@ -21,7 +21,9 @@ public final class TechniqueInput {
     private static final class Hold {
         final ServerPlayer player;final ServerLevel level;final int skill;final long start;
         final Input input;long heartbeat;int slashes;double budget;boolean triggered;
-        Hold(ServerPlayer p,Input i){player=p;level=p.serverLevel();skill=i.skill;input=i;start=heartbeat=level.getGameTime();}
+        /** 客户端轮盘选中的真实技能号（简易领域 = 43）。 */
+        final int wheelSkill;
+        Hold(ServerPlayer p,Input i){player=p;level=p.serverLevel();skill=i.skill;input=i;start=heartbeat=level.getGameTime();wheelSkill=i.wheelSkill();}
     }
     private static final Map<UUID,Hold> holds=new HashMap<>();
     private static final Map<UUID,Input> intents=new HashMap<>();
@@ -51,7 +53,7 @@ public final class TechniqueInput {
         if(input.wheelSkill()==SimpleDomain.SKILL){
             if(input.phase==0)SimpleDomain.start(p);
             else if(input.phase==1)SimpleDomain.hold(p);
-            else SimpleDomain.release(p);
+            else SimpleDomain.release(p); // phase 2/3 = 客户端明确松手/取消
             return;
         }
         // 简易领域接管期间：宿傩六式的任何输入都直接忽略（含"松手顺带放一次解"），
@@ -122,7 +124,9 @@ public final class TechniqueInput {
         if(e.phase!=TickEvent.Phase.END)return;
         for(Hold h:List.copyOf(holds.values())){
             ServerPlayer p=h.player;long now=h.level.getGameTime();
-            if(!allowed(p)||p.level()!=h.level||now-h.heartbeat>25){cancel(p);continue;}
+            // 心跳超时放宽到 100 刻（5 秒）：客户端每 10 刻发一次，丢包不该被判定成"松手"。
+            boolean domainHold=h.wheelSkill==SimpleDomain.SKILL&&SimpleDomain.active(p);
+            if(!allowed(p)||p.level()!=h.level||(!domainHold&&now-h.heartbeat>100)){SdLog.w("Hold 超时/失效 skill="+h.skill+" wheel="+h.wheelSkill+" 间隔="+(now-h.heartbeat)+" allowed="+allowed(p));cancel(p);continue;}
             int age=(int)(now-h.start);
             if(CombatExpansionRules.linger(h.skill)){
                 if(!h.triggered&&age>=CombatExpansionRules.HOLD_DELAY){withIntent(p,h.input,()->h.triggered=CombatExpansion.startLinger(p,h.skill));if(!h.triggered)cancel(p);}

@@ -298,11 +298,12 @@ public final class FurnaceMaxClient {
         PhotonFx.blobs(at,0.30+size*0.8,size*0.65,size*1.05,color,BLOOM_FIRE,0.22+random.nextDouble()*0.4,
             0.012,Math.max(6,(int)(12*rate)),3,6+random.nextInt(4));
     }
-    /** **蓄力专用**的火团：正常 alpha 混合、**不开 bloom**——上一版"太亮"就是 additive+bloom 叠出来的。 */
+    /** **蓄力弓专用**的火团：单颗粒子**最大 0.3 格**（用户要求"小一点"），可以发光；
+     *  靠"更多更小的粒子"维持形状，飞向玩家的那一层（{@code bow/.../in}）保持不变。 */
     private static void bowCluster(Vec3 at,double size,double rate){
-        int color=random.nextInt(4)==0?FIRE:(random.nextInt(3)==0?DEEP:FIRE);
-        PhotonFx.blobsSoft(at,0.30+size*0.8,size*0.65,size*1.05,color,0.22+random.nextDouble()*0.4,
-            0.012,Math.max(6,(int)(12*rate)),3,6+random.nextInt(4));
+        int color=random.nextInt(4)==0?FIRE_HOT:(random.nextInt(3)==0?DEEP:FIRE);
+        PhotonFx.blobs(at,0.24+size*0.30,0.22,0.30,color,BLOOM_FIRE,0.22+random.nextDouble()*0.4,
+            0.012,Math.max(8,(int)(18*rate)),3,6+random.nextInt(4));
     }
 
     // ------------------------------------------------------------------ 镀橙场（只留"方块变橙"，不放光雾）

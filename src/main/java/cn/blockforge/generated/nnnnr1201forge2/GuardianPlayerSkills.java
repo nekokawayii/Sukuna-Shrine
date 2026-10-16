@@ -58,7 +58,7 @@ public final class GuardianPlayerSkills {
         if(flash)amount=Math.pow(amount,Math.min(5,s.v("FlashExponent")));
         target.invulnerableTime=0;
         AttackTypes.mark(AttackTypes.LIGHTNING);boolean hit=CombatSettings.hurt(s.p,target,s.level.damageSources().sonicBoom(s.p),CombatSettings.spellDamage(s.p,Math.min(1000000,amount)));
-        if(hit){fx(s,flash?85:81,target.getBoundingBox().getCenter(),Vec3.ZERO,1,12,target.getId());if(punch&&target instanceof ServerPlayer p)SoulCombat.peel(p,false);}
+        if(hit){fx(s,flash?85:81,target.getBoundingBox().getCenter(),Vec3.ZERO,1,12,target.getId());if(flash)SkillSounds.play(s.p,"black_flash");if(punch&&target instanceof ServerPlayer p)SoulCombat.peel(p,false);}
         return hit;
     }
     public static boolean sustaining(ServerPlayer p){State s=states.get(p.getUUID());return s!=null&&s.domainUntil>0&&(DomainClash.active(p)||s.domainUntil>p.level().getGameTime());}

@@ -109,7 +109,7 @@ public final class GuardianEntity extends Monster {
         if(flash)damage=Math.pow(damage,v("FlashExponent"));
         damage+=bonus;
         p.invulnerableTime=0;var type=server().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE).getHolderOrThrow(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,new net.minecraft.resources.ResourceLocation("sukuna","guardian_soul")));boolean hit=p.hurt(new DamageSource(type,this),BalanceRules.damage(Math.min(Float.MAX_VALUE,damage)));
-        if(hit){if(p instanceof ServerPlayer player)participants.add(player.getUUID());fx(81,p.position(),Vec3.ZERO,1,10,p.getId());if(flash)fx(85,p.getEyePosition(),Vec3.ZERO,1,12,p.getId());ServerPlayer caster=MaidBridge.progression(p);if(punch&&caster!=null)SoulCombat.peel(caster,false);}return hit;
+        if(hit){if(p instanceof ServerPlayer player)participants.add(player.getUUID());fx(81,p.position(),Vec3.ZERO,1,10,p.getId());if(flash){fx(85,p.getEyePosition(),Vec3.ZERO,1,12,p.getId());SkillSounds.play(this,"black_flash");}ServerPlayer caster=MaidBridge.progression(p);if(punch&&caster!=null)SoulCombat.peel(caster,false);}return hit;
     }
     private int interval(String k){return Math.max(1,ticks(k)-(boost>0?(int)v("AttackSpeedMultiplier"):0));}
     private void moveToward(LivingEntity p){Vec3 d=p.position().subtract(position()).multiply(1,0,1).normalize();double speed=v("MoveSpeed")+(boost>0?v("SpeedMultiplier"):0);setDeltaMovement(d.x*speed,getDeltaMovement().y,d.z*speed);}

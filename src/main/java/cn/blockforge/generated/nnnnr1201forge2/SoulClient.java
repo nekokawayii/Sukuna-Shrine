@@ -25,7 +25,7 @@ public final class SoulClient {
     public static void receive(Network.Effect e){var mc=Minecraft.getInstance();if(mc.player==null)return;
         if(e.kind()==89){layers=(int)e.seed();stacks=e.life();return;}
         if(e.kind()==82&&e.owner()==mc.player.getId()){gapEnd=time+e.life();gapBoss=(int)e.seed();return;}
-        if(e.kind()==85&&e.seed()==mc.player.getId())crackEnd=time+e.life();
+        if(e.kind()==85){BlackFlashFx.play(e.position());if(e.seed()==mc.player.getId())crackEnd=time+e.life();}
         if(e.kind()==90){Domain old=domains.get(e.owner());if(old==null&&mc.player.distanceToSqr(e.position())<48*48)whiteEnd=time+7;domains.put(e.owner(),new Domain(e.position(),time+e.life(),old==null?time:old.born,e.size(),e.seed()==1));return;}
         if(e.kind()==91){domains.remove(e.owner());return;}
         if(e.kind()==94)return;
@@ -71,7 +71,8 @@ public final class SoulClient {
             if(e.kind()==80){if(e.size()==2||e.size()==5){ring(b,ps,p.add(0,0.08,0),1+age*0.025,0.025,(alpha<<24)|0xCDBDC7,cam);}}
             if(e.kind()==81){var target=mc.level.getEntity((int)e.seed());if(target!=null)p=target.getPosition(partial).add(0,0.25,0);for(int line=0;line<4;line++)for(int i=0;i<7;i++){Vec3 a=p.add(-0.48+i*0.14,0.25+line*0.4,0.38);ribbon(b,ps,a,a.add(0.075,0.065,0),0.012,(alpha<<24)|0xEDF0EF,cam);}}
             if(e.kind()==83){ring(b,ps,q.add(0,0.05,0),e.size(),0.06,(alpha<<24)|0xD9E8F2,cam);for(int j=0;j<12;j++){double a=j*Math.PI/6;ribbon(b,ps,q.add(0,0.05,0),q.add(Math.cos(a)*e.size(),0.05,Math.sin(a)*e.size()),0.018,(alpha<<24)|0xD9E8F2,cam);}Vec3 tip=p.lerp(q,Math.min(1,age/8));for(int i=-2;i<=2;i++){Vec3 off=new Vec3(i*0.2,0.03,0);ribbon(b,ps,p.add(off),tip.add(off),0.015,(alpha<<24)|0xCAD3D8,cam);}}
-            if(e.kind()==84||e.kind()==85){for(int i=0;i<10;i++){double a=i*Math.PI/5;Vec3 dir=new Vec3(Math.cos(a),Math.sin(a),Math.sin(i*4)*0.5);Vec3 start=p;for(int j=1;j<=4;j++){Vec3 end=p.add(dir.scale(j*(e.kind()==85?0.65:0.18))).add(0,Math.sin(j*9+i)*0.14,0);ribbon(b,ps,start,end,0.047,(alpha<<24)|0xBE1732,cam);ribbon(b,ps,start,end,0.028,(alpha<<24)|0x050207,cam);start=end;}}}
+            // 黑闪（85）的表现已交给 Photon 的 .fx，这里只保留冲刺蓄力（84）的丝带。
+            if(e.kind()==84){for(int i=0;i<10;i++){double a=i*Math.PI/5;Vec3 dir=new Vec3(Math.cos(a),Math.sin(a),Math.sin(i*4)*0.5);Vec3 start=p;for(int j=1;j<=4;j++){Vec3 end=p.add(dir.scale(j*0.18)).add(0,Math.sin(j*9+i)*0.14,0);ribbon(b,ps,start,end,0.047,(alpha<<24)|0xBE1732,cam);ribbon(b,ps,start,end,0.028,(alpha<<24)|0x050207,cam);start=end;}}}
             if(e.kind()==86){ribbon(b,ps,p,q,0.12,(alpha<<24)|0xD1E0E4,cam);ribbon(b,ps,p.add(0,-0.1,0),q.add(0,-0.1,0),0.05,(alpha/2<<24)|0xFFFFFF,cam);}
             if(e.kind()==87){Vec3 soul=p.lerp(q,Math.min(1,age/15));for(int i=0;i<5;i++){Vec3 a=soul.add((i-2)*0.13,0.3,0);ribbon(b,ps,a,a.add(0,1.1,0),0.06,(alpha/2<<24)|0xD6E5EB,cam);}ribbon(b,ps,p.add(0,0.8,0),soul.add(0,0.8,0),0.025,(alpha<<24)|0xE2E2F0,cam);}
             if(e.kind()==88){Vec3 a=p.add(p.x<0?1.015:-0.015,0,0);for(int i=0;i<4;i++)ribbon(b,ps,a.add(0,i*0.25,0.05),a.add(0,i*0.25,0.95),0.13,(alpha<<24)|0xFFFFFF,cam);}

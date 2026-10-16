@@ -63,5 +63,6 @@
   "guardian_10":{"sounds":[{"name":"sukuna:guardian_10"}]},
   "guardian_11":{"sounds":[{"name":"sukuna:guardian_11"}]},
   "guardian_12":{"sounds":[{"name":"sukuna:guardian_12"}]},
-  "guardian_victory":{"sounds":[{"name":"sukuna:guardian_victory","stream":true,"attenuation_distance":32767}]}
+  "guardian_victory":{"sounds":[{"name":"sukuna:guardian_victory","stream":true,"attenuation_distance":32767}]},
+  "black_flash":{"sounds":[{"name":"sukuna:blackflash"}]}
 }

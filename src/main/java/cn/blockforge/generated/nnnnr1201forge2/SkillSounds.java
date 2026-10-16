@@ -24,6 +24,7 @@ public final class SkillSounds {
         for(String id:List.of("space_charge","space_slash","nine_rotation","fetus_joint","void_needle","boss_reveal","daitian_curse","daitian_slam"))register(id);
         for(int i=1;i<=6;i++)register("yuji_"+i);
         for(String id:List.of("yuji_soul_impact","iwate_wind","soul_shrine","soul_peel","soul_feast","guardian_victory"))register(id);
+        register("black_flash");   // 黑闪命中音效
         for(int i=1;i<=11;i++)register("buddha_"+i);
         for(int i:new int[]{1,3,4,5,6,8,9,10,11,12})register("guardian_"+i);
         for(String id:AWAKENED)register("nine_"+id);

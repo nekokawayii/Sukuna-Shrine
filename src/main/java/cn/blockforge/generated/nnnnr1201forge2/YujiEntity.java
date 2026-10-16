@@ -61,7 +61,7 @@ public class YujiEntity extends Monster {
         boolean flash=action()!=5&&(BossControl.value(this,"BlackFlash",100))>random.nextInt(100);
         float dealt=BalanceRules.damage(((flash?amount*2.5f:amount)+bonus)*BossControl.value(this,"YujiDamage",1));
         boolean hit=p.hurt(soul||sureHit(p)?damageSources().sonicBoom(this):damageSources().mobAttack(this),dealt);
-        if(hit){fx(81,p.position().add(0,1,0),position(),1,8,p.getId());if(flash)fx(58,p.position(),Vec3.ZERO,dealt,10,p.getId());sound(flash?SoundEvents.GENERIC_EXPLODE:soul?SoundEvents.NOTE_BLOCK_BASEDRUM.value():SoundEvents.PLAYER_ATTACK_STRONG,flash?0.35f:soul?0.5f:0.8f);}return hit;
+        if(hit){fx(81,p.position().add(0,1,0),position(),1,8,p.getId());if(flash)fx(58,p.position(),Vec3.ZERO,dealt,10,p.getId());if(flash)SkillSounds.play(this,"black_flash");else sound(soul?SoundEvents.NOTE_BLOCK_BASEDRUM.value():SoundEvents.PLAYER_ATTACK_STRONG,soul?0.5f:0.8f);}return hit;
     }
     private boolean inReach(LivingEntity p){return sureHit(p)||distanceToSqr(p)<3.4*3.4&&hasLineOfSight(p);}
     private void begin(int skill){entityData.set(ACTION,skill);entityData.set(AGE,0);getNavigation().stop();dashHit=false;comboFinisher=false;lastSkill=skill;castBonus=BossRevelation.roll(this,BossRevelation.yuji(skill));if(skill==6)domainBonus=castBonus;

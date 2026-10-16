@@ -57,7 +57,7 @@ public final class VoidCombat {
             ServerPlayer p=MaidBridge.find(level,owner);
             if(EternalLove.protects(owner,target)||p!=null&&!CombatSettings.canHit(p,target)){flames.remove(id);continue;}
             if(p!=null&&p.isAlive()&&!p.isRemoved()&&p.level()==level&&wounds.size()<2048){Wound w=new Wound(p,target);for(int i=0;i<Math.min(VoidTechniqueRules.MAX_RIFTS,Math.max(1,flames.getInt(id)));i++)w.cuts.add((long)(i*360/Math.max(1,flames.getInt(id))));w.burning=true;w.manual=true;wounds.put(key,w);saveFire(w);visual(w);}
-            else if(p!=null){damage(p,target,(float)(VoidTechniqueRules.FIRE_DAMAGE*VoidController.voidDamage(p)),true);}
+            else if(p!=null){damage(p,target,(float)(VoidTechniqueRules.FIRE_DAMAGE*VoidController.voidDamage(p))*MahoragaRules.bossDamage(target,MahoragaRules.FURNACE_MULTIPLIER),true);} // 离线女仆/玩家：虚空灶灼烧同样特攻
             else {
                 var casters=target.getPersistentData().getCompound("SukunaVoidFlameCastersR63");
                 // 旧档只存UUID，施术者未加载时无法区分女仆和玩家；先暂停，待其加载后重算，避免旧伤害继续生效。
@@ -129,7 +129,7 @@ public final class VoidCombat {
                     w.burning=true;w.manual=true;saveFire(w);visual(w);
                     Vec3 center=w.target.getBoundingBox().getCenter();fx(p,116,center,center.add(0,1,0),Math.max(2,w.cuts.size()),24,w.target.getId());
                     furnaceBlast(p,center);
-                    damage(p,w.target,VoidTechniqueRules.FIRE_DAMAGE*(float)VoidController.voidDamage(p),true);
+                    damage(p,w.target,VoidTechniqueRules.FIRE_DAMAGE*(float)VoidController.voidDamage(p)*MahoragaRules.bossDamage(w.target,MahoragaRules.FURNACE_MULTIPLIER),true);
                     if(CombatSettings.canHit(p,w.target)){
                         var tag=w.target.getPersistentData();tag.putUUID("SukunaVoidIgnitionOwner",p.getUUID());tag.putBoolean("SukunaVoidIgnitionMaid",MaidBridge.isCaster(p));tag.putLong("SukunaVoidIgnitionUntil",p.level().getGameTime()+160);
                         w.target.setSecondsOnFire(8);
@@ -143,7 +143,8 @@ public final class VoidCombat {
     public static void playerBlastDamage(LivingHurtEvent event){
         if(playerBlast!=null&&event.getSource().is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)&&CombatSettings.caster(event.getSource())==playerBlast){
             if(!CombatSettings.canHit(playerBlast,event.getEntity())){event.setCanceled(true);return;}
-            event.setAmount(BalanceRules.damage(event.getAmount()));
+            // 虚空灶的爆炸：对魔虚罗 ×20（灶/开系特攻）
+            event.setAmount(BalanceRules.damage(event.getAmount())*MahoragaRules.bossDamage(event.getEntity(),MahoragaRules.FURNACE_MULTIPLIER));
         }
     }
     private static void furnaceBlast(ServerPlayer p,Vec3 center){
@@ -161,7 +162,7 @@ public final class VoidCombat {
             if(target.ignoreExplosion())continue;
             double distance=target.position().distanceTo(center);
             double visibility=net.minecraft.world.level.Explosion.getSeenPercent(center,target);
-            float amount=BalanceRules.damage(CasterDamageRules.furnaceBlast(distance,visibility,true));
+            float amount=BalanceRules.damage(CasterDamageRules.furnaceBlast(distance,visibility,true)*MahoragaRules.bossDamage(target,MahoragaRules.FURNACE_MULTIPLIER));
             if(amount<=0)continue;
             AttackTypes.mark(AttackTypes.VOID);if(CombatSettings.hurt(p,target,level.damageSources().explosion(body,body),amount)){
                 double impact=(1-distance/5)*visibility;Vec3 push=target.getEyePosition().subtract(center).normalize().scale(impact);
@@ -257,13 +258,13 @@ public final class VoidCombat {
             // 永久裂隙不再定身；它只记录宿傩下一次攻击可以出现的角度。
             boolean muted=DomainClash.active(w.owner)||w.domain&&!w.manual&&Skills.domainClashing(w.owner);
             // 裂隙不持续伤害，只有灶点燃后才造成虚空火焰伤害。
-            if(!muted&&w.burning&&now>=w.nextDamage){w.nextDamage=now+20;saveFire(w);damage(w.owner,w.target,(float)(VoidTechniqueRules.FIRE_DAMAGE*VoidController.voidDamage(w.owner)),true);}
+            if(!muted&&w.burning&&now>=w.nextDamage){w.nextDamage=now+20;saveFire(w);damage(w.owner,w.target,(float)(VoidTechniqueRules.FIRE_DAMAGE*VoidController.voidDamage(w.owner))*MahoragaRules.bossDamage(w.target,MahoragaRules.FURNACE_MULTIPLIER),true);}
             // cuts 永久保留，直到领域闭合或玩家关系保护主动清理。
             if(w.cuts.isEmpty()||!w.target.isAlive()){remove(w);it.remove();continue;}
             if(now%5==0){if(muted)remove(w);else visual(w);}
         }
         for(Iterator<Fusion> it=fusions.iterator();it.hasNext();){Fusion f=it.next();if(!f.owner.isAlive()||f.owner.isRemoved()||f.owner.level()!=f.level){it.remove();continue;}if(f.level.getGameTime()<f.due)continue;it.remove();
-            if(f.level.getEntity(f.target) instanceof LivingEntity target&&CombatSettings.canHit(f.owner,target))damage(f.owner,target,VoidTechniqueRules.fusion(f.count)* (float)VoidController.voidDamage(f.owner),false);
+            if(f.level.getEntity(f.target) instanceof LivingEntity target&&CombatSettings.canHit(f.owner,target))damage(f.owner,target,VoidTechniqueRules.fusion(f.count)*(float)VoidController.voidDamage(f.owner)*MahoragaRules.bossDamage(target,MahoragaRules.FURNACE_MULTIPLIER),false); // 开·虚空烬：对魔虚罗 ×20
             Wound w=wounds.remove(new Key(f.owner.getUUID(),f.target));if(w!=null){w.burning=false;saveFire(w);remove(w);}
             fx(f.owner,120,f.point,f.center,200,30,f.count);f.level.playSound(null,f.point.x,f.point.y,f.point.z,SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,4,0.5f);
         }

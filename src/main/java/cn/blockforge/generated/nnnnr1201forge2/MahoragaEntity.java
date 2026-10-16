@@ -330,7 +330,10 @@ public final class MahoragaEntity extends Monster {
          }
 
          String ownKey = MahoragaAdaptStore.keyOf(source);
-         if (ownKey != null) {
+         // 「按来源」的适应进度只属于**友方魔虚罗**（它继承主人的法轮表）。
+         // 本体魔虚罗的适应仍然是那 24 格"招式"法轮（turn/adapted）：如果让它也按来源算，
+         // 挨玩家打 24 次后就会把"玩家"这一整个来源免疫掉，等于整只怪对玩家无敌。
+         if (this.ally() && ownKey != null) {
             // 查表用**槽位键**（taken/<实体id>）：与主人法轮存在 Curse 里的键格式逐字一致，
             // 召唤时整张表原样拷过来就能直接命中，不会出现"继承了却一条都不生效"。
             String ownSlot = MahoragaAdaptStore.TAKEN + ownKey;
@@ -904,7 +907,7 @@ public final class MahoragaEntity extends Monster {
       }
 
       String victimKey = MahoragaAdaptStore.keyOfEntity(target);
-      if (victimKey != null) {
+      if (this.ally() && victimKey != null) {   // 「攻击适应」也只属于友方魔虚罗
          // 攻击适应：与主人法轮同一把尺（dealt/<实体id>，12 次 = 完全适应）
          String victimSlot = MahoragaAdaptStore.DEALT + victimKey;
          if (this.ownHits.getOrDefault(victimSlot, 0) >= OWN_CLEAR) {

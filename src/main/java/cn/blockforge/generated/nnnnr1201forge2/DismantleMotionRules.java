@@ -5,20 +5,15 @@ public final class DismantleMotionRules {
     public static final int BACKFLIP=1, FLYING_KICK=2, SPIN=3, KNEEL=4, AIR_PUNCH=5, SLIDE=6, GROUND_SMASH=7, RING_SKILL=28;
     public static final int RING_SEGMENTS=48, RING_LIFE=24, RING_FX=163;
     public static final double BACK_DISTANCE=10, KICK_DISTANCE=6, RETURN_DISTANCE=3;
-    /** 《使用说明》四(三)：飞踢接触敌人时**轻推开敌人，不额外增加独立踢击伤害**。
-     *  所以这里只有推力与抬升，没有伤害常量。 */
-    public static final double KICK_DAMAGE=0, KICK_KNOCKBACK=1.5, KICK_LIFT=0.45;
+    public static final double KICK_DAMAGE=40, KICK_KNOCKBACK=1.5, KICK_LIFT=0.45;
     public static boolean kickActive(int kind,int age){return kind==FLYING_KICK&&age>=5&&age<=16;}
     public static double kickLift(double resistance){return KICK_LIFT*(1-Math.max(0,Math.min(1,resistance)));}
     public static int trigger(boolean crouching,boolean forward,boolean backward){return !crouching||forward==backward?0:backward?BACKFLIP:FLYING_KICK;}
-    /** 由按键 + 服务端的冲刺/离地状态挑动作；返回 0 表示"这不是动作，走普通解"。
-     *  与《使用说明》四(三)(四)一致：蹲下后退/后退跳 = 后翻；蹲下前进 = 飞踢；蹲下不动 = 跪地；
-     *  疾跑前进 = 滑铲（起跳或上升中 = 冲拳）。 */
     public static int choose(boolean crouch,boolean forward,boolean backward,boolean jump,boolean sprint,boolean ground,double vertical){
         if(forward&&backward){forward=false;backward=false;}
         if(backward&&jump)return BACKFLIP;
         if(crouch)return backward?BACKFLIP:forward?FLYING_KICK:KNEEL;
-        if(sprint&&forward)return jump||vertical>0?AIR_PUNCH:SLIDE;
+        if(sprint&&forward)return jump||!ground&&vertical>0?AIR_PUNCH:SLIDE;
         return 0;
     }
     public static boolean valid(int kind){return kind>=BACKFLIP&&kind<=GROUND_SMASH;}

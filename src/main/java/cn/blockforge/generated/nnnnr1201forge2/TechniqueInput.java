@@ -78,8 +78,8 @@ public final class TechniqueInput {
             if(kind==0&&input.motion()!=0&&DismantleMotionRules.valid(input.motion()))kind=input.motion();
             if(kind!=0&&!DismantleMotionRules.valid(kind))kind=0;
             if(kind!=0){
-                int rotate=(input.forward()?1:0)+(input.backward()?2:0)+(input.crouch()?4:0)+(input.jump()?8:0)+(body.isSprinting()?16:0);
-                DismantleMotion.start(p,kind,rotate);
+                // 解动作已回档到 r101 行为：位移一律沿起手朝向（不再按移动键反向），所以这里不再传"转向意图"
+                DismantleMotion.start(p,kind);
                 return;
             }
         }

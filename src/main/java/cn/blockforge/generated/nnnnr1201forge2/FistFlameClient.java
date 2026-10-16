@@ -48,9 +48,12 @@ public final class FistFlameClient {
     // ---------- 「包覆手臂的咒力」自绘层（复刻 jujutsu-vfx 那套观感：逐帧自绘、裹住整条手臂、随出拳放大） ----------
     private static final ResourceLocation GLOW=new ResourceLocation("sukuna","textures/effect/glow.png");
     private static final ResourceLocation AURA_FX_TEXTURE=GLOW;
-    private static final int AURA_SEG=5;                       // 每条手臂几段
-    private static final double AURA_WIDTH=0.42,AURA_LEN=0.24; // 单段尺寸（格）；手臂本体只有 0.25 格宽，所以这是"裹一圈"
-    private static final int AURA_OUT=0x73C81414,AURA_IN=0x8CFF6A72,AURA_CORE=0x66FFD0D6;
+    private static final int AURA_SEG=6;                        // 每条手臂几段
+    private static final double AURA_WIDTH=0.90,AURA_LEN=0.42;  // 单段尺寸（格）；手臂本体只有 0.25 格宽，所以这是明显"裹一圈"
+    /** 粉红配色（外深粉 → 中亮粉 → 内浅粉高光）。 */
+    private static final int AURA_OUT=0x8CD8264E,AURA_IN=0xB0FF5E86,AURA_CORE=0xA0FFD3E2;
+    /** 开关：`false`＝关掉 `photon:11` 那层，只留自绘的粉红咒力包覆层。 */
+    private static final boolean PHOTON_FX=false;
     private record Where(Vec3 at,org.joml.Quaternionf rot,ResourceLocation level,long seen){}
     private static final Map<Integer,Long> BURNING=new HashMap<>();
     /** 渲染路径写、tick 路径读：key = 玩家id*2+手（0右 1左）。 */
@@ -70,6 +73,13 @@ public final class FistFlameClient {
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         long now=mc.level.getGameTime();
         BURNING.entrySet().removeIf(en->now>en.getValue());
+        if(!PHOTON_FX){                                   // 已关：不再起/更新/销毁 Photon 特效
+            if(!EFFECTS.isEmpty()){
+                for(Integer k:List.copyOf(EFFECTS.keySet()))kill(k);
+                EFFECTS.clear();SEEN.clear();LEVEL.clear();WANT.clear();
+            }
+            return;
+        }
         for(var e:List.copyOf(WANT.entrySet()))apply(e.getKey(),e.getValue(),now);
         List<Integer> dead=new ArrayList<>();
         for(Integer k:EFFECTS.keySet())if(now-SEEN.getOrDefault(k,0L)>GRACE)dead.add(k);
@@ -82,6 +92,7 @@ public final class FistFlameClient {
     }
     /** 渲染路径调用：只登记"这只手现在在哪、什么朝向"。 */
     private static void want(int key,Vec3 at,org.joml.Quaternionf rot){
+        if(!PHOTON_FX)return;                             // Photon 层已关：不登记
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         WANT.put(key,new Where(at,rot,mc.level.dimension().location(),mc.level.getGameTime()));
     }
@@ -170,7 +181,7 @@ public final class FistFlameClient {
                 armPoints(ps,model.rightArm,player.getId(),0,forward);
                 armPoints(ps,model.leftArm,player.getId(),1,forward);
                 // 自绘的包覆层：两条手臂各画一遍（用 render 事件给的 buffer，不碰 Photon 状态）
-                var vb=source.getBuffer(net.minecraft.client.renderer.RenderType.entityTranslucent(AURA_FX_TEXTURE));
+                var vb=source.getBuffer(net.minecraft.client.renderer.RenderType.entityTranslucentEmissive(AURA_FX_TEXTURE));
                 float power=power(player,partial);
                 aura(ps,vb,model.rightArm,light,power);
                 aura(ps,vb,model.leftArm,light,power);

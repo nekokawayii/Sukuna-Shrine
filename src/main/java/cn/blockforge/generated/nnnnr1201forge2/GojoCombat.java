@@ -15,8 +15,16 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 /** 玩家侧五条悟技能组：吃下碎片后可用，各自独立冷却，与右侧小轮盘一一对应。 */
 public final class GojoCombat {
     public static final int COUNT=GojoPlayer.COUNT;
-    /** 茈与无限制茈打魔虚罗的伤害倍率：这两个术式对魔虚罗特攻 3 倍（其余目标不受影响）。 */
-    public static final float MAHORAGA_DAMAGE=3f;
+    /** 「茈」打魔虚罗的伤害倍率：**10 倍**（其余目标不受影响）。 */
+    public static final float MAHORAGA_DAMAGE=10f;
+    /** 「无限制茈」打魔虚罗的倍率：沿用旧值 3 倍（本次需求只点了茈，要一起改就把这里也换成 10）。 */
+    public static final float MAHORAGA_DAMAGE_UNLIMITED=3f;
+    /** 茈命中魔虚罗后的**缓慢**时长与等级：30 秒 · 缓慢 I。 */
+    public static final int PURPLE_SLOW_TICKS=20*30,PURPLE_SLOW_AMPLIFIER=0;
+    /** 茈命中后的减速：只对魔虚罗生效（其余目标不吃这一条）。 */
+    private static void purpleSlow(LivingEntity target){
+        if(target instanceof MahoragaEntity)target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,PURPLE_SLOW_TICKS,PURPLE_SLOW_AMPLIFIER,false,false,false));
+    }
     private static final Map<UUID,Orb> guiding=new HashMap<>();
     private static final class State {
         final ServerPlayer p;final ServerLevel level;
@@ -223,7 +231,7 @@ public final class GojoCombat {
     public static void unlimited(ServerPlayer p,Vec3 at,String reason){
         double radius=48;
         fx(p,GojoFx.UNLIMITED,at,Vec3.ZERO,(float)radius,60,0);
-        for(LivingEntity victim:Skills.targets(p.serverLevel(),p,at,radius))if(victim.position().distanceToSqr(at)<=radius*radius)hit(p,victim,999,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE); // 无限制茈 999（打魔虚罗 ×3）
+        for(LivingEntity victim:Skills.targets(p.serverLevel(),p,at,radius))if(victim.position().distanceToSqr(at)<=radius*radius)hit(p,victim,999,false,MAHORAGA_DAMAGE_UNLIMITED,AttackTypes.MAGIC_PURPLE); // 无限制茈 999（打魔虚罗 ×3）
         p.invulnerableTime=0;
         p.hurt(p.serverLevel().damageSources().indirectMagic(p,p),Math.max(1,p.getMaxHealth()*0.4f));
         p.displayClientMessage(Component.literal(reason+" · 无限制茈（反噬 40% 最大生命）"),true);
@@ -241,7 +249,8 @@ public final class GojoCombat {
     public static void clashVisual(ServerPlayer p,boolean show){State s=states.get(p.getUUID());if(s==null||s.domainUntil<=0)return;if(show)fx(p,GojoFx.DOMAIN,s.center,p.getLookAngle(),GojoFx.DOMAIN_RADIUS,400,0);else fx(p,GojoFx.DOMAIN_CLOSE,s.center,Vec3.ZERO,1,4,0);}
     public static void extendDomain(ServerPlayer p,int ticks){State s=states.get(p.getUUID());if(s!=null&&s.domainUntil>0)s.domainUntil+=ticks;}
     private static boolean hit(ServerPlayer p,LivingEntity target,double damage,boolean knock){return hit(p,target,damage,knock,1f,AttackTypes.MAGIC);}
-    /** 命中结算。{@code bossMultiplier} 只对<b>魔虚罗</b>生效：茈与无限制茈打它要 3 倍（{@link #MAHORAGA_DAMAGE}）；
+    /** 命中结算。{@code bossMultiplier} 只对<b>魔虚罗</b>生效：茈打它 **10 倍**（{@link #MAHORAGA_DAMAGE}），
+     *  无限制茈 3 倍（{@link #MAHORAGA_DAMAGE_UNLIMITED}）；
      *  {@code type} 是这次的适应占位：苍/赫/茈各自一条进度（{@link AttackTypes#MAGIC_BLUE} 等）。 */
     private static boolean hit(ServerPlayer p,LivingEntity target,double damage,boolean knock,float bossMultiplier,String type){
         if(target==null||!CombatSettings.canHit(p,target))return false;
@@ -370,7 +379,8 @@ public final class GojoCombat {
                 // 命中演出：变大 + 渐隐，纯视觉效果，不再附带溅射伤害
                 if(o.purple){
                     fx(o.owner,GojoFx.PURPLE_BURST,o.pos,Vec3.ZERO,12,30,o.id);
-                    hit(o.owner,victim,500,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE); // 茈 500（打魔虚罗 ×3，独立适应）
+                    // 茈 500：打魔虚罗 ×10（{@link #MAHORAGA_DAMAGE}），并且命中后给它挂 30 秒缓慢
+                    if(hit(o.owner,victim,500,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE))purpleSlow(victim);
                 }else{
                     fx(o.owner,GojoFx.RED_END,o.pos,Vec3.ZERO,7,30,o.id);
                     hit(o.owner,victim,60,true,1f,AttackTypes.MAGIC_RED); // 赫 60（独立适应）

@@ -131,7 +131,7 @@ public final class CombatSettings {
             .executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();
                 p.sendSystemMessage(Component.literal("当前术式伤害倍率："+multiplier(p)+" 倍（/sukuna damage 数字 可改，1 为原倍率）"));
                 p.sendSystemMessage(Component.literal("通用因子：模式强度 x"+BalanceRules.factor()+" · 术式基础 0.6 · 成长加成 +"+Curse.spellBonus(p)+" · 状态 x"+Curse.damageFactor(p)+" · 残渣 x"+Curse.residueFactor(p)));
-                p.sendSystemMessage(Component.literal("苍(每秒) 原值10 → "+BalanceRules.number(spellDamage(p,10))+" · 赫 原值60 → "+BalanceRules.number(spellDamage(p,60))+" · 茈 原值500 → "+BalanceRules.number(spellDamage(p,500))+"（打魔虚罗 x"+GojoCombat.MAHORAGA_DAMAGE+"） · 无限制茈 原值999 → "+BalanceRules.number(spellDamage(p,999))+"（打魔虚罗 x"+GojoCombat.MAHORAGA_DAMAGE+"）"));
+                p.sendSystemMessage(Component.literal("苍(每秒) 原值10 → "+BalanceRules.number(spellDamage(p,10))+" · 赫 原值60 → "+BalanceRules.number(spellDamage(p,60))+" · 茈 原值500 → "+BalanceRules.number(spellDamage(p,500))+"（打魔虚罗 x"+GojoCombat.MAHORAGA_DAMAGE+" + 缓慢 "+GojoCombat.PURPLE_SLOW_TICKS/20+" 秒） · 无限制茈 原值999 → "+BalanceRules.number(spellDamage(p,999))+"（打魔虚罗 x"+GojoCombat.MAHORAGA_DAMAGE_UNLIMITED+"）"));
                 return 1;})
             .then(Commands.argument("multiplier",DoubleArgumentType.doubleArg(0.001,10000)).requires(s->s.hasPermission(2)).executes(c->{
                 ServerPlayer p=c.getSource().getPlayerOrException();double value=DoubleArgumentType.getDouble(c,"multiplier");

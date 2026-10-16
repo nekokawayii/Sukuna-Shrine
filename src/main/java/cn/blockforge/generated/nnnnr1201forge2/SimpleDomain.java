@@ -6,9 +6,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.Vec3;
 
 /** 捌的分支「**简易领域 · 捌**」：**长按释放**的贴身简易领域。
@@ -21,7 +22,9 @@ import net.minecraft.world.phys.Vec3;
  *        所以 10% = 每秒 1 次 {@code power}，这里按 5 刻一跳结算）；</li>
  *    <li>**长按来释放**：按住期间领域持续存在并持续结算；</li>
  *    <li>**冷却 = 释放时间的 70%**（长按 1 秒 → 冷却 0.7 秒）；</li>
- *    <li>释放时**减速 50%**、**两手上举**（姿态走 {@link SimpleDomainPose}）。</li>
+ *    <li>释放期间**移速只剩 30%（减速 70%）**、**两手上举**（姿态走 {@link SimpleDomainPose}）；
+ *        减速是**直接改 MOVEMENT_SPEED 属性**，不是「缓慢」药水效果 —— HUD 上不会出现药水图标，
+ *        也只在这个技能维持期间存在，收招立刻恢复。</li>
  *  </ul> */
 @net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid="sukuna")
 public final class SimpleDomain {
@@ -44,8 +47,12 @@ public final class SimpleDomain {
     public static final int DAMAGE_INTERVAL=5;
     /** 维持消耗：**每秒 150 咒力**（每 20 刻结算一次）；付不出就自动收招。 */
     public static final double ENERGY_PER_SECOND=150;
-    /** 减速 50%：缓慢 II 持续 10 刻，长按时每 10 刻续一次。 */
-    public static final int SLOW_REFRESH=10;
+    /** 释放期间的减速：**直接改移动速度属性**（{@code MULTIPLY_TOTAL -0.70} → 只剩 30%），
+     *  不是「缓慢」药水效果，所以没有药水图标、也不会和其它缓慢叠加。
+     *  只在维持期间挂着；收招/死亡/换维度立刻摘掉（修饰符是 transient，不写进存档）。 */
+    public static final float SLOW_SHARE=0.70f;
+    /** 减速修饰符的唯一 id：同一个 id 反复 add 是幂等的，不会叠成一堆 -70%。 */
+    private static final UUID SLOW_ID=UUID.fromString("7c9b1c4e-3a52-4d0e-9f1b-5f0d7e2a6b11");
     /** 冷却 = 释放时间 × 70%，且有下限，避免"点一下就好"。 */
     public static final double COOLDOWN_SHARE=0.70;
     /** 冷却地板：只防止"零冷却连按"，2 刻 = 0.1 秒；旧值 10 刻（0.5 秒）会把轻点也锁半秒，表现为"卡冷却"。 */
@@ -87,7 +94,7 @@ public final class SimpleDomain {
         if(!Journey.unlocked(p)||Curse.fingers(p)<5){CastFeedback.tell(p,"简易领域 · 捌 需要先吃下 5 根宿指");return false;}
         if(!Curse.spend(p,Curse.COST[0]))return false;
         Field f=new Field(p);f.nextEnergy=f.start+20;fields.put(p.getUUID(),f); // 第一秒后再扣第一笔
-        MaidBridge.body(p).addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,SLOW_REFRESH,1,false,false,false));
+        applySlow(MaidBridge.body(p));   // 减速 70%：直接改移速（不是缓慢效果）
         p.displayClientMessage(Component.literal("简易领域 · 捌（长按维持 · 松手收招）").setStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0xFF9AD6FF)),true);
         level(p).playSound(null,p.blockPosition(),SoundEvents.WARDEN_SONIC_CHARGE,SoundSource.PLAYERS,0.7f,1.6f);
         return true;
@@ -105,8 +112,7 @@ public final class SimpleDomain {
             SdLog.w("SD.hold 校验失败（仅记录，不收招）alive="+body.isAlive()+" allowed="+TechniqueInput.allowed(p));
             return;
         }
-        body.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,SLOW_REFRESH,1,false,false,false));
-        f.slowUntil=(int)(f.level.getGameTime()+SLOW_REFRESH);
+        applySlow(body);  // 每刻重挂一次（幂等）：手滑、重连都不会把减速丢掉
         net.minecraft.util.RandomSource rnd=p.getRandom();
         Vec3 center=f.center();
         for(int i=0;i<CUTS_PER_TICK;i++){
@@ -142,6 +148,21 @@ public final class SimpleDomain {
         }
     }
 
+    /** 挂上「减速 70%」：**直接改 MOVEMENT_SPEED 属性**（MULTIPLY_TOTAL -0.70 → 只剩 30% 移速）。
+     *  先摘旧的那份再挂，重复调用是幂等的，不会叠成一堆修饰符。 */
+    private static void applySlow(LivingEntity body){
+        AttributeInstance attr=body.getAttribute(Attributes.MOVEMENT_SPEED);
+        if(attr==null)return;
+        attr.removeModifier(SLOW_ID);
+        attr.addTransientModifier(new AttributeModifier(SLOW_ID,"sukuna_simple_domain_slow",-SLOW_SHARE,
+            AttributeModifier.Operation.MULTIPLY_TOTAL));
+    }
+    /** 摘掉减速：只在确实挂着时才动属性，避免每刻对无关玩家做无意义的属性重算。 */
+    private static void clearSlow(LivingEntity body){
+        AttributeInstance attr=body.getAttribute(Attributes.MOVEMENT_SPEED);
+        if(attr!=null&&attr.getModifier(SLOW_ID)!=null)attr.removeModifier(SLOW_ID);
+    }
+
     /** 松手收招：结算冷却（= 本次释放时间 ×70%），清掉减速与领域。 */
     public static void release(ServerPlayer p){release(p,"未标注");}
     public static void release(ServerPlayer p,String why){
@@ -153,7 +174,7 @@ public final class SimpleDomain {
         long held=Math.max(1,f.level.getGameTime()-f.start);
         int cooldown=Math.max(COOLDOWN_MIN,(int)Math.round(held*COOLDOWN_SHARE)); // 释放时间 ×70%，仅保留 2 刻地板
         Curse.data(p).putLong("SimpleDomainCooldown",f.level.getGameTime()+cooldown);
-        MaidBridge.body(p).removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
+        clearSlow(MaidBridge.body(p));
         f.level.playSound(null,p.blockPosition(),SoundEvents.WARDEN_SONIC_BOOM,SoundSource.PLAYERS,0.8f,1.3f);
         p.displayClientMessage(Component.literal("简易领域 · 捌 收招 · 持续 "+String.format(Locale.ROOT,"%.1f",held/20.0)+" 秒 · 冷却 "
             +String.format(Locale.ROOT,"%.1f",cooldown/20.0)+" 秒 · 命中 "+f.hits+" 次").setStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0xFF9AD6FF)),true);
@@ -168,10 +189,10 @@ public final class SimpleDomain {
     @net.minecraftforge.eventbus.api.SubscribeEvent
     public static void tick(net.minecraftforge.event.TickEvent.ServerTickEvent e){
         if(e.phase!=net.minecraftforge.event.TickEvent.Phase.END)return;
-        var server=e.getServer();if(server==null||fields.isEmpty())return;
+        var server=e.getServer();if(server==null)return;
         for(ServerPlayer p:server.getPlayerList().getPlayers()){
             Field f=fields.get(p.getUUID());
-            if(f==null)continue;
+            if(f==null){clearSlow(MaidBridge.body(p));continue;} // 兜底：任何异常路径漏下的减速在这里被摘掉
             LivingEntity body=MaidBridge.body(p);
             boolean gone=!body.isAlive()||body.level()!=f.level||f.level.getGameTime()-f.start>MAX_HOLD||f.released;
             if(gone){release(p,"tick alive="+body.isAlive()+" 跨维度="+(body.level()!=f.level)+" 松手="+f.released);continue;}

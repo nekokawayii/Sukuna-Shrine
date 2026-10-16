@@ -202,7 +202,10 @@ public final class MahoragaEntity extends Monster {
       CompoundTag own = tag.getCompound("MahoOwn");
 
       for(String key : own.getAllKeys()) {
-         this.ownHits.put(key, own.getInt(key));
+         String slot = normalizeSlot(key);
+         if (slot != null) {
+            this.ownHits.put(slot, Math.max(0, Math.min(MahoragaAdaptStore.IMMUNE, own.getInt(key))));
+         }
       }
 
       this.pushOwnMask();
@@ -328,16 +331,18 @@ public final class MahoragaEntity extends Monster {
 
          String ownKey = MahoragaAdaptStore.keyOf(source);
          if (ownKey != null) {
-            int ownHits = this.ownHits.getOrDefault(ownKey, 0);
+            // 查表用**槽位键**（taken/<实体id>）：与主人法轮存在 Curse 里的键格式逐字一致，
+            // 召唤时整张表原样拷过来就能直接命中，不会出现"继承了却一条都不生效"。
+            String ownSlot = MahoragaAdaptStore.TAKEN + ownKey;
+            int ownHits = this.ownHits.getOrDefault(ownSlot, 0);
             float ownFactor = MahoragaAdaptStore.takenFactor(ownHits); // 12 次减半 → 24 次免疫
             if (ownFactor <= 0.0F) {
                this.level().playSound((Player)null, this.blockPosition(), SoundEvents.SHIELD_BLOCK, SoundSource.HOSTILE, 1.6F, 0.7F);
                return false;
             }
             if (ownFactor < 1.0F) amount *= ownFactor;
+            this.turnOwn(ownSlot);
          }
-
-         this.turnOwn(ownKey);
          if (this.adapted(type)) {
             this.repel(type, source);
             return false;
@@ -434,15 +439,34 @@ public final class MahoragaEntity extends Monster {
       this.entityData.set(RITUAL, 0);
    }
 
+   /** 继承主人在法轮上攒下的**整张适应表**：受击（taken/）与攻击（dealt/）两条进度原样带过来。
+    *
+    *  <p>键格式必须与 {@link MahoragaAdaptStore} **逐字一致**：库里存的是
+    *  {@code taken/<实体id>} / {@code dealt/<实体id>} 这种<b>槽位键</b>，这只魔虚罗自己
+    *  查表（{@link #hurt} / {@link #hitTarget}）用的也必须是同样的槽位键。此前这里把库里的
+    *  槽位键原样放进 ownHits，但查表用的是<b>不带前缀的裸键</b>（{@code minecraft:zombie}），
+    *  于是每一条都查不中 —— 表现为 <b>"友方魔虚罗一点适应都没继承"</b>。</p> */
    public void importAdaptation(ServerPlayer owner) {
       this.ownHits.clear();
 
       for(Map.Entry<String, Integer> e : curseAdapt(owner).entrySet()) {
-         this.ownHits.put((String)e.getKey(), (Integer)e.getValue());
+         String slot = normalizeSlot((String)e.getKey());
+         int hits = Math.max(0, Math.min(MahoragaAdaptStore.IMMUNE, (Integer)e.getValue()));
+         if (slot != null && hits > 0) {
+            this.ownHits.put(slot, hits);
+         }
       }
 
       this.pushOwnMask();
       this.syncWheelOwn();
+   }
+
+   /** 旧存档里 ownHits 存的是裸键（没有 taken/ dealt/ 前缀），载入时统一补成 {@code taken/}。 */
+   private static String normalizeSlot(String key) {
+      if (key == null || key.isEmpty()) {
+         return null;
+      }
+      return key.indexOf('/') >= 0 ? key : MahoragaAdaptStore.TAKEN + key;
    }
 
    private static Map<String, Integer> curseAdapt(ServerPlayer owner) {
@@ -465,7 +489,8 @@ public final class MahoragaEntity extends Monster {
       int bit = 0;
 
       for(Map.Entry<String, Integer> e : this.ownHits.entrySet()) {
-         if (e.getValue() >= 6 && bit < 24) {
+         // 与主人法轮同一判据：12 次（CLEAR）= 完全适应，一格法轮
+         if (e.getValue() >= MahoragaAdaptStore.CLEAR && bit < 24) {
             mask |= 1 << bit;
          }
 
@@ -479,16 +504,19 @@ public final class MahoragaEntity extends Monster {
       this.fxSummoner(MahoragaVisuals.WHEEL_BEAT, MahoragaVisuals.WHEEL_ROTATE, this.position(), (float)(Math.min(4, Integer.bitCount(this.ownMask())) * 16), (long)Math.max(0, this.wheelType()));
    }
 
-   private void turnOwn(String key) {
-      if (key != null) {
-         int hits = this.ownHits.getOrDefault(key, 0);
-         if (hits < 6) {
+   /** 适应进度 +1。刻度与主人法轮**完全一致**：12 次（{@link MahoragaAdaptStore#CLEAR}）算"完全适应"，
+    *  24 次（{@link MahoragaAdaptStore#IMMUNE}）彻底免疫（免疫由 {@link MahoragaAdaptStore#takenFactor} 归零实现）。
+    *  旧版把上限写死成 6，于是"打满 12 次才真伤"（{@link #OWN_CLEAR}）永远到不了，继承过来的进度也没法用。 */
+   private void turnOwn(String slot) {
+      if (slot != null) {
+         int hits = this.ownHits.getOrDefault(slot, 0);
+         if (hits < MahoragaAdaptStore.IMMUNE) {
             int next = hits + 1;
-            this.ownHits.put(key, next);
+            this.ownHits.put(slot, next);
             this.pushOwnMask();
             this.syncWheelOwn();
-            if (next >= 6) {
-               this.announce("\u9b54\u865a\u7f57 \u00b7 \u5df2\u5b8c\u5168\u9002\u5e94" + ownLabel(key) + "\uff1a\u5b83\u5bf9\u8be5\u6765\u6e90\u7684\u5168\u90e8\u653b\u51fb\u65e0\u6548");
+            if (next == OWN_CLEAR) {
+               this.announce("\u9b54\u865a\u7f57 \u00b7 \u5df2\u5b8c\u5168\u9002\u5e94" + ownLabel(slot) + "\uff1a\u5b83\u5bf9\u8be5\u6765\u6e90\u7684\u5168\u90e8\u653b\u51fb\u65e0\u6548");
                this.level().playSound((Player)null, this.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 2.0F, 1.3F);
             }
 
@@ -500,25 +528,27 @@ public final class MahoragaEntity extends Monster {
       if (victim != null) {
          ResourceLocation id = ForgeRegistries.ENTITY_TYPES.getKey(victim.getType());
          if (id != null) {
-            this.turnOwn(id.toString());
+            this.turnOwn(MahoragaAdaptStore.DEALT + id);
          }
 
       }
    }
 
    private static String ownLabel(String key) {
-      if ("env".equals(key)) {
+      // ownHits 的键是槽位键（taken/ dealt/ 前缀），显示前先剥掉前缀
+      String bare = key == null ? "" : (key.indexOf('/') >= 0 ? key.substring(key.indexOf('/') + 1) : key);
+      if ("env".equals(bare)) {
          return "\u5176\u4ed6\u4f24\u5bb3";
       } else {
          try {
-            EntityType<?> type = (EntityType)ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(key));
+            EntityType<?> type = (EntityType)ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(bare));
             if (type != null) {
                return "\u300c" + type.getDescription().getString() + "\u300d";
             }
          } catch (RuntimeException var2) {
          }
 
-         return "\u300c" + key + "\u300d";
+         return "\u300c" + bare + "\u300d";
       }
    }
 
@@ -863,40 +893,37 @@ public final class MahoragaEntity extends Monster {
    }
 
    private void hitTarget(LivingEntity target, float scale, float knock) {
-      if (target != null && MahoragaRules.valid(this, target)) {
-         if (!this.isFriendlyTo(target)) {
-            String targetKey = MahoragaAdaptStore.keyOfEntity(target);
-            if (targetKey != null && this.ownHits.getOrDefault(targetKey, 0) >= OWN_CLEAR) {
-            } else {
-               target.invulnerableTime = 0;
-               float damage = BalanceRules.damage(this.getAttributeValue(Attributes.ATTACK_DAMAGE) * (double)scale);
-               boolean hurt = target.hurt(this.damageSources().mobAttack(this), damage);
-                if (hurt) {
-                   String victimKey = MahoragaAdaptStore.keyOfEntity(target);
-                   if (victimKey != null) {
-                      boolean alreadyAdapted = this.ownHits.getOrDefault(victimKey, 0) >= OWN_CLEAR;
-                      if (alreadyAdapted) {
-                         // 已经"适应对方存在"：这一击是真伤（无视护甲/抗性/无敌帧）、伤害翻倍，且对方 20 秒不能回血
-                         target.invulnerableTime = 0;
-                         target.hurt(this.damageSources().genericKill(), damage * MahoragaAdaptStore.ADAPTED_DAMAGE);
-                         target.getPersistentData().putLong(MahoragaAdaptStore.NO_HEAL_UNTIL,
-                            this.level().getGameTime() + MahoragaAdaptStore.ADAPTED_NO_HEAL_TICKS);
-                         target.getPersistentData().putBoolean("SukunaNoHeal", true);
-                      } else {
-                         this.turnOwn(victimKey); // 打中一次就涨一点"适应对方"
-                      }
-                   }
+      if (target == null || !MahoragaRules.valid(this, target) || this.isFriendlyTo(target)) {
+         return;
+      }
 
-                  Vec3 push = target.position().subtract(this.position()).multiply(1.0D, 0.0D, 1.0D);
-                  if (push.lengthSqr() > 1.0E-4D) {
-                     push = push.normalize();
-                     target.push(push.x * 3.2D * (double)knock, 1.4D * (double)knock, push.z * 3.2D * (double)knock);
-                     target.hurtMarked = true;
-                  }
-               }
+      target.invulnerableTime = 0;
+      float damage = BalanceRules.damage(this.getAttributeValue(Attributes.ATTACK_DAMAGE) * (double)scale);
+      if (!target.hurt(this.damageSources().mobAttack(this), damage)) {
+         return;
+      }
 
-            }
+      String victimKey = MahoragaAdaptStore.keyOfEntity(target);
+      if (victimKey != null) {
+         // 攻击适应：与主人法轮同一把尺（dealt/<实体id>，12 次 = 完全适应）
+         String victimSlot = MahoragaAdaptStore.DEALT + victimKey;
+         if (this.ownHits.getOrDefault(victimSlot, 0) >= OWN_CLEAR) {
+            // 已经"适应对方存在"：这一击是真伤（无视护甲/抗性/无敌帧）、伤害翻倍，且对方 20 秒不能回血
+            target.invulnerableTime = 0;
+            target.hurt(this.damageSources().genericKill(), damage * MahoragaAdaptStore.ADAPTED_DAMAGE);
+            target.getPersistentData().putLong(MahoragaAdaptStore.NO_HEAL_UNTIL,
+               this.level().getGameTime() + MahoragaAdaptStore.ADAPTED_NO_HEAL_TICKS);
+            target.getPersistentData().putBoolean("SukunaNoHeal", true);
+         } else {
+            this.turnOwn(victimSlot); // 打中一次就涨一点"适应对方"
          }
+      }
+
+      Vec3 push = target.position().subtract(this.position()).multiply(1.0D, 0.0D, 1.0D);
+      if (push.lengthSqr() > 1.0E-4D) {
+         push = push.normalize();
+         target.push(push.x * 3.2D * (double)knock, 1.4D * (double)knock, push.z * 3.2D * (double)knock);
+         target.hurtMarked = true;
       }
    }
 

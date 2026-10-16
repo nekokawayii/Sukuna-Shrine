@@ -23,5 +23,15 @@ public final class MahoragaRules {
     public static boolean wheelOnHead(LivingEntity entity){
         return entity!=null&&isWheel(entity.getItemBySlot(EquipmentSlot.HEAD));
     }
+    /** 「开 · 炎弓 / 灶 · 粉尘爆炸 / 灶 · 开」这一系对魔虚罗的**特攻倍率**：20 倍（其余目标不受影响）。 */
+    public static final float FURNACE_MULTIPLIER=20f;
+    /** 目标是不是魔虚罗（含**友方**魔虚罗）：只有它吃特攻倍率。 */
+    public static boolean isMahoraga(LivingEntity target){
+        return target instanceof MahoragaEntity;
+    }
+    /** 对魔虚罗的伤害倍率：是魔虚罗就返回 {@code multiplier}，否则恒为 1 —— 直接乘进原值即可，不影响其它目标。 */
+    public static float bossDamage(LivingEntity target,float multiplier){
+        return isMahoraga(target)?multiplier:1f;
+    }
     private MahoragaRules(){}
 }

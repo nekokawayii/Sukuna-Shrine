@@ -65,7 +65,8 @@ public final class CastHands {
             ps.pushPose();
             if(pose.kind==71){
                 // 第一人称单手竖印：右手抬到屏幕正中央（x 先把右臂枢轴的 -5/16 偏移抵消掉），几乎不旋转、只轻微前倾
-                ps.translate(0.375,-0.5,-0.55);
+                // y 由 -0.5 下调到 -0.72（用户反馈"手往下一点"）：只动这一处平移，角度与第三人称一律不动
+                ps.translate(0.375,-0.72,-0.55);
                 ps.mulPose(Axis.XP.rotationDegrees(-15));
             }else{
                 if(pose.kind==2){ps.translate(side<0?-0.42:0.32,-0.38,side<0?-0.95:-0.62+draw*0.28);ps.mulPose(Axis.YP.rotationDegrees(side<0?22:-30));ps.mulPose(Axis.ZP.rotationDegrees(side<0?-12:25));}

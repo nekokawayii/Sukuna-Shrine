@@ -231,13 +231,7 @@ public final class Skills {
     private static void release(ServerPlayer p,int type){
         Seal seal=seals.remove(p.getUUID());if(seal==null)return;
         unfreeze(p);pose(p,seal.type,0);
-        if(seal.type==SEAL_VOID){
-            GojoCombat.controlOnly(p);
-            CastFeedback.tell(p,"放下结印 · 无量空处仅剩控制（无伤害） · 再按一次释放键收起领域");
-            if(GojoCombat.domainOpen(p))released.add(p.getUUID());
-            noteVoid("放下（仅控制，伤害整段跳过）"+p.getScoreboardName());
-            return;
-        }
+        if(seal.type==SEAL_VOID){dropVoid(p);return;}
         Domain d=domains.get(p.getUUID());if(d!=null)d.damageScale=ShrineRules.DOMAIN_RELEASE_SCALE;
         CastFeedback.tell(p,"放下结印 · 御厨子伤害降至"+(int)(ShrineRules.DOMAIN_RELEASE_SCALE*100)+"% · 再按一次释放键收起领域");
         if(domains.containsKey(p.getUUID()))released.add(p.getUUID());
@@ -276,18 +270,29 @@ public final class Skills {
         }
     }
     // ---------------------------------------------------------------- 五条悟技能7 · 无量空处（同一套 Seal：结印 → 80 刻展开 → 放下仅控制 → 收起）
-    /** 释放键循环：①结印 ②再按=放下(此后仅控制、无伤害) ③**放下后再按一次=收起领域**。 */
+    /** 释放键循环：①结印 ②再按=放下(此后仅控制、无伤害) ③**放下后再按一次=收起领域**。
+     *
+     *  <p>判定一律以**各自的权威状态**为准：领域在不在看 {@code GojoCombat.domainOpen}（无量空处的领域状态存在
+     *  GojoCombat.State 里，**从不进** {@link #domains}），"放下过没有"看 {@link #released}，
+     *  结印在不在看 {@link #seals}。原来"结印还没生成领域"的分支写在 release 上（release 第一行就
+     *  {@code seals.remove}），一旦 Seal 先没了，这条输入就只剩最后那句提示——既放不下也收不起。
+     *  现在放下走 {@link #dropVoid}：不依赖 Seal 是否还在，只要"领域开着且还没放下过"就一定能放下。</p> */
     public static void voidPress(ServerPlayer p){
+        boolean open=GojoCombat.domainOpen(p),did=released.contains(p.getUUID());
+        Seal s0=seals.get(p.getUUID());
+        noteVoid("释放键 领域在="+open+" 已放下="+did+" 结印="+(s0==null?"无":(s0.type==SEAL_VOID?(s0.opened?"无量空处(已展开)":"无量空处(结印中)"):"御厨子"))+" "+p.getScoreboardName());
         // 先判条件再清"放下"标记：御厨子的放下标记不能被这条路径吃掉
-        if(released.contains(p.getUUID())&&GojoCombat.domainOpen(p)){
+        if(did&&open){
             released.remove(p.getUUID());
-            noteVoid("收起无量空处（放下后再按一次）");
+            noteVoid("收起无量空处（放下后再按一次）"+p.getScoreboardName());
             GojoCombat.closeDomain(p);   // 收起文案与术式熔断仍由 GojoCombat 自己负责
             CastFeedback.tell(p,"无量空处已收起");
             return;
         }
         Seal seal=seals.get(p.getUUID());
-        if(seal!=null&&seal.type==SEAL_VOID){if(seal.opened)release(p,SEAL_VOID);else cancelVoidSeal(p,"再次按下释放键");return;}
+        if(seal!=null&&seal.type==SEAL_VOID){if(seal.opened)dropVoid(p);else cancelVoidSeal(p,"再次按下释放键");return;}
+        // 结印已不在（或从来不在）但领域还开着、又没放下过：这一步仍然必须是"放下"，不能掉进最后的提示里
+        if(GojoCombat.domainOpen(p)&&!released.contains(p.getUUID())){dropVoid(p);return;}
         if(GojoCombat.domainOpen(p)){CastFeedback.tell(p,"无量空处已展开 · 再按=放下(仅控制) · 放下后再按一次=收起");return;}
         startVoidSeal(p);
     }
@@ -312,7 +317,21 @@ public final class Skills {
     private static void openVoidDomain(ServerPlayer p){
         pose(p,SEAL_VOID,GojoCombat.UNLIMITED_TICKS+400);   // 先摆姿态再生成：对拼当场结算时会反过来收起结印状态
         GojoCombat.openVoidDomain(p);
-        noteVoid("领域生成 "+p.getScoreboardName()+" 中心"+where(p.position())+" 半径"+(int)GojoFx.DOMAIN_RADIUS+"格 "+GojoCombat.UNLIMITED_TICKS+"刻");
+        noteVoid("领域生成 "+p.getScoreboardName()+" 中心"+where(p.position())+" 半径"+(int)GojoFx.DOMAIN_RADIUS+"格 "+GojoCombat.UNLIMITED_TICKS+"刻"
+            +" 结印在="+sealing(p,SEAL_VOID)+" 领域在="+GojoCombat.domainOpen(p)+" 已放下="+released.contains(p.getUUID()));
+    }
+    /** 「放下」：手势失效（life=0 的姿态包）+ 无量空处转为仅控制（伤害整段跳过），领域继续存在。
+     *  <b>不要求 Seal 还在</b>——放下这一步的权威状态是"领域开着且还没放下过"，Seal 在不在只决定姿态要不要额外清一次。
+     *  这是本轮的修复点：原来放下挂在 {@code release()} 上，而它第一行就把 Seal 摘了，Seal 一旦先没，
+     *  再按释放键只会落到最后那句提示里（既不能放下也不能收起）。 */
+    private static void dropVoid(ServerPlayer p){
+        Seal seal=seals.remove(p.getUUID());
+        if(seal!=null){unfreeze(p);pose(p,SEAL_VOID,0);}   // Seal 还在：解冻 + 发 life=0 让结印姿态立刻失效
+        GojoCombat.controlOnly(p);                          // 仅控制：伤害那一路整段跳过
+        released.add(p.getUUID());
+        CastFeedback.tell(p,"放下结印 · 无量空处仅剩控制（无伤害） · 再按一次释放键收起领域");
+        noteVoid("放下（仅控制，伤害整段跳过）"+p.getScoreboardName()
+            +" 结印在="+(seal!=null)+" 领域在="+GojoCombat.domainOpen(p));
     }
     /** 无量空处关闭（收起/到时/对拼）：清掉它的结印状态（由 GojoCombat.closeDomain 与 cancel 调用）。 */
     public static void endVoidSeal(ServerPlayer p){

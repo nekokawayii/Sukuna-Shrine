@@ -38,8 +38,15 @@ public final class TechniqueInput {
             return;
         }
         if(SixfoldFinale.active(p))return;
-        // 无量空处：开着时再按一次是"收起"，结印中再按一次是"放下/取消"——两条都要排在所有动作守卫之前
-        if(input.skill==41&&input.phase==0&&(GojoCombat.domainOpen(p)||Skills.sealing(p,Skills.SEAL_VOID))){GojoCombat.toggleDomain(p);return;}
+        // 无量空处：开着时再按一次是"收起"，结印中再按一次是"放下/取消"——两条都要排在所有动作守卫之前。
+        // 这里把三档判定用到的状态先落一条日志：以后再出现"按了没反应"，看这条就知道是领域/结印哪一侧判空了。
+        if(input.skill==41&&input.phase==0){
+            boolean open=GojoCombat.domainOpen(p),voidSeal=Skills.sealing(p,Skills.SEAL_VOID);
+            if(open||voidSeal){SdLog.w("VOID 释放键 phase=0 已接管 领域在="+open+" 结印在="+voidSeal);GojoCombat.toggleDomain(p);return;}
+            // 领域/结印都判空 = 这一下必然掉到通用守卫里静默返回（skill=41 不是 SkillAction 的技能号）。
+            // 落盘留证：下次再出"按了没反应"，看这条就知道是客户端没发包、还是服务端状态已经对不上。
+            SdLog.w("VOID 释放键 phase=0 未接管 领域在=false 结印在=false 其它结印="+Skills.sealing(p));
+        }
         // 神武解：按住释放键充能，松手打出去；取消（phase 3）只丢充能不打雷
         if(input.skill==Shinbuke.CHARGE_ID){
             if(input.phase==0)Shinbuke.beginCharge(p);

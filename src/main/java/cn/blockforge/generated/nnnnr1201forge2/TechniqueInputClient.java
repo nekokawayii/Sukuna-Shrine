@@ -37,7 +37,11 @@ public final class TechniqueInputClient {
         if(heldSkill>=0){if(!down){send(heldSkill,2);heldSkill=-1;}else if(++ticks%10==0)send(heldSkill,1);}
         if(down&&!previous&&heldSkill<0&&!FinaleClient.local()&&!DomainClashClient.active()&&!NetBranchVisuals.locked()&&!DismantleMotionClient.locked()&&Client.selected!=SlashFormRules.FREEHAND){
             heldSkill=Client.selected;ticks=0;
-            if(heldSkill==SlashFormRules.WORLD)worldLease=320;send(heldSkill,0);
+            if(heldSkill==SlashFormRules.WORLD)worldLease=320;
+            // 无量空处（输入侧技能号 41）的关键键：客户端确实发出去了才落盘 —— 与服务端那条"是否接管"配对看，
+            // 一眼分清"客户端压根没发包"和"发了但服务端状态对不上"。
+            if(heldSkill==41)SdLog.w("VOID 客户端按下 发出 skill=41 phase=0");
+            send(heldSkill,0);
         }
         previous=down;
     }

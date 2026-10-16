@@ -261,6 +261,9 @@ public final class Client {
     static boolean voidPulse(int owner,float partial){DomainVisual d=domains.get(owner);return d!=null&&(tick-d.born+partial)%160<8;}
     private static boolean insideVoid(){var mc=Minecraft.getInstance();return mc.player!=null&&domains.values().stream().anyMatch(d->VoidBossClient.shrine(d.owner)&&mc.player.position().distanceToSqr(d.center)<d.radius*d.radius);}
     private static boolean insideBlueVoid(){var mc=Minecraft.getInstance();return mc.player!=null&&domains.values().stream().anyMatch(d->VoidBossClient.blue(d.owner)&&mc.player.position().distanceToSqr(d.center)<d.radius*d.radius);}
+    /** 给其它特效系统用的镜头震动/闪光入口（最大功率·开 打出去时要"光污染"）。 */
+    public static void shake(int ticks){shakeUntil=Math.max(shakeUntil,tick+ticks);}
+    public static void flash(int ticks){flashUntil=Math.max(flashUntil,tick+ticks);}
     private static boolean bossDark(){var mc=Minecraft.getInstance();return mc.player!=null&&mc.player.hasEffect(net.minecraft.world.effect.MobEffects.DARKNESS)&&visuals.stream().anyMatch(v->v.e.kind()==38&&mc.player.distanceToSqr(v.e.position())<2304);}
     @SubscribeEvent public static void fog(ViewportEvent.ComputeFogColor e){if(bossDark()){e.setRed(0.028f);e.setGreen(0.008f);e.setBlue(0.045f);}else if(insideBlueVoid()){e.setRed(0.02f);e.setGreen(0.10f);e.setBlue(0.24f);}else if(insideVoid()){e.setRed(0.11f);e.setGreen(0.045f);e.setBlue(0.19f);}else if(inside()){e.setRed(0.40f);e.setGreen(0.018f);e.setBlue(0.045f);}FurnaceMaxClient.fog(e);}
     @SubscribeEvent public static void fogDistance(ViewportEvent.RenderFog e){if(bossDark()&&e.getType()==net.minecraft.world.level.material.FogType.NONE){e.setNearPlaneDistance(1);e.setFarPlaneDistance(5);e.setCanceled(true);}}

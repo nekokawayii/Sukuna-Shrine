@@ -28,7 +28,8 @@ public final class FurnaceMaxClient {
         RED=0xD8FF2418,SMOOTH=0x30A08878;
     private static final int BLOOM_FIRE=0xFF7A1206,BLOOM_GOLD=0xFF803010,BLOOM_RED=0xFF8A0A06;
     private static final String GLOW="textures/effect/glow.png";
-    private static final double BOW_HEIGHT=3.6;
+    /** 弓高：玩家身高 1.8 的两倍 = 3.6，再按用户要求放大三倍 → 10.8 格。 */
+    private static final double BOW_HEIGHT=10.8;
     /** 镀橙渐变 / 收拢（中断 70 刻、打出去 8 刻）/ 红球时长。 */
     private static final int COAT_RAMP=60,COLLAPSE_TICKS=70,FAST_COLLAPSE=8,BALL_TICKS=22;
 
@@ -243,32 +244,40 @@ public final class FurnaceMaxClient {
         Vec3 right=fwd.cross(new Vec3(0,1,0));
         if(right.lengthSqr()<1e-4)right=new Vec3(1,0,0);
         right=right.normalize();
-        Vec3 left=right.scale(-1);                    // 玩家左手边
-        Vec3 vertical=right.cross(fwd).normalize();    // 弓臂方向（竖直）
-        double h=BOW_HEIGHT*Math.max(0.18,progress),draw=0.95*progress;
-        Vec3 center=pos.add(0,1.15,0).add(left.scale(0.9)).add(fwd.scale(0.35));
-        Vec3 nock=center.subtract(fwd.scale(0.15+draw));
+        Vec3 left=right.scale(-1);                     // 玩家左手边
+        Vec3 vertical=right.cross(fwd).normalize();     // 弓臂方向（竖直）
+        double h=BOW_HEIGHT*Math.max(0.18,progress);
+        double bulge=h*0.17;                            // 弓弧深度：随弓一起放大
+        // 弓面**垂直于视线**（弓背朝左 / 弦朝玩家）：从背后看才是清清楚楚一张弓，
+        // 而不是顺着视线的一条竖线——上一版"看不出来是弓"的主因就在这里。
+        Vec3 center=pos.add(0,1.15,0).add(left.scale(1.2)).add(fwd.scale(0.5));
+        Vec3 tipTop=center.add(vertical.scale(h*0.5)),tipBottom=center.subtract(vertical.scale(h*0.5));
+        Vec3 belly=center.add(left.scale(bulge));       // 弓背（弧顶）
+        double cs=0.55+0.35*progress;                   // 单团火的大小（随蓄力略长）
         // 飞进来的火团：从弓心外沿径向飞入（"凝成"的过程）
-        spawn("bow/"+owner+"/in",PhotonFx.blobs(center,2.4+1.6*progress,0.26,0.42,FIRE,BLOOM_FIRE,-1.5,0,12,3,6),9);
-        // 弓臂：两段弧，各 5 团火
-        for(int limb=0;limb<2;limb++){
-            double sign=limb==0?1:-1;
-            for(int i=0;i<5;i++){
-                double t=0.18+0.82*i/4.0,ty=sign*t;
-                Vec3 at=center.add(vertical.scale(h*0.5*ty)).add(fwd.scale(0.5*(1-ty*ty)));
-                flameCluster(at,0.30+0.24*progress,1.0);
+        spawn("bow/"+owner+"/in",PhotonFx.blobs(center,h*0.34+1.5*progress,0.28,0.46,FIRE,BLOOM_FIRE,-1.7,0,16,3,6),9);
+        // 弓臂：两条二次贝塞尔弧（上稍→弓背、弓背→下稍），各 6 团
+        for(int half=0;half<2;half++){
+            Vec3 a=half==0?tipTop:belly,b=half==0?belly:tipBottom;
+            Vec3 ctrl=half==0?center.add(vertical.scale(h*0.30)).add(left.scale(bulge*0.62))
+                            :center.subtract(vertical.scale(h*0.30)).add(left.scale(bulge*0.62));
+            for(int i=0;i<=6;i++){
+                double t=i/6.0,mt=1-t;
+                Vec3 at=a.scale(mt*mt).add(ctrl.scale(2*mt*t)).add(b.scale(t*t));
+                flameCluster(at,cs,2.2);
             }
-            flameCluster(center.add(vertical.scale(sign*h*0.5)),0.42+0.22*progress,1.5);
         }
-        // 弓弦：中点随蓄力后拉，四团火勾出两段弦
-        for(int i=1;i<=2;i++){
-            double t=i/3.0;
-            flameCluster(center.add(vertical.scale(h*0.5*(1-t))).subtract(fwd.scale(0.15+draw*t)),0.22,0.7);
-            flameCluster(center.add(vertical.scale(-h*0.5*(1-t))).subtract(fwd.scale(0.15+draw*t)),0.22,0.7);
+        // 弓弦：从上稍到下稍的直线（在弓背右侧＝靠玩家这一侧），中点被拉后 draw 格（拉弓）
+        double draw=bulge*0.95*progress;
+        Vec3 nock=center.add(right.scale(draw*0.9));
+        for(int half=0;half<2;half++){
+            Vec3 a=half==0?tipTop:tipBottom;
+            for(int i=1;i<=5;i++)flameCluster(a.lerp(nock,i/5.0),cs*0.62,1.1);   // 弦：更细
         }
-        // 搭在弦上的箭
-        flameCluster(nock.add(fwd.scale(0.4)),0.30,1.0);
-        flameCluster(nock.add(fwd.scale(1.5+0.7*progress)),0.26,1.2);
+        flameCluster(nock,cs*0.8,1.3);
+        // 搭在弦上的箭：从弦中段沿瞄准方向伸出
+        flameCluster(nock.add(fwd.scale(h*0.14)),cs*0.8,1.4);
+        flameCluster(nock.add(fwd.scale(h*0.30+1.2*progress)),cs*0.7,1.5);
         // 金色收束线/收束射线**已按要求删除**：蓄力期间只有"火团凝成弓"这一件事
     }
     /** 一小团火：大小/颜色随机 + 轻微外扩 + 上飘火星＝燃烧感。 */

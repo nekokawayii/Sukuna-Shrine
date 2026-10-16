@@ -27,13 +27,14 @@ import net.minecraftforge.fml.common.Mod;
 public final class FistFlameClient {
     /** 服务端广播的特效号：附拳期间每 15 刻一条（带 entityId 与寿命）。 */
     public static final int FX=236;
-    /** 用户提供的拳击特效（放在 assets/sukuna/fx/meleepunch.fx，gzip NBT）。 */
-    private static final ResourceLocation PUNCH_FX=new ResourceLocation("sukuna","meleepunch");
+    /** 用户给的拳击特效：`ldlib/assets/photon/fx/11.fx`（LDLib 文件系统资源目录，用 `photon:11` 取）。 */
+    private static final ResourceLocation PUNCH_FX=new ResourceLocation("photon","11");
     private static final String PHOTON_ROOT="com.lowdragmc.photon.client.";
-    private static final int REFRESH=10;
+    /** 生命周期自己写：起一份之后**只更新位置/朝向**（不重启），附拳关闭或换维度时才销毁。 */
     private static final Map<Integer,Long> BURNING=new HashMap<>();
     private static final Map<Integer,Object> EFFECTS=new HashMap<>();
-    private static final Map<Integer,Long> SPAWNED=new HashMap<>();
+    private static final Map<Integer,ResourceLocation> LEVELS=new HashMap<>();
+    private static final Map<Integer,String> LAST_POS=new HashMap<>();
     private static Object fx;private static boolean broken;
     private static String lastNote="";private static long lastNoteAt;
 
@@ -42,7 +43,7 @@ public final class FistFlameClient {
         BURNING.put(e.owner(),mc.level.getGameTime()+Math.max(10,e.life()));
         note("客户端收到 kind=236 owner="+e.owner());
     }
-    /** 每刻：过期的玩家把特效收掉（`setForcedDeath`），并清理登记表。 */
+    /** 每刻：过期的玩家把特效销毁（生命周期由我们自己写）。 */
     public static void tick(){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         long now=mc.level.getGameTime();
@@ -50,14 +51,19 @@ public final class FistFlameClient {
         for(Iterator<Map.Entry<Integer,Object>> it=EFFECTS.entrySet().iterator();it.hasNext();){
             var e=it.next();
             boolean local=mc.player!=null&&e.getKey()==mc.player.getId();
-            if(local?Client.progress.fist():BURNING.containsKey(e.getKey()))continue;
-            try{rcall(e.getValue(),"setForcedDeath",true);}catch(Throwable ignored){}
-            SPAWNED.remove(e.getKey());it.remove();
+            if(local?(Client.progress.fist()&&Client.progress.unlocked()):BURNING.containsKey(e.getKey()))continue;
+            kill(e.getKey());
+            it.remove();
         }
     }
     public static void clear(){
-        for(Object o:EFFECTS.values())try{rcall(o,"setForcedDeath",true);}catch(Throwable ignored){}
-        EFFECTS.clear();SPAWNED.clear();BURNING.clear();
+        for(Integer id:List.copyOf(EFFECTS.keySet()))kill(id);
+        EFFECTS.clear();LEVELS.clear();LAST_POS.clear();BURNING.clear();
+    }
+    private static void kill(int id){
+        Object o=EFFECTS.get(id);if(o==null)return;
+        try{rcall(o,"setForcedDeath",true);note("销毁特效（玩家 "+id+"）");}catch(Throwable ignored){}
+        EFFECTS.remove(id);LEVELS.remove(id);LAST_POS.remove(id);
     }
     private static void note(String what){
         var mc=Minecraft.getInstance();long now=mc.level==null?0:mc.level.getGameTime();
@@ -86,30 +92,32 @@ public final class FistFlameClient {
         }
         return m.invoke(o instanceof Class<?>?null:o,args);
     }
-    /** 在给定世界位置与朝向上刷新一份 meleepunch 特效（每 {@link #REFRESH} 刻一次，只留一份）。 */
-    private static void spawn(int playerId,Vec3 at,org.joml.Quaternionf rot){
+    /** 手动生命周期：没起过就起一份；起过就**只更新偏移与朝向**（不重启、不叠加）；换维度则重建。 */
+    private static void ensure(int playerId,Vec3 at,org.joml.Quaternionf rot,ResourceLocation level){
         var mc=Minecraft.getInstance();if(mc.level==null||broken)return;
-        long now=mc.level.getGameTime();
-        Long last=SPAWNED.get(playerId);
-        if(last!=null&&now-last<REFRESH)return;
-        SPAWNED.put(playerId,now);
         try{
-            if(fx==null)fx=rcall(Class.forName(PHOTON_ROOT+"fx.FXHelper"),"getFX",PUNCH_FX);
-            if(fx==null)return;
-            Object old=EFFECTS.remove(playerId);
-            if(old!=null)try{rcall(old,"setForcedDeath",true);}catch(Throwable ignored){}
+            Object effect=EFFECTS.get(playerId);
+            if(effect!=null&&!level.equals(LEVELS.get(playerId))){kill(playerId);effect=null;}
             BlockPos bp=BlockPos.containing(at);
-            Object effect=Class.forName(PHOTON_ROOT+"fx.BlockEffect")
-                .getConstructor(Class.forName(PHOTON_ROOT+"fx.FX"),net.minecraft.world.level.Level.class,BlockPos.class)
-                .newInstance(fx,mc.level,bp);
-            rcall(effect,"setOffset",at.x-bp.getX()-0.5,at.y-bp.getY()-0.5,at.z-bp.getZ()-0.5);
+            double ox=at.x-bp.getX()-0.5,oy=at.y-bp.getY()-0.5,oz=at.z-bp.getZ()-0.5;
+            if(effect==null){
+                if(fx==null)fx=rcall(Class.forName(PHOTON_ROOT+"fx.FXHelper"),"getFX",PUNCH_FX);
+                if(fx==null)return;
+                effect=Class.forName(PHOTON_ROOT+"fx.BlockEffect")
+                    .getConstructor(Class.forName(PHOTON_ROOT+"fx.FX"),net.minecraft.world.level.Level.class,BlockPos.class)
+                    .newInstance(fx,mc.level,bp);
+                rcall(effect,"setAllowMulti",false);
+                rcall(effect,"start");
+                EFFECTS.put(playerId,effect);LEVELS.put(playerId,level);
+                note("起效 11.fx（玩家 "+playerId+"）@ "+String.format(Locale.ROOT,"%.2f/%.2f/%.2f",at.x,at.y,at.z));
+            }
+            // 每刻刷新位置与朝向：特效跟着手走，且不会重启
+            rcall(effect,"setOffset",ox,oy,oz);
             rcall(effect,"setRotation",rot);
-            rcall(effect,"setAllowMulti",false);
-            rcall(effect,"start");
-            EFFECTS.put(playerId,effect);
-            note("已起效 meleepunch（玩家 "+playerId+"）");
+            String key=String.format(Locale.ROOT,"%.2f/%.2f/%.2f",at.x,at.y,at.z);
+            if(!key.equals(LAST_POS.get(playerId))){LAST_POS.put(playerId,key);}
         }catch(ClassNotFoundException|NoClassDefFoundError e){broken=true;note("未安装 Photon，附拳特效跳过");}
-        catch(Throwable t){fail("起效 meleepunch",t);}
+        catch(Throwable t){fail("更新 11.fx",t);}
     }
 
     @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)
@@ -126,17 +134,19 @@ public final class FistFlameClient {
             if(!BURNING.containsKey(player.getId()))return;
             try{
                 var model=getParentModel();
-                handAt(ps,model.rightArm,player.getId());
+                handAt(ps,model.rightArm,player.getId(),player);
             }catch(Throwable t){fail("第三人称取手部姿态",t);}
         }
-        /** 手臂骨骼 → 手（像素 +9）→ 世界坐标 + 姿态四元数 → 起效。 */
-        private static void handAt(PoseStack ps,ModelPart arm,int playerId){
+        /** 手臂骨骼 → 手（+9/16 格；这套 PoseStack 里 **1 单位 = 1 格**、1 像素 = 1/16 格）
+         *  → 世界坐标 + 姿态四元数；再沿视线前移一点，避免特效糊在身后。 */
+        private static void handAt(PoseStack ps,ModelPart arm,int playerId,AbstractClientPlayer player){
             ps.pushPose();arm.translateAndRotate(ps);ps.translate(0,9/16.0,0);
             var m=ps.last().pose();
-            var cam=Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-            Vec3 at=cam.add(m.m30(),m.m31(),m.m32());
+            var mc=Minecraft.getInstance();
+            var cam=mc.gameRenderer.getMainCamera().getPosition();
+            Vec3 at=cam.add(m.m30(),m.m31(),m.m32()).add(player.getLookAngle().scale(0.25));
             var rot=new org.joml.Matrix3f(m).getNormalizedRotation(new org.joml.Quaternionf());
-            spawn(playerId,at,rot);
+            if(mc.level!=null)ensure(playerId,at,rot,mc.level.dimension().location());
             ps.popPose();
         }
     }
@@ -149,8 +159,8 @@ public final class FistFlameClient {
         try{
             var cam=e.getCamera();
             Vec3 look=new Vec3(cam.getLookVector()),right=new Vec3(cam.getLeftVector()).scale(-1),up=new Vec3(cam.getUpVector());
-            Vec3 at=cam.getPosition().add(look.scale(0.50)).add(right.scale(0.30)).subtract(up.scale(0.34));
-            spawn(p.getId(),at,new org.joml.Quaternionf(cam.rotation()));
+            Vec3 at=cam.getPosition().add(look.scale(0.60)).add(right.scale(0.30)).subtract(up.scale(0.34));
+            ensure(p.getId(),at,new org.joml.Quaternionf(cam.rotation()),mc.level.dimension().location());
         }catch(Throwable t){fail("第一人称起效",t);}
     }
     private FistFlameClient(){}

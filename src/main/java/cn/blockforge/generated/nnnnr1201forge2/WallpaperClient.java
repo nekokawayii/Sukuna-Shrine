@@ -49,7 +49,7 @@ public final class WallpaperClient {
     private static ResourceLocation current;
     private static int ringIndex;
     private static UUID self;
-    private static boolean enabled=true,initialized,announced,capturing,failed,captureLogged;
+    private static boolean enabled=true,initialized,announced,capturing,failed,captureLogged,statsLogged,debugOverlay;
     private static long tick;
 
     private static Path configPath(){return net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get().resolve("sukuna-wallpaper.properties");}
@@ -74,6 +74,16 @@ public final class WallpaperClient {
     }
     public static ResourceLocation texture(UUID id){
         return hasImage(id)?current:null;
+    }
+    /** 调试预览：把采到的这一帧直接画在左下角（`/sukuna_wallpaper debug`）——
+     *  用来一眼区分"纹理是黑的"还是"纹理没问题、只是斩击那边没画出来"。 */
+    public static void drawDebug(net.minecraft.client.gui.GuiGraphics g){
+        if(!debugOverlay||current==null)return;
+        var mc=Minecraft.getInstance();
+        int w=Math.min(420,Math.max(160,g.guiWidth()/3)),h=w*9/16;
+        int x=10,y=g.guiHeight()-h-14;
+        try{g.blit(current,x,y,0,0,w,h,w,h);}catch(RuntimeException ignored){return;}
+        g.drawString(mc.font,"斩击壁纸调试·纹理内容（应能看到你本机的窗口）",x,y-11,0xFFFF9A6A);
     }
     public static void clear(){
         self=null;announced=false;initialized=false;capturing=false;failed=false;
@@ -124,12 +134,20 @@ public final class WallpaperClient {
         double scale=Math.min(1.0,MAX_EDGE/(double)Math.max(sw,sh));
         int w=Math.max(1,(int)Math.round(sw*scale)),h=Math.max(1,(int)Math.round(sh*scale));
         NativeImage image=new NativeImage(NativeImage.Format.RGBA,w,h,false);
+        long lum=0;int bright=0;long nonBlack=0;
         for(int y=0;y<h;y++){
             int srcY=(int)((long)y*sh/h)*sw;
             for(int x=0;x<w;x++){
                 int argb=pixels[srcY+(int)((long)x*sw/w)];
                 image.setPixelRGBA(x,y,(0xFF000000)|((argb&0xFF)<<16)|(argb&0xFF00)|((argb>>16)&0xFF));
+                int v=(((argb>>16)&0xFF)+((argb>>8)&0xFF)+(argb&0xFF))/3;
+                lum+=v;if(v>bright)bright=v;if(v>8)nonBlack++;
             }
+        }
+        if(!statsLogged){
+            statsLogged=true;
+            LogUtils.getLogger().info("[斩击壁纸] 本帧内容统计：{}x{} 平均亮度 {} 最亮 {} 非黑占比 {}%",
+                w,h,lum/(double)(w*h),bright,String.format("%.1f",100.0*nonBlack/(w*h)));
         }
         return image;
     }
@@ -225,6 +243,7 @@ public final class WallpaperClient {
         root.then(Commands.literal("off").executes(c->{set(false);return 1;}));
         root.then(Commands.literal("refresh").executes(c->{tick=tick-tick%REFRESH_TICKS;tell("将立刻重新采集本机桌面。");return 1;}));
         root.then(Commands.literal("status").executes(c->{tell("斩击壁纸："+(enabled?"开启":"关闭")+" · 本机实时桌面（不上传分享）· "+(current==null?"尚未采到画面":"正在显示本机桌面")+" · 配置 config/sukuna-wallpaper.properties");return 1;}));
+        root.then(Commands.literal("debug").executes(c->{debugOverlay=!debugOverlay;tell("调试预览："+(debugOverlay?"开（左下角显示采到的本机画面，用来确认纹理内容）":"关"));return 1;}));
         e.getDispatcher().register(root);
     }
     private static void toggle(){set(!enabled);}

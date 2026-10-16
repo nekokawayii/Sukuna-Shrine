@@ -272,6 +272,7 @@ public final class Client {
     @SubscribeEvent public static void screenSeverance(RenderGuiEvent.Pre e){
         Minecraft mc=Minecraft.getInstance();
         FurnaceMaxClient.overlay(e.getGuiGraphics());
+        WallpaperClient.drawDebug(e.getGuiGraphics());
         boolean heat=mc.player!=null&&domains.values().stream().anyMatch(d->d.burning&&mc.player.position().distanceToSqr(d.center)<d.radius*d.radius);
         if(heat)FistAura.heat(e.getGuiGraphics(),tick+e.getPartialTick());
         if(progress.fist()&&mc.player!=null&&mc.player.isAlive()&&mc.options.getCameraType().isFirstPerson()&&!mc.options.hideGui)FistAura.draw(e.getGuiGraphics(),tick+e.getPartialTick());else if(!heat)FistAura.clear();

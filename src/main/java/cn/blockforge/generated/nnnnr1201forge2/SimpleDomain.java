@@ -97,8 +97,12 @@ public final class SimpleDomain {
         Field f=fields.get(p.getUUID());
         if(f==null){start(p);return;}
         LivingEntity body=MaidBridge.body(p);
-        if(f.level.getGameTime()-f.start>MAX_HOLD){SdLog.w("SD.hold 触到安全阀");release(p);return;}
-        if(!body.isAlive()||body.level()!=f.level||!TechniqueInput.allowed(p)){SdLog.w("SD.hold 校验失败 alive="+body.isAlive()+" allowed="+TechniqueInput.allowed(p));f.released=true;release(p);return;}
+        if(f.level.getGameTime()-f.start>MAX_HOLD){release(p,"安全阀");return;}
+        if(!body.isAlive()||body.level()!=f.level||!TechniqueInput.allowed(p)){
+            // 心跳时的校验失败**不再直接收招**（以前会在这里退出并写入冷却）：交给 tick 的死亡/显式松手判据处理。
+            SdLog.w("SD.hold 校验失败（仅记录，不收招）alive="+body.isAlive()+" allowed="+TechniqueInput.allowed(p));
+            return;
+        }
         body.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,SLOW_REFRESH,1,false,false,false));
         f.slowUntil=(int)(f.level.getGameTime()+SLOW_REFRESH);
         net.minecraft.util.RandomSource rnd=p.getRandom();
@@ -137,13 +141,15 @@ public final class SimpleDomain {
     }
 
     /** 松手收招：结算冷却（= 本次释放时间 ×70%），清掉减速与领域。 */
-    public static void release(ServerPlayer p){
+    public static void release(ServerPlayer p){release(p,"未标注");}
+    public static void release(ServerPlayer p,String why){
         Field f=fields.remove(p.getUUID());
         if(f==null)return;
         f.released=true;
-        SdLog.w("SD.release 持续="+((f.level.getGameTime()-f.start))+"刻 冷却起="+Curse.data(p).getLong("SimpleDomainCooldown"));
+        long heldTicks=f.level.getGameTime()-f.start;
+        SdLog.w("SD.release 原因="+why+" 持续="+heldTicks+"刻");
         p.serverLevel().getServer().getPlayerList().broadcastSystemMessage(
-            net.minecraft.network.chat.Component.literal("[诊断] 简易领域退出：持续 "+(f.level.getGameTime()-f.start)+" 刻"),false);
+            net.minecraft.network.chat.Component.literal("[诊断] 退出原因="+why+" 持续="+heldTicks+"刻"),false);
         long held=Math.max(1,f.level.getGameTime()-f.start);
         int cooldown=Math.max(COOLDOWN_MIN,(int)Math.round(held*COOLDOWN_SHARE)); // 释放时间 ×70%，仅保留 2 刻地板
         Curse.data(p).putLong("SimpleDomainCooldown",f.level.getGameTime()+cooldown);
@@ -154,7 +160,11 @@ public final class SimpleDomain {
     }
     /** 死亡/下线/维度切换等强制中断：按当前时长结算冷却（与松手一致）。 */
     public static void cancel(ServerPlayer p){release(p);}
-    /** 服务端每刻兜底：玩家不再满足条件（死亡、丢焦点、松开）就收招。 */
+    /** 服务端每刻：**唯一的退出判据就是"客户端明确松手"（released）**，外加死亡/跨维度/安全阀。
+     *
+     *  <p>这里曾经还有一条 `心跳断了 40 刻` 的判定 —— 那是遗留的心跳依赖：客户端每 10 刻发一次心跳，
+     *  再加上一个包的处理延迟，判定会在 **41 刻（2.05 秒）** 稳定触发，于是长按总是在 2.1 秒被强制收招。
+     *  现在彻底删掉：丢包、延迟、心跳间隔都不再能结束技能。</p> */
     @net.minecraftforge.eventbus.api.SubscribeEvent
     public static void tick(net.minecraftforge.event.TickEvent.ServerTickEvent e){
         if(e.phase!=net.minecraftforge.event.TickEvent.Phase.END)return;
@@ -163,10 +173,9 @@ public final class SimpleDomain {
             Field f=fields.get(p.getUUID());
             if(f==null)continue;
             LivingEntity body=MaidBridge.body(p);
-            // 只在"真的失效"时收招：死亡、换维度、超过上限，或心跳断了很久（>2 秒）。
-            // 早期版本这里每刻都用 holding() 判定，心跳包本来就有 0.5~1 秒间隔，会被误判成松手而反复 release（= 乱写冷却）。
-            boolean stale=f.level.getGameTime()-f.last>40;
-            if(!body.isAlive()||body.level()!=f.level||f.level.getGameTime()-f.start>MAX_HOLD||stale){release(p);continue;}
+            boolean gone=!body.isAlive()||body.level()!=f.level||f.level.getGameTime()-f.start>MAX_HOLD||f.released;
+            if(gone){release(p,"tick alive="+body.isAlive()+" 跨维度="+(body.level()!=f.level)+" 松手="+f.released);continue;}
+            hold(p); // 每刻真正执行领域逻辑（减速/斩痕/伤害），与心跳包是否到达无关
         }
     }
     private SimpleDomain(){}

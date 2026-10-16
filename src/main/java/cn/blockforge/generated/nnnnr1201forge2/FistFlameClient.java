@@ -34,6 +34,10 @@ public final class FistFlameClient {
     private static final String PHOTON_ROOT="com.lowdragmc.photon.client.";
     /** 宽限：这么久没被刷新才回收（约 2 秒）。 */
     private static final int GRACE=40;
+    /** 每只手臂上布几个咒力发射点（肩→拳均匀取样，读的是手臂模型方块的实际范围）。 */
+    private static final int ARM_POINTS=3;
+    /** 拖尾滞后：按实体位移往回拖多少刻（以及最大拖出多少格），挥拳时咒力会拖在后面。 */
+    private static final double DRAG_TICKS=1.6,DRAG_MAX=0.35;
     private record Where(Vec3 at,org.joml.Quaternionf rot,ResourceLocation level,long seen){}
     private static final Map<Integer,Long> BURNING=new HashMap<>();
     /** 渲染路径写、tick 路径读：key = 玩家id*2+手（0右 1左）。 */
@@ -102,7 +106,7 @@ public final class FistFlameClient {
         if(o==null)return;
         try{rcall(o,"setForcedDeath",true);note("销毁特效（"+describe(key)+"）");}catch(Throwable ignored){}
     }
-    private static String describe(int key){return "玩家 "+(key/2)+(key%2==1?" 左手":" 右手");}
+    private static String describe(int key){int hand=(key/8)%2;return "玩家 "+(key/8/2)+(hand==1?" 左手":" 右手")+" 第"+(key%8+1)+"点";}
     private static void note(String what){
         var mc=Minecraft.getInstance();long now=mc.level==null?0:mc.level.getGameTime();
         if(what.equals(lastNote)&&now-lastNoteAt<60)return;
@@ -145,19 +149,30 @@ public final class FistFlameClient {
             if(!BURNING.containsKey(player.getId()))return;
             try{
                 var model=getParentModel();
-                Vec3 forward=player.getLookAngle().scale(0.25);
-                handAt(ps,model.rightArm,player.getId(),0,forward);
-                handAt(ps,model.leftArm,player.getId(),1,forward);
+                // 拖尾滞后：按实体位移往回拖（上限 DRAG_MAX 格），手一挥咒力就落在后面
+                Vec3 d=player.getDeltaMovement();
+                Vec3 drag=new Vec3(-d.x*DRAG_TICKS,-d.y*DRAG_TICKS*0.4,-d.z*DRAG_TICKS);
+                if(drag.length()>DRAG_MAX)drag=drag.normalize().scale(DRAG_MAX);
+                Vec3 forward=player.getLookAngle().scale(0.25).add(drag);
+                armPoints(ps,model.rightArm,player.getId(),0,forward);
+                armPoints(ps,model.leftArm,player.getId(),1,forward);
             }catch(Throwable t){fail("第三人称取手部姿态",t);}
         }
-        private static void handAt(PoseStack ps,ModelPart arm,int playerId,int hand,Vec3 forward){
-            ps.pushPose();arm.translateAndRotate(ps);ps.translate(0,9/16.0,0);
-            var m=ps.last().pose();
-            var cam=Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-            Vec3 at=cam.add(m.m30(),m.m31(),m.m32()).add(forward);
-            var rot=new org.joml.Matrix3f(m).getNormalizedRotation(new org.joml.Quaternionf());
-            want(playerId*2+hand,at,rot);
-            ps.popPose();
+        /** 沿**整条手臂**均匀取 ARM_POINTS 个点（玩家手臂箱体固定为肩下 -2~10 像素，取 1~9.5 像素＝前臂到拳头）。
+         *  注：`ModelPart.cubes` 是 private，那个参考模组是带 Mixin/AT 才读到方块几何的；玩家模型尺寸固定，直接用像素范围更稳。 */
+        private static void armPoints(PoseStack ps,ModelPart arm,int playerId,int hand,Vec3 offset){
+            float from=1f,to=9.5f;
+            for(int i=0;i<ARM_POINTS;i++){
+                float t=ARM_POINTS==1?0.85f:(i+0.5f)/ARM_POINTS;      // 0.17/0.5/0.83 → 前臂到拳
+                float y=from+(to-from)*t;
+                ps.pushPose();arm.translateAndRotate(ps);ps.translate(0,y/16.0f,0);
+                var m=ps.last().pose();
+                var cam=Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+                Vec3 at=cam.add(m.m30(),m.m31(),m.m32()).add(offset);
+                var rot=new org.joml.Matrix3f(m).getNormalizedRotation(new org.joml.Quaternionf());
+                want((playerId*2+hand)*8+i,at,rot);
+                ps.popPose();
+            }
         }
     }
 
@@ -171,9 +186,19 @@ public final class FistFlameClient {
             var cam=e.getCamera();
             Vec3 look=new Vec3(cam.getLookVector()),right=new Vec3(cam.getLeftVector()).scale(-1),up=new Vec3(cam.getUpVector());
             var rot=new org.joml.Quaternionf(cam.rotation());
-            Vec3 base=cam.getPosition().add(look.scale(0.60)).subtract(up.scale(0.34));
-            want(p.getId()*2,base.add(right.scale(0.30)),rot);
-            want(p.getId()*2+1,base.subtract(right.scale(0.30)),rot);
+            Vec3 hand=cam.getPosition().add(look.scale(0.60)).subtract(up.scale(0.34));
+            Vec3 elbow=cam.getPosition().add(look.scale(0.34)).subtract(up.scale(0.62));
+            Vec3 d=p.getDeltaMovement();
+            Vec3 drag=new Vec3(-d.x*DRAG_TICKS,-d.y*DRAG_TICKS*0.4,-d.z*DRAG_TICKS);
+            if(drag.length()>DRAG_MAX)drag=drag.normalize().scale(DRAG_MAX);
+            for(int hand1=0;hand1<2;hand1++){
+                Vec3 side=hand1==0?right.scale(0.30):right.scale(-0.30);
+                for(int i=0;i<ARM_POINTS;i++){
+                    double t=(i+0.5)/ARM_POINTS;
+                    Vec3 at=elbow.lerp(hand,t).add(side).add(drag);
+                    want((p.getId()*2+hand1)*8+i,at,rot);
+                }
+            }
         }catch(Throwable t){fail("第一人称取手部位置",t);}
     }
     private FistFlameClient(){}

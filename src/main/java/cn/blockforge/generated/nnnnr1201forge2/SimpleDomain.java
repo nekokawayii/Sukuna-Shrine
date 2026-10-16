@@ -68,6 +68,10 @@ public final class SimpleDomain {
     }
     private static final Map<UUID,Field> fields=new HashMap<>();
     public static boolean active(ServerPlayer p){return fields.containsKey(p.getUUID());}
+    /** 简易领域"接管中"：正在维持**或**它的冷却还没走完。
+     *  这段时间内不应该再让宿傩六式（解/捌/开/灶/领域展开…）掺进来——它们的通用冷却
+     *  （{@code Skills.cast} 的 times[]）会弹出"XX 冷却中"，而简易领域本身压根不走那套冷却。 */
+    public static boolean owns(ServerPlayer p){return active(p)||cooldownLeft(p)>0;}
     /** 冷却剩余刻数（由"释放时间 ×70%"算出，写在 Curse 的长期键上）。 */
     public static int cooldownLeft(ServerPlayer p){return (int)Math.max(0,Curse.data(p).getLong("SimpleDomainCooldown")-p.level().getGameTime());}
 

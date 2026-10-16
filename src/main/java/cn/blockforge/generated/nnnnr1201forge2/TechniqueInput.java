@@ -54,6 +54,9 @@ public final class TechniqueInput {
             else SimpleDomain.release(p);
             return;
         }
+        // 简易领域接管期间：宿傩六式的任何输入都直接忽略（含"松手顺带放一次解"），
+        // 免得它去碰通用冷却、弹"XX 冷却中"。
+        if(SimpleDomain.owns(p)&&input.skill>=0&&input.skill<7)return;
         // 动作解：客户端把"按下时的按键组合"带过来了，服务端据此挑一个动作（服务端的冲刺/离地状态更准）
         if(input.phase()==0&&input.skill()==0){
             LivingEntity body=MaidBridge.body(p);

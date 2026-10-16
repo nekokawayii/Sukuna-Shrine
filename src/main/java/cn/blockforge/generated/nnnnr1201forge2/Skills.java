@@ -262,6 +262,8 @@ public final class Skills {
     }
     public static void cast(ServerPlayer p,int skill){
         if(skill<0||skill>=6||!p.isAlive()||p.isSpectator()||!Journey.unlocked(p))return;
+        // 简易领域接管期间（维持中或它的冷却中）不走通用冷却：这条技不属于宿傩六式那套 times[] 冷却。
+        if(SimpleDomain.owns(p))return;
         if(!Curse.canUseTechnique(p)){p.displayClientMessage(Component.literal("术式熔断中：只能使用术式反转或修复熔断"),true);return;}
         long now=p.serverLevel().getGameTime();long[] times=cooldowns.computeIfAbsent(p.getUUID(),k->new long[7]);
         if(skill==2&&Curse.fingers(p)<5){p.displayClientMessage(Component.literal("捌需要先吃下5根宿傩手指"),true);return;}
@@ -271,7 +273,7 @@ public final class Skills {
         if(skill==5&&domains.containsKey(p.getUUID())){closeDomain(p,true);return;}
         if(skill==5&&!MaidBridge.domainReady(p))return;
         if(SoulCombat.suppressed(p)&&!(skill==5&&Curse.active(p,"Iwate")&&!Curse.active(p,"SoulGap")&&p.getPersistentData().getLong("VoidCaptured")<=now)){p.displayClientMessage(Component.literal("灵魂剥离或灵魂压制中，无法使用术式"),true);return;}
-        if(now<times[skill]){p.displayClientMessage(Component.literal("术式冷却中 · "+String.format(Locale.ROOT,"%.1f",(times[skill]-now)/20.0)+" 秒"),true);return;}
+        if(now<times[skill]){p.displayClientMessage(Component.literal(NAMES[skill]+" 冷却中 · "+String.format(Locale.ROOT,"%.1f",(times[skill]-now)/20.0)+" 秒"),true);return;}
         boolean awakened=Curse.awakened(p);int tier=Curse.tier(p);double scale=Curse.scale(p);
         if(skill==4&&!awakened&&!domains.containsKey(p.getUUID())){p.displayClientMessage(Component.literal("灶需要先展开伏魔御厨子积聚粉尘"),true);return;}
         if(VoidJourney.evolved(p)&&!VoidCombat.ready(p,skill))return;

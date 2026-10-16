@@ -39,6 +39,11 @@ public final class WallpaperClient {
     public record DesktopRect(float x,float y,float width,float height){}
     /** 刷新间隔（刻）与采集后的最大边长（越小越省显存与带宽，采样按屏幕坐标所以不影响构图）。 */
     private static final int REFRESH_TICKS=10,MAX_EDGE=1280;
+    /** 第二条抓取通道：AWT Robot（与 GDI **并行**跑，谁抓到有效画面就用谁）。
+     *  全屏/GL 窗口下 GDI 常常全黑，这时 Robot 往往还能拿到画面，两条一起跑最稳。 */
+    private static final ExecutorService robot=new ThreadPoolExecutor(1,1,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(1),
+        r->{Thread t=new Thread(r,"sukuna-wallpaper-robot");t.setDaemon(true);t.setPriority(Thread.MIN_PRIORITY);return t;},
+        new ThreadPoolExecutor.AbortPolicy());
     private static final ResourceLocation[] RING={new ResourceLocation("sukuna","wallpaper/live0"),
         new ResourceLocation("sukuna","wallpaper/live1"),new ResourceLocation("sukuna","wallpaper/live2")};
     private static final ExecutorService io=new ThreadPoolExecutor(1,1,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(2),
@@ -49,7 +54,9 @@ public final class WallpaperClient {
     private static ResourceLocation current;
     private static int ringIndex;
     private static UUID self;
-    private static boolean enabled=true,initialized,announced,capturing,failed,captureLogged,statsLogged,debugOverlay,blankWarned;
+    private static boolean enabled=true,initialized,announced,capturing,failed,captureLogged,statsLogged,debugOverlay,blankWarned,robotBroken,robotNoted;
+    /** 上一帧是哪条通道给的（GDI / Robot），排查时看日志。 */
+    private static String lastSource="-";
     private static long tick;
 
     private static Path configPath(){return net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get().resolve("sukuna-wallpaper.properties");}
@@ -84,6 +91,22 @@ public final class WallpaperClient {
         int x=10,y=g.guiHeight()-h-14;
         try{g.blit(current,x,y,0,0,w,h,w,h);}catch(RuntimeException ignored){return;}
         g.drawString(mc.font,"斩击壁纸调试·纹理内容（应能看到你本机的窗口）",x,y-11,0xFFFF9A6A);
+    }
+    /** 这条通道抓到的画面"有没有内容"：亮像素占比（每 64 像素抽查一个）。 */
+    private static double score(int[] pixels){
+        if(pixels==null||pixels.length==0)return -1;
+        long lit=0;int n=0;
+        for(int i=0;i<pixels.length;i+=64){
+            int v=pixels[i];
+            if((((v>>16)&0xFF)+((v>>8)&0xFF)+(v&0xFF))/3>8)lit++;
+            n++;
+        }
+        return n==0?-1:lit/(double)n;
+    }
+    private static void noteRobotBroken(){
+        if(robotNoted)return;
+        robotNoted=true;
+        LogUtils.getLogger().info("[斩击壁纸] Robot 通道不可用（本轮由 GDI 提供画面）——多为 AWT 处于 headless；已在客户端初始化时尝试关闭 headless");
     }
     public static void clear(){
         self=null;announced=false;initialized=false;capturing=false;failed=false;
@@ -130,7 +153,25 @@ public final class WallpaperClient {
     private static NativeImage capture(DesktopRect area)throws Exception{
         int sx=Math.max(0,Math.round(area.x())),sy=Math.max(0,Math.round(area.y()));
         int sw=Math.max(1,Math.round(area.width())),sh=Math.max(1,Math.round(area.height()));
-        int[] pixels=com.sun.jna.Platform.isWindows()?captureGdi(sx,sy,sw,sh):captureRobot(sx,sy,sw,sh);
+        // 两条通道并行：Robot 在另一条线程上同时抓，GDI 在本线程抓，最后按"亮像素占比"择优
+        Future<int[]> robotTask=null;
+        try{if(!robotBroken)robotTask=robot.submit(()->captureRobot(sx,sy,sw,sh));}catch(RejectedExecutionException busy){}
+        int[] gdi=null;String gdiError=null;
+        try{gdi=captureGdi(sx,sy,sw,sh);}catch(Throwable ex){gdiError=ex.getClass().getSimpleName();}
+        int[] shot=null;
+        if(robotTask!=null){
+            try{shot=robotTask.get(700,TimeUnit.MILLISECONDS);}
+            catch(Throwable ex){robotTask.cancel(true);if(ex instanceof ExecutionException)robotBroken=true;}
+        }
+        double gdiScore=score(gdi),robotScore=score(shot);
+        if(robotScore<0&&robotBroken&&robotTask!=null)noteRobotBroken();
+        int[] pixels;String from;
+        if(gdiScore<0&&robotScore<0){
+            if(gdiError!=null)throw new IllegalStateException("两条抓取都失败（GDI:"+gdiError+"）");
+            pixels=gdi==null?(shot==null?new int[sw*sh]:shot):gdi;from="空白";
+        }else if(robotScore>gdiScore){pixels=shot;from="Robot";}
+        else{pixels=gdi;from="GDI";}
+        lastSource=from;
         double scale=Math.min(1.0,MAX_EDGE/(double)Math.max(sw,sh));
         int w=Math.max(1,(int)Math.round(sw*scale)),h=Math.max(1,(int)Math.round(sh*scale));
         NativeImage image=new NativeImage(NativeImage.Format.RGBA,w,h,false);
@@ -146,8 +187,9 @@ public final class WallpaperClient {
         }
         if(!statsLogged){
             statsLogged=true;
-            LogUtils.getLogger().info("[斩击壁纸] 本帧内容统计：{}x{} 平均亮度 {} 最亮 {} 非黑占比 {}%",
-                w,h,lum/(double)(w*h),bright,String.format("%.1f",100.0*nonBlack/(w*h)));
+            LogUtils.getLogger().info("[斩击壁纸] 本帧内容统计：{}x{} 来源={} 平均亮度 {} 最亮 {} 非黑占比 {}%（GDI {} / Robot {}）",
+                w,h,from,lum/(double)(w*h),bright,String.format("%.1f",100.0*nonBlack/(w*h)),
+                String.format("%.2f",gdiScore),String.format("%.2f",robotScore));
         }
         return image;
     }

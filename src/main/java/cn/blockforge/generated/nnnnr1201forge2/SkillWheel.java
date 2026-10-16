@@ -111,7 +111,7 @@ public final class SkillWheel extends Screen {
         case 2->"满咒力150%捌伤害 · 分支：蜘蛛网 / 多重斩 / 十字飞行";
         case 3->"凝火成弓，向准星方向释放";
         case 4->"粉尘焚爆，领域或觉醒后可用";
-        case 5->"开放领域 · 半径200格 · 密集60～120格斩击";
+        case 5->"开放领域 · 半径"+DomainOptions.radius(Client.progress.domainRadiusPts())+"格 · 密集60～120格斩击";
         case 6->"灵魂剥离 · 单体虚弱5秒 · 冷却90秒";
         default->skill>=34?GojoPlayer.desc(skill-34):skill>=7&&skill<17?GuardianPlayerSkills.DESC[skill-7]:"";
     };}

@@ -179,7 +179,7 @@ public final class VoidCombat {
         event.setAmount(BalanceRules.damage(CasterDamageRules.scale(event.getAmount(),owner==null?tag.getBoolean("SukunaVoidIgnitionMaid"):MaidBridge.isCaster(owner))));
     }
     public static void dismantle(ServerPlayer p,LivingEntity target){
-        if(Skills.inDomain(p,p)&&target==null)target=Skills.closestToCrosshair(p,Skills.targets(p.serverLevel(),p,Skills.domainCenter(p),200));
+        if(Skills.inDomain(p,p)&&target==null)target=Skills.closestToCrosshair(p,Skills.targets(p.serverLevel(),p,Skills.domainCenter(p),Skills.domainRadius(p)));
         Vec3 point=target==null?Skills.aimPoint(p,50):target.getBoundingBox().inflate(0.08).clip(p.getEyePosition(),target.getBoundingBox().getCenter()).orElse(target.getBoundingBox().getCenter());
         Vec3 direction=p.getLookAngle();long angle=p.getRandom().nextInt(360);long tint=angle+(VoidController.redCut(p)?720:0);
         Vec3 collisionAxis=NetBranches.side(direction).scale(Math.max(12,VoidController.slashLength(p))/2.0);if(CombatExpansion.collideSlash(p,point.subtract(collisionAxis),point.add(collisionAxis),direction))return;

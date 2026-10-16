@@ -31,11 +31,14 @@ public final class Client {
     private static boolean castHeld,charging,cleaveHeld;
     private static long chargeBorn;
     public static int selected;
-    public static Network.Progress progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false,false,false);
+    public static Network.Progress progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false,false,false,DomainOptions.DEFAULT_RADIUS,DomainOptions.DEFAULT_DAMAGE,DomainOptions.DEFAULT_SPEED);
     public static String energyText(double amount){return BalanceRules.number(amount);}
     public static int wallSize(){return BranchRules.wallSize(progress.nine(),progress.soulShrine(),progress.voidShrine(),progress.pureLandVictory());}
     public static boolean voidStage(){return progress.voidShrine();}
     public static boolean soulStage(){return progress.soulShrine()&&!progress.voidShrine();}
+    /** 本地玩家的伏魔御厨子是不是已经开着（服务端展开/收起时会广播 kind=1 / kind=5 的领域表现，这里读的就是它）：
+     *  点数分配界面只在"开启御厨子"的那一次按下弹，第二次（放下）与第三次（收起）不弹。 */
+    public static boolean shrineDomainOpen(){var p=Minecraft.getInstance().player;return p!=null&&domains.containsKey(p.getId());}
     public static int wheelPage;
     public static int wheelCount(){return wheelPage==1&&progress.pureLandVictory()?GuardianPlayerSkills.COUNT-1:baseWheelCount();}
     public static int baseWheelCount(){return voidStage()||soulStage()?7:6;}
@@ -123,7 +126,7 @@ public final class Client {
     public static boolean wheelHeld(){return ClientInput.held(WHEEL);}
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut e){clear();world=null;}
     private static void testReset(){FinaleClient.clear();TechniqueInputClient.clear();DomainClashClient.clear();DismantleMotionClient.clear();FreehandClient.clear();NetBranchVisuals.clear();SoulClient.clear();CastHands.clear();charging=cleaveHeld=false;}
-    private static void clear(){AimAssistClient.clear();FinaleClient.clear();TechniqueInputClient.clear();ExpansionVisuals.clear();ClientInput.clear();DomainClashClient.clear();DismantleMotionClient.clear();FreehandClient.clear();SlashFormVisuals.clear();BranchVisuals.clear();NetBranchVisuals.clear();Network.clientModpackMode=null;selected=0;wheelPage=0;VoidTechniqueClient.clear();VoidBossClient.clear();GojoFx.clear();CastHands.clear();RuinClient.clear();SoulClient.clear();FistFlameClient.clear();FistAura.clear();cleaveHeld=false;VoidVisuals.clear();supreme.clear();FurnaceMaxClient.clear();for(Visual v:visuals)PhotonBridge.stop(v.handle);for(Transient t:transients)PhotonBridge.stop(t.handle);visuals.clear();transients.clear();domains.clear();auras.clear();heldLast=false;castHeld=false;charging=false;generated=0;window=0;shakeUntil=flashUntil=transitionUntil=eyesUntil=0;progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false,false,false);jumpPress=0;jumpHeld=false;}
+    private static void clear(){AimAssistClient.clear();FinaleClient.clear();TechniqueInputClient.clear();ExpansionVisuals.clear();ClientInput.clear();DomainClashClient.clear();DismantleMotionClient.clear();FreehandClient.clear();SlashFormVisuals.clear();BranchVisuals.clear();NetBranchVisuals.clear();Network.clientModpackMode=null;selected=0;wheelPage=0;VoidTechniqueClient.clear();VoidBossClient.clear();GojoFx.clear();CastHands.clear();RuinClient.clear();SoulClient.clear();FistFlameClient.clear();FistAura.clear();cleaveHeld=false;VoidVisuals.clear();supreme.clear();FurnaceMaxClient.clear();for(Visual v:visuals)PhotonBridge.stop(v.handle);for(Transient t:transients)PhotonBridge.stop(t.handle);visuals.clear();transients.clear();domains.clear();auras.clear();heldLast=false;castHeld=false;charging=false;generated=0;window=0;shakeUntil=flashUntil=transitionUntil=eyesUntil=0;progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false,false,false,DomainOptions.DEFAULT_RADIUS,DomainOptions.DEFAULT_DAMAGE,DomainOptions.DEFAULT_SPEED);jumpPress=0;jumpHeld=false;}
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent e){
         if(e.phase!=TickEvent.Phase.END)return;
         Minecraft mc=Minecraft.getInstance();if(world!=mc.level){clear();world=mc.level;}ClientInput.tick();TechniqueInputClient.tick();ExpansionVisuals.tick();
@@ -294,7 +297,7 @@ public final class Client {
         if(!heat)FistAura.clear();
     }
     @SubscribeEvent public static void hud(RenderGuiEvent.Post e){
-        Minecraft mc=Minecraft.getInstance();if(mc.player==null||mc.options.hideGui||(mc.screen instanceof SkillWheel||mc.screen instanceof WallOptionsScreen||mc.screen instanceof RelationsScreen))return;
+        Minecraft mc=Minecraft.getInstance();if(mc.player==null||mc.options.hideGui||(mc.screen instanceof SkillWheel||mc.screen instanceof WallOptionsScreen||mc.screen instanceof DomainOptionsScreen||mc.screen instanceof RelationsScreen))return;
         int h=mc.getWindow().getGuiScaledHeight(),w=mc.getWindow().getGuiScaledWidth();var g=e.getGuiGraphics();FreehandClient.hud(g);
         if(!progress.unlocked()){
             boolean holding=mc.player.getMainHandItem().is(ProgressionContent.MEMORY.get())||mc.player.getOffhandItem().is(ProgressionContent.MEMORY.get());

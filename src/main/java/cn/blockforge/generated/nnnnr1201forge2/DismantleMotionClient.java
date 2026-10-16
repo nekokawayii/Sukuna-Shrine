@@ -34,6 +34,8 @@ public final class DismantleMotionClient {
     private static final boolean useBuiltinPose=useBuiltinPose();
     /** 兜底只提示一次，避免刷屏。 */
     private static boolean fallbackNoted;
+    /** 已经记录过"应用自绘姿态"的 kind（只写一次，避免每帧刷日志）。 */
+    private static final java.util.Set<Integer> poseNoted=new java.util.HashSet<>();
     /** 正在维持「简易领域 · 捌」的实体：**每刻有细小斩击包到达就在册**，断包即过期（所以松手自动放下手）。 */
     private static final java.util.Map<Integer,Long> simpleDomain=new java.util.HashMap<>();
     public static boolean simpleDomain(int id){Long t=simpleDomain.get(id);return t!=null&&clock-t<6;}
@@ -50,7 +52,8 @@ public final class DismantleMotionClient {
             if(packet.owner()==mc.player.getId()&&!locked())restoreCamera();return;
         }
         if(!DismantleMotionRules.valid(packet.kind())||packet.age()<0||packet.age()>DismantleMotionRules.duration(packet.kind()))return;
-        if(state==null||!state.packet.token().equals(packet.token())){state=new State(packet,clock);states.put(packet.owner(),state);}
+        if(state==null||!state.packet.token().equals(packet.token())){state=new State(packet,clock);states.put(packet.owner(),state);
+            com.mojang.logging.LogUtils.getLogger().info("[解动作] 客户端收到状态：kind={} owner={} age={}（动作表现将从这一刻开始）",packet.kind(),packet.owner(),packet.age());}
         else {state.packet=packet;state.received=clock;state.age=Math.max(state.age,packet.age());}
         if(packet.owner()==mc.player.getId()){
             if(savedCamera==null){savedCamera=mc.options.getCameraType();cameraPlayer=mc.player.getUUID();}
@@ -164,6 +167,10 @@ public final class DismantleMotionClient {
                 com.mojang.logging.LogUtils.getLogger().info("[解动作] 使用模组自绘关键帧动作组（8 段：后翻/飞踢/旋转/跪地/冲拳/滑铲/砸地/简易领域），不依赖 PlayerAnimator");
             }
             var pose=DismantlePose.sample(s.packet.kind(),t);crouching=false;
+            if(!poseNoted.contains(s.packet.kind())){
+                poseNoted.add(s.packet.kind());
+                com.mojang.logging.LogUtils.getLogger().info("[解动作] 应用自绘姿态：kind={} t={}",s.packet.kind(),String.format("%.1f",t));
+            }
             body.xRot=rad(pose.body());body.yRot=body.zRot=0;body.y=0;
             head.xRot=rad(pose.head());head.yRot=head.zRot=0;head.y=0;head.z=0;
             leftArm.xRot=rad(pose.leftArm());rightArm.xRot=rad(pose.rightArm());leftArm.zRot=rad(-pose.spread());rightArm.zRot=rad(pose.spread());leftArm.yRot=rightArm.yRot=0;

@@ -39,16 +39,39 @@ public final class DismantleMotion {
     public static void start(ServerPlayer p,int kind){
         if(!DismantleMotionRules.valid(kind)||active(p))return;
         // 动作期间不能重入，但收招后可以立刻继续使用解。
-        if(!allowed(p)){CastFeedback.unavailable(p,Curse.COST[0]);return;}
+        if(!allowed(p)){CastFeedback.unavailable(p,Curse.COST[0]);why(p,"状态不允许（禁用/领域冲突/锁技/非本维度等）");return;}
         LivingEntity actor=MaidBridge.body(p);
-        if(needsGround(kind)&&!grounded(actor)){CastFeedback.tell(p,"请站在地面上释放解动作");return;}
+        if(needsGround(kind)&&!grounded(actor)){CastFeedback.tell(p,"请站在地面上释放解动作");why(p,"不在地面");return;}
         // r204：**删掉"必须先蹲下"的限制**——蹲下就疾跑不了，导致"疾跑滑铲/空中冲拳"这类动作根本用不出来。
         // 现在由 choose() 的按键组合决定动作：蹲下前进/后退仍是飞踢/后翻，疾跑前进就是滑铲（起跳=冲拳）。
         Motion m=new Motion(p,kind);
-        if(!free(m,m.position)){CastFeedback.tell(p,"上方空间太低，无法完成动作");return;}
-        if(!Skills.beginMotion(p))return;
+        if(!free(m,m.position)){CastFeedback.tell(p,"上方空间太低，无法完成动作");why(p,"上方空间不足");return;}
+        if(!Skills.beginMotion(p)){CastFeedback.unavailable(p,Curse.COST[0]);why(p,"咒力不足（解动作花费 "+Curse.COST[0]+"）");return;}
+        why(p,"开始动作 kind="+kind+name(kind));
         CombatExpansion.fallingBranch(p);begin(m);
     }
+    private static String name(int kind){
+        if(kind==DismantleMotionRules.BACKFLIP)return"(后翻)";
+        if(kind==DismantleMotionRules.FLYING_KICK)return"(飞踢)";
+        if(kind==DismantleMotionRules.SPIN)return"(旋转环斩)";
+        if(kind==DismantleMotionRules.KNEEL)return"(跪地)";
+        if(kind==DismantleMotionRules.AIR_PUNCH)return"(冲拳)";
+        if(kind==DismantleMotionRules.SLIDE)return"(滑铲)";
+        if(kind==DismantleMotionRules.GROUND_SMASH)return"(砸地)";
+        return "";
+    }
+    /** 埋点：把"动作这次为什么没起来"写进 latest.log（同一玩家同一原因 4 秒内只写一条，不刷屏）。
+     *  没有它的话，"没触发"只能靠猜——服务端有六个静默 return 点。 */
+    private static final Map<UUID,long[]> lastWhy=new HashMap<>();
+    public static void why(ServerPlayer p,String reason){
+        long now=p.serverLevel().getGameTime();
+        long[] stamp=lastWhy.get(p.getUUID());
+        if(stamp!=null&&now-stamp[0]<80&&reason.equals(reasonCache.get(p.getUUID())))return;
+        lastWhy.put(p.getUUID(),new long[]{now});
+        reasonCache.put(p.getUUID(),reason);
+        com.mojang.logging.LogUtils.getLogger().info("[解动作] {}：{}",p.getGameProfile().getName(),reason);
+    }
+    private static final Map<UUID,String> reasonCache=new HashMap<>();
     /** 姿态分支已在原技能入口扣费，不重复扣费或吞掉原分支。 */
     public static boolean startPaid(ServerPlayer p,int kind){
         if(!DismantleMotionRules.valid(kind)||active(p)||!allowed(p))return false;

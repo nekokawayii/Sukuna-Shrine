@@ -82,6 +82,12 @@ public final class TechniqueInput {
                 DismantleMotion.start(p,kind);
                 return;
             }
+            // 埋点：玩家明显是想做动作（按住方向/蹲/疾跑）却没凑成动作 —— 把这组按键写进日志，
+            // 否则"没触发"完全无从判断（服务端这里静默返回）。
+            if(input.motion()!=0||input.forward()||input.backward()||input.crouch()||body.isSprinting())
+                DismantleMotion.why(p,"按键组合不构成动作：蹲="+input.crouch()+" 前="+input.forward()+" 后="+input.backward()
+                    +" 跳="+input.jump()+" 疾跑="+body.isSprinting()+" 落地="+body.onGround()+" 竖速="+String.format("%.2f",body.getDeltaMovement().y)
+                    +" 客户端意图="+input.motion());
         }
         if(input.phase==3){cancel(p);return;}
         Hold old=holds.get(p.getUUID());

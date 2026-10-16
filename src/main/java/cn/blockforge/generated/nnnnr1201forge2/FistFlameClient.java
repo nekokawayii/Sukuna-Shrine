@@ -30,11 +30,14 @@ public final class FistFlameClient {
     /** 用户给的拳击特效：`ldlib/assets/photon/fx/11.fx`（LDLib 文件系统资源目录，用 `photon:11` 取）。 */
     private static final ResourceLocation PUNCH_FX=new ResourceLocation("photon","11");
     private static final String PHOTON_ROOT="com.lowdragmc.photon.client.";
-    /** 生命周期自己写：起一份之后**只更新位置/朝向**（不重启），附拳关闭或换维度时才销毁。 */
+    /** 手动生命周期：**每 {@link #REBUILD} 刻销毁旧实例并重起一份**（新的一份立刻起，所以看不出接缝），
+     *  因为这个 fx 的粒子一旦生成就留在世界里，对跑着的实例 `setOffset` 不会让它跟手（r237 实测"特效留在原地"）。
+     *  附拳关闭 / 换维度 / 切世界时才彻底销毁。 */
+    private static final int REBUILD=3;
+    private static final Map<Integer,Long> BORN=new HashMap<>();
     private static final Map<Integer,Long> BURNING=new HashMap<>();
     private static final Map<Integer,Object> EFFECTS=new HashMap<>();
     private static final Map<Integer,ResourceLocation> LEVELS=new HashMap<>();
-    private static final Map<Integer,String> LAST_POS=new HashMap<>();
     private static Object fx;private static boolean broken;
     private static String lastNote="";private static long lastNoteAt;
 
@@ -58,12 +61,10 @@ public final class FistFlameClient {
     }
     public static void clear(){
         for(Integer id:List.copyOf(EFFECTS.keySet()))kill(id);
-        EFFECTS.clear();LEVELS.clear();LAST_POS.clear();BURNING.clear();
     }
     private static void kill(int id){
         Object o=EFFECTS.get(id);if(o==null)return;
         try{rcall(o,"setForcedDeath",true);note("销毁特效（玩家 "+id+"）");}catch(Throwable ignored){}
-        EFFECTS.remove(id);LEVELS.remove(id);LAST_POS.remove(id);
     }
     private static void note(String what){
         var mc=Minecraft.getInstance();long now=mc.level==null?0:mc.level.getGameTime();
@@ -92,32 +93,29 @@ public final class FistFlameClient {
         }
         return m.invoke(o instanceof Class<?>?null:o,args);
     }
-    /** 手动生命周期：没起过就起一份；起过就**只更新偏移与朝向**（不重启、不叠加）；换维度则重建。 */
+    /** 手动生命周期：到期（{@link #REBUILD} 刻）或还没起过 / 换维度 → 销毁旧的重起一份；否则什么都不做。 */
     private static void ensure(int playerId,Vec3 at,org.joml.Quaternionf rot,ResourceLocation level){
         var mc=Minecraft.getInstance();if(mc.level==null||broken)return;
         try{
+            long now=mc.level.getGameTime();
             Object effect=EFFECTS.get(playerId);
-            if(effect!=null&&!level.equals(LEVELS.get(playerId))){kill(playerId);effect=null;}
+            boolean expired=effect!=null&&now-BORN.getOrDefault(playerId,now)>=REBUILD;
+            if(effect!=null&&(!level.equals(LEVELS.get(playerId))||expired)){kill(playerId);effect=null;}
+            if(effect!=null)return;                                   // 还没到期：不动它（跑着的实例改了也没用）
+            if(fx==null)fx=rcall(Class.forName(PHOTON_ROOT+"fx.FXHelper"),"getFX",PUNCH_FX);
+            if(fx==null)return;
             BlockPos bp=BlockPos.containing(at);
-            double ox=at.x-bp.getX()-0.5,oy=at.y-bp.getY()-0.5,oz=at.z-bp.getZ()-0.5;
-            if(effect==null){
-                if(fx==null)fx=rcall(Class.forName(PHOTON_ROOT+"fx.FXHelper"),"getFX",PUNCH_FX);
-                if(fx==null)return;
-                effect=Class.forName(PHOTON_ROOT+"fx.BlockEffect")
-                    .getConstructor(Class.forName(PHOTON_ROOT+"fx.FX"),net.minecraft.world.level.Level.class,BlockPos.class)
-                    .newInstance(fx,mc.level,bp);
-                rcall(effect,"setAllowMulti",false);
-                rcall(effect,"start");
-                EFFECTS.put(playerId,effect);LEVELS.put(playerId,level);
-                note("起效 11.fx（玩家 "+playerId+"）@ "+String.format(Locale.ROOT,"%.2f/%.2f/%.2f",at.x,at.y,at.z));
-            }
-            // 每刻刷新位置与朝向：特效跟着手走，且不会重启
-            rcall(effect,"setOffset",ox,oy,oz);
+            effect=Class.forName(PHOTON_ROOT+"fx.BlockEffect")
+                .getConstructor(Class.forName(PHOTON_ROOT+"fx.FX"),net.minecraft.world.level.Level.class,BlockPos.class)
+                .newInstance(fx,mc.level,bp);
+            rcall(effect,"setOffset",at.x-bp.getX()-0.5,at.y-bp.getY()-0.5,at.z-bp.getZ()-0.5);
             rcall(effect,"setRotation",rot);
-            String key=String.format(Locale.ROOT,"%.2f/%.2f/%.2f",at.x,at.y,at.z);
-            if(!key.equals(LAST_POS.get(playerId))){LAST_POS.put(playerId,key);}
+            rcall(effect,"setAllowMulti",false);
+            rcall(effect,"start");
+            EFFECTS.put(playerId,effect);LEVELS.put(playerId,level);BORN.put(playerId,now);
+            note("起效 11.fx（玩家 "+playerId+"）@ "+String.format(Locale.ROOT,"%.2f/%.2f/%.2f",at.x,at.y,at.z));
         }catch(ClassNotFoundException|NoClassDefFoundError e){broken=true;note("未安装 Photon，附拳特效跳过");}
-        catch(Throwable t){fail("更新 11.fx",t);}
+        catch(Throwable t){fail("起效 11.fx",t);}
     }
 
     @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)

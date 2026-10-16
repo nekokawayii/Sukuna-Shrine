@@ -42,6 +42,8 @@ public final class SimpleDomain {
     public static final double MAHITO_SHARE=0.10;
     /** 每 5 刻结算一跳（= 每秒 1 次 power）。 */
     public static final int DAMAGE_INTERVAL=5;
+    /** 维持消耗：**每秒 150 咒力**（每 20 刻结算一次）；付不出就自动收招。 */
+    public static final double ENERGY_PER_SECOND=150;
     /** 减速 50%：缓慢 II 持续 10 刻，长按时每 10 刻续一次。 */
     public static final int SLOW_REFRESH=10;
     /** 冷却 = 释放时间 × 70%，且有下限，避免"点一下就好"。 */
@@ -49,7 +51,7 @@ public final class SimpleDomain {
     /** 冷却地板：只防止"零冷却连按"，2 刻 = 0.1 秒；旧值 10 刻（0.5 秒）会把轻点也锁半秒，表现为"卡冷却"。 */
     public static final int COOLDOWN_MIN=2;
     /** 每刻在圆柱内补几道随机斩击（r155 的节奏：一批一批出）。 */
-    public static final int CUTS_PER_TICK=15;   // 再减半（60 → 30 → 15）
+    public static final int CUTS_PER_TICK=7;    // 再砍一半（60 → 30 → 15 → 7）
     /** 每道斩击的尺寸（长度）与寿命。 */
     public static final float CUT_SIZE=10f;
     public static final int CUT_LIFE=12;   // 与 r155 一致
@@ -62,7 +64,7 @@ public final class SimpleDomain {
 
     private static final class Field {
         final ServerPlayer p;final ServerLevel level;final UUID body;
-        final long start;long last;int nextDamage;int slowUntil;int hits;
+        final long start;long last;int nextDamage;int slowUntil;int hits;long nextEnergy;
         /** 客户端明确松手/取消后置位：只有它为 true 才允许"非显式"退出。 */
         boolean released;
         Field(ServerPlayer p){this.p=p;level=p.serverLevel();body=MaidBridge.body(p).getUUID();start=level.getGameTime();last=start;}
@@ -84,7 +86,7 @@ public final class SimpleDomain {
         if(cooldownLeft(p)>0){CastFeedback.tell(p,"简易领域 · 捌 冷却中（"+((cooldownLeft(p)+19)/20)+" 秒）");return false;}
         if(!Journey.unlocked(p)||Curse.fingers(p)<5){CastFeedback.tell(p,"简易领域 · 捌 需要先吃下 5 根宿指");return false;}
         if(!Curse.spend(p,Curse.COST[0]))return false;
-        Field f=new Field(p);fields.put(p.getUUID(),f);
+        Field f=new Field(p);f.nextEnergy=f.start+20;fields.put(p.getUUID(),f); // 第一秒后再扣第一笔
         MaidBridge.body(p).addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,SLOW_REFRESH,1,false,false,false));
         p.displayClientMessage(Component.literal("简易领域 · 捌（长按维持 · 松手收招）").setStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0xFF9AD6FF)),true);
         level(p).playSound(null,p.blockPosition(),SoundEvents.WARDEN_SONIC_CHARGE,SoundSource.PLAYERS,0.7f,1.6f);
@@ -173,6 +175,16 @@ public final class SimpleDomain {
             LivingEntity body=MaidBridge.body(p);
             boolean gone=!body.isAlive()||body.level()!=f.level||f.level.getGameTime()-f.start>MAX_HOLD||f.released;
             if(gone){release(p,"tick alive="+body.isAlive()+" 跨维度="+(body.level()!=f.level)+" 松手="+f.released);continue;}
+            // 维持消耗：每秒 150 咒力（每 20 刻结算）；付不出就自动收招。
+            long now=p.level().getGameTime();
+            if(now>=f.nextEnergy){
+                f.nextEnergy=now+20;
+                if(!Curse.spend(p,ENERGY_PER_SECOND)){
+                    CastFeedback.tell(p,"咒力不足 · 简易领域自动收招（每秒 "+BalanceRules.number(ENERGY_PER_SECOND)+" 咒力）");
+                    release(p,"咒力不足");
+                    continue;
+                }
+            }
             hold(p); // 每刻真正执行领域逻辑（减速/斩痕/伤害），与心跳包是否到达无关
         }
     }

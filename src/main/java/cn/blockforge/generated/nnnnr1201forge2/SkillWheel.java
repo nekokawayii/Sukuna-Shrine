@@ -24,7 +24,7 @@ public final class SkillWheel extends Screen {
     private int centerX(){return WheelSideSlots.centerX(width,height,ice(),gojo());}
     private int count(){return page==1?GUARDIAN_WHEEL.length:Client.baseWheelCount();}
     private int global(int index){return page==1?GUARDIAN_WHEEL[index]+7:index;}
-    private String shortName(int skill){if(skill>=34)return GojoPlayer.shortName(skill-34);if(CombatExpansionRules.branch(skill))return CombatExpansionRules.name(skill).replace("解 · ","").replace("捌 · ","");if(skill>=24)return SlashFormRules.name(skill).replace("解 · ","").replace("捌 · ","");return skill==22?"霜凪":skill==23?"直瀑":skill>=7&&skill<17?GuardianPlayerSkills.SHORT[skill-7]:skill>=17?BranchRules.name(skill):SHORT[skill];}
+    private String shortName(int skill){if(skill==SimpleDomain.SKILL)return "简易领域 · 捌";if(skill>=34)return GojoPlayer.shortName(skill-34);if(CombatExpansionRules.branch(skill))return CombatExpansionRules.name(skill).replace("解 · ","").replace("捌 · ","");if(skill>=24)return SlashFormRules.name(skill).replace("解 · ","").replace("捌 · ","");return skill==22?"霜凪":skill==23?"直瀑":skill>=7&&skill<17?GuardianPlayerSkills.SHORT[skill-7]:skill>=17?BranchRules.name(skill):SHORT[skill];}
     private Button modeButton;
     @Override protected void init(){
         if(Client.progress.sukuna())modeButton=addRenderableWidget(Button.builder(Component.literal(modeText()),b->Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.TOGGLE_DISMANTLE))).bounds(centerX()-76,3,152,20).build());
@@ -81,7 +81,7 @@ public final class SkillWheel extends Screen {
         }
         updateHover(mx,my);super.mouseMoved(mx,my);
     }
-    private int cost(int skill){if(skill>=34)return GojoPlayer.costOf(skill-34);if(skill==FinaleRules.SKILL)return (int)Client.progress.energy();if(skill==29||skill==32)return Curse.COST[0];if(skill==30)return Curse.COST[3];if(skill==31)return 2000;if(skill==28)return Curse.COST[0];if(skill>=24)return skill==24?120:skill==25?180:skill==26?0:2000;if(skill==22||skill==23)return Uraume.cost(skill);if(skill==19)return 180;if(skill==20)return 120;if(skill==21)return BranchRules.wallCost(Client.progress.wallSpacing());if(NetBranchRules.branch(skill))return NetBranchRules.cost(skill);return skill<7?Curse.COST[skill]:GuardianPlayerSkills.COST[skill-7];}
+    private int cost(int skill){if(skill==SimpleDomain.SKILL)return 150;if(skill>=34)return GojoPlayer.costOf(skill-34);if(skill==FinaleRules.SKILL)return (int)Client.progress.energy();if(skill==29||skill==32)return Curse.COST[0];if(skill==30)return Curse.COST[3];if(skill==31)return 2000;if(skill==28)return Curse.COST[0];if(skill>=24)return skill==24?120:skill==25?180:skill==26?0:2000;if(skill==22||skill==23)return Uraume.cost(skill);if(skill==19)return 180;if(skill==20)return 120;if(skill==21)return BranchRules.wallCost(Client.progress.wallSpacing());if(NetBranchRules.branch(skill))return NetBranchRules.cost(skill);return skill<7?Curse.COST[skill]:GuardianPlayerSkills.COST[skill-7];}
     private static final String[] GOJO_DESC={"引力拉扯：把敌人吸向蓝色光球并施加缓慢","红色斥力球：高伤害与超级击退","蓄力3秒后打出圆柱激光，沿直线贯穿并击飞","双手合十5秒，苍与赫对撞成紫球后打出","念完四句咒词后原地引爆，范围48格 · 反噬自己40%生命","向准星方向瞬移最多8格","近距离三连拳，命中减速","领域展开：范围内敌人无法行动并持续受伤","长按引导：光球每秒5格跟随准星，松手后停留5秒"};
     private String desc(int skill){return switch(skill){
         case 33->"蓄力8秒 → 五阶段终结 · 耗尽咒力 · 停恢复60秒 · 熔断180秒";
@@ -165,7 +165,7 @@ public final class SkillWheel extends Screen {
             g.drawCenteredString(font,"碎片已食用 · 7 式（苍/赫长按为最大功率）",gx,cy+gr+7,0xFFA9C8F1);
         }
         if(Client.progress.sukuna()&&page==1){int x=cx+outer+4,y=cy-24;g.fill(x,y,x+74,y+48,outputHover?0xD6348A74:0xCC17322B);g.drawCenteredString(font,"术式反转",x+37,y+7,0xFFE2FFF2);g.drawCenteredString(font,"外放 · "+Client.energyText(100),x+37,y+25,0xFFA9DBC8);}
-        int[] branches=branches();for(int i=0;i<branches.length;i++){var box=branchBox(i);int id=branches[i];g.fill(box.x(),box.y(),box.x()+box.width(),box.y()+box.height(),branchHover==id?0xEE9D263B:0xDD321722);g.drawCenteredString(font,shortName(id),box.x()+37,box.y()+(box.height()<27?3:4),0xFFFFE6DE);if(box.height()>=27)g.drawCenteredString(font,id==21?Client.wallSize()+"×"+Client.wallSize()+"格":id==26?"1咒力/像素":Client.energyText(cost(id))+"咒力",box.x()+37,box.y()+17,0xFFDCC1F4);}
+        int[] branches=branches();for(int i=0;i<branches.length;i++){var box=branchBox(i);int id=branches[i];g.fill(box.x(),box.y(),box.x()+box.width(),box.y()+box.height(),branchHover==id?0xEE9D263B:0xDD321722);g.drawCenteredString(font,shortName(id),box.x()+37,box.y()+(box.height()<27?3:4),0xFFFFE6DE);if(box.height()>=27)g.drawCenteredString(font,id==21?Client.wallSize()+"×"+Client.wallSize()+"格":id==26?"1咒力/像素":id==SimpleDomain.SKILL?Client.energyText(cost(id))+"咒力/秒":Client.energyText(cost(id))+"咒力",box.x()+37,box.y()+17,0xFFDCC1F4);}
         int detailX=Client.progress.sukuna()?cx:width/2;
         g.drawCenteredString(font,Client.skillName(skill),detailX,Math.max(28,cy-outer-23),0xFFFFDDD1);
         g.drawCenteredString(font,skill==26?"每像素消耗1咒力 · 上限2000像素":"消耗 "+Client.energyText(cost(skill))+((skill==2&&!Client.voidStage()||skill==5)?" 咒力/秒":" 咒力/次"),detailX,Math.max(39,cy-outer-11),0xFFCB9BF0);

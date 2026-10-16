@@ -149,7 +149,7 @@ public final class Client {
         boolean pressed=ClientInput.held(CAST);
         if(charging&&(!progress.unlocked()||!progress.awakened()||mc.screen!=null||!mc.player.isAlive()||selected!=0)){Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.CANCEL_CHARGE));charging=false;}
         if(cleaveHeld&&(!progress.unlocked()||mc.screen!=null||!mc.player.isAlive()||selected!=2)){Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.CANCEL_CHARGE));cleaveHeld=false;}
-        while(FIST.consumeClick())if(mc.screen==null&&progress.fingers()>=5)Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.TOGGLE_FIST));
+        while(FIST.consumeClick()){}   // 附拳已搬进轮盘右上角固定格，Del 仅保留键位不再触发
         if(progress.unlocked()&&mc.screen==null){
             // 释放键由 TechniqueInputClient 独立处理；失焦时也能取消服务端按住状态。
             while(STREAM.consumeClick())if(mc.isWindowActive()&&mc.mouseHandler.isMouseGrabbed())Network.CHANNEL.sendToServer(new Network.StreamToggle());
@@ -289,7 +289,7 @@ public final class Client {
         FurnaceMaxClient.overlay(e.getGuiGraphics());
         boolean heat=mc.player!=null&&domains.values().stream().anyMatch(d->d.burning&&mc.player.position().distanceToSqr(d.center)<d.radius*d.radius);
         if(heat)FistAura.heat(e.getGuiGraphics(),tick+e.getPartialTick());
-        if(progress.fist()&&mc.player!=null&&mc.player.isAlive()&&mc.options.getCameraType().isFirstPerson()&&!mc.options.hideGui)FistAura.draw(e.getGuiGraphics(),tick+e.getPartialTick());else if(!heat)FistAura.clear();
+        if(!heat)FistAura.clear();
     }
     @SubscribeEvent public static void hud(RenderGuiEvent.Post e){
         Minecraft mc=Minecraft.getInstance();if(mc.player==null||mc.options.hideGui||(mc.screen instanceof SkillWheel||mc.screen instanceof WallOptionsScreen||mc.screen instanceof RelationsScreen))return;

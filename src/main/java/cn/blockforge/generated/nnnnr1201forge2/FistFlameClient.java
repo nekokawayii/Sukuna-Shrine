@@ -61,8 +61,9 @@ public final class FistFlameClient {
         /** 以某条手臂的骨骼为基准，往手掌方向偏移后画一簇火焰。 */
         private static void draw(PoseStack ps,VertexConsumer b,int light,net.minecraft.client.model.geom.ModelPart arm,float t){
             ps.pushPose();arm.translateAndRotate(ps);
-            ps.translate(0,-6/16.0,0);                       // 从肩往手掌方向挪（手臂骨长 12 像素）
-            ps.mulPose(com.mojang.math.Axis.XP.rotationDegrees(180));   // 火焰朝下飘
+            // 模型空间里 **+Y 是向下**：从肩到手要往 +Y 挪 9/16 格（原来看起来落在耳朵上就是这里写成了 -6/16）
+            ps.translate(0,9/16.0,0);
+            ps.mulPose(com.mojang.math.Axis.XP.rotationDegrees(180));   // 翻转后火苗朝上
             var pose=ps.last();
             for(int i=0;i<FLAMES;i++){
                 float ph=i*1.3f;
@@ -72,20 +73,39 @@ public final class FistFlameClient {
                 float x=(float)(sway+(i%3-1)*0.055),z=(float)(drift+(i%2)*0.02);
                 float half=0.045f+0.012f*(i%2);
                 int alpha=(int)((0.30+0.35*Math.abs(Math.sin(t*0.25+ph)))*255);
-                quad(pose,b,light,x,half,z,h,alpha);
+                flame(pose,b,light,x,half,z,h,alpha);
             }
             ps.popPose();
         }
-        /** 一张竖直的相机朝向面片：底部宽、顶端收细（火苗形状）。 */
-        private static void quad(PoseStack.Pose pose,VertexConsumer b,int light,float x,float half,float z,double h,int alpha){
-            float top=(float)(h*1.6),bot=0f,w=half,tw=half*0.35f;
-            int c1=(alpha<<24)|(HOT&0xFFFFFF),c2=((int)(alpha*0.55)<<24)|(RED&0xFFFFFF),c3=((int)(alpha*0.85)<<24)|(DEEP&0xFFFFFF);
-            vertex(pose,b,light,x-w,bot,z,c3);vertex(pose,b,light,x+w,bot,z,c3);vertex(pose,b,light,x+tw,top,z,c1);vertex(pose,b,light,x-tw,top,z,c1);
-            vertex(pose,b,light,x+w*0.6f,bot*1.0f,z+0.01f,c2);vertex(pose,b,light,x-w*0.6f,bot,z+0.01f,c2);vertex(pose,b,light,x-tw*0.6f,top,z+0.01f,c1);vertex(pose,b,light,x+tw*0.6f,top,z+0.01f,c1);
+    }
+    private static void flame(PoseStack.Pose pose,VertexConsumer b,int light,float x,float half,float z,double h,int alpha){
+        float top=(float)(h*1.6),bot=0f,w=half,tw=half*0.35f;
+        int c1=(alpha<<24)|(HOT&0xFFFFFF),c2=((int)(alpha*0.55)<<24)|(RED&0xFFFFFF),c3=((int)(alpha*0.85)<<24)|(DEEP&0xFFFFFF);
+        vertex(pose,b,light,x-w,bot,z,c3);vertex(pose,b,light,x+w,bot,z,c3);vertex(pose,b,light,x+tw,top,z,c1);vertex(pose,b,light,x-tw,top,z,c1);
+        vertex(pose,b,light,x+w*0.6f,bot,z+0.01f,c2);vertex(pose,b,light,x-w*0.6f,bot,z+0.01f,c2);vertex(pose,b,light,x-tw*0.6f,top,z+0.01f,c1);vertex(pose,b,light,x+tw*0.6f,top,z+0.01f,c1);
+    }
+    private static void vertex(PoseStack.Pose pose,VertexConsumer b,int light,float x,float y,float z,int color){
+        b.vertex(pose.pose(),x,y,z).color(color).uv(0,0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.normal(),0,0,1).endVertex();
+    }
+    /** 第一人称：自己的手走的是手持渲染通路（不经过玩家模型），所以这里补一份，让本机也能看到手上的火焰。
+     *  位置在 {@code translate(0.06,-0.30,-0.10)} —— 偏了就改这三个数。 */
+    @SubscribeEvent public static void hand(RenderHandEvent e){
+        var mc=Minecraft.getInstance();var p=mc.player;
+        if(p==null||mc.level==null||!Client.progress.fist()||e.getHand()!=net.minecraft.world.InteractionHand.MAIN_HAND)return;
+        float t=mc.level.getGameTime()+e.getPartialTick();
+        var ps=e.getPoseStack();ps.pushPose();
+        ps.translate(0.06,-0.30,-0.10);
+        ps.mulPose(com.mojang.math.Axis.XP.rotationDegrees(180));
+        var b=e.getMultiBufferSource().getBuffer(RenderType.entityTranslucent(p.getSkinTextureLocation()));
+        var pose=ps.last();
+        for(int i=0;i<FLAMES;i++){
+            float ph=i*1.3f;
+            double drift=Math.sin(t*0.18+ph)*0.055,sway=Math.cos(t*0.13+ph*1.4)*0.045,h=0.10+0.05*Math.abs(Math.sin(t*0.22+ph));
+            float x=(float)(sway+(i%3-1)*0.055),z=(float)(drift+(i%2)*0.02),half=0.045f+0.012f*(i%2);
+            int alpha=(int)((0.30+0.35*Math.abs(Math.sin(t*0.25+ph)))*255);
+            flame(pose,b,e.getPackedLight(),x,half,z,h,alpha);
         }
-        private static void vertex(PoseStack.Pose pose,VertexConsumer b,int light,float x,float y,float z,int color){
-            b.vertex(pose.pose(),x,y,z).color(color).uv(0,0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.normal(),0,0,1).endVertex();
-        }
+        ps.popPose();
     }
     private FistFlameClient(){}
 }

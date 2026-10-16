@@ -26,10 +26,9 @@ public final class WheelSideSlots {
     public static int centerX(int width,int height,boolean ice,boolean gojo){int r=radius(width,height,ice,gojo);if(gojo&&!ice)return Math.min(width/2,width-8-2*gojoRadius(width,height)-76-r);return ice?Math.max(width/2,8+2*iceRadius(width,height)+76+r):width/2;}
     public static Box reverse(int width,int height){return reverse(width,height,false);}
     public static Box reverse(int width,int height,boolean ice){return new Box(centerX(width,height,ice)-radius(width,height,ice)-72,height/2-32,64,64);}
-    /** 轮盘**右上角**的「咒力附拳」固定格：不属于任何分支，轮盘一打开就在（5 根手指起可用）。 */
+    /** **屏幕右上角**的「咒力附拳」固定格：不属于任何分支，轮盘一打开就在（5 根手指起可用）。 */
     public static Box fist(int width,int height,boolean ice){
-        int r=radius(width,height,ice);
-        return new Box(centerX(width,height,ice)+r+4,height/2-r*3/4-30,74,34);
+        return new Box(width-96,12,84,34);
     }
     public static Box repair(int width,int height){return repair(width,height,false);}
     public static Box repair(int width,int height,boolean ice){Box reverse=reverse(width,height,ice);return new Box(reverse.x(),reverse.y()+68,64,36);}

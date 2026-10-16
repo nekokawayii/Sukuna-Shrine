@@ -58,6 +58,8 @@ public final class FurnaceMaxClient {
     private static long time;
     /** 蓄力时的 FOV 倍数（用户要求：**不减** FOV，反而放大 2 倍）。 */
     private static double fovBoost=1,SEEK_FOV=2.0;
+    /** 蓄力期间是否已把视角切成第三人称（射出/中断的那一刻切回第一人称）。 */
+    private static boolean thirdPerson;
 
     // ------------------------------------------------------------------ 句柄生命周期
     /** 重叠刷新：只登记，不去停上一个（到点自然过期）。 */
@@ -75,6 +77,10 @@ public final class FurnaceMaxClient {
         return true;
     }
     public static void clear(){
+        if(thirdPerson){   // 别把玩家留在第三人称
+            thirdPerson=false;
+            Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+        }
         for(Spare s:spares)PhotonFx.stop(s.handle());
         spares.clear();throttled.clear();
         charges.clear();fields.clear();pillars.clear();balls.clear();burns.clear();time=0;
@@ -177,8 +183,17 @@ public final class FurnaceMaxClient {
         spares.removeIf(s->{if(time>=s.end()){PhotonFx.stop(s.handle());return true;}return false;});
         // FOV：蓄力期间放大到 2 倍，每刻 8% 平滑（约 1 秒到位）
         var local=Minecraft.getInstance().player;
-        double fovTarget=local!=null&&charges.containsKey(local.getId())?SEEK_FOV:1.0;
+        boolean chargingNow=local!=null&&charges.containsKey(local.getId());
+        double fovTarget=chargingNow?SEEK_FOV:1.0;
         fovBoost+=(fovTarget-fovBoost)*0.08;
+        // 视角：蓄力时切第三人称，射出（或中断）的那一瞬切回第一人称
+        if(chargingNow&&!thirdPerson){
+            thirdPerson=true;
+            Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+        }else if(!chargingNow&&thirdPerson){
+            thirdPerson=false;
+            Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+        }
         var player=Minecraft.getInstance().player;
         for(Iterator<Charge> it=charges.values().iterator();it.hasNext();){
             Charge c=it.next();

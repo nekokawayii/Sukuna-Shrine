@@ -26,10 +26,13 @@ public final class BlackFlashRender {
             this.pos=pos;this.dir=dir;this.born=born;
             for(int i=0;i<BOLTS;i++){
                 double[] y=new double[SEG+1],p=new double[SEG+1];
-                double yaw=rnd.nextDouble()*Math.PI*2,pitch=(rnd.nextDouble()-0.5)*1.2;
+                // **竖过来**：一半朝上、一半朝下（俯仰角约 63°~89°），水平方向只做锯齿抖动 → 整体是竖着的雷电柱
+                double up=i%2==0?1:-1;
+                double yaw=rnd.nextDouble()*Math.PI*2,pitch=up*(1.10+rnd.nextDouble()*0.45);
                 for(int s=0;s<=SEG;s++){
                     y[s]=yaw;p[s]=pitch;
-                    yaw+=(rnd.nextDouble()-0.5)*0.9;pitch+=(rnd.nextDouble()-0.5)*0.9;
+                    yaw+=(rnd.nextDouble()-0.5)*0.85;      // 水平锯齿
+                    pitch=up*(1.10+Math.abs(pitch)/22.0)+(rnd.nextDouble()-0.5)*0.22;   // 竖向偶尔回折
                 }
                 bolts.add(new Bolt(y,p,SEG));
             }
@@ -38,8 +41,8 @@ public final class BlackFlashRender {
     private static final List<Flash> FLASHES=new ArrayList<>();
     private static final Random RND=new Random();
     /** 参数都集中在这里，方便按手感调。 */
-    private static final int BOLTS=20,SEG=6,LIFE=12,WIND_LIFE=9,DARK_LIFE=4;
-    private static final double BOLT_LEN=5.6,BOLT_WIDTH=0.22,WIND_RADIUS=3.4;
+    private static final int BOLTS=22,SEG=7,LIFE=13,WIND_LIFE=10,DARK_LIFE=4;
+    private static final double BOLT_LEN=6.6,BOLT_WIDTH=0.24,WIND_RADIUS=4.2;
     private static final int RED=0xFFE02418,BLACK=0xFF050505,WIND=0xFFE6ECF2,DARK=0xFF000000;
     /** Photon 加法发光的 bloom 色（真 bloom 靠这条，用量小、寿命短，不会堆积）。 */
     private static final int BLOOM_RED=0xFF8A1208;
@@ -52,8 +55,11 @@ public final class BlackFlashRender {
         FLASHES.add(new Flash(pos,d,mc.level.getGameTime(),RND));
         if(FLASHES.size()>16)FLASHES.remove(0);   // 连打时只留最近的，绝不无限堆积
         // 一层 Photon 加法发光：真 bloom（顶点通路的普通混合做不出光晕）；寿命都很短，不会长期占用
-        // 只留一处 Photon 加法发光给整场戏"打光"（真 bloom 只能靠加法混合）；除此之外不生成任何别的特效
-        try{PhotonFx.spark(pos,0.5,0.40,0xFF2A10,BLOOM_RED,GLOW,true,1,8,22,0.5);}catch(Throwable ignored){}
+        // 光污染：一处加法发光给整场戏"打光" + 一拳的风压光环（都短命，不堆积）
+        try{
+            PhotonFx.spark(pos,0.5,0.40,0xFF2A10,BLOOM_RED,GLOW,true,1,8,22,0.5);
+            if(d.lengthSqr()>1e-6)PhotonFx.ring(pos.add(d.scale(1.6)),2.2,0.75,0xFFD8E6F2,BLOOM_RED,26,2,9);
+        }catch(Throwable ignored){}
         Client.shake(12);
     }
     public static void tick(){}
@@ -87,12 +93,14 @@ public final class BlackFlashRender {
                     from=to;
                 }
             }
-            // ---- 拳风：沿出拳方向扩张的风环 ----
+            // ---- 拳风：沿出拳方向扩张的风环（**更明显**：四层、更粗更亮更大） ----
             if(f.dir.lengthSqr()>1e-6&&age<=WIND_LIFE){
-                double wl=Math.max(0,1-age/WIND_LIFE),r=WIND_RADIUS*(0.35+0.75*(age/WIND_LIFE));
-                int a=(int)(120*wl*wl)<<24;
-                windRing(b,ps,f.pos.add(f.dir.scale(0.6+r*0.5)),f.dir,r,0.30,a|(WIND&0xFFFFFF),cam);
-                windRing(b,ps,f.pos.add(f.dir.scale(0.4+r)),f.dir,r*0.72,0.16,a|(WIND&0xFFFFFF),cam);
+                double wl=Math.max(0,1-age/WIND_LIFE),r=WIND_RADIUS*(0.35+0.85*(age/WIND_LIFE));
+                int a=(int)(185*wl*wl)<<24;
+                windRing(b,ps,f.pos.add(f.dir.scale(0.5+r*0.45)),f.dir,r*1.05,0.52,a|(WIND&0xFFFFFF),cam);
+                windRing(b,ps,f.pos.add(f.dir.scale(0.4+r*0.9)),f.dir,r*0.85,0.34,(int)(a*0.85)<<24|(WIND&0xFFFFFF),cam);
+                windRing(b,ps,f.pos.add(f.dir.scale(0.3+r*1.4)),f.dir,r*0.65,0.22,(int)(a*0.65)<<24|(WIND&0xFFFFFF),cam);
+                windRing(b,ps,f.pos.add(f.dir.scale(0.8+r*1.9)),f.dir,r*1.35,0.14,(int)(a*0.45)<<24|(WIND&0xFFFFFF),cam);
             }
         }
     }

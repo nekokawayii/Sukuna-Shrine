@@ -50,6 +50,12 @@ public final class Skills {
     private static final List<Slash> slashes=new ArrayList<>();
     private static final Map<UUID,Aura> auras=new HashMap<>();
     private static final Map<UUID,Domain> domains=new HashMap<>();
+    /** 御厨子结印状态（技能5）：按下起 3 秒不能移动，80 刻领域出现，再按释放键取消/放下。 */
+    private static final Map<UUID,Seal> seals=new HashMap<>();
+    /** 跳神龛的飞行状态（三击空格）。 */
+    private static final List<Leap> leaps=new ArrayList<>();
+    /** 「结印期间不能移动」用的移速修饰符：×0（与灶·最大功率同一套做法，UUID 必须独立）。 */
+    private static final UUID SEAL_SLOW=UUID.fromString("7c1f0a6e-2b94-4d5a-9f31-4a6d2e8b0c17");
     private static final List<Bow> bows=new ArrayList<>();
     private static final List<Fire> fires=new ArrayList<>();
     private static final List<Detonation> detonations=new ArrayList<>();
@@ -137,12 +143,137 @@ public final class Skills {
     public static boolean domainClashing(ServerPlayer p){Domain d=domains.get(p.getUUID());return d!=null&&clashing(d);}
     public static Vec3 domainCenter(ServerPlayer p){Domain d=domains.get(p.getUUID());return d==null?p.position():d.center;}
     public static void closeDomain(ServerPlayer p){closeDomain(p,false);}
-    public static void closeDomain(ServerPlayer p,boolean voluntary){Domain d=domains.remove(p.getUUID());if(d!=null){VoidCombat.closeDomain(p,valid(p,d.level)&&!clashing(d));Network.send(d.level,new Network.Effect(5,p.getId(),d.center,Vec3.ZERO,0,0,0));Curse.endDomain(p,voluntary&&d.level.getGameTime()<d.end);}}
+    /** 领域结束：**只锁领域自己 30 秒**（原来走的全局熔断 45/60 秒，会把其它术式一起禁掉）。 */
+    public static void closeDomain(ServerPlayer p,boolean voluntary){Domain d=domains.remove(p.getUUID());endSeal(p);if(d!=null){VoidCombat.closeDomain(p,valid(p,d.level)&&!clashing(d));Network.send(d.level,new Network.Effect(5,p.getId(),d.center,Vec3.ZERO,0,0,0));Curse.cooldownDomain(p);}}
     public static boolean domainActive(ServerPlayer p){return domains.containsKey(p.getUUID());}
     public static boolean clashDomainActive(ServerPlayer p){Domain d=domains.get(p.getUUID());return d!=null&&d.owner==p&&d.level==p.level()&&(DomainClash.active(p)||d.end>d.level.getGameTime());}
     public static void syncVoidFloor(ServerPlayer p){if(domains.containsKey(p.getUUID()))fx(p,25,p.position(),Vec3.ZERO,CombatSettings.voidFloor(p)?1:0,4,0);}
     private static void syncVoidShrine(Domain d){fx(d.owner,112,d.center,Vec3.ZERO,1,(int)Math.max(1,d.end-d.level.getGameTime()),GuardianCombat.awakened(d.owner)?1:0);}
     public static void syncAwakening(ServerPlayer p){Domain d=domains.get(p.getUUID());if(d!=null&&VoidJourney.evolved(p))syncVoidShrine(d);}
+
+    // ---------------------------------------------------------------- 技能5 · 伏魔御厨子（结印 → 展开 → 放下）
+    /** 结印中（从按下到"放下"或领域结束）：不能释放其它术式、不能攻击。 */
+    public static boolean sealing(ServerPlayer p){return seals.containsKey(p.getUUID());}
+    /** 状态转换一律落盘（这个项目的规矩：静默失败必须能在日志里查）。 */
+    private static void note(String message){com.mojang.logging.LogUtils.getLogger().info("[御厨子] "+message);}
+    private static String where(Vec3 v){return String.format(Locale.ROOT,"(%.1f, %.1f, %.1f)",v.x,v.y,v.z);}
+    /** 结印手势：kind=70/size=5 走 CastHands 的"双掌合于身前"分支；life=0 = 放下（立刻失效）。 */
+    private static void pose(ServerPlayer p,int life){fx(p,70,p.position(),p.getLookAngle(),5,life,5);}
+    /** 「结印期间不能移动」：移速 ×0 的属性修饰符（不用缓慢效果，抄灶·最大功率的写法）。 */
+    private static void freeze(ServerPlayer p){
+        var attr=MaidBridge.body(p).getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+        if(attr==null)return;
+        attr.removeModifier(SEAL_SLOW);
+        attr.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(SEAL_SLOW,"sukuna_domain_seal",-1,net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.MULTIPLY_TOTAL));
+    }
+    private static void unfreeze(ServerPlayer p){
+        var attr=MaidBridge.body(p).getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+        if(attr!=null&&attr.getModifier(SEAL_SLOW)!=null)attr.removeModifier(SEAL_SLOW);
+    }
+    /** 释放键（技能5）：结印中 → 取消/放下；已有领域 → 只提示；否则从头结印。 */
+    private static void domainPress(ServerPlayer p){
+        Seal seal=seals.get(p.getUUID());
+        if(seal!=null){if(seal.opened)release(p);else cancelSeal(p,"再次按下释放键");return;}
+        if(domains.containsKey(p.getUUID())){CastFeedback.tell(p,"御厨子已展开 · 三击空格跳上神龛");return;}
+        startSeal(p);
+    }
+    /** 结印起手：扣费与起手表现都在这一刻（此刻起 3 秒不能移动）。 */
+    private static void startSeal(ServerPlayer p){
+        if(SimpleDomain.owns(p)||FurnaceMax.active(p)){note("结印被拒：简易领域/最大功率接管中");return;}
+        if(!Curse.canUseTechnique(p)){p.displayClientMessage(Component.literal("术式熔断中：只能使用术式反转或修复熔断"),true);return;}
+        if(GuardianPlayerSkills.sustaining(p)){GuardianPlayerSkills.closeOwnedDomain(p,true);return;}
+        if(MaidBridge.isCaster(p)&&(GuardianEntity.locked(MaidBridge.body(p))||GuardianPlayerSkills.locked(p))){closeDomain(p);p.displayClientMessage(Component.literal("净土领域优先，御厨子无法展开"),true);return;}
+        if(!MaidBridge.domainReady(p)){CastFeedback.tell(p,"御厨子尚在维护中，暂时无法展开");return;}
+        if(Curse.domainCooling(p)){CastFeedback.tell(p,"御厨子冷却中 · "+((Curse.domainCooldownLeft(p)+19)/20)+" 秒");return;}
+        long now=p.serverLevel().getGameTime();
+        if(SoulCombat.suppressed(p)&&!(Curse.active(p,"Iwate")&&!Curse.active(p,"SoulGap")&&p.getPersistentData().getLong("VoidCaptured")<=now)){p.displayClientMessage(Component.literal("灵魂剥离或灵魂压制中，无法使用术式"),true);return;}
+        long[] times=cooldowns.computeIfAbsent(p.getUUID(),k->new long[7]);
+        if(now<times[5]){CastFeedback.tell(p,NAMES[5]+" 冷却中 · "+String.format(Locale.ROOT,"%.1f",(times[5]-now)/20.0)+" 秒");return;}
+        if(VoidJourney.evolved(p)&&!VoidCombat.ready(p,5)){note("结印被拒：虚空术式未就绪");return;}
+        if(!Curse.spend(p,Curse.COST[5]))return;
+        AttackTypes.prepare(AttackTypes.DISMANTLE);
+        times[5]=now+(long)Math.ceil(COOLDOWN[5]*SoulCombat.cooldown(p)*(Curse.active(p,"Siphon")?1.3:1)*(Curse.tier(p)>=4?0.8:1));
+        seals.put(p.getUUID(),new Seal(p));
+        freeze(p);
+        fx(p,67,p.position(),Vec3.ZERO,Journey.nine(p)?1:0,1,0);SkillSounds.cast(p,5);
+        pose(p,ShrineRules.domainTicks(MaidBridge.isCaster(p))+ShrineRules.DOMAIN_OPEN_TICKS+400);
+        CastFeedback.tell(p,"伏魔御厨子 · 结印中 · "+(ShrineRules.DOMAIN_FREEZE_TICKS/20)+" 秒无法移动 · 再按释放键取消");
+        note("结印开始 "+p.getScoreboardName()+" 冻结"+ShrineRules.DOMAIN_FREEZE_TICKS+"刻 "+ShrineRules.DOMAIN_OPEN_TICKS+"刻后展开");
+    }
+    /** 领域还没出现就再次按下：整体取消本次结印（不生成领域，按 30 秒冷却处理）。 */
+    private static void cancelSeal(ServerPlayer p,String why){
+        if(seals.remove(p.getUUID())==null)return;
+        unfreeze(p);pose(p,0);Curse.cooldownDomain(p);
+        CastFeedback.tell(p,"结印取消 · 御厨子冷却"+(ShrineRules.DOMAIN_COOLDOWN_TICKS/20)+" 秒");
+        note("结印取消（"+why+"）"+p.getScoreboardName());
+    }
+    /** 放下：手势失效、可以自由行动，但御厨子伤害降到 50%，领域继续存在。 */
+    private static void release(ServerPlayer p){
+        if(seals.remove(p.getUUID())==null)return;
+        unfreeze(p);pose(p,0);
+        Domain d=domains.get(p.getUUID());if(d!=null)d.damageScale=ShrineRules.DOMAIN_RELEASE_SCALE;
+        CastFeedback.tell(p,"放下结印 · 御厨子伤害降至"+(int)(ShrineRules.DOMAIN_RELEASE_SCALE*100)+"%");
+        note("放下（伤害×"+ShrineRules.DOMAIN_RELEASE_SCALE+"）"+p.getScoreboardName());
+    }
+    /** 领域结束或异常：收起结印状态（解冻 + 放下手势）。 */
+    private static void endSeal(ServerPlayer p){
+        if(seals.remove(p.getUUID())==null)return;
+        unfreeze(p);pose(p,0);
+    }
+    /** 结印第 80 刻：领域效果出现（原 case 5 的整段逻辑，原样搬过来）。 */
+    private static void openDomain(ServerPlayer p){
+        long now=p.serverLevel().getGameTime();
+        MaidBridge.domainOpened(p);double yaw=Math.toRadians(p.getYRot());Vec3 behind=new Vec3(Math.sin(yaw)*12,0,-Math.cos(yaw)*12);
+        int duration=ShrineRules.domainTicks(MaidBridge.isCaster(p));Domain d=new Domain(p,p.serverLevel(),p.position(),behind,now,now+duration,200);domains.put(p.getUUID(),d);
+        if(VoidJourney.evolved(p))syncVoidShrine(d);
+        fx(p,1,d.center,d.shrineOffset,(float)d.radius,duration,SoulJourney.evolved(p)?-now:now);
+        fx(p,25,p.position(),Vec3.ZERO,CombatSettings.voidFloor(p)?1:0,10,0);
+        pose(p,duration+400);
+        p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.BEACON_ACTIVATE,SoundSource.PLAYERS,4,0.5f);
+        p.displayClientMessage(Component.literal(VoidJourney.evolved(p)?"虚空御厨子 · "+(duration/20)+"秒 · 半径200格 · 五裂共鸣 · 结束闭合爆发":"领域展开 · 半径200格 · 每秒70咒力 · 再按释放键放下（伤害50%）"),true);
+        DomainClash.opened(p,domainCenter(p),200);
+        p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.PLAYER_ATTACK_SWEEP,SoundSource.PLAYERS,1.5f,0.5f);
+        note("领域生成 "+p.getScoreboardName()+" 中心"+where(d.center)+" 神龛"+where(d.center.add(d.shrineOffset))+" "+duration+"刻");
+    }
+    private static void tickSeals(){
+        // 副本遍历：openDomain 会走 DomainClash.opened，对拼当场结算时会反过来收起结印状态。
+        for(Seal seal:List.copyOf(seals.values())){
+            if(!seals.containsKey(seal.owner.getUUID()))continue;   // 本轮已被取消或放下
+            ServerPlayer p=seal.owner;long now=seal.level.getGameTime(),age=now-seal.start;
+            if(!valid(p,seal.level)){seals.remove(p.getUUID());unfreeze(p);pose(p,0);continue;}
+            if(age<ShrineRules.DOMAIN_FREEZE_TICKS)freeze(p);   // 每刻重挂一次（幂等）
+            else unfreeze(p);                                   // 3 秒后可以移动，手势保持
+            if(!seal.opened&&age>=ShrineRules.DOMAIN_OPEN_TICKS){seal.opened=true;openDomain(p);}
+        }
+    }
+    /** 三击空格：沿二次贝塞尔飞到"领域中心 + 神龛偏移 + 站立高度"，落点站住。 */
+    public static void leapToShrine(ServerPlayer p){
+        Domain d=domains.get(p.getUUID());
+        if(d==null||!valid(p,d.level)){CastFeedback.tell(p,"御厨子领域未展开 · 无法跳上神龛");return;}
+        if(leaps.stream().anyMatch(l->l.owner==p))return;
+        Vec3 to=d.center.add(d.shrineOffset).add(0,ShrineRules.SHRINE_STAND_Y,0);
+        leaps.add(new Leap(p,p.position(),to));
+        p.setNoGravity(true);p.setDeltaMovement(Vec3.ZERO);p.fallDistance=0;
+        warp(p,p.position());
+        note("跳神龛开始 "+p.getScoreboardName()+" "+where(p.position())+" → "+where(to));
+    }
+    /** 逐刻发一次传送，客户端才能平滑跟随。 */
+    private static void warp(ServerPlayer p,Vec3 pos){
+        if(p.connection!=null)p.connection.teleport(pos.x,pos.y,pos.z,p.getYRot(),p.getXRot());
+        else p.teleportTo(pos.x,pos.y,pos.z);
+    }
+    private static void tickLeaps(){
+        for(Iterator<Leap> it=leaps.iterator();it.hasNext();){
+            Leap leap=it.next();ServerPlayer p=leap.owner;long now=leap.level.getGameTime();
+            if(!valid(p,leap.level)||!domains.containsKey(p.getUUID())){it.remove();p.setNoGravity(false);p.fallDistance=0;continue;}
+            p.setNoGravity(true);p.setDeltaMovement(Vec3.ZERO);p.fallDistance=0;
+            warp(p,leap.at(now));
+            if(!leap.done(now))continue;
+            it.remove();p.setNoGravity(false);p.setDeltaMovement(Vec3.ZERO);
+            CastFeedback.tell(p,"御厨子 · 神龛之上");
+            note("跳神龛落点 "+p.getScoreboardName()+" "+where(p.position()));
+        }
+    }
     public static void cancelCharge(ServerPlayer p){charges.remove(p.getUUID());cleaveCharges.remove(p.getUUID());}
     public static void cancelSustained(ServerPlayer p){cancelCharge(p);if(auras.remove(p.getUUID())!=null)fx(p,9,p.position(),Vec3.ZERO,0,1,0);}
     /** 仅在实体tick或退出处理执行，不可在伤害队列的回调中修改集合。 */
@@ -216,7 +347,27 @@ public final class Skills {
     private record Aura(ServerPlayer owner,ServerLevel level,long start,long end,double radius){}
     private static final class Domain {
         final ServerPlayer owner;final ServerLevel level;final Vec3 center,shrineOffset;final long start;long end;final double radius;
+        /** 伤害倍率：结印"放下"后降到 {@link ShrineRules#DOMAIN_RELEASE_SCALE}，默认 1。 */
+        float damageScale=1f;
         Domain(ServerPlayer owner,ServerLevel level,Vec3 center,Vec3 shrineOffset,long start,long end,double radius){this.owner=owner;this.level=level;this.center=center;this.shrineOffset=shrineOffset;this.start=start;this.end=end;this.radius=radius;}
+    }
+    /** 结印中的玩家：{@code start} 起 3 秒不能移动，{@code DOMAIN_OPEN_TICKS} 刻后领域出现。 */
+    private static final class Seal {
+        final ServerPlayer owner;final ServerLevel level;final long start;boolean opened;
+        Seal(ServerPlayer p){owner=p;level=p.serverLevel();start=level.getGameTime();}
+    }
+    /** 跳神龛：起点→上方控制点→神龛落点的二次贝塞尔，逐刻 teleport 让客户端平滑跟。 */
+    private static final class Leap {
+        final ServerPlayer owner;final ServerLevel level;final Vec3 from,control,to;final long start;
+        Leap(ServerPlayer p,Vec3 from,Vec3 to){
+            owner=p;level=p.serverLevel();this.from=from;this.to=to;start=level.getGameTime();
+            control=from.add(to).scale(0.5).add(0,Math.max(4,from.distanceTo(to)*0.35),0);
+        }
+        Vec3 at(long now){
+            double t=Math.min(1,(now-start)/(double)ShrineRules.SHRINE_LEAP_TICKS),u=1-t;
+            return from.scale(u*u).add(control.scale(2*u*t)).add(to.scale(t*t));
+        }
+        boolean done(long now){return now-start>=ShrineRules.SHRINE_LEAP_TICKS;}
     }
     public static void extendDomain(ServerPlayer p,int ticks){Domain d=domains.get(p.getUUID());if(d!=null)d.end+=ticks;}
     public static void clashVisual(ServerPlayer p,boolean show){Domain d=domains.get(p.getUUID());if(d==null)return;if(!show){fx(p,5,d.center,Vec3.ZERO,0,0,0);return;}if(VoidJourney.evolved(p))syncVoidShrine(d);fx(p,1,d.center,d.shrineOffset,(float)d.radius,(int)Math.max(1,d.end-d.level.getGameTime()),SoulJourney.evolved(p)?-d.start:d.start);syncVoidFloor(p);}
@@ -239,7 +390,7 @@ public final class Skills {
         times[6]=now+COOLDOWN[6];if(target!=null)SoulCombat.peelTarget(p,target);fx(p,92,target==null?aimPoint(p,24):target.getBoundingBox().getCenter(),Vec3.ZERO,1,100,p.getId());SkillSounds.play(p,"soul_peel");
     }
     public static boolean cleaveActive(ServerPlayer p){return auras.containsKey(p.getUUID());}
-    public static boolean available(ServerPlayer p,int skill){return skill>=0&&skill<6&&(skill!=5||MaidBridge.domainReady(p)&&(!MaidBridge.isCaster(p)||!GuardianEntity.locked(MaidBridge.body(p))&&!GuardianPlayerSkills.locked(p)))&&!SoulCombat.suppressed(p)&&Curse.canUseTechnique(p)&&p.level().getGameTime()>=cooldowns.getOrDefault(p.getUUID(),new long[7])[skill]&&Curse.canSpend(p,Curse.COST[skill])&&(skill!=2||Curse.fingers(p)>=5)&&(skill!=4||Curse.awakened(p)||domainActive(p))&&(!VoidJourney.evolved(p)||VoidCombat.ready(p,skill));}
+    public static boolean available(ServerPlayer p,int skill){return skill>=0&&skill<6&&(skill!=5||MaidBridge.domainReady(p)&&(!MaidBridge.isCaster(p)||!GuardianEntity.locked(MaidBridge.body(p))&&!GuardianPlayerSkills.locked(p))&&!Curse.domainCooling(p)&&!sealing(p))&&!SoulCombat.suppressed(p)&&Curse.canUseTechnique(p)&&p.level().getGameTime()>=cooldowns.getOrDefault(p.getUUID(),new long[7])[skill]&&Curse.canSpend(p,Curse.COST[skill])&&(skill!=2||Curse.fingers(p)>=5)&&(skill!=4||Curse.awakened(p)||domainActive(p))&&(!VoidJourney.evolved(p)||VoidCombat.ready(p,skill));}
     public static boolean peelAvailable(ServerPlayer p){return SoulJourney.evolved(p)&&Curse.canSpend(p,Curse.COST[6])&&p.level().getGameTime()>=cooldowns.getOrDefault(p.getUUID(),new long[7])[6];}
     /** 动作只限制自身的时间轴，不再为普通解添加额外冷却。 */
     static boolean beginMotion(ServerPlayer p){return Curse.spend(p,Curse.COST[0]);}
@@ -262,17 +413,17 @@ public final class Skills {
     }
     public static void cast(ServerPlayer p,int skill){
         if(skill<0||skill>=6||!p.isAlive()||p.isSpectator()||!Journey.unlocked(p))return;
+        // 技能5「伏魔御厨子」不再按下即展开：走结印时间轴（按下=结印，再按=取消/放下），见 domainPress。
+        if(skill==5){domainPress(p);return;}
+        // 结印期间不能释放其它术式：玩家侧由 TechniqueInput 拦，这里再兜住女仆 AI 等直连入口。
+        if(sealing(p))return;
         // 简易领域接管期间（维持中或它的冷却中）不走通用冷却：这条技不属于宿傩六式那套 times[] 冷却。
         if(SimpleDomain.owns(p)||FurnaceMax.active(p))return;
         if(!Curse.canUseTechnique(p)){p.displayClientMessage(Component.literal("术式熔断中：只能使用术式反转或修复熔断"),true);return;}
         long now=p.serverLevel().getGameTime();long[] times=cooldowns.computeIfAbsent(p.getUUID(),k->new long[7]);
         if(skill==2&&Curse.fingers(p)<5){p.displayClientMessage(Component.literal("捌需要先吃下5根宿傩手指"),true);return;}
         if(skill==2&&auras.containsKey(p.getUUID())&&!VoidJourney.evolved(p)&&!MaidBridge.body(p).isShiftKeyDown()){auras.remove(p.getUUID());fx(p,9,p.position(),Vec3.ZERO,0,0,0);return;}
-        if(skill==5&&GuardianPlayerSkills.sustaining(p)){GuardianPlayerSkills.closeOwnedDomain(p,true);return;}
-        if(skill==5&&MaidBridge.isCaster(p)&&(GuardianEntity.locked(MaidBridge.body(p))||GuardianPlayerSkills.locked(p))){closeDomain(p);p.displayClientMessage(Component.literal("净土领域优先，御厨子无法展开"),true);return;}
-        if(skill==5&&domains.containsKey(p.getUUID())){closeDomain(p,true);return;}
-        if(skill==5&&!MaidBridge.domainReady(p))return;
-        if(SoulCombat.suppressed(p)&&!(skill==5&&Curse.active(p,"Iwate")&&!Curse.active(p,"SoulGap")&&p.getPersistentData().getLong("VoidCaptured")<=now)){p.displayClientMessage(Component.literal("灵魂剥离或灵魂压制中，无法使用术式"),true);return;}
+        if(SoulCombat.suppressed(p)){p.displayClientMessage(Component.literal("灵魂剥离或灵魂压制中，无法使用术式"),true);return;}
         if(now<times[skill]){
             SdLog.w("通用冷却拦截 skill="+skill+"("+NAMES[skill]+") 剩="+String.format(Locale.ROOT,"%.2f",(times[skill]-now)/20.0)+"秒 领域接管="+SimpleDomain.owns(p)+" 维持中="+SimpleDomain.active(p));
             p.displayClientMessage(Component.literal(NAMES[skill]+" 冷却中 · "+String.format(Locale.ROOT,"%.1f",(times[skill]-now)/20.0)+" 秒"),true);return;}
@@ -306,10 +457,8 @@ public final class Skills {
             case 2 -> {airCuts.put(p.getUUID(),0);long life=tier>=2?600:400;auras.put(p.getUUID(),new Aura(p,p.serverLevel(),now,now+life,10*scale));fx(p,8,p.position(),Vec3.ZERO,(float)(10*scale),(int)life,now);p.displayClientMessage(Component.literal(awakened?"虚空捌开启 · 伤害随剩余咒力百分比变化，满咒力150% · 金边裂缝追敌":"捌开启 · 每秒30咒力 · 再按释放可关闭"),true);}
             case 3 -> {int draw=tier>=3?20:30;bows.add(new Bow(p,p.serverLevel(),now+draw));fx(p,2,p.position(),forward,1,draw,0);}
             case 4 -> furnaces.add(new Furnace(p,p.serverLevel(),now+40));
-            case 5 -> {MaidBridge.domainOpened(p);double yaw=Math.toRadians(p.getYRot());Vec3 behind=new Vec3(Math.sin(yaw)*12,0,-Math.cos(yaw)*12);int duration=ShrineRules.domainTicks(MaidBridge.isCaster(p));Domain d=new Domain(p,p.serverLevel(),p.position(),behind,now,now+duration,200);domains.put(p.getUUID(),d);if(VoidJourney.evolved(p))syncVoidShrine(d);fx(p,1,d.center,d.shrineOffset,(float)d.radius,duration,SoulJourney.evolved(p)?-now:now);fx(p,25,p.position(),Vec3.ZERO,CombatSettings.voidFloor(p)?1:0,10,0);p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.BEACON_ACTIVATE,SoundSource.PLAYERS,4,0.5f);p.displayClientMessage(Component.literal(VoidJourney.evolved(p)?"虚空御厨子 · "+(duration/20)+"秒 · 半径200格 · 五裂共鸣 · 结束闭合爆发":"领域展开 · 半径200格 · 每秒70咒力 · 再次释放收回"),true);}
         }
-        if(skill==5)DomainClash.opened(p,domainCenter(p),200);
-        if(skill!=0&&skill!=4)p.serverLevel().playSound(null,p.blockPosition(),skill==3?SoundEvents.BLAZE_SHOOT:SoundEvents.PLAYER_ATTACK_SWEEP,SoundSource.PLAYERS,1.5f,skill==5?0.5f:0.8f);
+        if(skill!=0&&skill!=4)p.serverLevel().playSound(null,p.blockPosition(),skill==3?SoundEvents.BLAZE_SHOOT:SoundEvents.PLAYER_ATTACK_SWEEP,SoundSource.PLAYERS,1.5f,0.8f);
     }
     static Vec3 aimPoint(ServerPlayer p,double range){
         Vec3 eye=p.getEyePosition(),end=eye.add(p.getLookAngle().scale(range));var block=p.serverLevel().clip(new ClipContext(eye,end,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,p));return block.getType()==HitResult.Type.MISS?end:block.getLocation();
@@ -359,6 +508,8 @@ public final class Skills {
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event){
         if(event.phase!=TickEvent.Phase.END)return;
         VoidCombat.tick();
+        tickSeals();
+        tickLeaps();
         for(Iterator<MeleeCut> it=meleeCuts.iterator();it.hasNext();){
             MeleeCut cut=it.next();if(!valid(cut.owner,cut.level)){it.remove();continue;}if(cut.level.getGameTime()<cut.due)continue;it.remove();
             if(cut.level.getEntity(cut.target) instanceof LivingEntity target&&canHit(cut.owner,target)){
@@ -409,19 +560,19 @@ public final class Skills {
         }
         for(Iterator<Domain> it=domains.values().iterator();it.hasNext();){Domain d=it.next();long now=d.level.getGameTime(),age=now-d.start;ServerPlayer p=d.owner;
             if(DomainClash.active(p))continue;
-            if(!valid(p,d.level)||now>=d.end||(age>0&&age%20==0&&!Curse.spend(p,70))){VoidCombat.closeDomain(p,valid(p,d.level)&&!clashing(d));Network.send(d.level,new Network.Effect(5,p.getId(),d.center,Vec3.ZERO,0,0,0));it.remove();Curse.endDomain(p,false);continue;}
+            if(!valid(p,d.level)||now>=d.end||(age>0&&age%20==0&&!Curse.spend(p,70))){VoidCombat.closeDomain(p,valid(p,d.level)&&!clashing(d));Network.send(d.level,new Network.Effect(5,p.getId(),d.center,Vec3.ZERO,0,0,0));it.remove();endSeal(p);Curse.cooldownDomain(p);continue;}
             boolean clash=clashing(d);
             if(VoidJourney.evolved(p)){
-                if(!clash&&age%2==0)for(LivingEntity target:targets(d.level,p,d.center,d.radius))VoidCombat.domainHit(p,target);
+                if(!clash&&age%2==0)for(LivingEntity target:targets(d.level,p,d.center,d.radius))VoidCombat.domainHit(p,target,d.damageScale);
                 if(age%40==0){syncVoidShrine(d);fx(p,1,d.center,d.shrineOffset,(float)d.radius,(int)(d.end-now),-d.start);}
                 continue;
             }
-            if(!clash&&age%(Journey.rotation(p)?1:2)==0)for(LivingEntity target:targets(d.level,p,d.center,d.radius))for(int cut=0;cut<5&&target.isAlive();cut++)if(target.position().distanceToSqr(d.center)<=d.radius*d.radius&&damage(d.level,p,target,(Curse.tier(p)>=5?1.25f:1)*(float)Curse.power(p),SoulJourney.evolved(p),true,SoulJourney.evolved(p),true)){boolean red=Curse.awakened(p);if(red)ignite(p,target,4);if(SoulJourney.evolved(p))hitEffectSoul(d.level,p,target);else hitEffect(d.level,p,target,10,red);}
+            if(!clash&&age%(Journey.rotation(p)?1:2)==0)for(LivingEntity target:targets(d.level,p,d.center,d.radius))for(int cut=0;cut<5&&target.isAlive();cut++)if(target.position().distanceToSqr(d.center)<=d.radius*d.radius&&damage(d.level,p,target,(Curse.tier(p)>=5?1.25f:1)*(float)Curse.power(p)*d.damageScale,SoulJourney.evolved(p),true,SoulJourney.evolved(p),true)){boolean red=Curse.awakened(p);if(red)ignite(p,target,4);if(SoulJourney.evolved(p))hitEffectSoul(d.level,p,target);else hitEffect(d.level,p,target,10,red);}
             if(age%40==0){if(VoidJourney.evolved(p))syncVoidShrine(d);fx(p,67,p.position(),Vec3.ZERO,Journey.nine(p)?1:0,1,0);Network.send(d.level,new Network.Effect(1,p.getId(),d.center,d.shrineOffset,(float)d.radius,(int)(d.end-now),SoulJourney.evolved(p)?-d.start:d.start));fx(p,25,p.position(),Vec3.ZERO,CombatSettings.voidFloor(p)?1:0,2,0);}
             if(!clash&&Curse.awakened(p)&&age%20==0){
                 fx(p,24,d.center,d.shrineOffset,(float)d.radius,40,now);
                 // 领域粉尘自动燃烧；逐个目标判断敌友，避免环境火误伤盟友。
-                for(LivingEntity target:targets(d.level,p,d.center,d.radius))if(target.position().distanceToSqr(d.center)<=d.radius*d.radius){ignite(p,target,3);damage(d.level,p,target,(float)(2*Curse.power(p)),false,false,false,true);}
+                for(LivingEntity target:targets(d.level,p,d.center,d.radius))if(target.position().distanceToSqr(d.center)<=d.radius*d.radius){ignite(p,target,3);damage(d.level,p,target,(float)(2*Curse.power(p))*d.damageScale,false,false,false,true);}
             }
         }
         for(Iterator<Bow> it=bows.iterator();it.hasNext();){Bow b=it.next();if(!valid(b.owner,b.level)){it.remove();continue;}if(b.level.getGameTime()>=b.release){Fire f=new Fire(b.owner);f.purple=b.purple;fires.add(f);if(!f.purple)fx(b.owner,3,f.pos,f.dir,2,100,0);it.remove();}}
@@ -445,5 +596,5 @@ public final class Skills {
     }
     private static void detonate(ServerPlayer p,ServerLevel l,Vec3 pos,float radius){detonate(p,l,pos,radius,false);}
     private static void detonate(ServerPlayer p,ServerLevel l,Vec3 pos,float radius,boolean purple){AttackTypes.mark(AttackTypes.FIRE);Network.send(l,new Network.Effect(purple?CombatExpansionRules.FX_PURPLE:4,p.getId(),pos,Vec3.ZERO,radius,30,purple?2:l.getGameTime()));if(purple)SkillDestruction.impact(p,pos,4);l.playSound(null,pos.x,pos.y,pos.z,SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,3,0.7f);for(LivingEntity e:targets(l,p,pos,radius))if(e.position().distanceToSqr(pos)<=radius*radius){damage(l,p,e,16*(float)Curse.power(p)*MahoragaRules.bossDamage(e,MahoragaRules.FURNACE_MULTIPLIER),false,false);if(purple){Curse.permanentSoulFire(p,e);fx(p,CombatExpansionRules.FX_PURPLE,e.getBoundingBox().getCenter(),new Vec3(0,1,0),1,20,0);}else ignite(p,e,8);Vec3 push=e.position().subtract(pos).normalize().scale(1.5);e.push(push.x,0.4,push.z);}}
-    @SubscribeEvent public static void stop(ServerStoppedEvent e){slashes.clear();auras.clear();domains.clear();bows.clear();fires.clear();detonations.clear();cooldowns.clear();charges.clear();cleaveCharges.clear();cleaveMemory.clear();impacts.clear();meleeCuts.clear();strikes.clear();soulCuts.clear();furnaces.clear();joints.clear();rifts.clear();airCuts.clear();burns.clear();nextRift=0;}
+    @SubscribeEvent public static void stop(ServerStoppedEvent e){slashes.clear();auras.clear();domains.clear();bows.clear();fires.clear();detonations.clear();cooldowns.clear();charges.clear();cleaveCharges.clear();cleaveMemory.clear();impacts.clear();meleeCuts.clear();strikes.clear();soulCuts.clear();furnaces.clear();joints.clear();rifts.clear();airCuts.clear();burns.clear();seals.clear();leaps.clear();nextRift=0;}
 }

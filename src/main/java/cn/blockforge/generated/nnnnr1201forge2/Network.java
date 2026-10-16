@@ -75,6 +75,8 @@ public final class Network {
         void write(FriendlyByteBuf b){b.writeDouble(energy);b.writeDouble(maximum);b.writeVarInt(fingers);b.writeBoolean(awakened);b.writeBoolean(siphon);b.writeBoolean(disorder);b.writeBoolean(unlocked);b.writeBoolean(nine);b.writeBoolean(rotation);b.writeBoolean(fist);b.writeUtf(guide,2048);b.writeBoolean(soulShrine);b.writeBoolean(voidShrine);b.writeBoolean(pureLandVictory);b.writeBoolean(burnout);b.writeDouble(reverseHealing);b.writeDouble(reverseCost);b.writeBoolean(modpackMode);b.writeVarInt(clashPenaltyTicks);b.writeBoolean(sukuna);b.writeBoolean(uraume);b.writeVarInt(iceFish);b.writeVarInt(wallSpacing);b.writeBoolean(wallDiagonal);b.writeBoolean(dismantleQi);b.writeBoolean(amplification);b.writeBoolean(gojo);}
     }
     public record WallOptions(int halfBlocks,boolean diagonal){}
+    /** 三击空格：请服务端把自己送上御厨子的神龛（无领域时服务端只提示）。 */
+    public record ShrineLeap(){}
     public static Consumer<DrawState> drawReceiver=m->{};
     public record DrawState(java.util.UUID id,int state,double pixels){}
     public record DrawInput(java.util.UUID id,int operation,int width,int height,java.util.List<SlashFormRules.Segment> segments,boolean forward,boolean backward,boolean jump,boolean crouch){
@@ -178,6 +180,8 @@ public final class Network {
         CHANNEL.messageBuilder(ClashPress.class,10,NetworkDirection.PLAY_TO_SERVER).encoder((m,b)->{b.writeUUID(m.id());b.writeBoolean(m.down());}).decoder(b->new ClashPress(b.readUUID(),b.readBoolean())).consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null)DomainClash.press(p,m.id(),m.down());c.get().setPacketHandled(true);}).add();
         CHANNEL.messageBuilder(ClashState.class,11,NetworkDirection.PLAY_TO_CLIENT).encoder(ClashState::write).decoder(ClashState::read).consumerMainThread((m,c)->{clashReceiver.accept(m);c.get().setPacketHandled(true);}).add();
         CHANNEL.messageBuilder(WallOptions.class,12,NetworkDirection.PLAY_TO_SERVER).encoder((m,b)->{b.writeVarInt(m.halfBlocks());b.writeBoolean(m.diagonal());}).decoder(b->new WallOptions(b.readVarInt(),b.readBoolean())).consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null&&Journey.unlocked(p)&&Curse.awakened(p)){SukunaBranches.configure(p,m.halfBlocks(),m.diagonal());Curse.sync(p);}c.get().setPacketHandled(true);}).add();
+        // 24 = 空格三击跳上神龛（0-23 已被占用，见上面各处 messageBuilder 的 ID）。
+        CHANNEL.messageBuilder(ShrineLeap.class,24,NetworkDirection.PLAY_TO_SERVER).encoder((m,b)->{}).decoder(b->new ShrineLeap()).consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null)Skills.leapToShrine(p);c.get().setPacketHandled(true);}).add();
     }
     public static void registerDrawing(){
         WallpaperPackets.register();

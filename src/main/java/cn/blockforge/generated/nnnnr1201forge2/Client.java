@@ -58,6 +58,19 @@ public final class Client {
     private static long shakeUntil,flashUntil,transitionUntil,eyesUntil;
     private static float reflected;
     private static boolean redCut,soulCut;
+    private static boolean jumpHeld;
+    private static int jumpPress;
+    private static long jumpAt;
+    /** 空格三击（三次按下都落在 {@link ShrineRules#TRIPLE_JUMP_TICKS} 刻的总窗口内）：请服务端把自己送上神龛。 */
+    private static void tripleJump(Minecraft mc){
+        boolean down=progress.sukuna()&&mc.screen==null&&mc.isWindowActive()&&mc.options.keyJump.isDown();
+        if(down&&!jumpHeld){
+            // 超时就从这一击重新起算，避免"随便连跳"被当成三击。
+            if(jumpPress==0||tick-jumpAt>ShrineRules.TRIPLE_JUMP_TICKS){jumpPress=0;jumpAt=tick;}
+            if(++jumpPress>=3){jumpPress=0;Network.CHANNEL.sendToServer(new Network.ShrineLeap());}
+        }
+        jumpHeld=down;
+    }
 
     private static final List<Visual> visuals=new ArrayList<>();
     private static final List<Transient> transients=new ArrayList<>();
@@ -107,7 +120,7 @@ public final class Client {
     public static boolean wheelHeld(){return ClientInput.held(WHEEL);}
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut e){clear();world=null;}
     private static void testReset(){FinaleClient.clear();TechniqueInputClient.clear();DomainClashClient.clear();DismantleMotionClient.clear();FreehandClient.clear();NetBranchVisuals.clear();SoulClient.clear();CastHands.clear();charging=cleaveHeld=false;}
-    private static void clear(){AimAssistClient.clear();FinaleClient.clear();TechniqueInputClient.clear();ExpansionVisuals.clear();ClientInput.clear();DomainClashClient.clear();DismantleMotionClient.clear();FreehandClient.clear();SlashFormVisuals.clear();BranchVisuals.clear();NetBranchVisuals.clear();Network.clientModpackMode=null;selected=0;wheelPage=0;VoidTechniqueClient.clear();VoidBossClient.clear();GojoFx.clear();CastHands.clear();RuinClient.clear();SoulClient.clear();FistAura.clear();cleaveHeld=false;VoidVisuals.clear();supreme.clear();FurnaceMaxClient.clear();for(Visual v:visuals)PhotonBridge.stop(v.handle);for(Transient t:transients)PhotonBridge.stop(t.handle);visuals.clear();transients.clear();domains.clear();auras.clear();heldLast=false;castHeld=false;charging=false;generated=0;window=0;shakeUntil=flashUntil=transitionUntil=eyesUntil=0;progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false,false,false);}
+    private static void clear(){AimAssistClient.clear();FinaleClient.clear();TechniqueInputClient.clear();ExpansionVisuals.clear();ClientInput.clear();DomainClashClient.clear();DismantleMotionClient.clear();FreehandClient.clear();SlashFormVisuals.clear();BranchVisuals.clear();NetBranchVisuals.clear();Network.clientModpackMode=null;selected=0;wheelPage=0;VoidTechniqueClient.clear();VoidBossClient.clear();GojoFx.clear();CastHands.clear();RuinClient.clear();SoulClient.clear();FistAura.clear();cleaveHeld=false;VoidVisuals.clear();supreme.clear();FurnaceMaxClient.clear();for(Visual v:visuals)PhotonBridge.stop(v.handle);for(Transient t:transients)PhotonBridge.stop(t.handle);visuals.clear();transients.clear();domains.clear();auras.clear();heldLast=false;castHeld=false;charging=false;generated=0;window=0;shakeUntil=flashUntil=transitionUntil=eyesUntil=0;progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false,false,false);jumpPress=0;jumpHeld=false;}
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent e){
         if(e.phase!=TickEvent.Phase.END)return;
         Minecraft mc=Minecraft.getInstance();if(world!=mc.level){clear();world=mc.level;}ClientInput.tick();TechniqueInputClient.tick();ExpansionVisuals.tick();
@@ -116,7 +129,7 @@ public final class Client {
             if(mc.player!=null)Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.CANCEL_CHARGE));
             charging=cleaveHeld=false;
         }
-        if(mc.level==null||mc.player==null||mc.isPaused())return;if(progress.unlocked()&&!availableSkill(selected))selected=fallbackSkill();tick++;DismantleMotionClient.tick();SlashFormVisuals.tick();FreehandClient.tick(selected==SlashFormRules.FREEHAND&&FreehandClient.keyDown());BranchVisuals.tick();NetBranchVisuals.tick();VoidTechniqueClient.tick();VoidBossClient.tick();FurnaceMaxClient.tick();GojoFx.tick();MahoragaWheelClient.tick();ShinbukeVisuals.tick();SoulClient.tick();VoidVisuals.tick();if(charging&&tick-chargeBorn>200)charging=false;
+        if(mc.level==null||mc.player==null||mc.isPaused())return;if(progress.unlocked()&&!availableSkill(selected))selected=fallbackSkill();tick++;tripleJump(mc);DismantleMotionClient.tick();SlashFormVisuals.tick();FreehandClient.tick(selected==SlashFormRules.FREEHAND&&FreehandClient.keyDown());BranchVisuals.tick();NetBranchVisuals.tick();VoidTechniqueClient.tick();VoidBossClient.tick();FurnaceMaxClient.tick();GojoFx.tick();MahoragaWheelClient.tick();ShinbukeVisuals.tick();SoulClient.tick();VoidVisuals.tick();if(charging&&tick-chargeBorn>200)charging=false;
         if(tick-window>=20){window=tick;generated=0;}
         if(FinaleClient.local()||DomainClashClient.active()||NetBranchVisuals.locked()||DismantleMotionClient.locked()){
             charging=cleaveHeld=false;castHeld=ClientInput.held(CAST);heldLast=wheelHeld();

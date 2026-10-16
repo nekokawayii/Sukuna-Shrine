@@ -24,6 +24,14 @@ public final class CastHands {
     public static void clear(){poses.clear();}
     public static void receive(Network.Effect e){var l=Minecraft.getInstance().level;if(l!=null)poses.put(e.owner(),new Pose(e.kind(),(int)e.size(),l.getGameTime(),e.life()));}
     private static Pose active(int id){if(FinaleClient.active(id)||MotionRenderCompat.externalPlayerModels()||DismantleMotionClient.active(id))return null;var mc=Minecraft.getInstance();Pose pose=poses.get(id);if(mc.level==null||pose==null)return null;if(mc.level.getGameTime()-pose.start>=pose.life){poses.remove(id);return null;}return pose;}
+    /** 御厨子结印姿态还在吗（kind=70 且 size=5）：本地玩家据此锁住左键空挥/攻击。 */
+    public static boolean sealing(){
+        var mc=Minecraft.getInstance();
+        Pose pose=mc.player==null||mc.level==null?null:poses.get(mc.player.getId());
+        return pose!=null&&pose.kind==70&&pose.skill==5&&mc.level.getGameTime()-pose.start<pose.life;
+    }
+    /** 结印期间不能攻击：连空挥一起取消（与动作锁同一套做法）。 */
+    @SubscribeEvent public static void interaction(InputEvent.InteractionKeyMappingTriggered e){if(sealing()){e.setCanceled(true);e.setSwingHand(false);}}
     @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)
     public static final class Registration {
         @SubscribeEvent public static void layers(EntityRenderersEvent.AddLayers e){for(String skin:e.getSkins()){PlayerRenderer renderer=e.getSkin(skin);if(renderer!=null)renderer.addLayer(new Arms(renderer));}}

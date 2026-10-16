@@ -49,6 +49,8 @@ public final class TechniqueInput {
             return;
         }
         if(Shinbuke.holding(p)){return;} // 手持神武解：除充能外任何术式都不可用
+        // 御厨子结印期间：其余术式一律不理（释放键本身除外——第二次按下是"放下"或"取消"）
+        if(Skills.sealing(p)&&input.skill!=5){CastFeedback.tell(p,"结印中：只能再次按释放键（放下/取消）");return;}
         // 简易领域 · 捌：长按维持、松手收招（不走普通 hold 的"松手才结算"路径）
         if(input.wheelSkill()==SimpleDomain.SKILL){
             if(input.phase==0)SimpleDomain.start(p);

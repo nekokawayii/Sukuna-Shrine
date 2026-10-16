@@ -58,6 +58,10 @@ public final class Curse {
     public static double residueFactor(Player p){return 1+Journey.residuePercent(p)/100.0;}
     public static void status(Player p,String key,int ticks){data(p).putLong(key,p.level().getGameTime()+ticks);}
     public static void endDomain(ServerPlayer p,boolean voluntary){enterBurnout(p,ShrineRules.burnoutTicks(voluntary));}
+    /** 御厨子领域结束：**只锁领域自己 30 秒**（熔断是全局禁用术式，领域不该走它）。 */
+    public static void cooldownDomain(ServerPlayer p){status(p,"DomainCooldown",ShrineRules.DOMAIN_COOLDOWN_TICKS);}
+    public static boolean domainCooling(ServerPlayer p){return active(p,"DomainCooldown");}
+    public static int domainCooldownLeft(ServerPlayer p){return (int)Math.max(0,data(p).getLong("DomainCooldown")-p.level().getGameTime());}
     private static void clearBurnout(ServerPlayer p){data(p).putBoolean("TechniqueBurnout",false);data(p).remove("TechniqueBurnoutUntil");data(p).remove("TechniqueBurnoutAt");MaidBridge.body(p).removeEffect(TechniqueEffects.BURNOUT.get());}
     public static void enterBurnout(ServerPlayer p,int ticks){
         if(SixfoldFinale.active(p))return; // 终式期间不被关闭旧领域的熔断提前削减伤害，最终统一支付。

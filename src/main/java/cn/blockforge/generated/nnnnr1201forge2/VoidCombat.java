@@ -220,7 +220,8 @@ public final class VoidCombat {
         long now=e.getEntity().level().getGameTime();
         // 永久裂隙不禁疗；灶点燃造成的伤害仍由正常伤害事件处理。
     }
-    public static void domainHit(ServerPlayer p,LivingEntity t){
+    /** {@code scale} = 御厨子的伤害倍率（结印"放下"后 0.5），虚空阶段的领域伤害也要乘它。 */
+    public static void domainHit(ServerPlayer p,LivingEntity t,float scale){
         Vec3 end=t.getBoundingBox().getCenter();Wound local=wounds.get(new Key(p.getUUID(),t.getUUID()));
         int angleCount=local==null?1:Math.max(1,local.cuts.size());double angle=p.getRandom().nextInt(angleCount)*Math.PI*2/angleCount;
         Vec3 origin=end.add(Math.cos(angle)*2,Math.sin(angle*1.3),Math.sin(angle)*2);
@@ -232,7 +233,7 @@ public final class VoidCombat {
             fx(p,121,end.add(Math.cos(a)*2,Math.sin(a*1.3),Math.sin(a)*2),end,Math.max(2,t.getBbHeight()),8,p.getRandom().nextInt(360));
             add(p,t,false);
         }
-        scaledDamage(p,t,(float)(4*VoidController.voidDamage(p)),false,true,SlashFormRules.DAMAGE);
+        scaledDamage(p,t,(float)(4*VoidController.voidDamage(p))*scale,false,true,SlashFormRules.DAMAGE);
         // 领域命中沿用灵魂剪切虚线，并在0.3秒后补刀光，避免只剩裂隙。
         Vec3 direction=new Vec3(Math.cos(angle),0.4,Math.sin(angle));float size=Math.max(4,t.getBbHeight()*2);long cutAngle=p.getRandom().nextInt(360);
         fx(p,123,end,direction,size,6,cutAngle+720);

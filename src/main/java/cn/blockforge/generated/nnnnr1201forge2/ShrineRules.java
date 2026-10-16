@@ -6,6 +6,15 @@ public final class ShrineRules {
     public static final int VOLUNTARY_BURNOUT_TICKS=900,FORCED_BURNOUT_TICKS=1200,REPAIR_BUFF_TICKS=100;
     public static final int RESIDUE_DROP_DENOMINATOR=1000,RESIDUE_MAX_ITEMS=34;
     public static final int MAID_DOMAIN_COOLDOWN_TICKS=2400;
+    /** 御厨子（技能5）重做后的时间轴：按下起 {@link #DOMAIN_FREEZE_TICKS} 刻不能移动，{@link #DOMAIN_OPEN_TICKS} 刻领域出现。 */
+    public static final int DOMAIN_FREEZE_TICKS=60,DOMAIN_OPEN_TICKS=80;
+    /** 领域自己的冷却：只在领域结束时使用（不改全局熔断，否则等于禁用所有术式）。 */
+    public static final int DOMAIN_COOLDOWN_TICKS=600;
+    /** 结印"放下"后御厨子的伤害倍率，以及跳神龛的站立高度与飞行刻数、三击空格的最大间隔。 */
+    public static final float DOMAIN_RELEASE_SCALE=0.5f;
+    public static final double SHRINE_STAND_Y=4.0;
+    /** 跳神龛的飞行刻数、以及"三击空格"三击之间的总窗口（刻）。 */
+    public static final int SHRINE_LEAP_TICKS=16,TRIPLE_JUMP_TICKS=12;
     public static boolean recovering(boolean recovering,double energy,double maximum){return recovering&&energy<=maximum*0.25;}
     public static boolean needsOrb(double energy,double maximum){return maximum>0&&energy<maximum*0.5;}
     public static double skillWeight(int cost){return 1.0/Math.sqrt(Math.max(1,cost));}

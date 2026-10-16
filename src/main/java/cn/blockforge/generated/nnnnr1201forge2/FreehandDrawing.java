@@ -15,7 +15,7 @@ public final class FreehandDrawing {
         Drawing(ServerPlayer p,Network.DrawInput m){this.p=p;level=p.serverLevel();id=m.id();width=m.width();height=m.height();last=level.getGameTime();}
     }
     private static final Map<UUID,Drawing> drawings=new HashMap<>();
-    private static boolean allowed(ServerPlayer p){return Journey.unlocked(p)&&p.isAlive()&&!p.isRemoved()&&!p.isSpectator()&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p)&&!DismantleMotion.active(p)&&!EternalLove.settling(MaidBridge.body(p));}
+    private static boolean allowed(ServerPlayer p){return Journey.unlocked(p)&&p.isAlive()&&!p.isRemoved()&&!p.isSpectator()&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p)&&!DismantleMotion.active(p)&&!EternalLove.settling(MaidBridge.body(p))&&!Skills.sealing(p);}
     private static void reply(ServerPlayer p,UUID id,int state,double pixels){Network.CHANNEL.send(PacketDistributor.PLAYER.with(()->p),new Network.DrawState(id,state,pixels));}
     public static void input(ServerPlayer p,Network.DrawInput m){
         if(m.operation()==CANCEL){Drawing d=drawings.get(p.getUUID());if(d!=null&&d.id.equals(m.id()))cancel(p);return;}

@@ -281,9 +281,27 @@ public final class PhotonFx {
     }
     /** **带物理的火团**：与 {@link #lines} 同一套，但换成 glow 贴图、短粗（一小团火焰）。 */
     public static Handle blobs(Vec3 pos,double shell,double thin,double longSide,int color,int bloom,double speed,double gravity,double rate,int duration,int life){
-        return flow(pos,shell,thin,longSide,color,bloom,speed,gravity,rate,duration,life,false,true);
+        return flow(pos,shell,thin,longSide,color,bloom,speed,gravity,rate,duration,life,false,true,true);
+    }
+    /** **不发光**的火团：正常 alpha 混合、不开 bloom。蓄力那种"只要火、不要亮光"的场合用它。 */
+    public static Handle blobsSoft(Vec3 pos,double shell,double thin,double longSide,int color,double speed,double gravity,double rate,int duration,int life){
+        return flow(pos,shell,thin,longSide,color,0,speed,gravity,rate,duration,life,false,true,false);
+    }
+    /** 静态火环：固定半径的一圈火（不扩散），用来"冻结"爆炸那一瞬间的环。 */
+    public static Handle ring(Vec3 pos,double radius,double thickness,int color,int bloom,double rate,int duration,int life){
+        try{
+            Emitter e=emitter(RING,Math.max(0.2,radius),Math.max(0.02,thickness));Object c=e.config();
+            duration(c,duration);particleLife(c,life);size(c,Math.max(0.4,radius*0.06));
+            rate(c,Math.max(6,rate));colour(c,color);
+            tryCall(c,"setMaxParticles",Math.max(700,(int)(rate*Math.max(2,life))));
+            render(c,MODE_BILLBOARD,"textures/effect/glow.png",bloom);
+            return start(e,pos);
+        }catch(Throwable t){fail(t);return null;}
     }
     private static Handle flow(Vec3 pos,double shell,double thin,double longSide,int color,int bloom,double speed,double gravity,double rate,int duration,int life,boolean cylinder,boolean glow){
+        return flow(pos,shell,thin,longSide,color,bloom,speed,gravity,rate,duration,life,cylinder,glow,true);
+    }
+    private static Handle flow(Vec3 pos,double shell,double thin,double longSide,int color,int bloom,double speed,double gravity,double rate,int duration,int life,boolean cylinder,boolean glow,boolean additive){
         try{
             Emitter e=emitter(cylinder?CYLINDER:SHELL,Math.max(0.2,shell),cylinder?1:0.06);Object c=e.config();
             duration(c,duration);particleLife(c,life);
@@ -291,7 +309,7 @@ public final class PhotonFx {
             rate(c,Math.max(1,rate));
             tryCall(c,"setMaxParticles",Math.max(700,(int)(rate*Math.max(2,life))));
             if(speed!=0)speed(c,speed);
-            colour(c,color);render(c,MODE_BILLBOARD,glow?"textures/effect/glow.png":STREAK,bloom,true);
+            colour(c,color);render(c,MODE_BILLBOARD,glow?"textures/effect/glow.png":STREAK,bloom,additive);
             if(gravity!=0)tryCall(field(c,"physics"),"setGravity",num(gravity));
             return start(e,pos);
         }catch(Throwable t){fail(t);return null;}

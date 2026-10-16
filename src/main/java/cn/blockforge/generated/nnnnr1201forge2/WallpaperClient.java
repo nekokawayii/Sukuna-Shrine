@@ -57,6 +57,8 @@ public final class WallpaperClient {
     private static boolean enabled=true,initialized,announced,capturing,failed,captureLogged,statsLogged,debugOverlay,blankWarned,robotBroken,robotNoted;
     /** 上一帧是哪条通道给的（GDI / Robot），排查时看日志。 */
     private static String lastSource="-";
+    /** 过期内容探针：GDI 帧的指纹与连续未变次数。 */
+    private static long gdiHash;private static int gdiSameCount;private static boolean gdiStaleNoted;
     private static long tick;
 
     private static Path configPath(){return net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get().resolve("sukuna-wallpaper.properties");}
@@ -164,13 +166,26 @@ public final class WallpaperClient {
             catch(Throwable ex){robotTask.cancel(true);if(ex instanceof ExecutionException)robotBroken=true;}
         }
         double gdiScore=score(gdi),robotScore=score(shot);
+        if(gdi!=null){   // 过期内容探针：GDI 帧连续很多帧完全不变 → 说明拿到的是"卡住的旧画面"
+            long h=0;for(int i=0;i<gdi.length;i+=4096)h=h*31+gdi[i];
+            if(h==gdiHash){if(++gdiSameCount==40&&!gdiStaleNoted){gdiStaleNoted=true;
+                LogUtils.getLogger().info("[斩击壁纸] GDI 通道连续 40 帧画面完全未变：确认拿到的是过期内容（GL 窗口下 GDI/PrintWindow 的通病）");}}
+            else{gdiSameCount=0;gdiHash=h;}
+        }
         if(robotScore<0&&robotBroken&&robotTask!=null)noteRobotBroken();
         int[] pixels;String from;
         if(gdiScore<0&&robotScore<0){
             if(gdiError!=null)throw new IllegalStateException("两条抓取都失败（GDI:"+gdiError+"）");
             pixels=gdi==null?(shot==null?new int[sw*sh]:shot):gdi;from="空白";
-        }else if(robotScore>gdiScore){pixels=shot;from="Robot";}
-        else{pixels=gdi;from="GDI";}
+        }else if(robotScore>=0&&(gdiScore<0||robotScore>=gdiScore-0.05)){
+            // **Robot 优先**：GDI/PrintWindow 对 GL 窗口只能拿到"过期内容"（比如启动时的 Mojang 画面），
+            // 而"非黑占比"评分判不出过期，所以不能只比分数——有 Robot 就用 Robot。
+            pixels=shot;from="Robot";
+        }else if(gdiScore>=0){
+            pixels=gdi;from="GDI(可能过期)";
+        }else{
+            pixels=shot;from="Robot";
+        }
         lastSource=from;
         double scale=Math.min(1.0,MAX_EDGE/(double)Math.max(sw,sh));
         int w=Math.max(1,(int)Math.round(sw*scale)),h=Math.max(1,(int)Math.round(sh*scale));

@@ -38,9 +38,12 @@ public final class BlackFlashRender {
     private static final List<Flash> FLASHES=new ArrayList<>();
     private static final Random RND=new Random();
     /** 参数都集中在这里，方便按手感调。 */
-    private static final int BOLTS=12,SEG=6,LIFE=9,WIND_LIFE=7,DARK_LIFE=3;
-    private static final double BOLT_LEN=4.2,BOLT_WIDTH=0.16,WIND_RADIUS=2.6;
-    private static final int RED=0xFFB01810,BLACK=0xFF050505,WIND=0xFFD8DEE6,DARK=0xFF000000;
+    private static final int BOLTS=20,SEG=6,LIFE=12,WIND_LIFE=9,DARK_LIFE=4;
+    private static final double BOLT_LEN=5.6,BOLT_WIDTH=0.22,WIND_RADIUS=3.4;
+    private static final int RED=0xFFE02418,BLACK=0xFF050505,WIND=0xFFE6ECF2,DARK=0xFF000000;
+    /** Photon 加法发光的 bloom 色（真 bloom 靠这条，用量小、寿命短，不会堆积）。 */
+    private static final int BLOOM_RED=0xFF8A1208;
+    private static final String GLOW="textures/effect/glow.png";
 
     /** 命中点触发：{@code pos} = 敌人身上（胸口附近），{@code dir} = 出拳方向（可为 {@link Vec3#ZERO}）。 */
     public static void play(Vec3 pos,Vec3 dir){
@@ -48,7 +51,13 @@ public final class BlackFlashRender {
         Vec3 d=dir==null||dir.lengthSqr()<1e-6?Vec3.ZERO:dir.normalize();
         FLASHES.add(new Flash(pos,d,mc.level.getGameTime(),RND));
         if(FLASHES.size()>16)FLASHES.remove(0);   // 连打时只留最近的，绝不无限堆积
-        Client.shake(6);
+        // 一层 Photon 加法发光：真 bloom（顶点通路的普通混合做不出光晕）；寿命都很短，不会长期占用
+        try{
+            PhotonFx.spark(pos,0.55,0.42,0xFF2A10,BLOOM_RED,GLOW,true,1,10,26,0.55);      // 爆发光点（加法）
+            PhotonFx.ring(pos,1.5,0.52,0xFFFF3A18,BLOOM_RED,30,2,8);                     // 红色光环保留
+            PhotonFx.shockwave(pos,0xFF3A18,3.2,8);                                      // 冲击波
+        }catch(Throwable ignored){/* 没装 Photon：下面的顶点通路部分照常 */}
+        Client.shake(10);
     }
     public static void tick(){}
     public static void clear(){FLASHES.clear();}
@@ -70,10 +79,11 @@ public final class BlackFlashRender {
                     Vec3 step=new Vec3(Math.cos(yaw)*Math.cos(pitch),Math.sin(pitch),Math.sin(yaw)*Math.cos(pitch)).scale(BOLT_LEN/bolt.seg());
                     Vec3 to=from.add(step);
                     double taper=(1-s/(double)bolt.seg());
-                    int flick=(int)(155+100*Math.abs(Math.sin((age+s)*2.3)));
-                    int redA=(int)((150*flick/255.0)*life)<<24,blkA=(int)((235*flick/255.0)*life)<<24;
-                    ribbon(b,ps,from,to,BOLT_WIDTH*2.6*taper+0.02,redA|(RED&0xFFFFFF),cam);   // 外：红
-                    ribbon(b,ps,from,to,BOLT_WIDTH*1.3*taper+0.01,blkA|(BLACK&0xFFFFFF),cam); // 芯：黑
+                    int flick=(int)(175+80*Math.abs(Math.sin((age+s)*2.3)));
+                    int redA=(int)((165*flick/255.0)*life)<<24,blkA=(int)((245*flick/255.0)*life)<<24;
+                    ribbon(b,ps,from,to,BOLT_WIDTH*4.2*taper+0.04,(int)(redA*0.45)<<24|((RED>>1)&0x7F7F7F),cam);  // 最外：红色光晕
+                    ribbon(b,ps,from,to,BOLT_WIDTH*2.6*taper+0.02,redA|(RED&0xFFFFFF),cam);                        // 外：红
+                    ribbon(b,ps,from,to,BOLT_WIDTH*1.3*taper+0.01,blkA|(BLACK&0xFFFFFF),cam);                      // 芯：黑
                     from=to;
                 }
             }
@@ -83,12 +93,18 @@ public final class BlackFlashRender {
                 int a=(int)(120*wl*wl)<<24;
                 windRing(b,ps,f.pos.add(f.dir.scale(0.6+r*0.5)),f.dir,r,0.30,a|(WIND&0xFFFFFF),cam);
                 windRing(b,ps,f.pos.add(f.dir.scale(0.4+r)),f.dir,r*0.72,0.16,a|(WIND&0xFFFFFF),cam);
+                windRing(b,ps,f.pos.add(f.dir.scale(0.2+r*0.35)),f.dir,r*1.25,0.10,(int)(a*0.55)<<24|(RED&0xFFFFFF),cam);
+                windRing(b,ps,f.pos.add(f.dir.scale(0.8+r*1.2)),f.dir,r*1.6,0.07,(int)(a*0.35)<<24|(WIND&0xFFFFFF),cam);
             }
-            // ---- 黑色余闪 ----
+            // ---- 黑色余闪 + 红色光晕（顶点通路里的"光污染"层） ----
             if(age<=DARK_LIFE){
                 double dl=1-age/DARK_LIFE;int a=(int)(170*dl)<<24;
                 quad(b,ps,f.pos,0.55+0.5*(1-dl),cam,a|(DARK&0xFFFFFF));
             }
+            // 红色光晕（顶点通路里的"光污染"层）：外层大而淡，内层小而亮
+            double gr=1.4+2.6*(age/LIFE);
+            quad(b,ps,f.pos,gr,cam,((int)(95*life*life)<<24)|(RED&0xFFFFFF));
+            quad(b,ps,f.pos,gr*0.55,cam,((int)(150*life*life)<<24)|0xFF3A2A);
         }
     }
 

@@ -11,7 +11,7 @@ public final class SlashAppearance {
     public static void preview(){
         var player=Minecraft.getInstance().player;
         source=player==null?null:player.getUUID();
-        desktop=Client.progress.voidShrine()||Client.progress.pureLandVictory();
+        desktop=WallpaperPolicy.allSlashes(Client.progress.voidShrine(),Client.progress.pureLandVictory());
     }
     public static void reset(){source=null;desktop=false;}
     public static UUID source(){return source;}

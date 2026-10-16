@@ -54,8 +54,10 @@ public final class FurnaceMax {
 
     /** 弓矢：每刻 4 格、最多飞 100 格；命中点半径 100 格的火焰爆炸。 */
     public static final double SHOT_STEP=4.0,SHOT_RANGE=100.0,BLAST_RADIUS=100.0;
-    /** 当前伤害原值（与茈 500 / 无限制茈 999 同一口径，再走 {@link CombatSettings#spellDamage}）。 */
+    /** 爆炸伤害原值（与茈 500 / 无限制茈 999 同一口径，再走 {@link CombatSettings#spellDamage}）。 */
     public static final float BLAST_DAMAGE=2000f;
+    /** **点名机制**：这一招打魔虚罗时的固定伤害（绕过它的适应/免疫，走真伤类型）。 */
+    public static final float MAHORAGA_DAMAGE=100000f;
     /** 火柱：烧 15 秒，柱内每秒 150 点（原值）、半径 12 格；烧完缩成红球消失（客户端表现）。 */
     public static final int PILLAR_TICKS=20*15;
     public static final double PILLAR_RADIUS=12.0;
@@ -165,14 +167,23 @@ public final class FurnaceMax {
         cooldown(p,FIRE_COOLDOWN);
         p.displayClientMessage(Component.literal(NAME+" · 最大功率释放").setStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0xFFFF7A2A)),true);
     }
-    /** 弓矢命中点：半径 100 格的火焰爆炸，并立起 40 秒的火柱。 */
+    /** 弓矢命中点：半径 100 格的火焰爆炸，并在命中点留下 15 秒的"冻结爆炸"。 */
     private static void blast(ServerPlayer p,ServerLevel level,Vec3 center){
         long now=level.getGameTime();
         for(LivingEntity t:Skills.targets(level,p,center,BLAST_RADIUS)){
             double d=Math.sqrt(t.position().distanceToSqr(center));if(d>BLAST_RADIUS)continue;
-            double falloff=1-0.5*Math.min(1,d/BLAST_RADIUS);   // 近处满伤、边缘半伤
             AttackTypes.mark(AttackTypes.FIRE);
             t.invulnerableTime=0;
+            // **点名机制**：对魔虚罗固定 100000 伤害，且绕过它自己的"适应/免疫"
+            // （不绕的话法轮转满就会判 0，等于白打）
+            if(t instanceof MahoragaEntity mahoraga){
+                mahoraga.forceDamage(level.damageSources().genericKill(),MAHORAGA_DAMAGE);
+                p.displayClientMessage(Component.literal(NAME+" · 对魔虚罗造成 "+BalanceRules.number(MAHORAGA_DAMAGE)+" 伤害")
+                    .setStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0xFFFF7A2A)),true);
+                burnFx(level,t);
+                continue;
+            }
+            double falloff=1-0.5*Math.min(1,d/BLAST_RADIUS);   // 近处满伤、边缘半伤
             float amount=CombatSettings.spellDamage(p,BLAST_DAMAGE*(float)Curse.power(p)*(float)falloff
                 *MahoragaRules.bossDamage(t,MahoragaRules.FURNACE_MULTIPLIER));
             CombatSettings.hurt(p,t,level.damageSources().explosion(p,p),amount);

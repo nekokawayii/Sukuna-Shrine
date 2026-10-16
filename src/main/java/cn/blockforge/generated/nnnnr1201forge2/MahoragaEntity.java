@@ -357,6 +357,12 @@ public final class MahoragaEntity extends Monster {
       return super.hurt(source, amount);
    }
 
+   /** **绕过"适应"吃一次伤害**：给"点名数值"的技能用（例如灶·最大功率·开 对魔虚罗固定 100000）。
+    *  直接走父类的受击流程（照常吃护甲/免伤事件），只是跳过本类里"按招式/按来源适应"的那套判定。 */
+   public boolean forceDamage(DamageSource source, float amount) {
+      return super.hurt(source, amount);
+   }
+
    private void announce(String text) {
       if (!this.level().isClientSide) {
          for(ServerPlayer p : this.server().getServer().getPlayerList().getPlayers()) {

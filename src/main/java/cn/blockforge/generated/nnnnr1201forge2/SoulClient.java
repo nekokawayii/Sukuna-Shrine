@@ -48,13 +48,14 @@ public final class SoulClient {
                 int seg=6;double len=w*0.5;
                 for(int s=0;s<seg;s++){
                     double t0=s/(double)seg,t1=(s+1)/(double)seg;
-                    int x0=(int)(len*t0),x1=(int)(len*t1);
-                    int half=Math.max(1,(int)(3.2*(1-t0)));          // 越往外越细
-                    int a=(int)((0.10+0.85*t0)*255*life);            // 越往外越亮（但整体随演出淡出）
+                    // **从 15% 处才起画**：7 条都从正中心起画，内端又粗又暗，叠起来就是正中那两块黑紫暗斑
+                    int x0=(int)(len*(0.15+0.85*t0)),x1=(int)(len*(0.15+0.85*t1));
+                    int half=Math.max(1,(int)(2.4*(1-t0)));          // 越往外越细
+                    int a=(int)((0.06+0.9*t0)*255*life);             // 内端更淡，越往外越亮（整体随演出淡出）
                     g.fill(x0,-half,x1,half,(a<<24)|0x100312);       // 外壳：黑紫
                 }
                 int coreA=(int)(230*life);
-                g.fill((int)(len*0.05),-1,(int)(len*0.42),1,(coreA<<24)|0xFF991D36);  // 内芯：亮红
+                g.fill((int)(len*0.25),-1,(int)(len*0.62),1,(coreA<<24)|0xFF991D36);  // 内芯：亮红（同样外移）
                 g.pose().popPose();
             }
         }

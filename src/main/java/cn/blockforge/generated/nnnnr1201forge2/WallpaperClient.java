@@ -49,7 +49,7 @@ public final class WallpaperClient {
     private static ResourceLocation current;
     private static int ringIndex;
     private static UUID self;
-    private static boolean enabled=true,initialized,announced,capturing,failed,captureLogged,statsLogged,debugOverlay;
+    private static boolean enabled=true,initialized,announced,capturing,failed,captureLogged,statsLogged,debugOverlay,blankWarned;
     private static long tick;
 
     private static Path configPath(){return net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get().resolve("sukuna-wallpaper.properties");}
@@ -172,9 +172,13 @@ public final class WallpaperClient {
             info.bmiHeader.biCompression=com.sun.jna.platform.win32.WinGDI.BI_RGB;
             info.bmiHeader.write();
             com.sun.jna.Memory buffer=new com.sun.jna.Memory((long)w*h*4);
-            if(gdi32.GetDIBits(mem,bmp,0,h,buffer,info,com.sun.jna.platform.win32.WinGDI.DIB_RGB_COLORS)==0)
-                throw new IllegalStateException("GetDIBits 失败");
-            byte[] raw=buffer.getByteArray(0,w*h*4);
+            byte[] raw=readDib(gdi32,mem,bmp,w,h,buffer,info);
+            // 全屏 / GL 窗口下 BitBlt 常常整屏全黑：补一次 DWM 合成抓取（PW_RENDERFULLCONTENT=2）
+            blankFrame=false;
+            if(isBlank(raw)){
+                if(user32.PrintWindow(user32.GetDesktopWindow(),mem,2))raw=readDib(gdi32,mem,bmp,w,h,buffer,info);
+                blankFrame=isBlank(raw);
+            }
             int[] out=new int[w*h];
             for(int i=0,o=0;i<out.length;i++,o+=4)
                 out[i]=((raw[o+2]&0xFF)<<16)|((raw[o+1]&0xFF)<<8)|(raw[o]&0xFF);   // BGRA → RGB
@@ -185,6 +189,26 @@ public final class WallpaperClient {
             user32.ReleaseDC(null,screen);
         }
     }
+    /** 这一帧是不是"全黑"：每 64 个像素抽查一次，够快也能识别全屏黑屏那种情况。 */
+    private static boolean isBlank(byte[] raw){
+        long lit=0;int samples=0;
+        for(int o=0;o+3<raw.length;o+=64*4){
+            int v=((raw[o+2]&0xFF)+((raw[o+1]&0xFF)+(raw[o]&0xFF)))/3;
+            if(v>8)lit++;
+            samples++;
+        }
+        return samples==0||lit*100L/samples<1;   // 亮像素 <1% 视为全黑
+    }
+    private static byte[] readDib(com.sun.jna.platform.win32.GDI32 gdi32,com.sun.jna.platform.win32.WinDef.HDC mem,
+                                  com.sun.jna.platform.win32.WinDef.HBITMAP bmp,int w,int h,com.sun.jna.Memory buffer,
+                                  com.sun.jna.platform.win32.WinGDI.BITMAPINFO info){
+        if(gdi32.GetDIBits(mem,bmp,0,h,buffer,info,com.sun.jna.platform.win32.WinGDI.DIB_RGB_COLORS)==0)
+            throw new IllegalStateException("GetDIBits 失败");
+        return buffer.getByteArray(0,w*h*4);
+    }
+    /** 上一帧是否全黑（全屏模式下 GDI 抓不到游戏画面时会是 true）。 */
+    public static boolean blankFrame(){return blankFrame;}
+    private static boolean blankFrame;
     private static final int SRCCOPY=0x00CC0020,CAPTUREBLT=0x40000000;
     /** 非 Windows 兜底：AWT Robot（需要非 headless 环境）。 */
     private static int[] captureRobot(int x,int y,int w,int h){
@@ -209,6 +233,12 @@ public final class WallpaperClient {
             tm.register(next,new DynamicTexture(image));   // DynamicTexture 接管这一帧的像素
             current=next;
             if(old!=null&&old!=next)tm.release(old);       // 释放上一张
+            if(blankFrame()&&!blankWarned){
+                blankWarned=true;
+                tell("斩击壁纸：系统抓到的是**全黑画面**——全屏模式下 GDI 取不到游戏与桌面画面。请把游戏切成**窗口模式**"
+                    +"（视频设置 → 全屏：关，或按 F11）再试；窗口模式下桌面、任务管理器、其他窗口都会出现在斩击里。");
+                LogUtils.getLogger().warn("[斩击壁纸] 抓到全黑帧：BitBlt 与 PrintWindow 都没取到画面，通常是全屏模式所致");
+            }
             if(!captureLogged){
                 captureLogged=true;
                 LogUtils.getLogger().info("[斩击壁纸] 本机桌面采集成功：显示器 {}x{} → 贴图 {}x{}（本机玩家 {}）",

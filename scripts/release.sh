@@ -46,13 +46,14 @@ else
 fi
 [ -n "${ID:-}" ] || { echo "建 Release 失败"; exit 1; }
 
-HAVE=$(curl -s -H "Authorization: Bearer $TOKEN" "$API/releases/$ID/assets" | grep -o '"name": *"[^"]*"')
+HAVE=$(curl -s -H "Authorization: Bearer $TOKEN" "$API/releases/$ID/assets" | grep -o '"name": *"[^"]*"' || true)
 for j in "${JARS[@]}"; do
   n=$(basename "$j")
   if printf '%s' "$HAVE" | grep -qF "$n"; then echo "跳过已上传的 $n"; continue; fi
   echo -n "上传 $n ... "
-  curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" \
+  RESP=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" \
     -H "Content-Type: application/java-archive" --data-binary @"$j" \
-    "https://uploads.github.com/repos/$REPO/releases/$ID/assets?name=$n" | grep -o '"state": *"[a-z]*"' | head -1
+    "https://uploads.github.com/repos/$REPO/releases/$ID/assets?name=$n" || true)
+  printf '%s' "$RESP" | grep -o '"state": *"[a-z]*"' | head -1 || echo "上传结果未知（响应：${RESP:0:120}）"
 done
 echo "完成：https://github.com/$REPO/releases/tag/$TAG"

@@ -150,7 +150,18 @@ public final class Curse {
         }
         // 旧存档的持续反转开关作废，改为轮盘单次释放，避免更新后自动扣咒力。
         data(p).remove("ReverseTechnique");
-        if(p.isAlive()&&!SixfoldFinale.active(p)&&!active(p,"FinaleNoRecovery")&&!active(p,"RecoveryDelay")&&!Skills.sustaining(p)&&!GuardianPlayerSkills.sustaining(p))addRaw(p,15+fingers(p)*3+(awakened(p)?10:0)+(nine(p)?10:0)+(soul(p)?20:0)+(VoidController.boosted(p)?15:0)+(GuardianCombat.awakened(p)?30:0));sync(p);
+        // 「咒力附拳」开启期间：**不回复咒力**（这里排除掉），并且**每秒扣 10 点**（扣不动就自动关闭）。
+        boolean fist=data(p).getBoolean("Fist");
+        if(fist){
+            if(!spend(p,10)){
+                data(p).putBoolean("Fist",false);sync(p);
+                p.displayClientMessage(net.minecraft.network.chat.Component.literal("咒力耗尽，咒力附拳已关闭"),true);
+                com.mojang.logging.LogUtils.getLogger().info("[附拳] {} 咒力不足，自动关闭",p.getScoreboardName());
+            }else{
+                com.mojang.logging.LogUtils.getLogger().info("[附拳] {} 每秒消耗 10 咒力，剩余 {}",p.getScoreboardName(),(int)energy(p));
+            }
+        }
+        if(p.isAlive()&&!fist&&!SixfoldFinale.active(p)&&!active(p,"FinaleNoRecovery")&&!active(p,"RecoveryDelay")&&!Skills.sustaining(p)&&!GuardianPlayerSkills.sustaining(p))addRaw(p,15+fingers(p)*3+(awakened(p)?10:0)+(nine(p)?10:0)+(soul(p)?20:0)+(VoidController.boosted(p)?15:0)+(GuardianCombat.awakened(p)?30:0));sync(p);
     }
     @SubscribeEvent public static void soulFire(TickEvent.LevelTickEvent e){if(e.phase!=TickEvent.Phase.END||!(e.level instanceof net.minecraft.server.level.ServerLevel l)||l.getGameTime()%20!=0)return;for(var entity:l.getAllEntities())if(entity instanceof net.minecraft.world.entity.LivingEntity target&&target.getPersistentData().getBoolean("SukunaSoulFire")){target.setSecondsOnFire(3);target.getPersistentData().putBoolean("SukunaNoHeal",true);}}
     @SubscribeEvent public static void noSoulHeal(net.minecraftforge.event.entity.living.LivingHealEvent e){if(e.getEntity().getPersistentData().getBoolean("SukunaNoHeal"))e.setCanceled(true);}

@@ -41,6 +41,20 @@ public final class FistFlameClient {
     public static void receive(Network.Effect e){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         BURNING.put(e.owner(),mc.level.getGameTime()+Math.max(10,e.life()));
+        note("客户端收到 kind=236 owner="+e.owner()+" life="+e.life());
+    }
+    /** 验证埋点：同一条消息 3 秒内只写一次，避免刷屏。 */
+    private static String lastNote="";
+    private static long lastNoteAt;
+    private static void note(String what){
+        var mc=Minecraft.getInstance();long now=mc.level==null?0:mc.level.getGameTime();
+        if(what.equals(lastNote)&&now-lastNoteAt<60)return;
+        lastNote=what;lastNoteAt=now;
+        com.mojang.logging.LogUtils.getLogger().info("[附拳] {}",what);
+    }
+    private static void fail(String what,Throwable t){
+        String key="ERR:"+what;
+        if(!key.equals(lastNote)){lastNote=key;com.mojang.logging.LogUtils.getLogger().warn("[附拳] {} 失败：{}",what,t.toString());}
     }
     /** 每刻：清过期 + 每 2 刻在手部位置点一簇 PhotonFx（面片由渲染层每帧画）。 */
     public static void tick(){
@@ -76,12 +90,15 @@ public final class FistFlameClient {
         Flames(PlayerRenderer parent){super(parent);}
         @Override public void render(PoseStack ps,MultiBufferSource source,int light,AbstractClientPlayer player,float limb,float amount,float partial,float age,float yaw,float pitch){
             if(!burning(player.getId()))return;
-            var model=getParentModel();
-            var b=source.getBuffer(RenderType.entityTranslucent(player.getSkinTextureLocation()));
-            float t=age+partial;
-            Vec3[] store=HANDS.computeIfAbsent(player.getId(),k->new Vec3[2]);
-            hand(ps,b,light,model.rightArm,t,store,0);
-            hand(ps,b,light,model.leftArm,t+1.7f,store,1);
+            note("渲染层开始绘制 owner="+player.getId());
+            try{
+                var model=getParentModel();
+                var b=source.getBuffer(RenderType.entityTranslucent(player.getSkinTextureLocation()));
+                float t=age+partial;
+                Vec3[] store=HANDS.computeIfAbsent(player.getId(),k->new Vec3[2]);
+                hand(ps,b,light,model.rightArm,t,store,0);
+                hand(ps,b,light,model.leftArm,t+1.7f,store,1);
+            }catch(Throwable t){fail("手部面片绘制",t);}
         }
         /** 一条手臂：挪到手 → 画一簇火苗，同时把该点世界坐标记下来给 PhotonFx。 */
         private static void hand(PoseStack ps,VertexConsumer b,int light,ModelPart arm,float t,Vec3[] store,int slot){
@@ -105,6 +122,8 @@ public final class FistFlameClient {
     @SubscribeEvent public static void hand(RenderHandEvent e){
         var mc=Minecraft.getInstance();var p=mc.player;
         if(p==null||mc.level==null||!Client.progress.fist()||e.getHand()!=net.minecraft.world.InteractionHand.MAIN_HAND)return;
+        note("第一人称手部绘制（本机附拳="+Client.progress.fist()+"）");
+        try{
         float t=mc.level.getGameTime()+e.getPartialTick();
         var ps=e.getPoseStack();ps.pushPose();
         ps.translate(0.02,-0.22,-0.12);                                   // 稍微往手心方向挪一点
@@ -122,6 +141,7 @@ public final class FistFlameClient {
             flame(pose,b,e.getPackedLight(),x,half,z,h,alpha);
         }
         ps.popPose();
+        }catch(Throwable t){fail("第一人称手部绘制",t);}
     }
 
     /** 一张竖直火苗面片：底宽、顶尖、内外两层颜色错开。 */

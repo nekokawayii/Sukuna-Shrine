@@ -437,11 +437,15 @@ public final class Skills {
      *  别的玩家的客户端据此在**你的双手上**画红色咒力火焰——这样它才不是"只有自己看得见"的 HUD 特效。 */
     private static final int FIST_AURA_INTERVAL=15;
     private static void tickFistAura(){
+        int sent=0;
         for(ServerPlayer p:serverPlayers()){
             if(p.level().getGameTime()%FIST_AURA_INTERVAL!=0)continue;
             if(!Curse.data(p).getBoolean("Fist"))continue;
             fx(p,FistFlameClient.FX,p.getEyePosition(),Vec3.ZERO,1,FIST_AURA_INTERVAL+20,p.getId());
+            sent++;
         }
+        // 验证埋点：每 15 刻（=发送节奏）最多写一行，说明服务端确实在广播
+        if(sent>0)com.mojang.logging.LogUtils.getLogger().info("[附拳] 服务端广播 kind={} 给 {} 名附拳中的玩家",FistFlameClient.FX,sent);
     }
     private static List<ServerPlayer> serverPlayers(){
         var server=net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();

@@ -29,16 +29,21 @@ public final class PhotonBridge {
     private static Object number(Number n)throws Exception{return call(type("gameobject.emitter.data.number.NumberFunction"),"constant",n);}
     private static Object triple(double x,double y,double z)throws Exception{return type("gameobject.emitter.data.number.NumberFunction3").getConstructor(Number.class,Number.class,Number.class).newInstance(x,y,z);}
     @SuppressWarnings("unchecked")
-    public static Handle spawn(Vec3 pos,int color,double size,int count,int life){return particle(pos,color,size,count,life,false,0);}
-    public static Handle needle(Vec3 pos,int life,float angle){return particle(pos,0xFFFFFFFF,3.2,1,life,true,angle);}
-    private static Handle particle(Vec3 pos,int color,double size,int count,int life,boolean needle,float angle){
+    public static Handle spawn(Vec3 pos,int color,double size,int count,int life){return particle(pos,color,size,count,life,false,0,size*0.3);}
+    public static Handle needle(Vec3 pos,int life,float angle){return particle(pos,0xFFFFFFFF,3.2,1,life,true,angle,0);}
+    /** 彩色细长光弧：与 {@link #needle} 同一条通路，但可以指定颜色与粗细（火焰用的金色拉丝）。 */
+    public static Handle streak(Vec3 pos,int color,double size,int life,float angle){return particle(pos,color,size,1,life,true,angle,0);}
+    /** 大范围"镀色云"：在 {@code spread} 见方的盒子里撒 {@code count} 颗 {@code size} 大小的软粒子。
+     *  用来做「周身 60 格方块被镀上橙色」这种大体积覆盖——一个发射器就能铺满一片区域，比逐点补粒子便宜得多。 */
+    public static Handle cloud(Vec3 pos,int color,double spread,double size,int count,int life){return particle(pos,color,size,count,life,false,0,spread);}
+    private static Handle particle(Vec3 pos,int color,double size,int count,int life,boolean needle,float angle,double spread){
         if(broken||Minecraft.getInstance().level==null)return null;
         try{
             Object emitter=type("gameobject.emitter.particle.ParticleEmitter").getConstructor().newInstance();Object config=field(emitter,"config");
             call(config,"setDuration",1);call(config,"setLooping",false);call(config,"setMaxParticles",count);call(config,"setStartLifetime",number(life));call(config,"setStartSpeed",number(needle?0:0.04));
             call(config,"setStartSize",triple(size,size,size));call(field(config,"physics"),"setHasCollision",false);call(config,"setStartRotation",triple(0,0,angle));
             call(config,"setStartColor",call(type("gameobject.emitter.data.number.NumberFunction"),"color",color));
-            Object shape=field(config,"shape");call(shape,"setScale",triple(needle?0:size*0.3,needle?0:size*0.3,needle?0:size*0.3));
+            Object shape=field(config,"shape");call(shape,"setScale",triple(spread,spread,spread));
             Object renderer=field(config,"renderer");call(renderer,"setBloomEffect",true);call(renderer,"setBloomColor",color);
             Object material=field(config,"material");call(material,"setCull",false);
             Object texture=type("gameobject.emitter.data.material.TextureMaterial").getConstructor(ResourceLocation.class).newInstance(new ResourceLocation("sukuna",needle?"textures/effect/void_rift.png":(color>>>24)<200?"textures/effect/dust.png":"textures/effect/flame.png"));call(material,"setMaterial",texture);

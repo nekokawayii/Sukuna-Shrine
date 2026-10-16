@@ -58,6 +58,8 @@ public final class FurnaceMax {
     public static final int PILLAR_TICKS=20*40;
     public static final double PILLAR_RADIUS=12.0;
     public static final float PILLAR_DPS=150f;
+    /** 蓄力时"周身方块被镀上橙色"的作用半径（客户端表现，见 {@link FurnaceMaxClient}）。 */
+    public static final double FIELD_RADIUS=60;
 
     /** 特效号（客户端 {@link Client#receive} 全段交给 {@link FurnaceMaxClient}）。 */
     public static final int FX_CHARGE=230,FX_SHOT=231,FX_BLAST=232,FX_PILLAR=233;

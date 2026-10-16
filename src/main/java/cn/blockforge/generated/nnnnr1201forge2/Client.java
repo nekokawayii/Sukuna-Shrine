@@ -262,10 +262,11 @@ public final class Client {
     private static boolean insideVoid(){var mc=Minecraft.getInstance();return mc.player!=null&&domains.values().stream().anyMatch(d->VoidBossClient.shrine(d.owner)&&mc.player.position().distanceToSqr(d.center)<d.radius*d.radius);}
     private static boolean insideBlueVoid(){var mc=Minecraft.getInstance();return mc.player!=null&&domains.values().stream().anyMatch(d->VoidBossClient.blue(d.owner)&&mc.player.position().distanceToSqr(d.center)<d.radius*d.radius);}
     private static boolean bossDark(){var mc=Minecraft.getInstance();return mc.player!=null&&mc.player.hasEffect(net.minecraft.world.effect.MobEffects.DARKNESS)&&visuals.stream().anyMatch(v->v.e.kind()==38&&mc.player.distanceToSqr(v.e.position())<2304);}
-    @SubscribeEvent public static void fog(ViewportEvent.ComputeFogColor e){if(bossDark()){e.setRed(0.028f);e.setGreen(0.008f);e.setBlue(0.045f);}else if(insideBlueVoid()){e.setRed(0.02f);e.setGreen(0.10f);e.setBlue(0.24f);}else if(insideVoid()){e.setRed(0.11f);e.setGreen(0.045f);e.setBlue(0.19f);}else if(inside()){e.setRed(0.40f);e.setGreen(0.018f);e.setBlue(0.045f);}}
+    @SubscribeEvent public static void fog(ViewportEvent.ComputeFogColor e){if(bossDark()){e.setRed(0.028f);e.setGreen(0.008f);e.setBlue(0.045f);}else if(insideBlueVoid()){e.setRed(0.02f);e.setGreen(0.10f);e.setBlue(0.24f);}else if(insideVoid()){e.setRed(0.11f);e.setGreen(0.045f);e.setBlue(0.19f);}else if(inside()){e.setRed(0.40f);e.setGreen(0.018f);e.setBlue(0.045f);}FurnaceMaxClient.fog(e);}
     @SubscribeEvent public static void fogDistance(ViewportEvent.RenderFog e){if(bossDark()&&e.getType()==net.minecraft.world.level.material.FogType.NONE){e.setNearPlaneDistance(1);e.setFarPlaneDistance(5);e.setCanceled(true);}}
     @SubscribeEvent public static void screenSeverance(RenderGuiEvent.Pre e){
         Minecraft mc=Minecraft.getInstance();
+        FurnaceMaxClient.overlay(e.getGuiGraphics());
         boolean heat=mc.player!=null&&domains.values().stream().anyMatch(d->d.burning&&mc.player.position().distanceToSqr(d.center)<d.radius*d.radius);
         if(heat)FistAura.heat(e.getGuiGraphics(),tick+e.getPartialTick());
         if(progress.fist()&&mc.player!=null&&mc.player.isAlive()&&mc.options.getCameraType().isFirstPerson()&&!mc.options.hideGui)FistAura.draw(e.getGuiGraphics(),tick+e.getPartialTick());else if(!heat)FistAura.clear();

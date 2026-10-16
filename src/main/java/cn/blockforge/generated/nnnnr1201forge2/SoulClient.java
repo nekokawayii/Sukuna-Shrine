@@ -25,7 +25,7 @@ public final class SoulClient {
     public static void receive(Network.Effect e){var mc=Minecraft.getInstance();if(mc.player==null)return;
         if(e.kind()==89){layers=(int)e.seed();stacks=e.life();return;}
         if(e.kind()==82&&e.owner()==mc.player.getId()){gapEnd=time+e.life();gapBoss=(int)e.seed();return;}
-        if(e.kind()==85){BlackFlashRender.play(e.position());if(e.seed()==mc.player.getId())crackEnd=time+e.life();}
+        if(e.kind()==85){BlackFlashRender.play(e.position(),e.direction());if(e.seed()==mc.player.getId())crackEnd=time+e.life();}
         if(e.kind()==90){Domain old=domains.get(e.owner());if(old==null&&mc.player.distanceToSqr(e.position())<48*48)whiteEnd=time+7;domains.put(e.owner(),new Domain(e.position(),time+e.life(),old==null?time:old.born,e.size(),e.seed()==1));return;}
         if(e.kind()==91){domains.remove(e.owner());return;}
         if(e.kind()==94)return;

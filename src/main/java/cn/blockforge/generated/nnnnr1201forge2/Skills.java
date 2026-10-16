@@ -170,11 +170,16 @@ public final class Skills {
         var attr=MaidBridge.body(p).getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
         if(attr!=null&&attr.getModifier(SEAL_SLOW)!=null)attr.removeModifier(SEAL_SLOW);
     }
-    /** 释放键（技能5）：结印中 → 取消/放下；已有领域 → 只提示；否则从头结印。 */
+    /** 释放键（技能5）循环：①结印 ②再按=放下(伤害50%) ③**放下后再按一次=收起领域**。 */
     private static void domainPress(ServerPlayer p){
+        if(released.remove(p.getUUID())&&domains.containsKey(p.getUUID())){
+            note("收起御厨子（放下后再按一次）");
+            closeDomain(p,true);CastFeedback.tell(p,"御厨子已收起");
+            return;
+        }
         Seal seal=seals.get(p.getUUID());
         if(seal!=null){if(seal.opened)release(p);else cancelSeal(p,"再次按下释放键");return;}
-        if(domains.containsKey(p.getUUID())){CastFeedback.tell(p,"御厨子已展开 · 三击空格跳上神龛");return;}
+        if(domains.containsKey(p.getUUID())){CastFeedback.tell(p,"御厨子已展开 · 再按=放下(伤害50%) · 放下后再按一次=收起 · 三击空格跳上神龛");return;}
         startSeal(p);
     }
     /** 结印起手：扣费与起手表现都在这一刻（此刻起 3 秒不能移动）。 */
@@ -212,11 +217,13 @@ public final class Skills {
         if(seals.remove(p.getUUID())==null)return;
         unfreeze(p);pose(p,0);
         Domain d=domains.get(p.getUUID());if(d!=null)d.damageScale=ShrineRules.DOMAIN_RELEASE_SCALE;
-        CastFeedback.tell(p,"放下结印 · 御厨子伤害降至"+(int)(ShrineRules.DOMAIN_RELEASE_SCALE*100)+"%");
+        CastFeedback.tell(p,"放下结印 · 御厨子伤害降至"+(int)(ShrineRules.DOMAIN_RELEASE_SCALE*100)+"% · 再按一次释放键收起领域");
+        if(domains.containsKey(p.getUUID()))released.add(p.getUUID());
         note("放下（伤害×"+ShrineRules.DOMAIN_RELEASE_SCALE+"）"+p.getScoreboardName());
     }
     /** 领域结束或异常：收起结印状态（解冻 + 放下手势）。 */
     private static void endSeal(ServerPlayer p){
+        released.remove(p.getUUID());
         if(seals.remove(p.getUUID())==null)return;
         unfreeze(p);pose(p,0);
     }
@@ -352,6 +359,8 @@ public final class Skills {
         Domain(ServerPlayer owner,ServerLevel level,Vec3 center,Vec3 shrineOffset,long start,long end,double radius){this.owner=owner;this.level=level;this.center=center;this.shrineOffset=shrineOffset;this.start=start;this.end=end;this.radius=radius;}
     }
     /** 结印中的玩家：{@code start} 起 3 秒不能移动，{@code DOMAIN_OPEN_TICKS} 刻后领域出现。 */
+    /** 已经"放下"过（姿态解除、伤害 50%）但领域仍在的玩家：再按一次释放键即收起领域。 */
+    private static final java.util.Set<UUID> released=new java.util.HashSet<>();
     private static final class Seal {
         final ServerPlayer owner;final ServerLevel level;final long start;boolean opened;
         Seal(ServerPlayer p){owner=p;level=p.serverLevel();start=level.getGameTime();}

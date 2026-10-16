@@ -46,12 +46,12 @@ public final class FistFlameClient {
     /** 拖尾滞后：按实体位移往回拖多少刻（以及最大拖出多少格），挥拳时咒力会拖在后面。 */
     private static final double DRAG_TICKS=1.6,DRAG_MAX=0.35;
     // ---------- 「包覆手臂的咒力」自绘层（复刻 jujutsu-vfx 那套观感：逐帧自绘、裹住整条手臂、随出拳放大） ----------
-    private static final ResourceLocation GLOW=new ResourceLocation("sukuna","textures/effect/glow.png");
+    private static final ResourceLocation GLOW=new ResourceLocation("photon","textures/particle/circle.png");
     private static final ResourceLocation AURA_FX_TEXTURE=GLOW;
     private static final int AURA_SEG=6;                        // 每条手臂几段
     private static final double AURA_WIDTH=0.90,AURA_LEN=0.42;  // 单段尺寸（格）；手臂本体只有 0.25 格宽，所以这是明显"裹一圈"
     /** 粉红配色（外深粉 → 中亮粉 → 内浅粉高光）。 */
-    private static final int AURA_OUT=0x8CD8264E,AURA_IN=0xB0FF5E86,AURA_CORE=0xA0FFD3E2;
+    private static final int AURA_OUT=0xB4D8264E,AURA_IN=0xD2FF5E86,AURA_CORE=0xC0FFD3E2;
     /** 开关：`false`＝关掉 `photon:11` 那层，只留自绘的粉红咒力包覆层。 */
     private static final boolean PHOTON_FX=false;
     private record Where(Vec3 at,org.joml.Quaternionf rot,ResourceLocation level,long seen){}
@@ -213,12 +213,24 @@ public final class FistFlameClient {
             layer(pose,vb,light,x0,y0,z0,x1,y1,z1,core,0.6f);
         }
         private static void layer(PoseStack.Pose pose,com.mojang.blaze3d.vertex.VertexConsumer vb,int light,float x0,float y0,float z0,float x1,float y1,float z1,int color,float scale){
+            // 正反各画一遍：玩家模型带有 scale(-1,-1,1) 翻转，只画一面可能整片被背面剔除（"看不见"的原因之一）
+            layerOne(pose,vb,light,x0,y0,z0,x1,y1,z1,color,scale,false);
+            layerOne(pose,vb,light,x0,y0,z0,x1,y1,z1,color,scale,true);
+        }
+        private static void layerOne(PoseStack.Pose pose,com.mojang.blaze3d.vertex.VertexConsumer vb,int light,float x0,float y0,float z0,float x1,float y1,float z1,int color,float scale,boolean flip){
             float cx=(x0+x1)/2,cy=(y0+y1)/2,cz=(z0+z1)/2;
             float hx=(x1-x0)/2*scale,hy=(y1-y0)/2*scale,hz=(z1-z0)/2*scale;
-            vertex(pose,vb,light,cx-hx,cy+hy,cz-hz,color,0,0);
-            vertex(pose,vb,light,cx+hx,cy+hy,cz+hz,color,1,0);
-            vertex(pose,vb,light,cx+hx,cy-hy,cz+hz,color,1,1);
-            vertex(pose,vb,light,cx-hx,cy-hy,cz-hz,color,0,1);
+            if(flip){
+                vertex(pose,vb,light,cx-hx,cy-hy,cz-hz,color,0,1);
+                vertex(pose,vb,light,cx+hx,cy-hy,cz+hz,color,1,1);
+                vertex(pose,vb,light,cx+hx,cy+hy,cz+hz,color,1,0);
+                vertex(pose,vb,light,cx-hx,cy+hy,cz-hz,color,0,0);
+            }else{
+                vertex(pose,vb,light,cx-hx,cy+hy,cz-hz,color,0,0);
+                vertex(pose,vb,light,cx+hx,cy+hy,cz+hz,color,1,0);
+                vertex(pose,vb,light,cx+hx,cy-hy,cz+hz,color,1,1);
+                vertex(pose,vb,light,cx-hx,cy-hy,cz-hz,color,0,1);
+            }
         }
         private static void vertex(PoseStack.Pose pose,com.mojang.blaze3d.vertex.VertexConsumer vb,int light,float x,float y,float z,int color,float u,float v){
             vb.vertex(pose.pose(),x,y,z).color(color).uv(u,v).overlayCoords(4194304).uv2(light).normal(pose.normal(),0,0,1).endVertex();
@@ -246,7 +258,7 @@ public final class FistFlameClient {
         var mc=Minecraft.getInstance();var p=mc.player;
         if(p==null||mc.level==null||!Client.progress.fist())return;
         if(!mc.options.getCameraType().isFirstPerson())return;
-        if(e.getStage()!=RenderLevelStageEvent.Stage.AFTER_PARTICLES)return;
+        if(e.getStage()!=RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS)return;
         try{
             var cam=e.getCamera();
             Vec3 look=new Vec3(cam.getLookVector()),right=new Vec3(cam.getLeftVector()).scale(-1),up=new Vec3(cam.getUpVector());
@@ -284,6 +296,7 @@ public final class FistFlameClient {
             }
             BufferUploader.drawWithShader(b.end());
             RenderSystem.enableCull();RenderSystem.disableBlend();
+            note(String.format(Locale.ROOT,"自绘层(第一人称) power=%.2f 宽=%.2f 段数=%d 色=%08X",power,AURA_WIDTH*power,AURA_SEG,AURA_IN));
         }catch(Throwable t){fail("第一人称取手部位置",t);}
     }
     /** 第一人称世界层里的一张柔光面片（面向相机，贴图通道，尺寸单位＝格）。 */

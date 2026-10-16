@@ -90,7 +90,7 @@ public final class Network {
         public Effect wallpaper(java.util.UUID source,boolean all){return new Effect(kind,owner,position,direction,size,life,seed,source,all);}
         public Effect fromCaster(ServerPlayer caster){
             ServerPlayer source=caster instanceof MaidBridge.Actor maid?MaidBridge.owner(maid):caster;
-            return wallpaper(source==null?null:source.getUUID(),WallpaperPolicy.allSlashes(VoidJourney.evolved(caster),GuardianCombat.awakened(caster)));
+            return wallpaper(source==null?null:source.getUUID(),VoidJourney.evolved(caster)||GuardianCombat.awakened(caster));
         }
         static Effect read(FriendlyByteBuf b) {
             int kind=b.readInt(),owner=b.readInt();Vec3 position=vec(b),direction=vec(b);float size=b.readFloat();int life=b.readInt();long seed=b.readLong();
@@ -180,7 +180,6 @@ public final class Network {
         CHANNEL.messageBuilder(WallOptions.class,12,NetworkDirection.PLAY_TO_SERVER).encoder((m,b)->{b.writeVarInt(m.halfBlocks());b.writeBoolean(m.diagonal());}).decoder(b->new WallOptions(b.readVarInt(),b.readBoolean())).consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null&&Journey.unlocked(p)&&Curse.awakened(p)){SukunaBranches.configure(p,m.halfBlocks(),m.diagonal());Curse.sync(p);}c.get().setPacketHandled(true);}).add();
     }
     public static void registerDrawing(){
-        WallpaperPackets.register();
         CHANNEL.messageBuilder(AimState.class,23,NetworkDirection.PLAY_TO_CLIENT).encoder((m,b)->{b.writeBoolean(m.enabled());b.writeDouble(m.angle());b.writeDouble(m.range());b.writeBoolean(m.circle());}).decoder(b->new AimState(b.readBoolean(),b.readDouble(),b.readDouble(),b.readBoolean())).consumerMainThread((m,c)->{aimReceiver.accept(m);c.get().setPacketHandled(true);}).add();
         CHANNEL.messageBuilder(TestReset.class,22,NetworkDirection.PLAY_TO_CLIENT).encoder((m,b)->{}).decoder(b->new TestReset()).consumerMainThread((m,c)->{testResetReceiver.run();c.get().setPacketHandled(true);}).add();
         CHANNEL.messageBuilder(CombatState.class,18,NetworkDirection.PLAY_TO_CLIENT).encoder((m,b)->{b.writeBoolean(m.finaleReady());b.writeVarInt(m.lingers());b.writeBoolean(m.stream());b.writeVarInt(m.noRecovery());b.writeVarInt(m.finaleBurnout());}).decoder(b->new CombatState(b.readBoolean(),b.readVarInt(),b.readBoolean(),b.readVarInt(),b.readVarInt())).consumerMainThread((m,c)->{combatReceiver.accept(m);c.get().setPacketHandled(true);}).add();

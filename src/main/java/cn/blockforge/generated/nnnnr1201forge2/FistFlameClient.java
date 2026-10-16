@@ -18,36 +18,32 @@ import net.minecraftforge.client.event.*;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/** 「咒力附拳」的表现层：**整条手臂上覆着红色半透明咒力火焰**（自己第一人称与别人都看得见）。
+/** 「咒力附拳」的表现层：**小臂到拳头上裹着一大团粉红半透明咒力**（照原作截图：光滑、成团、不是尖火苗）。
  *
- *  <p>三条经验（r228–r233 踩出来的）：</p>
- *  <ol>
- *    <li>**不要用玩家皮肤贴图当火焰贴图**：`UV(0,0)` 会采样到皮肤里的黑色像素，火焰就变成"黑烟"。
- *        改用 `sukuna:textures/effect/glow.png` 并**把 UV 固定在贴图中心**（(0.5,0.5)，那里的像素是白色不透明），
- *        这样整块面片的颜色完全由顶点色决定。</li>
- *    <li>**骨骼坐标系是模型像素**（1 单位 = 1/16 格）：手臂箱体只有 4×12 像素，
- *        所以火焰尺寸要给 **像素级**（半宽 1.8~2.6、高 5~8），给 0.07 等于 0.07 像素 → 肉眼看不见。</li>
- *    <li>**第一人称自己的手**走手持通路、且那个 PoseStack 的量级不可控（照 0.06 画就会糊满半个屏幕），
- *        所以第一人称改到 **世界渲染**（`RenderLevelStageEvent`）里，按估算的"肩→手"线画一串火焰，
- *        尺寸用**格**、完全可控。</li>
- *  </ol> */
+ *  <p>做法＝把 {@code textures/effect/glow.png}（柔和的径向光斑）**整张贴**画成面向相机的大方片，
+ *  叠两层（外层暗红大一点、内层亮粉小一点）就得到"一大团咒力"的观感；只在**小臂中段到拳头**铺，
+ *  不会包住整个人。</p>
+ *
+ *  <p>坐标系注意事项（踩过的坑）：骨骼坐标系单位是**模型像素**（1 像素 = 1/16 格），
+ *  所以骨骼里画的尺寸要给像素级；贴图**不能**用玩家皮肤（UV 会采到黑色像素 → 变黑烟），
+ *  这里统一用 glow 贴图，并让 UV 覆盖 (0,0)~(1,1) 以保留它的柔边。</p> */
 @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
 public final class FistFlameClient {
-    /** 服务端广播的特效号：附拳期间每 15 刻一条（带 entityId 与寿命）。 */
     public static final int FX=236;
     private static final ResourceLocation GLOW=new ResourceLocation("sukuna","textures/effect/glow.png");
     private static final Map<Integer,Long> BURNING=new HashMap<>();
     private static final Map<Integer,Vec3[]> HANDS=new HashMap<>();
-    private static final int FLAMES=6,ARM_STEPS=4,SPAWN_INTERVAL=2;
-    private static final int DEEP=0xB00A0A0A,HOT=0xE6FF3A20,RED=0xD0D01A10;
+    /** 用哪几种颜色：外层暗红偏黑、中层正红、内层亮粉（照原作那团咒力的层次）。 */
+    private static final int OUTER=0x9A5A0A0A,MID=0xC8C81A18,INNER=0xD8FF7A82;
     private static final int BLOOM_RED=0xFF8A1208;
+    private static final int SPAWN_INTERVAL=2;
     private static String lastNote="";
     private static long lastNoteAt;
 
     public static void receive(Network.Effect e){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         BURNING.put(e.owner(),mc.level.getGameTime()+Math.max(10,e.life()));
-        note("客户端收到 kind=236 owner="+e.owner()+" life="+e.life());
+        note("客户端收到 kind=236 owner="+e.owner());
     }
     public static void tick(){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
@@ -70,10 +66,11 @@ public final class FistFlameClient {
         String key="ERR:"+what;
         if(!key.equals(lastNote)){lastNote=key;com.mojang.logging.LogUtils.getLogger().warn("[附拳] {} 失败：{}",what,t.toString());}
     }
+    /** 附加的 PhotonFx 发光（有 Photon 时给这团咒力加 bloom，没有也不影响主绘制）。 */
     private static void photon(Vec3 hand){
         try{
-            PhotonFx.blobs(hand,0.16,0.12,0.08,0xFF5512,BLOOM_RED,0.06,-0.012,6,1,10);
-            PhotonFx.spark(hand,0.09,0.13,0xFF2A10,BLOOM_RED,"textures/effect/glow.png",true,1,7,4,0.25);
+            PhotonFx.blobs(hand,0.20,0.14,0.10,0xFF5512,BLOOM_RED,0.05,-0.010,5,1,10);
+            PhotonFx.spark(hand,0.12,0.16,0xFF2A10,BLOOM_RED,"textures/effect/glow.png",true,1,7,4,0.2);
         }catch(Throwable ignored){}
     }
 
@@ -84,7 +81,7 @@ public final class FistFlameClient {
         }
     }
 
-    /** 第三人称/别人看：沿**整条手臂**（肩到手，0~10 像素）铺火焰。 */
+    /** 第三人称/别人看：小臂中段到拳头裹两团光斑。单位＝模型像素。 */
     private static final class Flames extends RenderLayer<AbstractClientPlayer,PlayerModel<AbstractClientPlayer>> {
         Flames(PlayerRenderer parent){super(parent);}
         @Override public void render(PoseStack ps,MultiBufferSource source,int light,AbstractClientPlayer player,float limb,float amount,float partial,float age,float yaw,float pitch){
@@ -96,85 +93,81 @@ public final class FistFlameClient {
                 Vec3[] store=HANDS.computeIfAbsent(player.getId(),k->new Vec3[2]);
                 arm(ps,b,light,model.rightArm,t,store,0);
                 arm(ps,b,light,model.leftArm,t+1.7f,store,1);
-            }catch(Throwable t){fail("第三人称手部绘制",t);}
+            }catch(Throwable t){fail("第三人称绘制",t);}
         }
-        /** 一条手臂：从肩(0)到手(10 像素)分 ARM_STEPS 段，每段一簇火焰。单位为**像素**。 */
+        /** 沿小臂铺：像素 y=4(肘) 与 y=8.5(拳) 两处，每处两层大光斑，随呼吸缩放。 */
         private static void arm(PoseStack ps,VertexConsumer b,int light,ModelPart part,float t,Vec3[] store,int slot){
             ps.pushPose();part.translateAndRotate(ps);
-            for(int s=0;s<ARM_STEPS;s++){
-                float y=1.5f+s*3.0f;                                       // 像素：沿手臂往下
-                ps.pushPose();ps.translate(0,y,0);
-                if(store!=null&&slot==0&&s==ARM_STEPS-1)store[0]=null;
-                ps.translate(0,0,0);
-                ps.mulPose(com.mojang.math.Axis.XP.rotationDegrees(180));   // 让火苗朝上
-                var pose=ps.last();
-                for(int i=0;i<FLAMES;i++){
-                    float ph=i*1.3f+s*2.1f;
-                    double px=Math.cos(t*0.13+ph*1.4)*1.2+(i%3-1)*1.5, pz=Math.sin(t*0.18+ph)*1.2+(i%2)*0.8;
-                    float half=1.8f+0.6f*(i%2), h=(float)(5.0+2.0*Math.abs(Math.sin(t*0.22+ph)));
-                    int alpha=(int)((0.42+0.42*Math.abs(Math.sin(t*0.25+ph)))*255);
-                    flame(pose,b,light,(float)px,half,(float)pz,h,alpha);
-                }
-                ps.popPose();
+            for(int k=0;k<2;k++){
+                float y=k==0?4.5f:9.0f;
+                double pulse=1.0+0.10*Math.sin(t*0.16+k*2.1f+slot*1.7f);   // 呼吸
+                double len=11.0*pulse,wide=8.5*pulse;
+                if(store!=null&&slot==0&&k==1)store[0]=worldFromPose(ps,y,0);
+                blob(ps,b,light,0,y,0,wide,len,OUTER);                      // 外层：暗红、更大
+                blob(ps,b,light,0,y,0.06f,wide*0.78,len*0.80,MID);          // 中层：正红
+                blob(ps,b,light,0,y,0.12f,wide*0.50,len*0.55,INNER);        // 内层：亮粉
             }
             ps.popPose();
         }
     }
 
-    /** 第一人称：自己在世界渲染里沿估算的"肩→手"线铺火焰（尺寸以格为单位，完全可控）。 */
+    /** 第一人称：自己在世界渲染里沿"肘→拳"这段画同样两团光斑（尺寸以格为单位）。 */
     @SubscribeEvent public static void scene(RenderLevelStageEvent e){
         var mc=Minecraft.getInstance();var p=mc.player;
         if(p==null||mc.level==null||!Client.progress.fist())return;
-        if(!mc.options.getCameraType().isFirstPerson())return;              // 第三人称已由渲染层覆盖
+        if(!mc.options.getCameraType().isFirstPerson())return;
         if(e.getStage()!=RenderLevelStageEvent.Stage.AFTER_PARTICLES)return;
         try{
             var cam=e.getCamera().getPosition();
             Vec3 look=new Vec3(e.getCamera().getLookVector()),right=new Vec3(e.getCamera().getLeftVector()).scale(-1),up=new Vec3(e.getCamera().getUpVector());
-            Vec3 hand=cam.add(look.scale(0.45)).add(right.scale(0.33)).subtract(up.scale(0.30));
-            Vec3 shoulder=cam.add(look.scale(0.10)).add(right.scale(0.30)).subtract(up.scale(0.75));
+            Vec3 hand=cam.add(look.scale(0.50)).add(right.scale(0.30)).subtract(up.scale(0.34));
+            Vec3 elbow=cam.add(look.scale(0.34)).add(right.scale(0.30)).subtract(up.scale(0.62));
             float t=mc.level.getGameTime()+e.getPartialTick();
             var ps=e.getPoseStack();ps.pushPose();ps.translate(-cam.x,-cam.y,-cam.z);
             RenderSystem.enableDepthTest();RenderSystem.disableCull();RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();RenderSystem.setShader(GameRenderer::getPositionColorShader);
             BufferBuilder b=Tesselator.getInstance().getBuilder();b.begin(VertexFormat.Mode.QUADS,DefaultVertexFormat.POSITION_COLOR);
-            for(int s=0;s<=ARM_STEPS;s++){
-                double f=s/(double)ARM_STEPS;
-                Vec3 at=shoulder.lerp(hand,f);
-                for(int i=0;i<FLAMES;i++){
-                    float ph=i*1.3f+s*1.7f;
-                    Vec3 q=at.add(look.scale(Math.sin(t*0.18+ph)*0.03)).add(right.scale(Math.cos(t*0.13+ph*1.4)*0.035)).add(0,0.02*Math.sin(t*0.22+ph),0);
-                    double half=0.045+0.015*(i%2),h=0.10+0.05*Math.abs(Math.sin(t*0.22+ph));
-                    int alpha=(int)((0.45+0.40*Math.abs(Math.sin(t*0.25+ph)))*255);
-                    cameraQuad(b,ps,q,look,right,up,half,h,alpha);
-                }
+            for(int k=0;k<2;k++){
+                Vec3 at=k==0?elbow:hand;
+                double pulse=1+0.10*Math.sin(t*0.16+k*2.1);
+                double len=(k==0?0.34:0.30)*pulse,wide=(k==0?0.26:0.24)*pulse;
+                worldBlob(b,ps,at,look,right,up,wide,len,OUTER);
+                worldBlob(b,ps,at,look,right,up,wide*0.78,len*0.80,MID);
+                worldBlob(b,ps,at,look,right,up,wide*0.50,len*0.55,INNER);
             }
             BufferUploader.drawWithShader(b.end());
             RenderSystem.enableCull();RenderSystem.disableBlend();
             ps.popPose();
             HANDS.put(p.getId(),new Vec3[]{hand,null});
-            note("第一人称世界层绘制（附拳=true）");
+            note("第一人称世界层绘制");
         }catch(Throwable t){fail("第一人称世界层绘制",t);}
     }
-    /** 世界空间里面向相机的一张竖直火苗（用 look/right/up 当基向量，尺寸单位是格）。 */
-    private static void cameraQuad(BufferBuilder b,PoseStack ps,Vec3 c,Vec3 look,Vec3 right,Vec3 up,double half,double h,int alpha){
-        Vec3 u=up.scale(h),w=right.scale(half);
-        int c1=(alpha<<24)|(HOT&0xFFFFFF),c3=((int)(alpha*0.85)<<24)|(DEEP&0xFFFFFF);
-        face(b,ps,c.subtract(w),c.add(w),c.add(w.scale(0.4)).add(u),c.subtract(w.scale(0.4)).add(u),c3,c1);
+
+    /** 骨骼坐标系里的一团光斑：竖直方片，UV 覆盖整张 glow（保留柔边）。 */
+    private static void blob(PoseStack ps,VertexConsumer b,int light,float x,float y,float z,double wide,double len,int color){        ps.pushPose();ps.translate(x,y,z);ps.mulPose(com.mojang.math.Axis.XP.rotationDegrees(180));
+        var pose=ps.last();
+        float w=(float)wide,h=(float)len;
+        quad(pose,b,light,-w,0,-h,w,0,h,color,false);
+        ps.popPose();
     }
-    private static void face(BufferBuilder b,PoseStack ps,Vec3 a,Vec3 z,Vec3 c,Vec3 d,int ca,int cz){
-        Client.quad(b,ps,a,z,c,d,ca);
-        Client.quad(b,ps,a,z,c,d,cz);
+    /** 世界空间里的一团光斑：以相机基向量铺一张面向相机的方片。 */
+    private static void worldBlob(BufferBuilder b,PoseStack ps,Vec3 c,Vec3 look,Vec3 right,Vec3 up,double wide,double len,int color){
+        Vec3 u=up.scale(len),w=right.scale(wide);
+        Client.quad(b,ps,c.subtract(w).subtract(u),c.add(w).subtract(u),c.add(w).add(u),c.subtract(w).add(u),color);
     }
-    /** 一张竖直火苗面片（骨骼坐标系，单位＝像素）：底宽、顶尖。 */
-    private static void flame(PoseStack.Pose pose,VertexConsumer b,int light,float x,float half,float z,double h,int alpha){
-        float top=(float)h,bot=0f,w=half,tw=half*0.35f;
-        int c1=(alpha<<24)|(HOT&0xFFFFFF),c2=((int)(alpha*0.55)<<24)|(RED&0xFFFFFF),c3=((int)(alpha*0.85)<<24)|(DEEP&0xFFFFFF);
-        vert(pose,b,light,x-w,bot,z,c3);vert(pose,b,light,x+w,bot,z,c3);vert(pose,b,light,x+tw,top,z,c1);vert(pose,b,light,x-tw,top,z,c1);
-        vert(pose,b,light,x+w*0.6f,bot,z+0.01f,c2);vert(pose,b,light,x-w*0.6f,bot,z+0.01f,c2);vert(pose,b,light,x-tw*0.6f,top,z+0.01f,c1);vert(pose,b,light,x+tw*0.6f,top,z+0.01f,c1);
+    private static void quad(PoseStack.Pose pose,VertexConsumer b,int light,float x0,float y0,float z0,float x1,float y1,float z1,int color,boolean unused){
+        // UV 逐顶点铺满整张贴图：glow 的径向柔边才会显出来（全钉 (0,0) 只会采到透明角 → 看不见）
+        vertex(pose,b,light,x0,y1,z0,color,0f,0f);
+        vertex(pose,b,light,x1,y1,z0,color,1f,0f);
+        vertex(pose,b,light,x1,y0,z1,color,1f,1f);
+        vertex(pose,b,light,x0,y0,z1,color,0f,1f);
     }
-    /** UV 固定取贴图中心（那里的像素是白色不透明），颜色完全由顶点色决定。 */
-    private static void vert(PoseStack.Pose pose,VertexConsumer b,int light,float x,float y,float z,int color){
-        b.vertex(pose.pose(),x,y,z).color(color).uv(0.5f,0.5f).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.normal(),0,0,1).endVertex();
+    private static void vertex(PoseStack.Pose pose,VertexConsumer b,int light,float x,float y,float z,int color,float u,float v){
+        b.vertex(pose.pose(),x,y,z).color(color).uv(u,v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(pose.normal(),0,0,1).endVertex();
+    }
+    private static Vec3 worldFromPose(PoseStack ps,double dy_pixels,double dz_pixels){
+        var m=ps.last().pose();var cam=Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        return cam.add(m.m30(),m.m31()+dy_pixels/16.0,m.m32()+dz_pixels/16.0);
     }
     private FistFlameClient(){}
 }

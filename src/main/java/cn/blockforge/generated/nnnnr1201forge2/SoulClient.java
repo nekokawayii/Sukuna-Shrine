@@ -39,28 +39,43 @@ public final class SoulClient {
         if(progress.nine())g.drawString(mc.font,"咒胎受肉 "+layers+" / 9"+(stacks>0?"  灵魂僵直 "+stacks+"层 · 移速 -"+(stacks*15)+"% · 冷却 +"+(stacks*10)+"%":""),12,h-144,0xFFC7DCE7);
         if(time<gapEnd){g.fill(0,0,w,h,0x7003060C);g.drawCenteredString(mc.font,"灵魂间隙 · 禁止领域与治疗 · "+((gapEnd-time+19)/20)+"秒",w/2,h/2-50,0xFFE1E2EA);}
         Domain d=inside();if(d!=null)g.drawCenteredString(mc.font,"领域展开 · 岩手观光 · "+((d.end-time+19)/20)+"秒",w/2,36,0xFFFFE5B7);
-        // 黑闪的屏幕演出：**以准星（屏幕正中）为圆心，黑色火花围成一个圆环向外扩散，圆心处再簇拥一小撮火花**。
-        // 每颗火花＝外面一层红色辉光 + 里面一颗近黑火花，逐颗独立闪烁（波谷整颗跳过）做出"噼啪炸开"的张力。
+        // 黑闪的屏幕演出（照原作截图）：**又粗又长的黑芯红边闪电到处劈开 + 大量黑色火花散布**，两样都要多；
+        // 圆心仍是准星（屏幕正中）。每段/每颗独立闪烁（波谷跳过）做出"噼啪炸开"的张力。
         if(time<crackEnd){ScreenSeverance.draw(g,37,(crackEnd-time)/16f);
             float life=Math.max(0,Math.min(1,(crackEnd-time)/16f));
             int cx=w/2,cy=h/2;
-            double rad=(0.10+0.90*(1-life))*Math.min(w,h)*0.62;      // 半径随演出扩散
-            int dots=28;
-            for(int i=0;i<dots;i++){
-                double ang=i*Math.PI*2/dots+time*0.05;
-                int x=(int)(cx+Math.cos(ang)*rad),y=(int)(cy+Math.sin(ang)*rad);
-                if(Math.sin(time*1.9+i*3.1)<-0.30)continue;           // 整颗跳过 = 闪烁
-                int a=(int)((0.30+0.70*Math.abs(Math.sin(time*1.9+i*3.1)))*225*life);
-                g.fill(x-4,y-4,x+4,y+4,((int)(a*0.35)<<24)|0xFF2A18);   // 红色辉光（光污染）
-                g.fill(x-2,y-2,x+2,y+2,(a<<24)|0x0A0A0A);               // 近黑火花
+            java.util.Random rnd=new java.util.Random(20261017L);      // 固定种子：一次演出形状稳定，只随时间抖动
+            // —— 黑电：11 道，从屏幕内随机点向随机方向劈出去，粗 6~15 像素、越往外越细 ——
+            for(int i=0;i<11;i++){
+                double x=cx+(rnd.nextDouble()-0.5)*w*0.75,y=cy+(rnd.nextDouble()-0.5)*h*0.75;
+                double ang=rnd.nextDouble()*Math.PI*2;
+                int seg=10+rnd.nextInt(5);
+                double len=Math.min(w,h)*(0.40+rnd.nextDouble()*0.55);
+                double thick=5+rnd.nextDouble()*10;
+                for(int s=0;s<seg;s++){
+                    double a=ang+Math.sin((time*0.9+s)*1.7+i)*0.24;
+                    double step=len/seg;
+                    double nx=x+Math.cos(a)*step,ny=y+Math.sin(a)*step;
+                    double t=1-s/(double)seg;
+                    int hw=(int)(thick*0.5*t)+1;
+                    if(Math.sin(time*1.9+s*1.3+i)<-0.35){x=nx;y=ny;continue;}                  // 炸断
+                    int alpha=(int)(life*(0.40+0.60*Math.abs(Math.sin(time*1.9+s+i)))*240);
+                    g.fill((int)x-hw-2,(int)y-hw-2,(int)x+hw+2,(int)y+hw+2,((int)(alpha*0.38)<<24)|0xFF2A18);  // 红辉光
+                    g.fill((int)x-hw,(int)y-hw,(int)x+hw,(int)y+hw,(alpha<<24)|0x0A0A0A);                      // 近黑芯
+                    x=nx;y=ny;
+                }
             }
-            for(int i=0;i<10;i++){                                   // 圆心：一小撮火花
-                double ang=i*Math.PI*2/10+time*0.11,rr=6+((i%3)*5);
-                int x=(int)(cx+Math.cos(ang)*rr),y=(int)(cy+Math.sin(ang)*rr);
-                if(Math.sin(time*2.3+i*1.7)<-0.25)continue;
-                int a=(int)(215*life);
-                g.fill(x-3,y-3,x+3,y+3,((int)(a*0.40)<<24)|0xFF2A18);
-                g.fill(x-1,y-1,x+1,y+1,(a<<24)|0x0A0A0A);
+            // —— 黑火花：72 颗，围着准星向外扩散并散布 ——
+            for(int i=0;i<72;i++){
+                double ang=i*2.399963+rnd.nextDouble()*0.25;
+                double frac=0.20+((i*37)%100)/100.0*0.80;
+                double rr=(0.10+0.90*(1-life))*Math.min(w,h)*0.72*frac;
+                int x=(int)(cx+Math.cos(ang+time*0.05)*rr),y=(int)(cy+Math.sin(ang+time*0.05)*rr);
+                double wave=Math.sin(time*2.1+i*1.3);
+                if(wave<-0.30)continue;                                                     // 整颗跳过 = 闪烁
+                int a=(int)((0.35+0.65*Math.abs(wave))*225*life),sz=2+(i%3);
+                g.fill(x-sz-2,y-sz-2,x+sz+2,y+sz+2,((int)(a*0.40)<<24)|0xFF2A18);            // 红辉光
+                g.fill(x-sz,y-sz,x+sz,y+sz,(a<<24)|0x0A0A0A);                                // 近黑火花
             }
         }
         if(time<whiteEnd)g.fill(0,0,w,h,((int)(150*(whiteEnd-time)/7.0)<<24)|0xFFF5DC);

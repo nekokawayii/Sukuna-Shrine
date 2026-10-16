@@ -5,53 +5,60 @@ import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 
-/** 黑闪表现层（客户端，**纯顶点通路自绘** + 少量 Photon 加法发光）。
+/** 黑闪表现层（客户端，纯顶点通路自绘 + 少量 Photon 加法发光）。
  *
- *  <p>按用户设定：**以准星（命中点）为圆心，黑色火花围成圆环向外扩散；圆环中间是拳风 + 黑色火花**。</p>
+ *  <p>按用户给的原作截图定形态：**又粗又长的黑芯红边闪电**向四面八方劈开 + **大量黑色火花（红边）**散布，
+ *  两样都要多；圆心仍是准星所指的命中点，拳风照旧从圆心推出。</p>
  *  <ul>
- *    <li><b>黑色火花圆环</b>：28 颗黑芯火花排在一个**垂直于视线的圆**上（所以从玩家视角看就是一个圆），
- *        半径从 0.6 格扩散到 5.2 格；每颗火花＝外面一层红色辉光 + 里面一颗近黑火花，逐颗独立闪烁（波谷整颗跳过）。</li>
- *    <li><b>圆心（准星处）</b>：拳风的四层风环沿出拳方向推出去 + 一圈向内簇拥的黑色火花（10 颗）。</li>
- *    <li><b>光污染</b>：Photon 加法混合两处——命中点发光点（bloom）+ 拳风光环；顶点通路的红色辉光层负责其余光晕。</li>
- *  </ul>
- *
- *  <p>没有贴图、没有长寿命发射器：不会残留，也不吃显存/粒子内存。</p> */
+ *    <li><b>黑色闪电</b>：{@link #BOLTS} 道，每道 10~14 段折线、长 9~14 格、粗 0.34~0.55（越往外越细），
+ *        三层绘制＝红色辉光（2.3 倍宽）+ 红层 + 近黑芯；每段独立闪烁（波谷整段跳过）。</li>
+ *    <li><b>黑色火花</b>：{@link #SPARKS} 颗，从圆心向外飞散，每颗＝红色辉光 + 近黑方片，逐颗独立闪烁；
+ *        另有 {@link #CORE_SPARKS} 颗贴着圆心。</li>
+ *    <li><b>拳风</b>：四层风环沿出拳方向推出。</li>
+ *    <li><b>光污染</b>：命中点 Photon 加法发光点 + 拳风光环；顶点通路的红辉光层负责其余光晕。</li>
+ *  </ul> */
 public final class BlackFlashRender {
-    /** 一颗火花：环上角度、半径比例（0~1）、离面抖动、大小倍率。 */
-    private record Spark(double ang,double rad,double tilt,double size){}
+    private record Bolt(double[] yaw,double[] pitch,double len,double width){}
+    private record Spark(double yaw,double pitch,double speed,double size,double phase){}
     private static final class Flash {
-        final Vec3 pos,dir;final long born;final List<Spark> ring=new ArrayList<>(),core=new ArrayList<>();
+        final Vec3 pos,dir;final long born;final List<Bolt> bolts=new ArrayList<>();final List<Spark> sparks=new ArrayList<>();
         Flash(Vec3 pos,Vec3 dir,long born,Random rnd){
             this.pos=pos;this.dir=dir;this.born=born;
-            for(int i=0;i<SPARKS;i++){
-                double ang=(i+ rnd.nextDouble()*0.5)*Math.PI*2/SPARKS;
-                ring.add(new Spark(ang,0.9+rnd.nextDouble()*0.2,(rnd.nextDouble()-0.5)*0.5,0.8+rnd.nextDouble()*0.5));
+            for(int i=0;i<BOLTS;i++){
+                int seg=SEG_MIN+rnd.nextInt(SEG_MAX-SEG_MIN+1);
+                double[] y=new double[seg+1],p=new double[seg+1];
+                double yaw=rnd.nextDouble()*Math.PI*2,pitch=(rnd.nextDouble()-0.5)*1.7;
+                for(int s=0;s<=seg;s++){
+                    y[s]=yaw;p[s]=pitch;
+                    yaw+=(rnd.nextDouble()-0.5)*1.15;     // 折线抖得狠一点，像裂开的黑电
+                    pitch+=(rnd.nextDouble()-0.5)*1.15;
+                }
+                bolts.add(new Bolt(y,p,9.0+rnd.nextDouble()*5.0,0.34+rnd.nextDouble()*0.21));
             }
-            for(int i=0;i<CORE_SPARKS;i++)
-                core.add(new Spark(rnd.nextDouble()*Math.PI*2,rnd.nextDouble()*0.45,(rnd.nextDouble()-0.5)*0.8,0.7+rnd.nextDouble()*0.6));
+            for(int i=0;i<SPARKS;i++)
+                sparks.add(new Spark(rnd.nextDouble()*Math.PI*2,(rnd.nextDouble()-0.5)*1.5,1.2+rnd.nextDouble()*3.2,0.16+rnd.nextDouble()*0.30,rnd.nextDouble()*6.28));
         }
     }
     private static final List<Flash> FLASHES=new ArrayList<>();
     private static final Random RND=new Random();
-    /** 可调参数。 */
-    private static final int SPARKS=28,CORE_SPARKS=10,LIFE=12,WIND_LIFE=10;
-    private static final double RING_MIN=0.6,RING_MAX=5.2,SPARK_SIZE=0.26,WIND_RADIUS=4.2;
+    /** —— 用户要求"要很多"：闪电 26 道、火花 72 颗 —— */
+    private static final int BOLTS=26,SPARKS=72,CORE_SPARKS=14,SEG_MIN=10,SEG_MAX=14,LIFE=13,WIND_LIFE=10;
+    private static final double WIND_RADIUS=4.2;
     private static final int RED=0xFFE02418,BLACK=0xFF060606,WIND=0xFFE6ECF2;
     private static final int BLOOM_RED=0xFF8A1208;
     private static final String GLOW="textures/effect/glow.png";
+    private static final Vec3 FALLBACK=new Vec3(0,0,1);
 
-    /** 命中点（＝准星指向处）触发。{@code dir} = 出拳方向（可为 {@link Vec3#ZERO}）。 */
     public static void play(Vec3 pos,Vec3 dir){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         Vec3 d=dir==null||dir.lengthSqr()<1e-6?Vec3.ZERO:dir.normalize();
         FLASHES.add(new Flash(pos,d,mc.level.getGameTime(),RND));
-        if(FLASHES.size()>16)FLASHES.remove(0);
-        // 光污染：命中点 bloom 发光 + 拳风处加法光环（都短命）
+        if(FLASHES.size()>12)FLASHES.remove(0);
         try{
-            PhotonFx.spark(pos,0.5,0.40,0xFF2A10,BLOOM_RED,GLOW,true,1,8,20,0.5);
+            PhotonFx.spark(pos,0.6,0.45,0xFF2A10,BLOOM_RED,GLOW,true,1,9,26,0.55);
             if(d.lengthSqr()>1e-6)PhotonFx.ring(pos.add(d.scale(1.6)),2.4,0.8,0xFFD8E6F2,BLOOM_RED,26,2,9);
         }catch(Throwable ignored){}
-        Client.shake(12);
+        Client.shake(13);
     }
     public static void tick(){}
     public static void clear(){FLASHES.clear();}
@@ -63,16 +70,34 @@ public final class BlackFlashRender {
             double age=mc.level.getGameTime()-f.born+partial;
             if(age<0||age>LIFE)continue;
             double life=Math.max(0,1-age/LIFE);
-            // 圆环所在平面：垂直于视线（玩家看过去就是一圈）
-            Vec3 n=cam.subtract(f.pos);n=n.lengthSqr()<1e-6?new Vec3(0,0,1):n.normalize();
-            Vec3 ref=Math.abs(n.y)>0.9?new Vec3(1,0,0):new Vec3(0,1,0);
-            Vec3 e1=n.cross(ref).normalize(),e2=n.cross(e1).normalize();
-            // ---- 黑色火花圆环：半径扩散 ----
-            double rad=RING_MIN+(RING_MAX-RING_MIN)*DismantleMotionRules.phase(age,0,LIFE*0.8);
-            for(Spark s:f.ring)spark(b,ps,f.pos,e1,e2,s,rad,life,age);
-            // ---- 圆心：向内簇拥的黑色火花 ----
-            for(Spark s:f.core)spark(b,ps,f.pos,e1,e2,s,RING_MIN*0.9+s.rad()*1.4,life,age);
-            // ---- 圆心：拳风四层风环（沿出拳方向推出去） ----
+            // ---- 黑色闪电：从圆心向四面八方劈开 ----
+            for(Bolt bolt:f.bolts){
+                Vec3 from=f.pos;int seg=bolt.yaw().length-1;
+                for(int s=0;s<seg;s++){
+                    double yaw=bolt.yaw()[s]+Math.sin((age*1.6+s)*1.7)*0.16;
+                    double pitch=bolt.pitch()[s]+Math.cos((age*1.4+s)*1.3)*0.16;
+                    double step=bolt.len()/seg;
+                    Vec3 to=from.add(Math.cos(yaw)*Math.cos(pitch)*step,Math.sin(pitch)*step,Math.sin(yaw)*Math.cos(pitch)*step);
+                    double taper=1-s/(double)seg;
+                    double wave=Math.sin((age*1.9+s)*2.1+yaw);
+                    if(wave<-0.35&&age>1.5){from=to;continue;}                          // 炸断
+                    int a=(int)((0.35+0.65*Math.abs(wave))*life*255);
+                    double w=bolt.width()*taper;
+                    ribbon(b,ps,from,to,w*2.3+0.06,(int)(a*0.42)<<24|(RED&0xFFFFFF));   // 红辉光（光污染）
+                    ribbon(b,ps,from,to,w*1.35+0.03,(int)(a*0.72)<<24|(RED&0xFFFFFF));  // 红层
+                    ribbon(b,ps,from,to,w,(a<<24)|(BLACK&0xFFFFFF));                     // 近黑芯
+                    from=to;
+                }
+            }
+            // ---- 黑色火花：向外飞散 ----
+            for(Spark s:f.sparks)sparkAt(b,ps,f.pos.add(dirOf(s).scale(s.speed()*age)),s.size()*(1+age*0.03),life,age,s.phase());
+            // ---- 圆心：贴着命中的一小撮火花 ----
+            for(int i=0;i<CORE_SPARKS;i++){
+                double ang=i*Math.PI*2/CORE_SPARKS+age*0.2;
+                Vec3 p=f.pos.add(Math.cos(ang)*(0.5+age*0.12),0.25*Math.sin(ang*2+age),Math.sin(ang)*(0.5+age*0.12));
+                sparkAt(b,ps,p,0.22,life,age,i*1.1);
+            }
+            // ---- 拳风：四层风环 ----
             if(f.dir.lengthSqr()>1e-6&&age<=WIND_LIFE){
                 double wl=Math.max(0,1-age/WIND_LIFE),r=WIND_RADIUS*(0.35+0.85*(age/WIND_LIFE));
                 int a=(int)(185*wl*wl)<<24;
@@ -83,28 +108,32 @@ public final class BlackFlashRender {
             }
         }
     }
-
-    /** 画一颗火花：红色辉光 + 近黑芯，逐颗独立闪烁。 */
-    private static void spark(BufferBuilder b,PoseStack ps,Vec3 center,Vec3 e1,Vec3 e2,Spark s,double rad,double life,double age){
-        double wave=Math.sin(age*1.9+s.ang()*3.1);
-        if(wave<-0.30)return;                                     // 整颗跳过 = 闪烁的"炸断"感
-        double a=(0.25+0.75*Math.abs(wave))*life;
-        Vec3 p=center.add(e1.scale(Math.cos(s.ang())*rad)).add(e2.scale(Math.sin(s.ang())*rad)).add(0,s.tilt(),0);
-        double size=SPARK_SIZE*s.size();
-        quad(b,ps,p,size*2.4,(int)(a*70)<<24|(RED&0xFFFFFF));     // 外：红色辉光（光污染）
-        quad(b,ps,p,size,(int)(a*235)<<24|(BLACK&0xFFFFFF));      // 内：近黑火花
+    private static Vec3 dirOf(Spark s){return new Vec3(Math.cos(s.yaw())*Math.cos(s.pitch()),Math.sin(s.pitch()),Math.sin(s.yaw())*Math.cos(s.pitch()));}
+    /** 一颗火花：红色辉光 + 近黑方片，逐颗闪烁。 */
+    private static void sparkAt(BufferBuilder b,PoseStack ps,Vec3 p,double size,double life,double age,double phase){
+        double wave=Math.sin(age*2.1+phase);
+        if(wave<-0.30)return;
+        int a=(int)((0.30+0.70*Math.abs(wave))*life*255);
+        quad(b,ps,p,size*2.2,(int)(a*0.55)<<24|(RED&0xFFFFFF));
+        quad(b,ps,p,size,(a<<24)|(BLACK&0xFFFFFF));
     }
-    /** 相机朝向的方形面片。 */
+    private static void ribbon(BufferBuilder b,PoseStack ps,Vec3 a,Vec3 z,double half,int color){
+        var cam=Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        Vec3 mid=a.lerp(z,.5),across=z.subtract(a).cross(cam.subtract(mid));
+        if(across.lengthSqr()<1e-8)across=FALLBACK;
+        Vec3 side=across.normalize().scale(half);
+        Client.quad(b,ps,a.add(side),z.add(side),z.subtract(side),a.subtract(side),color);
+    }
     private static void quad(BufferBuilder b,PoseStack ps,Vec3 c,double r,int color){
         var cam=Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        Vec3 n=cam.subtract(c);n=n.lengthSqr()<1e-6?new Vec3(0,0,1):n.normalize();
+        Vec3 n=cam.subtract(c);n=n.lengthSqr()<1e-6?FALLBACK:n.normalize();
         Vec3 up=new Vec3(0,1,0).subtract(n.scale(new Vec3(0,1,0).dot(n)));
         if(up.lengthSqr()<1e-4)up=new Vec3(1,0,0).subtract(n.scale(n.x));
         up=up.normalize();Vec3 right=n.cross(up).normalize();
         Vec3 u=up.scale(r).add(right.scale(r)),w=up.scale(r).subtract(right.scale(r));
         Client.quad(b,ps,c.add(u),c.add(w),c.subtract(u),c.subtract(w),color);
     }
-    /** 垂直于 {@code dir} 的圆环（16 段面片拼成，不依赖 Photon）。 */
+    /** 垂直于 {@code dir} 的圆环（16 段面片拼成）。 */
     private static void windRing(BufferBuilder b,PoseStack ps,Vec3 c,Vec3 dir,double r,double thick,int color,Vec3 cam){
         Vec3 n=dir.normalize();
         Vec3 ref=Math.abs(n.y)>0.9?new Vec3(1,0,0):new Vec3(0,1,0);

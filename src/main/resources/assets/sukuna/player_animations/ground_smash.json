@@ -1,0 +1,129 @@
+{
+ "name": "ground_smash",
+ "author": "sukuna",
+ "description": "ground_smash",
+ "emote": {
+  "beginTick": 0,
+  "endTick": 24,
+  "stopTick": 24,
+  "isLoop": false,
+  "returnTick": 0,
+  "nsfw": false,
+  "degrees": true,
+  "easeBeforeKeyframe": true,
+  "moves": [
+   {
+    "tick": 0,
+    "body": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "rightArm": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "leftLeg": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "rightLeg": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    }
+   },
+   {
+    "tick": 4,
+    "body": {
+     "x": -14,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": -170,
+     "y": 0,
+     "z": -10
+    },
+    "rightArm": {
+     "x": -170,
+     "y": 0,
+     "z": 10
+    },
+    "leftLeg": {
+     "x": -70,
+     "y": 0,
+     "z": 0
+    },
+    "rightLeg": {
+     "x": -40,
+     "y": 0,
+     "z": 0
+    }
+   },
+   {
+    "tick": 8,
+    "body": {
+     "x": 20,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": -20,
+     "y": 0,
+     "z": -30
+    },
+    "rightArm": {
+     "x": -20,
+     "y": 0,
+     "z": 30
+    },
+    "leftLeg": {
+     "x": -95,
+     "y": -8,
+     "z": -10
+    },
+    "rightLeg": {
+     "x": -45,
+     "y": 0,
+     "z": 0
+    }
+   },
+   {
+    "tick": 24,
+    "body": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "rightArm": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "leftLeg": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "rightLeg": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    }
+   }
+  ]
+ }
+}

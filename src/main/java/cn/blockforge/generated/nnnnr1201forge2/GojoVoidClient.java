@@ -97,6 +97,8 @@ public final class GojoVoidClient {
 
     // ------------------------------------------------------------ 底衬 + 纯黑盘面（Photon 画不出的那一小块）
     @SubscribeEvent public static void render(RenderLevelStageEvent e){
+        // 【已回退】回到原来的阶段：黑色领域底衬在方块之后、实体之前画，并清掉地形深度，
+        // 这样"纯黑底衬 + 黑洞 + 银河"的黑色领域画面与之前完全一致（实体仍然压在画布之上）。
         if(anchor==null||e.getStage()!=RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS)return;
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         PoseStack ps=e.getPoseStack();Vec3 cam=e.getCamera().getPosition();
@@ -121,6 +123,8 @@ public final class GojoVoidClient {
         backdrop(b,ps,e.getCamera(),cam); // 纯黑底衬：地形、天空、领域雾全部让位
         hole(b,ps,cam);                   // 纯黑盘面 + 白色硬边
         BufferUploader.drawWithShader(b.end());
+        // 地形深度已经被底衬盖住，清掉它，远处粒子（银河/星空/彩线）才不会被看不见的方块挡掉；
+        // 实体在后面的阶段重新写入深度，所以怪物与玩家仍然压在画布之上。
         // 地形深度已经被底衬盖住，清掉它，远处粒子（银河/星空/彩线）才不会被看不见的方块挡掉；
         // 实体在后面的阶段重新写入深度，所以怪物与玩家仍然压在画布之上。
         RenderSystem.clear(org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT,false);

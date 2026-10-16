@@ -23,6 +23,12 @@ public final class GojoCombat {
         int casting=-1,age;UUID target;Vec3 center=Vec3.ZERO;long domainUntil;int chargeSkill=-1;long chargeAt;boolean chargeFired;
         State(ServerPlayer p){this.p=p;level=p.serverLevel();}
     }
+    /** 无量空处：持续 **90 秒**（1 分半）。 */
+    public static final int UNLIMITED_TICKS=1800;
+    /** 无量空处持续伤害：**每 0.1 秒（2 刻）2 点**。 */
+    public static final double UNLIMITED_DAMAGE=2;
+    /** 在"绝对无法移动"之上再叠的减速档：移动缓慢 IV（amplifier 3）。 */
+    public static final int UNLIMITED_SLOW_AMPLIFIER=3;
     private static final Map<UUID,State> states=new HashMap<>();
     private static final List<Orb> orbs=new ArrayList<>();
     private static final List<Beam> beams=new ArrayList<>();
@@ -187,7 +193,7 @@ public final class GojoCombat {
                 s.casting=-1;
             }
             case 7->{ // 无量空处
-                s.center=p.position();s.domainUntil=p.level().getGameTime()+400;
+                s.center=p.position();s.domainUntil=p.level().getGameTime()+UNLIMITED_TICKS;
                 // direction 带上朝向：客户端把白边黑洞摆在正前方
                 Network.send(p.serverLevel(),new Network.Effect(GojoFx.DOMAIN_OPEN,p.getId(),s.center,p.getLookAngle(),GojoFx.DOMAIN_RADIUS,400,0));
                 DomainClash.opened(p,s.center,GojoFx.DOMAIN_RADIUS);
@@ -323,7 +329,7 @@ public final class GojoCombat {
                     if(VoidLock.immune(p,victim))continue; // 自己/盟友与默认玩家/宠物/女仆/永恒挚爱：绝对不生效
                     if(DomainClash.active(p))break;
                     VoidLock.hold(victim,now); // 强制控制：拴在原地，绝对无法移动
-                    if(now%20==0)hit(p,victim,8,false,1f,AttackTypes.MAGIC); // 无量空处持续伤害：基础「魔法」
+                    if(now%2==0)hit(p,victim,UNLIMITED_DAMAGE,false,1f,AttackTypes.MAGIC); // 每 0.1 秒 2 点（基础「魔法」）
                 }
             }
             chargeTick(s);

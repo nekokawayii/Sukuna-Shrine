@@ -1,12 +1,16 @@
 plugins { id 'java'; id 'net.minecraftforge.gradle' version '[6.0,6.2)' }
-version = '1.6.0-r137'
+version = '1.6.0-r165'
 group = 'cn.blockforge.generated.nnnnr1201forge2'
 base { archivesName = 'sukuna-forge-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 minecraft { mappings channel: 'official', version: '1.20.1' }
 dependencies {
+    // 本地前置：PlayerAnimator（动作动画）与 TLM（女仆兼容）。
+    // 运行期由 mods 目录提供；这里只用于编译，避免把它们的类打进我们自己的 jar。
+    compileOnly fileTree(dir: 'libs', include: ['*.jar'])
+    annotationProcessor fileTree(dir: 'libs', include: ['*.jar'])
+
     minecraft 'net.minecraftforge:forge:1.20.1-47.4.0'
-    compileOnly files('libs/touhoulittlemaid-1-2.5.2-forge_mc1.20.1.jar')
 }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
 processResources {
@@ -50,3 +54,26 @@ def copyToDist = tasks.register('copyToDist', Copy) {
     doLast { logger.lifecycle("已同步发行 jar 到 ${distDir}") }
 }
 tasks.named('assemble') { finalizedBy copyToDist }
+
+// 同时把这版 jar 装进本地测试整合包的 mods 目录（免去每次手动拷贝）。
+// 会自动删掉里面旧版的 sukuna-*.jar，避免同名模组多版本共存导致加载到旧版。
+// 需要改位置时用：./gradlew build -PmodsDir=某路径
+def modsDir = new File((project.findProperty('modsDir')
+        ?: 'E:/hmcl/.minecraft/versions/1.20.1test/mods') as String)
+def copyToMods = tasks.register('copyToMods', Copy) {
+    dependsOn autoShareJar
+    onlyIf { modsDir.isDirectory() || modsDir.parentFile?.isDirectory() && modsDir.mkdirs() }
+    // 先清掉旧版 sukuna jar（只匹配本模组的文件名，绝不动 photon / playeranimator 等前置）
+    doFirst {
+        modsDir.listFiles({ f -> f.isFile() && f.name.startsWith('sukuna-forge-') && f.name.endsWith('.jar') } as FileFilter)
+                ?.each { if (it.delete()) logger.lifecycle("已移除旧版 ${it.name}") }
+    }
+    // mods 里只放一份：两个 jar 是同一个 modid，同放会触发 Forge 的重复模组判定。
+    // 默认装 -auto-share（已同意共享），想要另一版就用 -PmodsJar=ask
+    def modsVariant = (project.findProperty('modsJar') ?: 'auto-share') as String
+    if (modsVariant == 'ask') from(tasks.named('jar').flatMap { it.archiveFile })
+    else from(autoShareJar.flatMap { it.archiveFile })
+    into modsDir
+    doLast { logger.lifecycle("已同步发行 jar 到测试整合包 ${modsDir}（变体 ${modsVariant}）") }
+}
+tasks.named('assemble') { finalizedBy copyToMods }

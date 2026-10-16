@@ -17,10 +17,23 @@ public final class DismantleMotion {
         final ServerPlayer player;final LivingEntity actor;final ServerLevel level;final int kind;final UUID token=UUID.randomUUID();
         final Vec3 forward;final float yaw;final boolean gravity;final long born;final double width,height;
         final Set<UUID> kicked=new HashSet<>();
-        Vec3 position;boolean blocked,ringReleased;int age,emitted;
-        Motion(ServerPlayer p,int kind){
+        Vec3 position;boolean blocked,ringReleased,backwardMove;int age,emitted;
+        Motion(ServerPlayer p,int kind,int rotate){
             player=p;actor=MaidBridge.body(p);level=p.serverLevel();this.kind=kind;position=actor.position();yaw=p.getYRot();
-            double a=Math.toRadians(yaw);forward=new Vec3(-Math.sin(a),0,Math.cos(a));gravity=actor.isNoGravity();born=level.getGameTime();
+            double a=Math.toRadians(yaw);
+            Vec3 facing=new Vec3(-Math.sin(a),0,Math.cos(a));
+            // 按客户端实际按的移动键取"真前进方向"；后退类动作沿它的反方向位移，但人仍然面向敌人
+            Vec3 look=new Vec3(p.getLookAngle().x,0,p.getLookAngle().z);
+            if(look.lengthSqr()<1e-4)look=facing;
+            look=look.normalize();
+            double wantX=0,wantZ=0;
+            if((rotate&1)!=0){wantX+=look.x;wantZ+=look.z;}
+            if((rotate&2)!=0){wantX-=look.x;wantZ-=look.z;}
+            Vec3 want=new Vec3(wantX,0,wantZ);
+            // 默认（没有位移输入）：飞踢等"向前"的动作沿用视线方向
+            forward=(want.lengthSqr()>1e-4?want.normalize():look);
+            backwardMove=(rotate&2)!=0&&(rotate&1)==0;
+            gravity=actor.isNoGravity();born=level.getGameTime();
             width=actor.getBbWidth();height=MaidBridge.isCaster(p)?actor.getBbHeight():1.8;
         }
     }
@@ -34,14 +47,18 @@ public final class DismantleMotion {
     }
     private static boolean grounded(LivingEntity body){return !body.isPassenger()&&!body.isSleeping()&&!body.isFallFlying()&&!body.isInWater()&&body.onGround();}
     public static boolean available(ServerPlayer p,int kind){return DismantleMotionRules.valid(kind)&&!active(p)&&allowed(p)&&grounded(MaidBridge.body(p))&&Skills.available(p,0);}
-    public static void start(ServerPlayer p,int kind){
+    public static void start(ServerPlayer p,int kind){start(p,kind,0);}
+    /** {@code rotate} 是客户端的"转向意图"位：1 前进、2 后退、4 蹲下、8 跳跃、16 疾跑。
+     *  后退类动作（后翻）**保持面向敌人**，位移方向按实际移动方向反转，符合《使用说明》的
+     *  "向后移动 10 格/向前飞踢"以及"剑气朝起手时面对的水平方向飞行"。 */
+    public static void start(ServerPlayer p,int kind,int rotate){
         if(!DismantleMotionRules.valid(kind)||active(p))return;
         // 动作期间不能重入，但收招后可以立刻继续使用解。
         if(!allowed(p)){CastFeedback.unavailable(p,Curse.COST[0]);return;}
         LivingEntity actor=MaidBridge.body(p);
         if(!grounded(actor)&&kind!=DismantleMotionRules.SPIN){CastFeedback.tell(p,"请站在地面上释放解动作");return;}
         if(!MaidBridge.isCaster(p)&&kind!=DismantleMotionRules.SPIN&&!p.isShiftKeyDown()){CastFeedback.tell(p,"按住蹲下和前进／后退，再释放解");return;}
-        Motion m=new Motion(p,kind);
+        Motion m=new Motion(p,kind,rotate);
         if(!free(m,m.position)){CastFeedback.tell(p,"上方空间太低，无法完成动作");return;}
         if(!Skills.beginMotion(p))return;
         CombatExpansion.fallingBranch(p);begin(m);
@@ -50,7 +67,7 @@ public final class DismantleMotion {
     public static boolean startPaid(ServerPlayer p,int kind){
         if(!DismantleMotionRules.valid(kind)||active(p)||!allowed(p))return false;
         LivingEntity actor=MaidBridge.body(p);if(actor.isPassenger()||actor.isSleeping()||actor.isFallFlying()||actor.isInWater())return false;
-        Motion m=new Motion(p,kind);if(!free(m,m.position))return false;begin(m);return true;
+        Motion m=new Motion(p,kind,0);if(!free(m,m.position))return false;begin(m);return true;
     }
     private static void begin(Motion m){ServerPlayer p=m.player;LivingEntity actor=m.actor;
         Skills.cancelCharge(p);FreehandDrawing.cancel(p);actor.stopUsingItem();
@@ -89,7 +106,7 @@ public final class DismantleMotion {
             if(m.kind==DismantleMotionRules.FLYING_KICK&&m.age<18&&next>=18)m.blocked=false;
             double dy=DismantleMotionRules.height(m.kind,next)-DismantleMotionRules.height(m.kind,m.age);
             Vec3 before=m.position;
-            m.position=safeMove(m,m.forward.scale(m.blocked?0:dx).add(0,dy,0));m.age=next;
+            m.position=safeMove(m,m.forward.scale(m.blocked?0:(m.backwardMove?-dx:dx)).add(0,dy,0));m.age=next;
             int landing=m.kind==DismantleMotionRules.BACKFLIP?22:m.kind==DismantleMotionRules.FLYING_KICK?30:m.kind==DismantleMotionRules.AIR_PUNCH?1000:0;
             if(next>=landing)m.position=safeMove(m,new Vec3(0,-0.35,0));
             actor.setPos(m.position);actor.setDeltaMovement(Vec3.ZERO);actor.setNoGravity(true);actor.setOnGround(!free(m,m.position.add(0,-0.08,0)));actor.fallDistance=0;
@@ -123,10 +140,8 @@ public final class DismantleMotion {
             // 接触体积可以略大于脚，但不能隔着实心方块踢到另一侧。
             Vec3 origin=before.add(0,Math.min(0.9,m.height*0.5),0);
             if(m.level.clip(new net.minecraft.world.level.ClipContext(origin,touch,net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,m.actor)).getType()!=HitResult.Type.MISS)continue;
-            m.kicked.add(target.getUUID());int previousInvulnerability=target.invulnerableTime;target.invulnerableTime=0;
-            float damage=CombatSettings.spellDamage(m.player,DismantleMotionRules.KICK_DAMAGE);
-            AttackTypes.mark(AttackTypes.UNARMED);if(!CombatSettings.hurt(m.player,target,m.player.damageSources().indirectMagic(m.actor,m.actor),damage)){target.invulnerableTime=previousInvulnerability;continue;}
-            if(!target.isAlive())continue;
+            // 只"轻推开"，不结算独立踢击伤害；也不碰无敌帧（避免把别人的伤害判定吃掉）。
+            m.kicked.add(target.getUUID());
             Vec3 oldVelocity=target.getDeltaMovement();
             target.knockback(DismantleMotionRules.KICK_KNOCKBACK,-m.forward.x,-m.forward.z);
             Vec3 velocity=target.getDeltaMovement();

@@ -1,0 +1,195 @@
+{
+ "name": "flying_kick",
+ "author": "sukuna",
+ "description": "flying_kick",
+ "emote": {
+  "beginTick": 0,
+  "endTick": 50,
+  "stopTick": 50,
+  "isLoop": false,
+  "returnTick": 0,
+  "nsfw": false,
+  "degrees": true,
+  "easeBeforeKeyframe": true,
+  "moves": [
+   {
+    "tick": 0,
+    "body": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "rightArm": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "leftLeg": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "rightLeg": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    }
+   },
+   {
+    "tick": 4,
+    "body": {
+     "x": 18,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": -40,
+     "y": 0,
+     "z": -40
+    },
+    "rightArm": {
+     "x": -40,
+     "y": 0,
+     "z": 40
+    },
+    "leftLeg": {
+     "x": -100,
+     "y": 0,
+     "z": 0
+    },
+    "rightLeg": {
+     "x": 30,
+     "y": 0,
+     "z": 0
+    }
+   },
+   {
+    "tick": 16,
+    "body": {
+     "x": 24,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": -30,
+     "y": 0,
+     "z": -50
+    },
+    "rightArm": {
+     "x": -30,
+     "y": 0,
+     "z": 50
+    },
+    "leftLeg": {
+     "x": -110,
+     "y": 0,
+     "z": 0
+    },
+    "rightLeg": {
+     "x": 20,
+     "y": 0,
+     "z": 0
+    }
+   },
+   {
+    "tick": 22,
+    "body": {
+     "x": 30,
+     "y": 0,
+     "z": 0
+    },
+    "head": {
+     "x": 20,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": -140,
+     "y": 0,
+     "z": -20
+    },
+    "rightArm": {
+     "x": -140,
+     "y": 0,
+     "z": 20
+    },
+    "leftLeg": {
+     "x": -90,
+     "y": 0,
+     "z": 0
+    },
+    "rightLeg": {
+     "x": -80,
+     "y": 0,
+     "z": 0
+    }
+   },
+   {
+    "tick": 38,
+    "body": {
+     "x": 6,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": -70,
+     "y": 0,
+     "z": -70
+    },
+    "rightArm": {
+     "x": -70,
+     "y": 0,
+     "z": 70
+    },
+    "leftLeg": {
+     "x": -88,
+     "y": -10,
+     "z": -12
+    },
+    "rightLeg": {
+     "x": -20,
+     "y": 0,
+     "z": 6
+    }
+   },
+   {
+    "tick": 50,
+    "body": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "head": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "rightArm": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "leftLeg": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "rightLeg": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    }
+   }
+  ]
+ }
+}

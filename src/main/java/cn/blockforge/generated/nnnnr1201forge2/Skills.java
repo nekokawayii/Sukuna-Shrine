@@ -43,6 +43,10 @@ public final class Skills {
     private static final List<Furnace> furnaces=new ArrayList<>();
     /** 剑气弹幕的基础飞行速度（格/刻）：原来硬编码 2，现在提成常量，"斩击速度 −70%"就是乘 0.3。 */
     public static final double SLASH_SPEED=2;
+    /** 领域随机斩击的寿命（刻）：短命，只闪一下就走完伤害判定。 */
+    public static final int DOMAIN_CUT_LIFE=6;
+    /** 领域里同时存在的静止斩击上限（密度×10 后需要更大的池子）。 */
+    public static final int DOMAIN_CUT_LIMIT=2000;
     private static final List<Slash> slashes=new ArrayList<>();
     private static final Map<UUID,Aura> auras=new HashMap<>();
     private static final Map<UUID,Domain> domains=new HashMap<>();
@@ -121,6 +125,8 @@ public final class Skills {
         ServerPlayer owner;ServerLevel level;Vec3 pos,dir,axis;float size,power;int age,life;boolean world,space;Set<UUID> hit=new HashSet<>();
         /** 每刻飞行格数：**这就是"斩击速度"**（剑气弹幕的飞行速度）。手持生成了才定型，中途换手不影响已经在飞的。 */
         double speed=SLASH_SPEED;
+        /** 伤害系数（1 = 普通解）。简易领域的随机斩击用小于 1 的系数。 */
+        float damageScale=1f;
         Slash(ServerPlayer p,Vec3 pos,Vec3 dir,Vec3 axis,float size){owner=p;level=p.serverLevel();this.pos=pos;this.dir=dir;this.axis=axis;this.size=size;power=(float)Curse.power(p);world=Curse.awakened(p);life=(int)(400*Curse.scale(p));speed=SLASH_SPEED*(Hiten.holding(p)?Hiten.SLASH_SLOW:1);}
     }
     private record Charge(ServerLevel level,long start){}
@@ -238,6 +244,16 @@ public final class Skills {
     /** 动作只限制自身的时间轴，不再为普通解添加额外冷却。 */
     static boolean beginMotion(ServerPlayer p){return Curse.spend(p,Curse.COST[0]);}
     /** 按住连发每次只产生一道，费用由服务端按本次按住的累计次数结算。 */
+    /** 简易领域 · 捌：在圆柱内**随机位置、随机方向**出现的斩击。
+     *
+     *  <p>御厨子的领域斩击是"球内随机点 + 随机三维方向飞行"，这里对齐同一套观感：
+     *  方向用均匀球面采样（{@code y} 均匀、方位角均匀），**不跟随准星**，所以斩击是向四面八方飞出去的。</p> */
+    static void domainSlashRandom(ServerPlayer p,Vec3 at,float size,int life){
+        if(slashes.size()>=DOMAIN_CUT_LIMIT)return;
+        double y=p.getRandom().nextDouble()*2-1,flat=Math.sqrt(Math.max(0,1-y*y)),a=p.getRandom().nextDouble()*Math.PI*2;
+        Vec3 dir=new Vec3(Math.cos(a)*flat,y,Math.sin(a)*flat);
+        slash(p,at,dir,size,p.getRandom().nextInt(360),0f,life,0);
+    }
     static void heldSlash(ServerPlayer p){
         if(SlashForms.qi(p)){SlashForms.basic(p);return;}
         if(VoidJourney.evolved(p)){VoidCombat.cast(p,0);return;}
@@ -302,8 +318,28 @@ public final class Skills {
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.PLAYER_ATTACK_SWEEP,SoundSource.PLAYERS,1.2f,0.65f);
         return angle;
     }
-    private static void slash(ServerPlayer p,Vec3 pos,Vec3 dir,Vec3 axis,float size){
-        if(slashes.size()>=400)return;long angle=p.getRandom().nextInt(360);Vec3 side=new Vec3(-dir.z,0,dir.x).normalize();if(side.lengthSqr()<0.1)side=new Vec3(1,0,0);Vec3 up=dir.cross(side).normalize();double a=Math.toRadians(angle);axis=side.scale(Math.cos(a)).add(up.scale(Math.sin(a))).normalize();Slash s=new Slash(p,pos,dir,axis,size);slashes.add(s);fx(p,0,pos,dir,size,s.life,angle+(SoulJourney.evolved(p)?2000:Journey.nine(p)?1440:s.world?720:0));
+    private static void slash(ServerPlayer p,Vec3 pos,Vec3 dir,Vec3 axis,float size){slash(p,pos,dir,size,p.getRandom().nextInt(360),1f);}
+    /** 通用斩击：**角度与伤害系数都可指定**（简易领域的随机斩击直接走这一条，表现与伤害一致）。 */
+    static void slash(ServerPlayer p,Vec3 pos,Vec3 dir,float size,int angleDegrees,float damageScale){slash(p,pos,dir,size,angleDegrees,damageScale,0);}
+    static void slash(ServerPlayer p,Vec3 pos,Vec3 dir,float size,int angleDegrees,float damageScale,int life){slash(p,pos,dir,size,angleDegrees,damageScale,life,SLASH_SPEED);}
+    static void slash(ServerPlayer p,Vec3 pos,Vec3 dir,float size,int angleDegrees,float damageScale,int life,double speed){
+        if(slashes.size()>=(damageScale<1f?DOMAIN_CUT_LIMIT:400))return; // 领域静止斩击用大池子，飞行斩击维持 400
+        Vec3 side=new Vec3(-dir.z,0,dir.x).normalize();if(side.lengthSqr()<0.1)side=new Vec3(1,0,0);
+        Vec3 up=dir.cross(side).normalize();double a=Math.toRadians(angleDegrees);
+        Vec3 axis=side.scale(Math.cos(a)).add(up.scale(Math.sin(a))).normalize();
+        Slash s=new Slash(p,pos,dir,axis,size);s.damageScale=damageScale;
+        if(life>0)s.life=life;   // 领域用的随机斩击寿命单独指定（默认 400 刻会瞬间堆满上限）
+        s.speed=speed;
+        // 【关键】speed<=0 = 静止斩痕：必须用专门给"停在原地的斩击"准备的 STILL 特效（162），
+        // 不能用普通斩击特效 0 —— 客户端会自己按 kind 判定位移（Client.position 对 kind 0 每刻推 2 格），
+        // 那就是"明明是斩击却看起来像剑气飞出去"的真正原因。STILL 在客户端是零位移的静止斩痕。
+        boolean still=speed<=0;
+        slashes.add(s);
+        if(still){
+            // r155 的表现通路：静止斩痕用 SlashFormRules.STILL(162)，长度同时写进 direction 与 size 两处。
+            Vec3 unit=dir.lengthSqr()<1e-8?new Vec3(0,0,1):dir.normalize();
+            Network.send(p.serverLevel(),new Network.Effect(SlashFormRules.STILL,p.getId(),pos,unit.scale(Math.max(0.5,size)),size,s.life,0));
+        }else fx(p,0,pos,dir,size,s.life,angleDegrees+(SoulJourney.evolved(p)?2000:Journey.nine(p)?1440:s.world?720:0));
     }
     private static void hitEffect(ServerLevel l,ServerPlayer caster,LivingEntity target,int kind,boolean red){Vec3 center=target.getBoundingBox().getCenter();float size=kind==10?Math.max(1.5f,Math.min(6,target.getBbHeight()*1.5f)):Math.max(4,target.getBbHeight()*3);Network.send(l,new Network.Effect(red?11:kind,target.getId(),center,center.subtract(target.position()),size,kind==10?6:10,target.getRandom().nextLong()).fromCaster(caster));}
     private static void hitEffectSoul(ServerLevel l,ServerPlayer caster,LivingEntity target){if(!target.isAlive())return;Vec3 center=target.getBoundingBox().getCenter();Network.send(l,new Network.Effect(93,target.getId(),center,Vec3.ZERO,Math.max(1,target.getBbHeight()),12,target.getRandom().nextLong()).fromCaster(caster));}
@@ -358,7 +394,7 @@ public final class Skills {
         for(Iterator<Joint> it=joints.values().iterator();it.hasNext();){Joint j=it.next();if(!valid(j.owner,j.level)){it.remove();continue;}if(j.level.getGameTime()<j.due)continue;it.remove();var entity=j.level.getEntity(j.target);if(entity instanceof LivingEntity target&&canHit(j.owner,target)){damage(j.level,j.owner,target,j.power,true,false);fx(j.owner,59,target.getBoundingBox().getCenter(),Vec3.ZERO,4,20,target.getId());SkillSounds.play(j.owner,"fetus_joint");}}
         tickRifts();
         for(Iterator<Slash> it=slashes.iterator();it.hasNext();){Slash s=it.next();if(++s.age>s.life||!valid(s.owner,s.level)){it.remove();continue;}Vec3 old=s.pos;s.pos=s.pos.add(s.dir.scale(s.speed));if(CombatExpansion.collideSlash(s.owner,s.pos.subtract(s.axis.scale(s.size/2)),s.pos.add(s.axis.scale(s.size/2)),s.dir)){it.remove();continue;}SkillDestruction.line(s.owner,s.pos.subtract(s.axis.scale(s.size/2)),s.pos.add(s.axis.scale(s.size/2)),0.6);AABB swept=new AABB(old,s.pos).inflate(s.size/2+1);
-            for(LivingEntity e:targets(s.level,s.owner,s.pos,s.size/2+3)){if(!e.getBoundingBox().intersects(swept))continue;Vec3 q=e.getBoundingBox().getCenter().subtract(old.lerp(s.pos,0.5));double a=q.dot(s.axis),b=q.dot(s.dir);Vec3 normal=s.axis.cross(s.dir).normalize();double halfThickness=0.45;float amount=s.space?(float)((YujiEntity.percent(e,e.getMaxHealth()*0.25f)+300)*Journey.bonus(s.owner)*(Curse.active(s.owner,"Disorder")?0.8:1)):(s.world?12:6)*s.power;boolean soul=SoulJourney.evolved(s.owner);if(Math.abs(a)<s.size/2+projection(e,s.axis)&&Math.abs(b)<1+projection(e,s.dir)&&Math.abs(q.dot(normal))<halfThickness+projection(e,normal)&&(Journey.rotation(s.owner)||s.hit.add(e.getUUID()))&&scaledDamage(s.level,s.owner,e,amount,s.world,true,soul,SlashFormRules.DAMAGE)){if(soul)hitEffectSoul(s.level,s.owner,e);else hitEffect(s.level,s.owner,e,7,s.world);}}
+            for(LivingEntity e:targets(s.level,s.owner,s.pos,s.size/2+3)){if(!e.getBoundingBox().intersects(swept))continue;Vec3 q=e.getBoundingBox().getCenter().subtract(old.lerp(s.pos,0.5));double a=q.dot(s.axis),b=q.dot(s.dir);Vec3 normal=s.axis.cross(s.dir).normalize();double halfThickness=0.45;float amount=(s.space?(float)((YujiEntity.percent(e,e.getMaxHealth()*0.25f)+300)*Journey.bonus(s.owner)*(Curse.active(s.owner,"Disorder")?0.8:1)):(s.world?12:6)*s.power)*s.damageScale;boolean soul=SoulJourney.evolved(s.owner);if(Math.abs(a)<s.size/2+projection(e,s.axis)&&Math.abs(b)<1+projection(e,s.dir)&&Math.abs(q.dot(normal))<halfThickness+projection(e,normal)&&(Journey.rotation(s.owner)||s.hit.add(e.getUUID()))&&scaledDamage(s.level,s.owner,e,amount,s.world,true,soul,SlashFormRules.DAMAGE)){if(soul)hitEffectSoul(s.level,s.owner,e);else hitEffect(s.level,s.owner,e,7,s.world);}}
         }
         for(Iterator<Aura> it=auras.values().iterator();it.hasNext();){Aura a=it.next();long now=a.level.getGameTime(),age=now-a.start;ServerPlayer p=a.owner;
             if(!valid(p,a.level)||!Curse.canUseTechnique(p)||now>=a.end||(age>0&&age%20==0&&!Curse.spend(p,30))){Network.send(a.level,new Network.Effect(9,p.getId(),p.position(),Vec3.ZERO,0,0,0));it.remove();continue;}

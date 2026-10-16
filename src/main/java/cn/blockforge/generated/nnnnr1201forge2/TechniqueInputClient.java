@@ -5,7 +5,16 @@ import net.minecraft.client.Minecraft;
 /** 不改原版全局按键表；按键沿与心跳仅属于本机玩家。 */
 public final class TechniqueInputClient {
     private static boolean previous;private static int heldSkill=-1,ticks,worldLease;
-    private static TechniqueInput.Input packet(int skill,int phase){var mc=Minecraft.getInstance();return new TechniqueInput.Input(skill,phase,mc.options.keyUp.isDown(),mc.options.keyDown.isDown(),mc.options.keyJump.isDown(),mc.options.keyShift.isDown());}
+    private static TechniqueInput.Input packet(int skill,int phase){
+        var mc=Minecraft.getInstance();
+        boolean up=mc.options.keyUp.isDown(),downKey=mc.options.keyDown.isDown(),jump=mc.options.keyJump.isDown(),crouch=mc.options.keyShift.isDown();
+        boolean sprint=mc.player!=null&&mc.player.isSprinting(),ground=mc.player!=null&&mc.player.onGround();
+        double vy=mc.player==null?0:mc.player.getDeltaMovement().y;
+        // 动作意图按《使用说明》四(三)(四)当场算好：后退+跳=后翻、蹲下+前进=飞踢、蹲下不动=跪地、
+        // 疾跑前进=滑铲、疾跑起跳=冲拳；0 表示"这不是动作，走普通解"。
+        int motion=DismantleMotionRules.choose(crouch,up,downKey,jump,sprint,ground,vy);
+        return new TechniqueInput.Input(skill,phase,up,downKey,jump,crouch,motion,Client.selected);
+    }
     private static void send(int skill,int phase){Network.CHANNEL.sendToServer(packet(skill,phase));}
     public static void cancel(){if((heldSkill>=0||worldLease>0)&&Minecraft.getInstance().player!=null)send(heldSkill>=0?heldSkill:SlashFormRules.WORLD,3);heldSkill=-1;previous=false;ticks=0;worldLease=0;}
     public static void clear(){heldSkill=-1;previous=false;ticks=worldLease=0;}
@@ -26,7 +35,10 @@ public final class TechniqueInputClient {
         if(worldLease>0){worldLease--;if(worldLease%10==0)send(SlashFormRules.WORLD,1);}
         // 动作中的输入不能再次启动技能，但仍必须送达松手与取消。
         if(heldSkill>=0){if(!down){send(heldSkill,2);heldSkill=-1;}else if(++ticks%10==0)send(heldSkill,1);}
-        if(down&&!previous&&heldSkill<0&&!FinaleClient.local()&&!DomainClashClient.active()&&!NetBranchVisuals.locked()&&!DismantleMotionClient.locked()&&Client.selected!=SlashFormRules.FREEHAND){heldSkill=Client.selected;ticks=0;if(heldSkill==SlashFormRules.WORLD)worldLease=320;send(heldSkill,0);}
+        if(down&&!previous&&heldSkill<0&&!FinaleClient.local()&&!DomainClashClient.active()&&!NetBranchVisuals.locked()&&!DismantleMotionClient.locked()&&Client.selected!=SlashFormRules.FREEHAND){
+            heldSkill=Client.selected;ticks=0;
+            if(heldSkill==SlashFormRules.WORLD)worldLease=320;send(heldSkill,0);
+        }
         previous=down;
     }
     private TechniqueInputClient(){}

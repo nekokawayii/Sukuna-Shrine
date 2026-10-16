@@ -2,12 +2,20 @@ package cn.blockforge.generated.nnnnr1201forge2;
 
 import java.util.*;
 import net.minecraft.server.level.*;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 /** 按住状态按玩家隔离；心跳只续租，不重复施法。菜单、失焦与断线取消而非松手释放。 */
 public final class TechniqueInput {
-    public record Input(int skill,int phase,boolean forward,boolean backward,boolean jump,boolean crouch){
+    /** {@code motion} = 本次按下要不要走"动作解"（后翻/飞踢/滑铲/冲拳/跪地/环斩），由客户端按当时的按键决定。 */
+    public record Input(int skill,int phase,boolean forward,boolean backward,boolean jump,boolean crouch,int motion,int wheelSkill){
+        public Input(int skill,int phase,boolean forward,boolean backward,boolean jump,boolean crouch){
+            this(skill,phase,forward,backward,jump,crouch,DismantleMotionRules.choose(crouch,forward,backward,jump,false,true,0),-1);
+        }
+        public Input(int skill,int phase,boolean forward,boolean backward,boolean jump,boolean crouch,int motion){
+            this(skill,phase,forward,backward,jump,crouch,motion,-1);
+        }
         public Input(int skill,int phase,boolean forward,boolean backward,boolean jump){this(skill,phase,forward,backward,jump,false);}
     }
     private static final class Hold {
@@ -39,6 +47,27 @@ public final class TechniqueInput {
             return;
         }
         if(Shinbuke.holding(p)){return;} // 手持神武解：除充能外任何术式都不可用
+        // 简易领域 · 捌：长按维持、松手收招（不走普通 hold 的"松手才结算"路径）
+        if(input.wheelSkill()==SimpleDomain.SKILL){
+            if(input.phase==0)SimpleDomain.start(p);
+            else if(input.phase==1)SimpleDomain.hold(p);
+            else SimpleDomain.release(p);
+            return;
+        }
+        // 动作解：客户端把"按下时的按键组合"带过来了，服务端据此挑一个动作（服务端的冲刺/离地状态更准）
+        if(input.phase()==0&&input.skill()==0){
+            LivingEntity body=MaidBridge.body(p);
+            // 客户端已经按"按下那一瞬间"的按键与疾跑/离地状态算好了动作意图，服务端复核并兜底
+            int kind=DismantleMotionRules.choose(input.crouch(),input.forward(),input.backward(),input.jump(),
+                body.isSprinting(),body.onGround(),body.getDeltaMovement().y);
+            if(kind==0&&input.motion()!=0&&DismantleMotionRules.valid(input.motion()))kind=input.motion();
+            if(kind!=0&&!DismantleMotionRules.valid(kind))kind=0;
+            if(kind!=0){
+                int rotate=(input.forward()?1:0)+(input.backward()?2:0)+(input.crouch()?4:0)+(input.jump()?8:0)+(body.isSprinting()?16:0);
+                DismantleMotion.start(p,kind,rotate);
+                return;
+            }
+        }
         if(input.phase==3){cancel(p);return;}
         Hold old=holds.get(p.getUUID());
         if(input.phase==1){if(input.skill==SlashFormRules.WORLD)CombatExpansion.chantHeartbeat(p);if(old!=null&&old.skill==input.skill)old.heartbeat=p.level().getGameTime();return;}
@@ -65,7 +94,7 @@ public final class TechniqueInput {
         if(input.skill==0&&!Curse.canSpend(p,Curse.COST[0])){cancel(p);CastFeedback.unavailable(p,Curse.COST[0]);return;}
         cast(p,input.skill,input);hold.triggered=true;hold.slashes=1;
     }
-    private static boolean allowed(ServerPlayer p){return !Shinbuke.holding(p)&&!GojoEntity.mindLocked(p)&&CombatExpansion.valid(p,p.serverLevel())&&(Journey.unlocked(p)||Uraume.unlocked(p)||GojoPlayer.unlocked(p))&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p)&&!MaidBridge.recovering(p)&&!CombatExpansion.controlled(p);}
+    static boolean allowed(ServerPlayer p){return !Shinbuke.holding(p)&&!GojoEntity.mindLocked(p)&&CombatExpansion.valid(p,p.serverLevel())&&(Journey.unlocked(p)||Uraume.unlocked(p)||GojoPlayer.unlocked(p))&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p)&&!MaidBridge.recovering(p)&&!CombatExpansion.controlled(p);}
     private static void cast(ServerPlayer p,int skill,Input input){
         intents.put(p.getUUID(),input);
         try{castRaw(p,skill);}finally{intents.remove(p.getUUID());}

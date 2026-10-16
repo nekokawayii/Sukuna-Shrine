@@ -26,6 +26,13 @@ versionRange="[1.1.17]"
 ordering="AFTER"
 side="CLIENT"
 [[dependencies.${mod_id}]]
+modId="playeranimator"
+    mandatory=false
+    versionRange="[1.0.2-rc1,)"
+    side="BOTH"
+    ordering="AFTER"
+
+[[dependencies.${mod_id}]]
 modId="touhou_little_maid"
 mandatory=false
 versionRange="[1.2.5,)"

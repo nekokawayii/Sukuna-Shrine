@@ -26,6 +26,17 @@ public final class DismantleMotionClient {
     private static long clock;private static boolean rendering;
     private static MotionRenderer normal,slim;
     public static boolean active(int id){return states.containsKey(id);}
+    /** true = 用内置关节姿态（没装 PlayerAnimator 时的兜底）；false = 交给 PlayerAnimator 播动画。 */
+    public static boolean useBuiltinPose(){
+        try{return !net.minecraftforge.fml.ModList.get().isLoaded("playeranimator");}
+        catch(Throwable t){return true;}
+    }
+    private static final boolean useBuiltinPose=useBuiltinPose();
+    /** 正在维持「简易领域 · 捌」的实体：**每刻有细小斩击包到达就在册**，断包即过期（所以松手自动放下手）。 */
+    private static final java.util.Map<Integer,Long> simpleDomain=new java.util.HashMap<>();
+    public static boolean simpleDomain(int id){Long t=simpleDomain.get(id);return t!=null&&clock-t<6;}
+    public static void simpleDomainState(int id){simpleDomain.put(id,clock);}
+    public static void simpleDomainOff(int id){simpleDomain.remove(id);}
     public static boolean locked(){var mc=Minecraft.getInstance();var p=mc.player;return p!=null&&p.isAlive()&&world==mc.level&&p.getUUID().equals(cameraPlayer)&&active(p.getId());}
     public static int inputKind(){var mc=Minecraft.getInstance();return DismantleMotionRules.trigger(mc.options.keyShift.isDown(),mc.options.keyUp.isDown(),mc.options.keyDown.isDown());}
     public static void receive(Network.MotionState packet){
@@ -49,6 +60,7 @@ public final class DismantleMotionClient {
     public static void tick(){
         var mc=Minecraft.getInstance();clock++;
         if(world!=mc.level||mc.player==null||!mc.player.isAlive()||cameraPlayer!=null&&!cameraPlayer.equals(mc.player.getUUID())){clear();world=mc.level;return;}
+        simpleDomain.entrySet().removeIf(en->clock-en.getValue()>=6);
         states.entrySet().removeIf(entry->{State s=entry.getValue();var p=mc.level.getEntity(entry.getKey());return p==null||!p.isAlive()||clock-s.received>20||s.age>DismantleMotionRules.duration(s.packet.kind())+2;});
         for(State s:states.values())s.age=Math.min(DismantleMotionRules.duration(s.packet.kind())+3,s.age+1);
         if(locked()){
@@ -65,7 +77,7 @@ public final class DismantleMotionClient {
         @SubscribeEvent public static void layers(EntityRenderersEvent.AddLayers e){normal=new MotionRenderer(e.getContext(),false);slim=new MotionRenderer(e.getContext(),true);}
     }
     @SubscribeEvent(priority=EventPriority.HIGHEST) public static void render(RenderPlayerEvent.Pre e){
-        if(rendering||!active(e.getEntity().getId())||!(e.getEntity() instanceof AbstractClientPlayer player))return;
+        if(rendering||!(active(e.getEntity().getId())||simpleDomain(e.getEntity().getId()))||!(e.getEntity() instanceof AbstractClientPlayer player))return;
         // 始终准备原版动作后备；仅安装 YSM 不代表此玩家已启用自定义模型。
         // 内层事件仍交给 YSM 接管，确实使用自定义模型时保留其渲染入口。
         boolean custom=MotionRenderCompat.externalPlayerModels();
@@ -81,7 +93,7 @@ public final class DismantleMotionClient {
     @SuppressWarnings({"rawtypes","unchecked"})
     public static void living(RenderLivingEvent.Pre e){
         var entity=e.getEntity();
-        if(rendering||!active(entity.getId())||!MaidBridge.isMaid(entity)&&!(entity instanceof AbstractClientPlayer&&MotionRenderCompat.externalPlayerModels()))return;
+        if(rendering||!(active(entity.getId())||simpleDomain(entity.getId()))||!MaidBridge.isMaid(entity)&&!(entity instanceof AbstractClientPlayer&&MotionRenderCompat.externalPlayerModels()))return;
         e.setCanceled(true);rendering=true;var ps=e.getPoseStack();ps.pushPose();
         try{
             transform(entity,ps,e.getPartialTick());
@@ -91,7 +103,8 @@ public final class DismantleMotionClient {
         finally{ps.popPose();rendering=false;}
     }
     private static void transform(net.minecraft.world.entity.LivingEntity entity,PoseStack ps,float partial){
-        State s=states.get(entity.getId());if(s==null)return;double t=age(s,partial),pivot=entity.getBbHeight()*0.5;
+        State s=states.get(entity.getId());if(s==null)return; // 简易领域不翻转，只改手臂
+        double t=age(s,partial),pivot=entity.getBbHeight()*0.5;
         // 自定义骨架只加整体翻转/旋转，不压低站姿模型，避免女仆陷进地面。
         ps.translate(0,pivot,0);
         if(s.packet.kind()==DismantleMotionRules.SPIN)ps.mulPose(Axis.YP.rotationDegrees((float)DismantleMotionRules.spin(t)));
@@ -111,7 +124,8 @@ public final class DismantleMotionClient {
             addLayer(new net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer<>(this,MotionPlayerGeometry.armor(0.5f),MotionPlayerGeometry.armor(1),context.getModelManager()));
         }
         @Override protected void setupRotations(AbstractClientPlayer p,PoseStack ps,float age,float yaw,float partial){
-            State s=states.get(p.getId());if(s==null){super.setupRotations(p,ps,age,yaw,partial);return;}
+            State s=states.get(p.getId());
+            if(s==null){super.setupRotations(p,ps,age,yaw,partial);return;} // 简易领域走默认站姿
             double t=age(s,partial);var pose=DismantlePose.sample(s.packet.kind(),t);
             super.setupRotations(p,ps,age,s.packet.yaw(),partial);
             // YSM 外层已做整体旋转，原版后备只补下蹲高度，不能再翻一次。
@@ -128,8 +142,25 @@ public final class DismantleMotionClient {
         AnimatedPlayer(EntityRendererProvider.Context c,boolean slim){super(MotionPlayerGeometry.player(slim),slim);}
         @Override public void copyPropertiesTo(net.minecraft.client.model.HumanoidModel<AbstractClientPlayer> target){super.copyPropertiesTo(target);MotionPlayerGeometry.knees(target,leftLeg.getChild("knee").xRot,rightLeg.getChild("knee").xRot);}
         @Override public void setupAnim(AbstractClientPlayer p,float limb,float amount,float age,float yaw,float pitch){
-            super.setupAnim(p,0,0,age,yaw,pitch);State s=states.get(p.getId());if(s==null)return;
-            var pose=DismantlePose.sample(s.packet.kind(),age(s,age-p.tickCount));crouching=false;
+            super.setupAnim(p,0,0,age,yaw,pitch);
+            if(simpleDomain(p.getId())&&states.get(p.getId())==null){
+                PlayerAnimClient.playLoop(p,PlayerAnimClient.SIMPLE_DOMAIN,age-p.tickCount);
+                if(!useBuiltinPose)return;
+                // 简易领域 · 捌：两手上举、身体微微后仰，腿保持站立
+                leftArm.xRot=rightArm.xRot=SimpleDomainPose.ARM_X;
+                leftArm.zRot=-SimpleDomainPose.ARM_Z;rightArm.zRot=SimpleDomainPose.ARM_Z;
+                leftArm.yRot=rightArm.yRot=0;leftArm.y=rightArm.y=2;leftArm.z=rightArm.z=0;
+                head.xRot=SimpleDomainPose.HEAD_X;
+                hat.copyFrom(head);leftSleeve.copyFrom(leftArm);rightSleeve.copyFrom(rightArm);
+                return;
+            }
+            State s=states.get(p.getId());if(s==null)return;
+            double t=age(s,age-p.tickCount);
+            // 【前置 PlayerAnimator】骨骼动画交给它播（时间轴按动作已过刻数对齐）；
+            // 没装前置时 useBuiltinPose 为 true，继续用下面的内置关节姿态兜底。
+            PlayerAnimClient.play(p,s.packet.kind(),t);
+            if(!useBuiltinPose){crouching=false;return;}
+            var pose=DismantlePose.sample(s.packet.kind(),t);crouching=false;
             body.xRot=rad(pose.body());body.yRot=body.zRot=0;body.y=0;
             head.xRot=rad(pose.head());head.yRot=head.zRot=0;head.y=0;head.z=0;
             leftArm.xRot=rad(pose.leftArm());rightArm.xRot=rad(pose.rightArm());leftArm.zRot=rad(-pose.spread());rightArm.zRot=rad(pose.spread());leftArm.yRot=rightArm.yRot=0;

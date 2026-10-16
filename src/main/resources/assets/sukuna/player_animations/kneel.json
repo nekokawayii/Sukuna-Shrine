@@ -1,0 +1,129 @@
+{
+ "name": "kneel",
+ "author": "sukuna",
+ "description": "kneel",
+ "emote": {
+  "beginTick": 0,
+  "endTick": 22,
+  "stopTick": 22,
+  "isLoop": false,
+  "returnTick": 0,
+  "nsfw": false,
+  "degrees": true,
+  "easeBeforeKeyframe": true,
+  "moves": [
+   {
+    "tick": 0,
+    "body": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "rightArm": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "leftLeg": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "rightLeg": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    }
+   },
+   {
+    "tick": 6,
+    "body": {
+     "x": 12,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": -40,
+     "y": 0,
+     "z": -40
+    },
+    "rightArm": {
+     "x": -40,
+     "y": 0,
+     "z": 40
+    },
+    "leftLeg": {
+     "x": -90,
+     "y": -8,
+     "z": -10
+    },
+    "rightLeg": {
+     "x": -30,
+     "y": 0,
+     "z": 0
+    }
+   },
+   {
+    "tick": 10,
+    "body": {
+     "x": 10,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": -60,
+     "y": 0,
+     "z": -80
+    },
+    "rightArm": {
+     "x": -60,
+     "y": 0,
+     "z": 80
+    },
+    "leftLeg": {
+     "x": -90,
+     "y": -8,
+     "z": -10
+    },
+    "rightLeg": {
+     "x": -30,
+     "y": 0,
+     "z": 0
+    }
+   },
+   {
+    "tick": 22,
+    "body": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "rightArm": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "leftLeg": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "rightLeg": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    }
+   }
+  ]
+ }
+}

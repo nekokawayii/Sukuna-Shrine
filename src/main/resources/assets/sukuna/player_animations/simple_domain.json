@@ -1,0 +1,86 @@
+{
+ "name": "simple_domain",
+ "author": "sukuna",
+ "description": "simple_domain",
+ "emote": {
+  "beginTick": 0,
+  "endTick": 40,
+  "stopTick": 40,
+  "isLoop": true,
+  "returnTick": 0,
+  "nsfw": false,
+  "degrees": true,
+  "easeBeforeKeyframe": true,
+  "moves": [
+   {
+    "tick": 0,
+    "body": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "head": {
+     "x": -8,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": -168,
+     "y": 0,
+     "z": -12
+    },
+    "rightArm": {
+     "x": -168,
+     "y": 0,
+     "z": 12
+    }
+   },
+   {
+    "tick": 20,
+    "body": {
+     "x": -4,
+     "y": 0,
+     "z": 0
+    },
+    "head": {
+     "x": -12,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": -176,
+     "y": 0,
+     "z": -15
+    },
+    "rightArm": {
+     "x": -176,
+     "y": 0,
+     "z": 15
+    }
+   },
+   {
+    "tick": 40,
+    "body": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "head": {
+     "x": -8,
+     "y": 0,
+     "z": 0
+    },
+    "leftArm": {
+     "x": -168,
+     "y": 0,
+     "z": -12
+    },
+    "rightArm": {
+     "x": -168,
+     "y": 0,
+     "z": 12
+    }
+   }
+  ]
+ }
+}

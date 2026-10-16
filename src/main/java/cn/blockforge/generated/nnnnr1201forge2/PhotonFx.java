@@ -314,6 +314,41 @@ public final class PhotonFx {
         }catch(Throwable t){fail(t);return null;}
     }
 
+    // ------------------------------------------------------------ 简易领域 · 捌（全 Photon）
+    /** 领域柱壳：半径 {@code radius}、高 {@code height} 的青色粒子壳 + 贴地圆环。长按期间常驻。 */
+    public static Handle simpleDomainShell(Vec3 pos,double radius,double height){
+        try{
+            // 柱面：CYLINDER 形状的壳，粒子沿轴向铺开
+            Emitter body=emitter(CYLINDER,radius,0.08);Object c=body.config();
+            duration(c,200);particleLife(c,26);size(c,0.5);rate(c,Math.max(6,radius*4.0));
+            shapeScale(c,1,height/2.0,1);speed(c,0.02);colour(c,0x66BFE9FF);
+            render(c,MODE_BILLBOARD,"textures/effect/glow.png",0xFF7FC8FF);
+            // 顶盖与底盖：两个圆环，边界更清楚
+            Emitter ring=emitter(RING,radius,0.06);Object r=ring.config();
+            duration(r,200);particleLife(r,22);size(r,0.42);rate(r,Math.max(8,radius*5.0));colour(r,0x99E6F6FF);
+            render(r,MODE_BILLBOARD,"textures/effect/glow.png",0xFFBFE4FF);
+            return start(List.of(new Placement(body,new Vec3(0,height*0.5,0)),new Placement(ring,new Vec3(0,0.08,0))),pos);
+        }catch(Throwable t){fail(t);return null;}
+    }
+    /** 贴地圆环：标示领域半径（半径 5）。 */
+    public static Handle simpleDomainRing(Vec3 pos,double radius){
+        try{
+            Emitter ring=emitter(RING,radius,0.05);Object r=ring.config();
+            duration(r,200);particleLife(r,20);size(r,0.5);rate(r,Math.max(10,radius*6.0));colour(r,0xCCE6F6FF);
+            render(r,MODE_BILLBOARD,"textures/effect/glow.png",0xFFE6F6FF);
+            return start(List.of(new Placement(ring,new Vec3(0,0.06,0))),pos);
+        }catch(Throwable t){fail(t);return null;}
+    }
+    /** 细小斩击：一条竖起来的亮线（用拉长的粒子模拟细刃）。 */
+    public static Handle simpleDomainCut(Vec3 at,Vec3 dir){
+        try{
+            Emitter cut=emitter(DOT,0,0);Object c=cut.config();
+            duration(c,4);particleLife(c,4);stretch(c,1.0,0.10);rate(c,1);speed(c,0.05);colour(c,0xF2FFFFFF);
+            render(c,MODE_VERTICAL,"textures/effect/streak.png",0xFFFFFFFF);
+            return start(List.of(new Placement(cut,Vec3.ZERO)),at);
+        }catch(Throwable t){fail(t);return null;}
+    }
+
     // ------------------------------------------------------------ 无量空处画布（全 Photon）
     private static final String GLOW="textures/effect/glow.png",GALAXY="textures/effect/galaxy.png",STREAK="textures/effect/streak.png";
     /** 统一零件构造：stretchAlong &gt; 0 时用拉伸尺寸（细线/笔触），否则用等向尺寸。 */

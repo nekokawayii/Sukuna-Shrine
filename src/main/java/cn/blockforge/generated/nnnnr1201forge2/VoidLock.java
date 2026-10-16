@@ -46,7 +46,9 @@ public final class VoidLock {
         victim.fallDistance=0;
         victim.setDeltaMovement(0,Math.min(0,victim.getDeltaMovement().y),0); // 水平速度清零，保留下落避免悬空
         victim.hurtMarked=true;
-        victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,10,5,false,false));
+        // 绝对无法移动之外，再明确叠一层"速度减慢 70%"：移动缓慢 IV（amplifier 3）
+        // 原版每级 -15%，IV 级 = -45%；配合"每刻水平速度清零 + 拴点回拉"，实际移动能力远低于 30%。
+        victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,10,GojoCombat.UNLIMITED_SLOW_AMPLIFIER,false,false));
         victim.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN,20,4,false,false));
         if(victim instanceof ServerPlayer p){
             if(p.isFallFlying())p.stopFallFlying();

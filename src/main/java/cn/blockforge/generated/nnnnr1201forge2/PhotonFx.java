@@ -95,6 +95,8 @@ public final class PhotonFx {
         try{
             Emitter e=emitter(SPHERE,Math.max(0.05,radius),1);Object c=e.config();
             duration(c,duration);particleLife(c,life);size(c,Math.max(0.05,size));rate(c,Math.max(1,rate));
+            // 大火海要的粒子数远超默认上限，这里按 rate×life 抬高（默认 700 会把"夸张"压回去）
+            tryCall(c,"setMaxParticles",Math.max(700,(int)(rate*Math.max(2,life))));
             if(orbit!=0)orbit(c,orbit);
             colour(c,color);render(c,MODE_BILLBOARD,texture,bloom,additive);
             return start(e,pos);
@@ -287,6 +289,7 @@ public final class PhotonFx {
             duration(c,duration);particleLife(c,life);
             stretch(c,Math.max(0.008,thin),Math.max(0.06,longSide));
             rate(c,Math.max(1,rate));
+            tryCall(c,"setMaxParticles",Math.max(700,(int)(rate*Math.max(2,life))));
             if(speed!=0)speed(c,speed);
             colour(c,color);render(c,MODE_BILLBOARD,glow?"textures/effect/glow.png":STREAK,bloom,true);
             if(gravity!=0)tryCall(field(c,"physics"),"setGravity",num(gravity));

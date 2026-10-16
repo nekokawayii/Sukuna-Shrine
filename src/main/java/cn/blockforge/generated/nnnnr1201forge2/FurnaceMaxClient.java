@@ -53,6 +53,8 @@ public final class FurnaceMaxClient {
     private static final Map<String,Long> throttled=new HashMap<>();
     private static final Random random=new Random();
     private static long time;
+    /** 蓄力时的 FOV 倍数（用户要求：**不减** FOV，反而放大 2 倍）。 */
+    private static double fovBoost=1,SEEK_FOV=2.0;
 
     // ------------------------------------------------------------------ 句柄生命周期
     /** 重叠刷新：只登记，不去停上一个（到点自然过期）。 */
@@ -98,10 +100,11 @@ public final class FurnaceMaxClient {
         if(e.kind()==FurnaceMax.FX_SHOT){   // 弓矢：亮柱 + 金线 + 火团尾迹
             if(!PhotonFx.ready())return;
             Vec3 at=e.position(),dir=e.direction().lengthSqr()<1e-6?new Vec3(0,0,1):e.direction().normalize();
-            spawn("shot/",PhotonFx.beam(at.subtract(dir.scale(3.4)),at.add(dir.scale(1.6)),0.55,6),8);
-            PhotonFx.ray(at,3.4,0.035,1.1,GOLD,BLOOM_GOLD,true,2,5,22,1.6);
-            flameCluster(at,0.55,1.5);
-            flameCluster(at.subtract(dir.scale(1.8)),0.45,1.1);
+            spawn("shot/",PhotonFx.beam(at.subtract(dir.scale(5.0)),at.add(dir.scale(2.6)),1.1,6),8);
+            PhotonFx.ray(at,4.6,0.045,1.7,GOLD,BLOOM_GOLD,true,3,6,44,2.2);
+            flameCluster(at,0.95,3.0);
+            flameCluster(at.subtract(dir.scale(2.6)),0.8,2.4);
+            if(time%2==0)PhotonFx.spark(at,3.2,2.6,FIRE,BLOOM_FIRE,GLOW,true,2,6,34,1.1);
             return;
         }
         if(e.kind()==FurnaceMax.FX_BLAST){
@@ -169,6 +172,10 @@ public final class FurnaceMaxClient {
         if(Minecraft.getInstance().level==null){clear();return;}
         time++;
         spares.removeIf(s->{if(time>=s.end()){PhotonFx.stop(s.handle());return true;}return false;});
+        // FOV：蓄力期间放大到 2 倍，每刻 8% 平滑（约 1 秒到位）
+        var local=Minecraft.getInstance().player;
+        double fovTarget=local!=null&&charges.containsKey(local.getId())?SEEK_FOV:1.0;
+        fovBoost+=(fovTarget-fovBoost)*0.08;
         var player=Minecraft.getInstance().player;
         for(Iterator<Charge> it=charges.values().iterator();it.hasNext();){
             Charge c=it.next();
@@ -223,6 +230,11 @@ public final class FurnaceMaxClient {
         for(Ball b:balls)if(player.position().distanceToSqr(b.center)<=256)k=Math.max(k,0.3);
         return k;
     }
+    /** 蓄力期间 FOV ×{@link #SEEK_FOV}（2 倍）：视野拉宽，不是缩窄。 */
+    public static void fov(net.minecraftforge.client.event.ViewportEvent.ComputeFov e){
+        if(Math.abs(fovBoost-1)<0.01)return;
+        e.setFOV(e.getFOV()*(float)fovBoost);
+    }
     /** 雾色向橙金靠拢（比上一版轻，避免"糊屏"）。 */
     public static void fog(net.minecraftforge.client.event.ViewportEvent.ComputeFogColor e){
         double k=intensity();
@@ -253,18 +265,18 @@ public final class FurnaceMaxClient {
         Vec3 center=pos.add(0,1.15,0).add(left.scale(1.2)).add(fwd.scale(0.5));
         Vec3 tipTop=center.add(vertical.scale(h*0.5)),tipBottom=center.subtract(vertical.scale(h*0.5));
         Vec3 belly=center.add(left.scale(bulge));       // 弓背（弧顶）
-        double cs=0.55+0.35*progress;                   // 单团火的大小（随蓄力略长）
-        // 飞进来的火团：从弓心外沿径向飞入（"凝成"的过程）
-        spawn("bow/"+owner+"/in",PhotonFx.blobs(center,h*0.34+1.5*progress,0.28,0.46,FIRE,BLOOM_FIRE,-1.7,0,16,3,6),9);
-        // 弓臂：两条二次贝塞尔弧（上稍→弓背、弓背→下稍），各 6 团
+        double cs=0.85+0.55*progress;                   // 单团火的大小（随蓄力更粗）
+        // 飞进来的火团：从弓心外沿径向飞入（"凝成"的过程），范围与密度都加大
+        spawn("bow/"+owner+"/in",PhotonFx.blobs(center,h*0.50+2*progress,0.34,0.55,FIRE,BLOOM_FIRE,-2.0,0,26,4,7),11);
+        // 弓臂：两条二次贝塞尔弧（上稍→弓背、弓背→下稍），各 9 团
         for(int half=0;half<2;half++){
             Vec3 a=half==0?tipTop:belly,b=half==0?belly:tipBottom;
             Vec3 ctrl=half==0?center.add(vertical.scale(h*0.30)).add(left.scale(bulge*0.62))
                             :center.subtract(vertical.scale(h*0.30)).add(left.scale(bulge*0.62));
-            for(int i=0;i<=6;i++){
-                double t=i/6.0,mt=1-t;
+            for(int i=0;i<=8;i++){
+                double t=i/8.0,mt=1-t;
                 Vec3 at=a.scale(mt*mt).add(ctrl.scale(2*mt*t)).add(b.scale(t*t));
-                flameCluster(at,cs,2.2);
+                flameCluster(at,cs,3.4);
             }
         }
         // 弓弦：从上稍到下稍的直线（在弓背右侧＝靠玩家这一侧），中点被拉后 draw 格（拉弓）
@@ -272,19 +284,22 @@ public final class FurnaceMaxClient {
         Vec3 nock=center.add(right.scale(draw*0.9));
         for(int half=0;half<2;half++){
             Vec3 a=half==0?tipTop:tipBottom;
-            for(int i=1;i<=5;i++)flameCluster(a.lerp(nock,i/5.0),cs*0.62,1.1);   // 弦：更细
+            for(int i=1;i<=7;i++)flameCluster(a.lerp(nock,i/7.0),cs*0.7,1.7);   // 弦：更细
         }
-        flameCluster(nock,cs*0.8,1.3);
+        flameCluster(nock,cs*0.9,2.0);
         // 搭在弦上的箭：从弦中段沿瞄准方向伸出
-        flameCluster(nock.add(fwd.scale(h*0.14)),cs*0.8,1.4);
-        flameCluster(nock.add(fwd.scale(h*0.30+1.2*progress)),cs*0.7,1.5);
+        flameCluster(nock.add(fwd.scale(h*0.14)),cs*0.9,2.2);
+        flameCluster(nock.add(fwd.scale(h*0.30+1.2*progress)),cs*0.8,2.4);
+        // 弓身外圈的火环 + 上飘火星：让整张弓"烧起来"
+        if(time%4==0)PhotonFx.spark(center,h*0.46,2.2,FIRE,BLOOM_FIRE,GLOW,true,4,10,55,1.1);
+        if(time%3==0)PhotonFx.lines(center.subtract(vertical.scale(h*0.45)),h*0.55,0.05,1.8,GOLD,BLOOM_GOLD,3.6,0.02,26,4,12,false);
         // 金色收束线/收束射线**已按要求删除**：蓄力期间只有"火团凝成弓"这一件事
     }
     /** 一小团火：大小/颜色随机 + 轻微外扩 + 上飘火星＝燃烧感。 */
     private static void flameCluster(Vec3 at,double size,double rate){
         int color=random.nextInt(4)==0?FIRE_HOT:(random.nextInt(3)==0?DEEP:FIRE);
-        PhotonFx.blobs(at,0.26+size*0.7,size*0.55,size*0.9,color,BLOOM_FIRE,0.22+random.nextDouble()*0.4,
-            0.012,Math.max(5,(int)(10*rate)),2,5+random.nextInt(3));
+        PhotonFx.blobs(at,0.30+size*0.8,size*0.65,size*1.05,color,BLOOM_FIRE,0.22+random.nextDouble()*0.4,
+            0.012,Math.max(6,(int)(12*rate)),3,6+random.nextInt(4));
     }
 
     // ------------------------------------------------------------------ 镀橙场（只留"方块变橙"，不放光雾）
@@ -302,28 +317,31 @@ public final class FurnaceMaxClient {
         double remaining=Math.max(0,q.born+FurnaceMax.PILLAR_TICKS-time);
         double k=Math.min(1,remaining/FurnaceMax.PILLAR_TICKS);
         double shrink=k<0.16?k/0.16:1;               // 只有最后 ~2.4 秒才收缩
-        // 火海本体：两层大火球持续补，保持"刚爆炸"的体积
+        // 火海本体：两层大火球持续补，保持"刚爆炸"的体积（再加大）
         if(time%6==0){
-            spawn("pillar/"+q.owner+"/sea",PhotonFx.sphere(q.center.add(0,5*shrink,0),30*shrink,10*shrink,FIRE,BLOOM_FIRE,GLOW,true,12,12,150*shrink,0.7),20);
-            spawn("pillar/"+q.owner+"/sea2",PhotonFx.sphere(q.center.add(0,2*shrink,0),13*shrink,6*shrink,FIRE_HOT,BLOOM_FIRE,GLOW,true,10,10,95*shrink,1.3),18);
+            spawn("pillar/"+q.owner+"/sea",PhotonFx.sphere(q.center.add(0,5*shrink,0),42*shrink,13*shrink,FIRE,BLOOM_FIRE,GLOW,true,12,12,220*shrink,0.7),20);
+            spawn("pillar/"+q.owner+"/sea2",PhotonFx.sphere(q.center.add(0,2*shrink,0),20*shrink,8*shrink,FIRE_HOT,BLOOM_FIRE,GLOW,true,10,10,140*shrink,1.3),18);
+            spawn("pillar/"+q.owner+"/sea3",PhotonFx.sphere(q.center.add(0,14*shrink,0),26*shrink,10*shrink,DEEP,BLOOM_FIRE,GLOW,true,10,12,120*shrink,0.9),20);
         }
         // 火团持续上飘 / 向四周翻滚
         if(time%2==0){
-            for(int i=0;i<7;i++){
-                double a=random.nextDouble()*Math.PI*2,r=Math.sqrt(random.nextDouble())*30*shrink;
-                flameCluster(q.center.add(Math.cos(a)*r,random.nextDouble()*26*shrink,Math.sin(a)*r),0.42+0.3*k,1.8);
+            for(int i=0;i<11;i++){
+                double a=random.nextDouble()*Math.PI*2,r=Math.sqrt(random.nextDouble())*40*shrink;
+                flameCluster(q.center.add(Math.cos(a)*r,random.nextDouble()*34*shrink,Math.sin(a)*r),0.6+0.4*k,2.6);
             }
         }
-        // 每 20 刻一圈向外扩散的环 + 闪一下：让"爆炸还在继续"
-        if(time%20==0){
-            spawn("pillar/"+q.owner+"/pulse",PhotonFx.shockwave(q.center.add(0,1,0),0xE0FF7A20,(float)(12+34*shrink),28),36);
-            PhotonFx.ray(q.center.add(0,2,0),40*shrink,0.02,1.6,0xAAFFD9A0,BLOOM_GOLD,true,4,6,30,6.0);
-            Client.flash(4);Client.shake(5);
+        // 每 12 刻一圈向外扩散的环 + 闪一下：让"爆炸还在继续"
+        if(time%12==0){
+            spawn("pillar/"+q.owner+"/pulse",PhotonFx.shockwave(q.center.add(0,1,0),0xE0FF7A20,(float)(16+50*shrink),30),38);
+            PhotonFx.ray(q.center.add(0,2,0),55*shrink,0.02,1.8,0xAAFFD9A0,BLOOM_GOLD,true,4,6,40,7.0);
+            spawn("pillar/"+q.owner+"/tornado",PhotonFx.sphere(q.center.add(0,18*shrink,0),30*shrink,8*shrink,FIRE,BLOOM_FIRE,GLOW,true,10,12,140*shrink,2.4),22);
+            Client.flash(5);Client.shake(6);
         }
         // 持续向外飞散的丝线（带物理）
-        if(time%8==0){
-            spawn("pillar/"+q.owner+"/ray",PhotonFx.lines(q.center.add(0,3*shrink,0),18*shrink,0.06,2.4,GOLD,BLOOM_GOLD,6.0,0.10,60,10,18,false),30);
-            spawn("pillar/"+q.owner+"/ray2",PhotonFx.lines(q.center.add(0,2*shrink,0),9*shrink,0.04,1.5,0xFFF0C0,BLOOM_GOLD,9.0,0.14,40,8,14,false),24);
+        if(time%6==0){
+            spawn("pillar/"+q.owner+"/ray",PhotonFx.lines(q.center.add(0,3*shrink,0),22*shrink,0.07,2.8,GOLD,BLOOM_GOLD,6.5,0.10,80,10,18,false),30);
+            spawn("pillar/"+q.owner+"/ray2",PhotonFx.lines(q.center.add(0,2*shrink,0),11*shrink,0.05,1.7,0xFFF0C0,BLOOM_GOLD,9.5,0.14,60,8,14,false),24);
+            spawn("pillar/"+q.owner+"/ray3",PhotonFx.lines(q.center.add(0,4*shrink,0),34*shrink,0.09,3.6,DEEP,BLOOM_FIRE,4.2,0.06,45,12,22,false),32);
         }
     }
 
@@ -339,33 +357,39 @@ public final class FurnaceMaxClient {
     // ------------------------------------------------------------------ 爆炸（往"光污染"方向堆）
     private static void blast(Vec3 center){
         if(!PhotonFx.ready())return;
-        Client.shake(36);Client.flash(14);
-        GojoBlastClient.spawn(center,54,0xFFC070);
-        GojoBlastClient.spawn(center.add(0,6,0),26,0xFFE8B0);
+        Client.shake(52);Client.flash(22);
+        GojoBlastClient.spawn(center,70,0xFFC070);
+        GojoBlastClient.spawn(center.add(0,8,0),34,0xFFE8B0);
+        GojoBlastClient.spawn(center,18,0xFFFFFFF0);
         spawn("blast/",PhotonFx.shockwave(center,0xF0FF7A20,(float)FurnaceMax.BLAST_RADIUS,40),46);
         spawn("blast/",PhotonFx.shockwave(center,0xC0FFD9A0,(float)(FurnaceMax.BLAST_RADIUS*0.62),34),40);
         spawn("blast/",PhotonFx.shockwave(center,0xA0FF3A10,(float)(FurnaceMax.BLAST_RADIUS*1.06),54),60);
         spawn("blast/",PhotonFx.shockwave(center,0xFFE0A8,(float)(FurnaceMax.BLAST_RADIUS*0.34),28),34);
-        for(int ring=1;ring<=6;ring++){                       // 六道火环
-            double r=FurnaceMax.BLAST_RADIUS*ring/6.0;
+        spawn("blast/",PhotonFx.shockwave(center,0x90FF3A10,(float)(FurnaceMax.BLAST_RADIUS*1.45),70),80);
+        spawn("blast/",PhotonFx.shockwave(center,0x70FFFFFF,(float)(FurnaceMax.BLAST_RADIUS*0.18),22),28);
+        for(int ring=1;ring<=8;ring++){                       // 八道火环
+            double r=FurnaceMax.BLAST_RADIUS*ring/8.0;
             for(int i=0;i<8;i++){
                 double a=i*Math.PI/4+random.nextDouble()*0.3;
-                Vec3 at=center.add(Math.cos(a)*r,(random.nextDouble()-0.35)*6,Math.sin(a)*r);
-                PhotonFx.spark(at,5.0+ring*1.8,3.6+ring*1.2,ring<=3?FIRE:FIRE_HOT,BLOOM_FIRE,GLOW,true,5,11,40,1.6);
+                Vec3 at=center.add(Math.cos(a)*r,(random.nextDouble()-0.35)*8,Math.sin(a)*r);
+                PhotonFx.spark(at,5.5+ring*1.8,4.0+ring*1.2,ring<=4?FIRE:FIRE_HOT,BLOOM_FIRE,GLOW,true,5,11,44,1.7);
             }
         }
-        // 四层带物理的放射丝线（飞出去会被重力压弯）
-        spawn("blast/",PhotonFx.lines(center,14,0.06,2.6,GOLD,BLOOM_GOLD,7.5,0.10,70,10,18,false),28);
-        spawn("blast/",PhotonFx.lines(center,7,0.04,1.6,0xFFF0C0,BLOOM_GOLD,11.0,0.14,50,8,14,false),22);
-        spawn("blast/",PhotonFx.lines(center,20,0.09,3.4,DEEP,BLOOM_FIRE,5.0,0.06,40,12,22,false),32);
-        spawn("blast/",PhotonFx.lines(center,30,0.11,4.2,0xB0FF3A10,BLOOM_FIRE,3.2,0.05,30,14,24,false),36);
-        PhotonFx.ray(center,110,0.02,1.8,0xAAFFD9A0,BLOOM_GOLD,true,5,7,34,7.0);
-        spawn("blast/",PhotonFx.sphere(center,30,10,FIRE,BLOOM_FIRE,GLOW,true,28,14,120,0.8),44);
-        spawn("blast/",PhotonFx.sphere(center,12,6,FIRE_HOT,BLOOM_FIRE,GLOW,true,22,10,80,1.4),36);
-        for(int i=0;i<18;i++){                                // 抛洒大块火团
-            double a=random.nextDouble()*Math.PI*2,r=random.nextDouble()*80;
-            Vec3 at=center.add(Math.cos(a)*r,(random.nextDouble()-0.3)*12,Math.sin(a)*r);
-            PhotonFx.blobs(at,6.5,0.5,0.9,FIRE,BLOOM_FIRE,3.8,0.10,18,6,16);
+        // 六层带物理的放射丝线（飞出去会被重力压弯）
+        spawn("blast/",PhotonFx.lines(center,14,0.06,2.6,GOLD,BLOOM_GOLD,7.5,0.10,90,10,18,false),28);
+        spawn("blast/",PhotonFx.lines(center,7,0.04,1.6,0xFFF0C0,BLOOM_GOLD,11.0,0.14,70,8,14,false),22);
+        spawn("blast/",PhotonFx.lines(center,20,0.09,3.4,DEEP,BLOOM_FIRE,5.0,0.06,60,12,22,false),32);
+        spawn("blast/",PhotonFx.lines(center,30,0.11,4.2,0xB0FF3A10,BLOOM_FIRE,3.2,0.05,50,14,24,false),36);
+        spawn("blast/",PhotonFx.lines(center,44,0.13,5.4,0xA0FF6A14,BLOOM_FIRE,2.4,0.04,40,16,26,false),38);
+        spawn("blast/",PhotonFx.lines(center,4,0.03,1.1,0xFFFFFFFF,BLOOM_GOLD,14.0,0.18,50,6,12,false),20);
+        PhotonFx.ray(center,140,0.02,2.2,0xAAFFD9A0,BLOOM_GOLD,true,6,8,46,8.0);
+        spawn("blast/",PhotonFx.sphere(center,42,13,FIRE,BLOOM_FIRE,GLOW,true,30,16,200,0.8),48);
+        spawn("blast/",PhotonFx.sphere(center,18,8,FIRE_HOT,BLOOM_FIRE,GLOW,true,24,12,130,1.4),40);
+        spawn("blast/",PhotonFx.sphere(center.add(0,18,0),30,10,DEEP,BLOOM_FIRE,GLOW,true,26,14,110,1.0),44);
+        for(int i=0;i<30;i++){                                // 抛洒大块火团
+            double a=random.nextDouble()*Math.PI*2,r=random.nextDouble()*110;
+            Vec3 at=center.add(Math.cos(a)*r,(random.nextDouble()-0.3)*16,Math.sin(a)*r);
+            PhotonFx.blobs(at,8,0.55,1.0,FIRE,BLOOM_FIRE,4.2,0.10,22,7,18);
         }
     }
 

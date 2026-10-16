@@ -31,6 +31,8 @@ public final class GojoCombat {
         int casting=-1,age;UUID target;Vec3 center=Vec3.ZERO;long domainUntil;int chargeSkill=-1;long chargeAt;boolean chargeFired;
         /** 结印"放下"后 = true：无量空处只控制、**不再造成伤害**（下一次展开时复位）。 */
         boolean controlOnly;
+        /** 展开音效的时间轴：>0 表示还要在那一刻播放 gojodomainmid（起手音 1.445 秒之后）。 */
+        long midSoundAt;
         State(ServerPlayer p){this.p=p;level=p.serverLevel();}
     }
     /** 无量空处：持续 **90 秒**（1 分半）。 */
@@ -115,6 +117,8 @@ public final class GojoCombat {
         State s=states.computeIfAbsent(p.getUUID(),k->new State(p));
         if(s.p!=p||s.level!=p.level())states.put(p.getUUID(),s=new State(p));
         s.controlOnly=false;   // 新一次展开：伤害恢复
+        // 展开音效：先放起手，1.445 秒（29 刻）后再放 mid —— 两段无缝衔接
+        SkillSounds.play(p,"gojo_domain_start");s.midSoundAt=p.level().getGameTime()+29;
         s.center=p.position();s.domainUntil=p.level().getGameTime()+UNLIMITED_TICKS;
         // direction 带上朝向：客户端把白边黑洞摆在正前方
         Network.send(p.serverLevel(),new Network.Effect(GojoFx.DOMAIN_OPEN,p.getId(),s.center,p.getLookAngle(),GojoFx.DOMAIN_RADIUS,400,0));
@@ -344,6 +348,8 @@ public final class GojoCombat {
                 s.center=p.position(); // 领域跟着施法者走：画布与判定半径都以他为球心
                 if(p.level().getGameTime()%20==0)fx(p,GojoFx.DOMAIN,s.center,p.getLookAngle(),GojoFx.DOMAIN_RADIUS,30,0);
                 long now=p.level().getGameTime();
+                // 无量空处展开音效：起手 gojodomainstart（1.445 秒）之后无缝接 gojodomainmid
+                if(s.midSoundAt>0&&now>=s.midSoundAt){s.midSoundAt=0;SkillSounds.play(p,"gojo_domain_mid");}
                 double domR=GojoFx.DOMAIN_RADIUS;
                 for(LivingEntity victim:Skills.targets(p.serverLevel(),p,s.center,(int)domR)){
                     if(victim.position().distanceToSqr(s.center)>domR*domR)continue;

@@ -64,5 +64,7 @@
   "guardian_11":{"sounds":[{"name":"sukuna:guardian_11"}]},
   "guardian_12":{"sounds":[{"name":"sukuna:guardian_12"}]},
   "guardian_victory":{"sounds":[{"name":"sukuna:guardian_victory","stream":true,"attenuation_distance":32767}]},
-  "black_flash":{"sounds":[{"name":"sukuna:blackflash"}]}
+  "black_flash":{"sounds":[{"name":"sukuna:blackflash"}]},
+  "gojo_domain_start":{"sounds":[{"name":"sukuna:gojodomainstart"}]},
+  "gojo_domain_mid":{"sounds":[{"name":"sukuna:gojodomainmid"}]}
 }

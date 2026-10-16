@@ -32,6 +32,9 @@ public final class FurnaceMaxClient {
     private static final double BOW_HEIGHT=10.8;
     /** 镀橙渐变 / 收拢（中断 70 刻、打出去 8 刻）/ 红球时长。 */
     private static final int COAT_RAMP=60,COLLAPSE_TICKS=70,FAST_COLLAPSE=8,BALL_TICKS=70;
+    /** **爆炸及之后（含 15 秒冻结期）的夸张系数**：整体再堆一个量级时只改这一个数。
+     *  只作用于爆炸/冻结期，不影响蓄力弓（蓄力另有"单颗粒子 ≤0.3 格"的约束）。 */
+    private static final double X=2.8;
 
     /** 不抢占 key 的句柄：新旧发射器**重叠存活**，各自到点自然消失。
      *  长驻形状（弓脊、火柱内核、镀色光雾）必须这么刷，否则"边建边停"会出现间隙（看起来就是时有时无）。 */
@@ -313,37 +316,44 @@ public final class FurnaceMaxClient {
         if(f.wiped)return;   // 光雾已移除：保留接口，收拢逻辑改由 intensity 驱动雾色
     }
 
-    // ------------------------------------------------------------------ 火柱＝"停在爆炸那一瞬间"15 秒
-    /** **不是火球**：把这 15 秒当成"冻结的爆炸瞬间"——固定半径的火环 + 静止的放射火线 +
-     *  铺在爆炸范围内的火壳 + 地面余火，中心**不再堆火球**。15 秒后交给红球（见 {@link #redBall}）。 */
+    // ------------------------------------------------------------------ 火柱＝"停在爆炸那一瞬间"15 秒（密集度 ×X）
+    /** **不是火球**：这 15 秒是"冻结的爆炸瞬间"——固定半径的多道火环 + 静止的放射火线 +
+     *  铺满爆炸范围的层层火壳 + 地面火海，中心尽量不堆实心球；密度按夸张系数 {@link #X} 堆。 */
     private static void drawPillar(Pillar q){
         if(!PhotonFx.ready())return;
         double remaining=Math.max(0,q.born+FurnaceMax.PILLAR_TICKS-time);
         double k=Math.min(1,remaining/FurnaceMax.PILLAR_TICKS);
         double shrink=k<0.16?k/0.16:1;               // 只有最后 ~2.4 秒整体收缩
-        if(time%8==0){
-            // 冻结的四道火环（半径固定，不扩散）
-            for(int i=1;i<=4;i++){
-                double r=FurnaceMax.BLAST_RADIUS*i/4.0*shrink;
-                spawn("pillar/"+q.owner+"/ring",PhotonFx.ring(q.center.add(0,2,0),r,0.10,0xFF6A14,BLOOM_FIRE,Math.max(20,r*0.5),10,14),18);
-            }
-            // 静止的放射火线：speed=0 → 不飞、不扩散，就是"卡住的那一刻"
-            spawn("pillar/"+q.owner+"/line1",PhotonFx.lines(q.center.add(0,3,0),14*shrink,0.06,2.6,GOLD,BLOOM_GOLD,0,0,60,10,16,false),24);
-            spawn("pillar/"+q.owner+"/line2",PhotonFx.lines(q.center.add(0,3,0),30*shrink,0.09,3.6,DEEP,BLOOM_FIRE,0,0,45,12,20,false),28);
-            spawn("pillar/"+q.owner+"/line3",PhotonFx.lines(q.center.add(0,3,0),60*shrink,0.12,5.0,0xA0FF6A14,BLOOM_FIRE,0,0,35,14,22,false),30);
-            // 铺在爆炸范围内的火（球壳，不是中心实心球）
-            spawn("pillar/"+q.owner+"/shell1",PhotonFx.blobs(q.center.add(0,4,0),46*shrink,3.2,3.6,FIRE,BLOOM_FIRE,0,0,90,10,14),22);
-            spawn("pillar/"+q.owner+"/shell2",PhotonFx.blobs(q.center.add(0,7,0),78*shrink,4.0,4.4,0xB0FF3A10,BLOOM_FIRE,0,0,50,12,18),26);
-        }
-        // 地面余火（只贴地，不往中心堆）
         if(time%4==0){
-            for(int i=0;i<6;i++){
-                double a=random.nextDouble()*Math.PI*2,r=Math.sqrt(random.nextDouble())*80*shrink;
-                flameCluster(q.center.add(Math.cos(a)*r,random.nextDouble()*4,Math.sin(a)*r),0.5+0.3*k,1.8);
+            // 冻结的九道火环（半径固定，不扩散）
+            for(int i=1;i<=9;i++){
+                double r=FurnaceMax.BLAST_RADIUS*i/9.0*shrink;
+                spawn("pillar/"+q.owner+"/ring",PhotonFx.ring(q.center.add(0,2+ (i%3),0),r,0.12,
+                    i%2==0?0xFF6A14:0xFFC24A,BLOOM_FIRE,Math.max(30,r*1.1*X),8,14),16);
+            }
+            // 静止的放射火线（speed=0：不飞、不扩散，就是"卡住的那一刻"）——六层
+            spawn("pillar/"+q.owner+"/line1",PhotonFx.lines(q.center.add(0,3,0),14*shrink,0.06,2.6,GOLD,BLOOM_GOLD,0,0,(int)(150*X),8,16,false),22);
+            spawn("pillar/"+q.owner+"/line2",PhotonFx.lines(q.center.add(0,3,0),30*shrink,0.09,3.6,DEEP,BLOOM_FIRE,0,0,(int)(120*X),10,20,false),26);
+            spawn("pillar/"+q.owner+"/line3",PhotonFx.lines(q.center.add(0,3,0),60*shrink,0.12,5.0,0xA0FF6A14,BLOOM_FIRE,0,0,(int)(90*X),12,22,false),28);
+            spawn("pillar/"+q.owner+"/line4",PhotonFx.lines(q.center.add(0,6,0),90*shrink,0.14,6.0,0x80FF3A10,BLOOM_FIRE,0,0,(int)(70*X),12,24,false),30);
+            spawn("pillar/"+q.owner+"/line5",PhotonFx.lines(q.center.add(0,10,0),22*shrink,0.05,2.0,0xFFFFFFFF,BLOOM_GOLD,0,0,(int)(60*X),8,14,false),22);
+            spawn("pillar/"+q.owner+"/line6",PhotonFx.lines(q.center.add(0,1,0),8*shrink,0.04,1.2,0xFFFFE0A8,BLOOM_GOLD,0,0,(int)(80*X),6,12,false),20);
+            // 层层火壳（空心，不是中心实心球）
+            spawn("pillar/"+q.owner+"/shell1",PhotonFx.blobs(q.center.add(0,4,0),20*shrink,2.2,2.6,FIRE_HOT,BLOOM_FIRE,0,0,(int)(160*X),8,12),20);
+            spawn("pillar/"+q.owner+"/shell2",PhotonFx.blobs(q.center.add(0,4,0),36*shrink,2.8,3.2,FIRE,BLOOM_FIRE,0,0,(int)(180*X),8,14),22);
+            spawn("pillar/"+q.owner+"/shell3",PhotonFx.blobs(q.center.add(0,5,0),52*shrink,3.4,3.8,FIRE,BLOOM_FIRE,0,0,(int)(140*X),10,14),24);
+            spawn("pillar/"+q.owner+"/shell4",PhotonFx.blobs(q.center.add(0,7,0),70*shrink,4.0,4.4,0xB0FF3A10,BLOOM_FIRE,0,0,(int)(100*X),10,16),26);
+            spawn("pillar/"+q.owner+"/shell5",PhotonFx.blobs(q.center.add(0,9,0),92*shrink,4.6,5.0,0x90FF2A08,BLOOM_FIRE,0,0,(int)(70*X),12,18),28);
+        }
+        // 地面火海（只贴地，不往中心堆成球）
+        if(time%2==0){
+            for(int i=0;i<16;i++){
+                double a=random.nextDouble()*Math.PI*2,r=Math.sqrt(random.nextDouble())*95*shrink;
+                flameCluster(q.center.add(Math.cos(a)*r,random.nextDouble()*5,Math.sin(a)*r),0.65+0.4*k,2.6);
             }
         }
-        // 每 20 刻整体闪一下（保留"还在爆"的压迫感，但形状不变）
-        if(time%20==0){Client.flash(4);Client.shake(4);}
+        // 每 12 刻整体闪一下 + 轻震（形状不变，只是"一直在炸"的压迫感）
+        if(time%12==0){Client.flash(7);Client.shake(7);}
     }
 
     // ------------------------------------------------------------------ 收尾红球（缓慢缩到 1 格方块）
@@ -359,39 +369,49 @@ public final class FurnaceMaxClient {
     // ------------------------------------------------------------------ 爆炸（往"光污染"方向堆）
     private static void blast(Vec3 center){
         if(!PhotonFx.ready())return;
-        Client.shake(52);Client.flash(22);
-        GojoBlastClient.spawn(center,70,0xFFC070);
-        GojoBlastClient.spawn(center.add(0,8,0),34,0xFFE8B0);
-        GojoBlastClient.spawn(center,18,0xFFFFFFF0);
-        spawn("blast/",PhotonFx.shockwave(center,0xF0FF7A20,(float)FurnaceMax.BLAST_RADIUS,40),46);
-        spawn("blast/",PhotonFx.shockwave(center,0xC0FFD9A0,(float)(FurnaceMax.BLAST_RADIUS*0.62),34),40);
-        spawn("blast/",PhotonFx.shockwave(center,0xA0FF3A10,(float)(FurnaceMax.BLAST_RADIUS*1.06),54),60);
-        spawn("blast/",PhotonFx.shockwave(center,0xFFE0A8,(float)(FurnaceMax.BLAST_RADIUS*0.34),28),34);
-        spawn("blast/",PhotonFx.shockwave(center,0x90FF3A10,(float)(FurnaceMax.BLAST_RADIUS*1.45),70),80);
-        spawn("blast/",PhotonFx.shockwave(center,0x70FFFFFF,(float)(FurnaceMax.BLAST_RADIUS*0.18),22),28);
-        for(int ring=1;ring<=8;ring++){                       // 八道火环
-            double r=FurnaceMax.BLAST_RADIUS*ring/8.0;
-            for(int i=0;i<8;i++){
-                double a=i*Math.PI/4+random.nextDouble()*0.3;
-                Vec3 at=center.add(Math.cos(a)*r,(random.nextDouble()-0.35)*8,Math.sin(a)*r);
-                PhotonFx.spark(at,5.5+ring*1.8,4.0+ring*1.2,ring<=4?FIRE:FIRE_HOT,BLOOM_FIRE,GLOW,true,5,11,44,1.7);
+        Client.shake(90);Client.flash(34);
+        GojoBlastClient.spawn(center,120,0xFFC070);
+        GojoBlastClient.spawn(center.add(0,10,0),62,0xFFE8B0);
+        GojoBlastClient.spawn(center,30,0xFFFFFFF0);
+        GojoBlastClient.spawn(center.add(0,30,0),44,0xFFFF9A3C);
+        // 九道冲击波（含纯白内环与超大外环）
+        double[] swR={0.14,0.30,0.50,0.72,1.0,1.10,1.45,1.90,2.40};
+        int[] swL={22,28,34,40,48,58,72,88,104};
+        int[] swC={0xFFFFFFFF,0xFFFFE0A8,0xE0FFD9A0,0xD0FF9A50,0xF0FF7A20,0xB0FF3A10,0x90FF3A10,0x70FF2A08,0x50FF1A00};
+        for(int i=0;i<swR.length;i++)spawn("blast/",PhotonFx.shockwave(center,swC[i],(float)(FurnaceMax.BLAST_RADIUS*swR[i]),swL[i]),swL[i]+10);
+        for(int ring=1;ring<=12;ring++){                      // 十二道火环 × 每道 12 点
+            double r=FurnaceMax.BLAST_RADIUS*ring/12.0;
+            for(int i=0;i<12;i++){
+                double a=i*Math.PI/6+random.nextDouble()*0.3;
+                Vec3 at=center.add(Math.cos(a)*r,(random.nextDouble()-0.35)*11,Math.sin(a)*r);
+                PhotonFx.spark(at,6.0+ring*1.5,4.6+ring*1.0,ring<=6?FIRE:FIRE_HOT,BLOOM_FIRE,GLOW,true,6,12,(int)(80*X),1.8);
             }
         }
-        // 六层带物理的放射丝线（飞出去会被重力压弯）
-        spawn("blast/",PhotonFx.lines(center,14,0.06,2.6,GOLD,BLOOM_GOLD,7.5,0.10,90,10,18,false),28);
-        spawn("blast/",PhotonFx.lines(center,7,0.04,1.6,0xFFF0C0,BLOOM_GOLD,11.0,0.14,70,8,14,false),22);
-        spawn("blast/",PhotonFx.lines(center,20,0.09,3.4,DEEP,BLOOM_FIRE,5.0,0.06,60,12,22,false),32);
-        spawn("blast/",PhotonFx.lines(center,30,0.11,4.2,0xB0FF3A10,BLOOM_FIRE,3.2,0.05,50,14,24,false),36);
-        spawn("blast/",PhotonFx.lines(center,44,0.13,5.4,0xA0FF6A14,BLOOM_FIRE,2.4,0.04,40,16,26,false),38);
-        spawn("blast/",PhotonFx.lines(center,4,0.03,1.1,0xFFFFFFFF,BLOOM_GOLD,14.0,0.18,50,6,12,false),20);
-        PhotonFx.ray(center,140,0.02,2.2,0xAAFFD9A0,BLOOM_GOLD,true,6,8,46,8.0);
-        spawn("blast/",PhotonFx.sphere(center,42,13,FIRE,BLOOM_FIRE,GLOW,true,30,16,200,0.8),48);
-        spawn("blast/",PhotonFx.sphere(center,18,8,FIRE_HOT,BLOOM_FIRE,GLOW,true,24,12,130,1.4),40);
-        spawn("blast/",PhotonFx.sphere(center.add(0,18,0),30,10,DEEP,BLOOM_FIRE,GLOW,true,26,14,110,1.0),44);
-        for(int i=0;i<30;i++){                                // 抛洒大块火团
-            double a=random.nextDouble()*Math.PI*2,r=random.nextDouble()*110;
-            Vec3 at=center.add(Math.cos(a)*r,(random.nextDouble()-0.3)*16,Math.sin(a)*r);
-            PhotonFx.blobs(at,8,0.55,1.0,FIRE,BLOOM_FIRE,4.2,0.10,22,7,18);
+        // 贴地火圈（两层）：让爆炸在地面上也有"烧起来的一圈"
+        spawn("blast/",PhotonFx.ring(center.add(0,0.6,0),FurnaceMax.BLAST_RADIUS*0.96,0.26,0xFFFF6A14,BLOOM_FIRE,260*X,10,16),20);
+        spawn("blast/",PhotonFx.ring(center.add(0,0.6,0),FurnaceMax.BLAST_RADIUS*0.55,0.18,0xFFFFC24A,BLOOM_GOLD,200*X,10,16),20);
+        spawn("blast/",PhotonFx.ring(center.add(0,24,0),FurnaceMax.BLAST_RADIUS*0.40,0.22,0xFFFFE0A8,BLOOM_GOLD,160*X,10,16),20);
+        // 九层带物理的放射丝线（飞出去会被重力压弯）
+        spawn("blast/",PhotonFx.lines(center,14,0.06,2.6,GOLD,BLOOM_GOLD,7.5,0.10,(int)(150*X),10,18,false),30);
+        spawn("blast/",PhotonFx.lines(center,7,0.04,1.6,0xFFF0C0,BLOOM_GOLD,11.0,0.14,(int)(120*X),8,14,false),24);
+        spawn("blast/",PhotonFx.lines(center,20,0.09,3.4,DEEP,BLOOM_FIRE,5.0,0.06,(int)(110*X),12,22,false),34);
+        spawn("blast/",PhotonFx.lines(center,30,0.11,4.2,0xB0FF3A10,BLOOM_FIRE,3.2,0.05,(int)(90*X),14,24,false),38);
+        spawn("blast/",PhotonFx.lines(center,44,0.13,5.4,0xA0FF6A14,BLOOM_FIRE,2.4,0.04,(int)(80*X),16,26,false),40);
+        spawn("blast/",PhotonFx.lines(center,4,0.03,1.1,0xFFFFFFFF,BLOOM_GOLD,14.0,0.18,(int)(90*X),6,12,false),22);
+        spawn("blast/",PhotonFx.lines(center,60,0.16,6.6,0x80FF2A08,BLOOM_FIRE,1.6,0.03,(int)(60*X),18,28,false),42);
+        spawn("blast/",PhotonFx.lines(center,100,0.20,8.0,0x60FF1A00,BLOOM_FIRE,1.0,0.02,(int)(45*X),20,30,false),44);
+        spawn("blast/",PhotonFx.lines(center,2,0.02,0.7,0xFFFFFFF0,BLOOM_GOLD,18.0,0.22,(int)(70*X),5,10,false),18);
+        PhotonFx.ray(center,180,0.02,2.6,0xAAFFD9A0,BLOOM_GOLD,true,7,9,(int)(120*X),10.0);
+        // 五层火海（含高空一层，避免整体看起来只是个球）
+        spawn("blast/",PhotonFx.sphere(center,60,16,FIRE,BLOOM_FIRE,GLOW,true,34,18,(int)(420*X),0.8),56);
+        spawn("blast/",PhotonFx.sphere(center,34,11,FIRE_HOT,BLOOM_FIRE,GLOW,true,28,14,(int)(300*X),1.4),48);
+        spawn("blast/",PhotonFx.sphere(center.add(0,20,0),46,13,DEEP,BLOOM_FIRE,GLOW,true,30,16,(int)(220*X),1.0),52);
+        spawn("blast/",PhotonFx.sphere(center,14,7,0xFFFFFFFF,BLOOM_GOLD,GLOW,true,20,10,(int)(160*X),1.6),42);
+        spawn("blast/",PhotonFx.sphere(center.add(0,38,0),34,11,FIRE,BLOOM_FIRE,GLOW,true,26,14,(int)(150*X),0.9),48);
+        for(int i=0;i<64;i++){                                // 抛洒大块火团
+            double a=random.nextDouble()*Math.PI*2,r=random.nextDouble()*140;
+            Vec3 at=center.add(Math.cos(a)*r,(random.nextDouble()-0.3)*20,Math.sin(a)*r);
+            PhotonFx.blobs(at,10,0.6,1.1,FIRE,BLOOM_FIRE,4.6,0.10,(int)(26*X),8,20);
         }
     }
 

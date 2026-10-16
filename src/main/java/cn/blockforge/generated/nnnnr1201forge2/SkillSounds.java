@@ -45,6 +45,13 @@ public final class SkillSounds {
         }
         level.playSound(null,entity.blockPosition(),sound.get(),entity instanceof ServerPlayer?SoundSource.PLAYERS:SoundSource.HOSTILE,2,1);
     }
+    /** 领域展开类音效的音量：默认 {@link #play(Entity,String)} 用 2，用户要求"翻 2.5 倍" → 5。 */
+    public static final float DOMAIN_VOLUME=5f;
+    /** 指定音量的播放。 */
+    public static void play(Entity entity,String id,float volume){
+        var sound=SOUNDS.get(id);if(sound==null||!(entity.level() instanceof ServerLevel level))return;
+        level.playSound(null,entity.blockPosition(),sound.get(),entity instanceof ServerPlayer?SoundSource.PLAYERS:SoundSource.HOSTILE,volume,1);
+    }
     public static void cast(ServerPlayer p,int skill){
         if(skill<0||skill>=NORMAL.length)return;
         // 开与御厨子不再随成长阶段切换音频；其他招式保留原有阶段槽位。

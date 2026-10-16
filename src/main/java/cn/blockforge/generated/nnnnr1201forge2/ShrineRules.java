@@ -8,6 +8,10 @@ public final class ShrineRules {
     public static final int MAID_DOMAIN_COOLDOWN_TICKS=2400;
     /** 御厨子（技能5）重做后的时间轴：按下起 {@link #DOMAIN_FREEZE_TICKS} 刻不能移动，{@link #DOMAIN_OPEN_TICKS} 刻领域出现。 */
     public static final int DOMAIN_FREEZE_TICKS=60,DOMAIN_OPEN_TICKS=80;
+    /** 无量空处专用：**按下释放键立刻播 gojo_domain_start（1.445 秒 ≈ 29 刻）**，放完这一刻领域出现。 */
+    public static final int VOID_OPEN_TICKS=30;
+    /** 起手音效长度（刻）：mid 紧随其后无缝衔接。 */
+    public static final int VOID_START_SOUND_TICKS=29;
     /** 领域自己的冷却：只在领域结束时使用（不改全局熔断，否则等于禁用所有术式）。 */
     public static final int DOMAIN_COOLDOWN_TICKS=600;
     /** 结印"放下"后御厨子的伤害倍率，以及跳神龛的站立高度与飞行刻数、三击空格的最大间隔。 */

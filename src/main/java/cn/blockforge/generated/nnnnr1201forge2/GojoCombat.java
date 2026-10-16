@@ -118,7 +118,7 @@ public final class GojoCombat {
         if(s.p!=p||s.level!=p.level())states.put(p.getUUID(),s=new State(p));
         s.controlOnly=false;   // 新一次展开：伤害恢复
         // 展开音效：先放起手，1.445 秒（29 刻）后再放 mid —— 两段无缝衔接
-        SkillSounds.play(p,"gojo_domain_start");s.midSoundAt=p.level().getGameTime()+29;
+        // 展开音效已提前到"按下释放键"那一刻由 Skills.startVoidSeal 播放（音量 5），这里不再重复播。
         s.center=p.position();s.domainUntil=p.level().getGameTime()+UNLIMITED_TICKS;
         // direction 带上朝向：客户端把白边黑洞摆在正前方
         Network.send(p.serverLevel(),new Network.Effect(GojoFx.DOMAIN_OPEN,p.getId(),s.center,p.getLookAngle(),GojoFx.DOMAIN_RADIUS,400,0));

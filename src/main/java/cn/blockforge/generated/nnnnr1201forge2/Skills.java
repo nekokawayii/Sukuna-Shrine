@@ -266,7 +266,9 @@ public final class Skills {
             if(!valid(p,seal.level)){seals.remove(p.getUUID());unfreeze(p);pose(p,seal.type,0);continue;}
             if(age<ShrineRules.DOMAIN_FREEZE_TICKS)freeze(p);   // 每刻重挂一次（幂等）
             else unfreeze(p);                                   // 3 秒后可以移动，手势保持
-            if(!seal.opened&&age>=ShrineRules.DOMAIN_OPEN_TICKS){seal.opened=true;if(seal.type==SEAL_VOID)openVoidDomain(p);else openDomain(p);}
+            if(seal.type==SEAL_VOID&&seal.midAt>0&&now>=seal.midAt){seal.midAt=0;SkillSounds.play(p,"gojo_domain_mid",SkillSounds.DOMAIN_VOLUME);}
+            int openAt=seal.type==SEAL_VOID?ShrineRules.VOID_OPEN_TICKS:ShrineRules.DOMAIN_OPEN_TICKS;
+            if(!seal.opened&&age>=openAt){seal.opened=true;if(seal.type==SEAL_VOID)openVoidDomain(p);else openDomain(p);}
         }
     }
     // ---------------------------------------------------------------- 五条悟技能7 · 无量空处（同一套 Seal：结印 → 80 刻展开 → 放下仅控制 → 收起）
@@ -300,9 +302,13 @@ public final class Skills {
     private static void startVoidSeal(ServerPlayer p){
         if(seals.containsKey(p.getUUID())){CastFeedback.tell(p,"另一种领域正在结印中");return;}
         if(!GojoCombat.payVoidSeal(p))return;
-        seals.put(p.getUUID(),new Seal(p,SEAL_VOID));
+        Seal seal=new Seal(p,SEAL_VOID);
+        // 按下释放键立刻播展开音效（音量翻 2.5 倍＝5），并把 mid 排在起手音效结束处无缝衔接
+        SkillSounds.play(p,"gojo_domain_start",SkillSounds.DOMAIN_VOLUME);
+        seal.midAt=seal.start+ShrineRules.VOID_START_SOUND_TICKS;
+        seals.put(p.getUUID(),seal);
         freeze(p);
-        pose(p,SEAL_VOID,GojoCombat.UNLIMITED_TICKS+ShrineRules.DOMAIN_OPEN_TICKS+400);
+        pose(p,SEAL_VOID,GojoCombat.UNLIMITED_TICKS+ShrineRules.VOID_OPEN_TICKS+400);
         CastFeedback.tell(p,"无量空处 · 结印中 · "+(ShrineRules.DOMAIN_FREEZE_TICKS/20)+" 秒无法移动 · 再按释放键取消");
         noteVoid("结印开始 "+p.getScoreboardName()+" 冻结"+ShrineRules.DOMAIN_FREEZE_TICKS+"刻 "+ShrineRules.DOMAIN_OPEN_TICKS+"刻后展开");
     }
@@ -469,7 +475,7 @@ public final class Skills {
     /** 结印中的玩家：{@code start} 起 3 秒不能移动，{@code DOMAIN_OPEN_TICKS} 刻后领域出现。
      *  {@code type} 区分伏魔御厨子与无量空处（两者共用这一套状态机与手势/冻结机制）。 */
     private static final class Seal {
-        final ServerPlayer owner;final ServerLevel level;final long start;final int type;boolean opened;
+        final ServerPlayer owner;final ServerLevel level;final long start;final int type;boolean opened;long midAt;
         Seal(ServerPlayer p,int type){owner=p;level=p.serverLevel();start=level.getGameTime();this.type=type;}
     }
     /** 跳神龛：起点→上方控制点→神龛落点的二次贝塞尔，逐刻 teleport 让客户端平滑跟。 */

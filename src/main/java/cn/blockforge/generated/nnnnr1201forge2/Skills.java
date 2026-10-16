@@ -433,7 +433,23 @@ public final class Skills {
     }
     static LivingEntity closestToCrosshair(ServerPlayer p,List<LivingEntity> candidates){LivingEntity t=aimTarget(p);return t!=null&&candidates.contains(t)?t:null;}
     static List<LivingEntity> crosshairOrder(ServerPlayer p,List<LivingEntity> candidates){return candidates.stream().sorted(Comparator.<LivingEntity>comparingDouble(e->aimDistance(p,e)).thenComparingDouble(e->e.distanceToSqr(p))).toList();}
-    public static void toggleFist(ServerPlayer p){if(!Curse.canUseTechnique(p))return;if(Curse.fingers(p)<5){p.displayClientMessage(Component.literal("咒力附拳需要先吃下5根宿傩手指"),true);return;}boolean active=Curse.data(p).getBoolean("Fist");Curse.data(p).putBoolean("Fist",!active);Curse.sync(p);p.displayClientMessage(Component.literal("咒力附拳："+(!active?"开启 · 再按 Del 关闭":"关闭")),true);}
+    /** 「咒力附拳」的表现广播：附拳开启期间每 15 刻给全场发一条 kind=236（带 entityId 与寿命），
+     *  别的玩家的客户端据此在**你的双手上**画红色咒力火焰——这样它才不是"只有自己看得见"的 HUD 特效。 */
+    private static final int FIST_AURA_INTERVAL=15;
+    private static void tickFistAura(){
+        for(ServerPlayer p:serverPlayers()){
+            if(p.level().getGameTime()%FIST_AURA_INTERVAL!=0)continue;
+            if(!Curse.data(p).getBoolean("Fist"))continue;
+            fx(p,FistFlameClient.FX,p.getEyePosition(),Vec3.ZERO,1,FIST_AURA_INTERVAL+20,p.getId());
+        }
+    }
+    private static List<ServerPlayer> serverPlayers(){
+        var server=net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+        return server==null?List.of():List.copyOf(server.getPlayerList().getPlayers());
+    }
+    /** 咒力附拳（技能号 45）的技能号声明见 {@link #FIST_SKILL}。 */
+    public static final int FIST_SKILL=45;
+    public static void toggleFist(ServerPlayer p){if(!Curse.canUseTechnique(p))return;if(Curse.fingers(p)<5){p.displayClientMessage(Component.literal("咒力附拳需要先吃下5根宿傩手指"),true);return;}boolean active=Curse.data(p).getBoolean("Fist");Curse.data(p).putBoolean("Fist",!active);Curse.sync(p);p.displayClientMessage(Component.literal("咒力附拳："+(!active?"开启 · 再按一次切换关闭":"关闭")),true);}
     public static void charge(ServerPlayer p,boolean start){
         if(start)CombatExpansion.worldChant(p,TechniqueInput.intent(p));
     }
@@ -603,6 +619,7 @@ public final class Skills {
     private static boolean hitDamage(ServerLevel l,ServerPlayer p,LivingEntity e,float n,boolean world){return damage(l,p,e,n*(float)Curse.power(p),world);}
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event){
         if(event.phase!=TickEvent.Phase.END)return;
+        tickFistAura();
         VoidCombat.tick();
         tickSeals();
         tickLeaps();

@@ -31,6 +31,8 @@ public final class TechniqueInput {
     public static Input intent(ServerPlayer p){return intents.getOrDefault(p.getUUID(),new Input(0,0,false,false,false));}
     public static boolean holding(ServerPlayer p,int skill){Hold h=holds.get(p.getUUID());return h!=null&&h.skill==skill;}
     public static void receive(ServerPlayer p,Input input){
+        // 咒力附拳（技能号 45，轮盘页面 0 右上角那一格）：按一次开关；它不是术式，所以不经过任何术式守卫
+        if(input.skill==Skills.FIST_SKILL){if(input.phase==0)Skills.toggleFist(p);return;}
         if(input.skill==FinaleRules.SKILL){
             if(input.phase==0)SixfoldFinale.start(p);
             else if(input.phase==1)SixfoldFinale.heartbeat(p);

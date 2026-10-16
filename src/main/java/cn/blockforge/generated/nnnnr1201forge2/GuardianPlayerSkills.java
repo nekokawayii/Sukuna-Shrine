@@ -54,7 +54,8 @@ public final class GuardianPlayerSkills {
     private static boolean hit(State s,LivingEntity target,double base,boolean punch){
         if(DomainClash.active(s.p)||DomainClash.active(target)||!CombatSettings.canHit(s.p,target))return false;
         double amount=base+(s.boostUntil>s.level.getGameTime()?s.v("DamageMultiplier"):0);
-        boolean flash=punch&&s.casting!=6&&s.p.getRandom().nextDouble()*100<s.v("FlashChance");
+        // 黑闪判定：`casting==6` 是净土领域、`casting==1` 是**径庭拳**——两者都不再触发黑闪（用户要求），只有咒力拳等其它拳招才吃这个概率。
+        boolean flash=punch&&s.casting!=6&&s.casting!=1&&s.p.getRandom().nextDouble()*100<s.v("FlashChance");
         if(flash)amount=Math.pow(amount,Math.min(5,s.v("FlashExponent")));
         target.invulnerableTime=0;
         AttackTypes.mark(AttackTypes.LIGHTNING);boolean hit=CombatSettings.hurt(s.p,target,s.level.damageSources().sonicBoom(s.p),CombatSettings.spellDamage(s.p,Math.min(1000000,amount)));

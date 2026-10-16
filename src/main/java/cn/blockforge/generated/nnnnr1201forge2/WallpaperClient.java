@@ -49,7 +49,7 @@ public final class WallpaperClient {
     private static ResourceLocation current;
     private static int ringIndex;
     private static UUID self;
-    private static boolean enabled=true,initialized,announced,capturing,failed;
+    private static boolean enabled=true,initialized,announced,capturing,failed,captureLogged;
     private static long tick;
 
     private static Path configPath(){return net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get().resolve("sukuna-wallpaper.properties");}
@@ -191,6 +191,11 @@ public final class WallpaperClient {
             tm.register(next,new DynamicTexture(image));   // DynamicTexture 接管这一帧的像素
             current=next;
             if(old!=null&&old!=next)tm.release(old);       // 释放上一张
+            if(!captureLogged){
+                captureLogged=true;
+                LogUtils.getLogger().info("[斩击壁纸] 本机桌面采集成功：显示器 {}x{} → 贴图 {}x{}（本机玩家 {}）",
+                    Math.round(desktop().width()),Math.round(desktop().height()),image.getWidth(),image.getHeight(),self);
+            }
         }catch(RuntimeException ex){
             image.close();fail(ex);
         }

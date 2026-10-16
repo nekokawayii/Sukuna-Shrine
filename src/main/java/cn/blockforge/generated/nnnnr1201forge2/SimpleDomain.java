@@ -148,8 +148,6 @@ public final class SimpleDomain {
         f.released=true;
         long heldTicks=f.level.getGameTime()-f.start;
         SdLog.w("SD.release 原因="+why+" 持续="+heldTicks+"刻");
-        p.serverLevel().getServer().getPlayerList().broadcastSystemMessage(
-            net.minecraft.network.chat.Component.literal("[诊断] 退出原因="+why+" 持续="+heldTicks+"刻"),false);
         long held=Math.max(1,f.level.getGameTime()-f.start);
         int cooldown=Math.max(COOLDOWN_MIN,(int)Math.round(held*COOLDOWN_SHARE)); // 释放时间 ×70%，仅保留 2 刻地板
         Curse.data(p).putLong("SimpleDomainCooldown",f.level.getGameTime()+cooldown);

@@ -251,9 +251,10 @@ public final class Skills {
     private static void openDomain(ServerPlayer p){
         long now=p.serverLevel().getGameTime();
         int radiusPts=SukunaBranches.domainRadiusPts(p),damagePts=SukunaBranches.domainDamagePts(p),speedPts=SukunaBranches.domainSpeedPts(p);
+        boolean verticalKill=SukunaBranches.domainVerticalKill(p);
         int radius=DomainOptions.radius(radiusPts);float damageMult=(float)DomainOptions.damage(damagePts),speedMult=(float)DomainOptions.speed(speedPts);
         MaidBridge.domainOpened(p);double yaw=Math.toRadians(p.getYRot());Vec3 behind=new Vec3(Math.sin(yaw)*12,0,-Math.cos(yaw)*12);
-        int duration=ShrineRules.domainTicks(MaidBridge.isCaster(p));Domain d=new Domain(p,p.serverLevel(),p.position(),behind,now,now+duration,radius,damageMult,speedMult);domains.put(p.getUUID(),d);
+        int duration=ShrineRules.domainTicks(MaidBridge.isCaster(p));Domain d=new Domain(p,p.serverLevel(),p.position(),behind,now,now+duration,radius,damageMult,speedMult,verticalKill);domains.put(p.getUUID(),d);
         if(VoidJourney.evolved(p))syncVoidShrine(d);
         fx(p,1,d.center,d.shrineOffset,(float)d.radius,duration,SoulJourney.evolved(p)?-now:now);
         fx(p,25,p.position(),Vec3.ZERO,CombatSettings.voidFloor(p)?1:0,10,0);
@@ -263,7 +264,8 @@ public final class Skills {
         DomainClash.opened(p,domainCenter(p),radius);
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.PLAYER_ATTACK_SWEEP,SoundSource.PLAYERS,1.5f,0.5f);
         note("领域生成 "+p.getScoreboardName()+" 中心"+where(d.center)+" 神龛"+where(d.center.add(d.shrineOffset))+" "+duration+"刻"
-            +" 点数 半径"+radiusPts+"/伤害"+damagePts+"/速度"+speedPts+" → "+radius+"格 ×"+String.format(Locale.ROOT,"%.2f",damageMult)+" ×"+String.format(Locale.ROOT,"%.2f",speedMult));
+            +" 点数 半径"+radiusPts+"/伤害"+damagePts+"/速度"+speedPts+" → "+radius+"格 ×"+String.format(Locale.ROOT,"%.2f",damageMult)+" ×"+String.format(Locale.ROOT,"%.2f",speedMult)
+            +" 纵向伤敌"+(verticalKill?"开":"关"));
     }
     private static void tickSeals(){
         // 副本遍历：openDomain 会走 DomainClash.opened，对拼当场结算时会反过来收起结印状态。
@@ -478,11 +480,17 @@ public final class Skills {
         /** 展开那一刻已保存的点数换算出的两个倍率（{@link DomainOptions}）：领域伤害 ×{@code damageMult}、
          *  斩击节奏 ×{@code speedMult}。半径直接落在 {@link #radius} 上，不再单独存倍率。 */
         final float damageMult,speedMult;
+        /** 「纵向伤敌」开关（展开那一刻的存档值）：关掉时跳过 Y 明显低于 {@link #center} 的目标——这就是关掉它
+         *  多拿 1 点（{@link DomainOptions#total(boolean)}）的代价，判定见 {@link Skills#reachable}。 */
+        final boolean verticalKill;
         /** 斩击节奏累积器：每刻攒 1，攒够 {@code SLASH_INTERVAL/speedMult}（九相轮转时 1/speedMult）刻结算一次，
          *  用累积而不是取整间隔，速度倍率才对每一刻都线性生效。 */
         double slashCharge;
-        Domain(ServerPlayer owner,ServerLevel level,Vec3 center,Vec3 shrineOffset,long start,long end,double radius,float damageMult,float speedMult){this.owner=owner;this.level=level;this.center=center;this.shrineOffset=shrineOffset;this.start=start;this.end=end;this.radius=radius;this.damageMult=damageMult;this.speedMult=speedMult;}
+        Domain(ServerPlayer owner,ServerLevel level,Vec3 center,Vec3 shrineOffset,long start,long end,double radius,float damageMult,float speedMult,boolean verticalKill){this.owner=owner;this.level=level;this.center=center;this.shrineOffset=shrineOffset;this.start=start;this.end=end;this.radius=radius;this.damageMult=damageMult;this.speedMult=speedMult;this.verticalKill=verticalKill;}
     }
+    /** 纵向伤敌：「纵向伤敌」关掉时，跳过 Y 明显低于领域中心的目标（阈值 {@link DomainOptions#VERTICAL_MARGIN} 格，
+     *  {@code d.center} 是展开那一刻玩家站的位置，也是领域的垂直基准）——省下的那 1 点就是换来的补偿。 */
+    private static boolean reachable(Domain d,LivingEntity target){return d.verticalKill||target.getY()>=d.center.y-DomainOptions.VERTICAL_MARGIN;}
     /** 已经"放下"过（姿态解除、御厨子伤害 50% / 无量空处仅控制）但领域仍在的玩家：再按一次释放键即收起领域。 */
     private static final java.util.Set<UUID> released=new java.util.HashSet<>();
     /** 结印中的玩家：{@code start} 起 3 秒不能移动，{@code DOMAIN_OPEN_TICKS} 刻后领域出现。
@@ -706,16 +714,16 @@ public final class Skills {
             if(age<=0){d.slashCharge=0;beat=true;}
             else {d.slashCharge++;beat=d.slashCharge>=interval;if(beat)d.slashCharge-=interval;}
             if(VoidJourney.evolved(p)){
-                if(!clash&&beat)for(LivingEntity target:targets(d.level,p,d.center,d.radius))VoidCombat.domainHit(p,target,d.damageScale*d.damageMult);
+                if(!clash&&beat)for(LivingEntity target:targets(d.level,p,d.center,d.radius))if(reachable(d,target))VoidCombat.domainHit(p,target,d.damageScale*d.damageMult);
                 if(age%40==0){syncVoidShrine(d);fx(p,1,d.center,d.shrineOffset,(float)d.radius,(int)(d.end-now),-d.start);}
                 continue;
             }
-            if(!clash&&beat)for(LivingEntity target:targets(d.level,p,d.center,d.radius))for(int cut=0;cut<5&&target.isAlive();cut++)if(target.position().distanceToSqr(d.center)<=d.radius*d.radius&&damage(d.level,p,target,(Curse.tier(p)>=5?1.25f:1)*(float)Curse.power(p)*d.damageScale*d.damageMult,SoulJourney.evolved(p),true,SoulJourney.evolved(p),true)){boolean red=Curse.awakened(p);if(red)ignite(p,target,4);if(SoulJourney.evolved(p))hitEffectSoul(d.level,p,target);else hitEffect(d.level,p,target,10,red);}
+            if(!clash&&beat)for(LivingEntity target:targets(d.level,p,d.center,d.radius))if(reachable(d,target))for(int cut=0;cut<5&&target.isAlive();cut++)if(target.position().distanceToSqr(d.center)<=d.radius*d.radius&&damage(d.level,p,target,(Curse.tier(p)>=5?1.25f:1)*(float)Curse.power(p)*d.damageScale*d.damageMult,SoulJourney.evolved(p),true,SoulJourney.evolved(p),true)){boolean red=Curse.awakened(p);if(red)ignite(p,target,4);if(SoulJourney.evolved(p))hitEffectSoul(d.level,p,target);else hitEffect(d.level,p,target,10,red);}
             if(age%40==0){if(VoidJourney.evolved(p))syncVoidShrine(d);fx(p,67,p.position(),Vec3.ZERO,Journey.nine(p)?1:0,1,0);Network.send(d.level,new Network.Effect(1,p.getId(),d.center,d.shrineOffset,(float)d.radius,(int)(d.end-now),SoulJourney.evolved(p)?-d.start:d.start));fx(p,25,p.position(),Vec3.ZERO,CombatSettings.voidFloor(p)?1:0,2,0);}
             if(!clash&&Curse.awakened(p)&&age%20==0){
                 fx(p,24,d.center,d.shrineOffset,(float)d.radius,40,now);
                 // 领域粉尘自动燃烧；逐个目标判断敌友，避免环境火误伤盟友。
-                for(LivingEntity target:targets(d.level,p,d.center,d.radius))if(target.position().distanceToSqr(d.center)<=d.radius*d.radius){ignite(p,target,3);damage(d.level,p,target,(float)(2*Curse.power(p))*d.damageScale*d.damageMult,false,false,false,true);}
+                for(LivingEntity target:targets(d.level,p,d.center,d.radius))if(reachable(d,target)&&target.position().distanceToSqr(d.center)<=d.radius*d.radius){ignite(p,target,3);damage(d.level,p,target,(float)(2*Curse.power(p))*d.damageScale*d.damageMult,false,false,false,true);}
             }
         }
         for(Iterator<Bow> it=bows.iterator();it.hasNext();){Bow b=it.next();if(!valid(b.owner,b.level)){it.remove();continue;}if(b.level.getGameTime()>=b.release){Fire f=new Fire(b.owner);f.purple=b.purple;fires.add(f);if(!f.purple)fx(b.owner,3,f.pos,f.dir,2,100,0);it.remove();}}

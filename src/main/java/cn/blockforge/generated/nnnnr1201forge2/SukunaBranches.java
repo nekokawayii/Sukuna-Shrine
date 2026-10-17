@@ -35,24 +35,28 @@ public final class SukunaBranches {
     public static int wallSpacing(ServerPlayer p){int n=Curse.data(p).getInt("WallSpacing");return n>=1&&n<=20?n:4;}
     public static boolean diagonal(ServerPlayer p){return Curse.data(p).getBoolean("WallDiagonal");}
     public static void configure(ServerPlayer p,int halfBlocks,boolean diagonal){if(halfBlocks<1||halfBlocks>20)return;Curse.data(p).putInt("WallSpacing",halfBlocks);Curse.data(p).putBoolean("WallDiagonal",diagonal);}
-    /** 伏魔御厨子的三项点数（per-player NBT，键名 DomainRadiusPts/DomainDamagePts/DomainSpeedPts）：没存过时用
-     *  {@link DomainOptions} 的默认 4/3/3，换算表也全在那边（服务端第 80 刻展开与客户端界面共用）。 */
+    /** 伏魔御厨子的三项点数 + 「纵向伤敌」开关（per-player NBT，键名 DomainRadiusPts/DomainDamagePts/DomainSpeedPts/DomainVerticalKill）：
+     *  没存过时用 {@link DomainOptions} 的默认 4/3/3 + 开关默认开，换算表也全在那边（服务端第 80 刻展开与客户端界面共用）。 */
     public static int domainRadiusPts(ServerPlayer p){return domainPoints(p)[0];}
     public static int domainDamagePts(ServerPlayer p){return domainPoints(p)[1];}
     public static int domainSpeedPts(ServerPlayer p){return domainPoints(p)[2];}
+    /** 「纵向伤敌」：没存过时默认**开**（照现在行为，能打到下方的目标）；关掉则可用总点数多 1（{@link DomainOptions#total(boolean)}）。 */
+    public static boolean domainVerticalKill(ServerPlayer p){var tag=Curse.data(p);return !tag.contains("DomainVerticalKill")||tag.getBoolean("DomainVerticalKill");}
     /** 三项一起读：任何一项缺失（新玩家）或整体不合法（存档被改过）都退回整套默认值，绝不给出半套分配。 */
     private static int[] domainPoints(ServerPlayer p){
-        var tag=Curse.data(p);
+        var tag=Curse.data(p);boolean vertical=domainVerticalKill(p);
         int radius=tag.contains("DomainRadiusPts")?tag.getInt("DomainRadiusPts"):DomainOptions.DEFAULT_RADIUS;
         int damage=tag.contains("DomainDamagePts")?tag.getInt("DomainDamagePts"):DomainOptions.DEFAULT_DAMAGE;
         int speed=tag.contains("DomainSpeedPts")?tag.getInt("DomainSpeedPts"):DomainOptions.DEFAULT_SPEED;
-        return DomainOptions.valid(radius,damage,speed)?new int[]{radius,damage,speed}:new int[]{DomainOptions.DEFAULT_RADIUS,DomainOptions.DEFAULT_DAMAGE,DomainOptions.DEFAULT_SPEED};
+        // 合法性按**同一份存档里的开关**校验：关掉纵向伤敌时 11 点是合法的（多出来的那 1 点就是它的补偿），开着时仍是 10。
+        return DomainOptions.valid(radius,damage,speed,vertical)?new int[]{radius,damage,speed}:new int[]{DomainOptions.DEFAULT_RADIUS,DomainOptions.DEFAULT_DAMAGE,DomainOptions.DEFAULT_SPEED};
     }
-    /** 保存伏魔御厨子的三项点数：越界或三项之和超过总点数就整包拒收（存档里永远是合法分配，客户端发的值不当真）。 */
-    public static void configureDomain(ServerPlayer p,int radiusPts,int damagePts,int speedPts){
-        if(!DomainOptions.valid(radiusPts,damagePts,speedPts))return;
+    /** 保存伏魔御厨子的三项点数与「纵向伤敌」开关：越界或三项之和超过可用总点数（开关开=10 / 关=11）就整包拒收
+     *  （存档里永远是合法分配，客户端发的值不当真）。 */
+    public static void configureDomain(ServerPlayer p,int radiusPts,int damagePts,int speedPts,boolean verticalKill){
+        if(!DomainOptions.valid(radiusPts,damagePts,speedPts,verticalKill))return;
         var tag=Curse.data(p);
-        tag.putInt("DomainRadiusPts",radiusPts);tag.putInt("DomainDamagePts",damagePts);tag.putInt("DomainSpeedPts",speedPts);
+        tag.putInt("DomainRadiusPts",radiusPts);tag.putInt("DomainDamagePts",damagePts);tag.putInt("DomainSpeedPts",speedPts);tag.putBoolean("DomainVerticalKill",verticalKill);
     }
     public static int cost(ServerPlayer p,int skill){return skill==BranchRules.WALL?BranchRules.wallCost(wallSpacing(p)):skill==BranchRules.WEB?180:120;}
     public static boolean available(ServerPlayer p,int skill){return skill>=BranchRules.WEB&&skill<=BranchRules.WALL&&Journey.unlocked(p)&&(skill==BranchRules.WALL?Curse.awakened(p):Curse.fingers(p)>=5)&&valid(p,p.serverLevel())&&!p.isSpectator()&&!MaidBridge.recovering(p)&&!SoulCombat.suppressed(p)&&Curse.canUseTechnique(p)&&!Curse.active(p,"BranchCooldown"+skill)&&Curse.canSpend(p,cost(p,skill))&&!(skill==BranchRules.MULTI&&Curse.data(p).getBoolean("MultiArmed"));}

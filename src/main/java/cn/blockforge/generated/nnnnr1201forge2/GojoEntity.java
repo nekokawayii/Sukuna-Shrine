@@ -87,7 +87,7 @@ public final class GojoEntity extends Monster {
     private boolean hit(LivingEntity p,double amount,boolean knock){
         if(!valid(p))return false;
         p.invulnerableTime=0;
-        boolean hurt=p.hurt(soulSource(),BalanceRules.damage(amount));
+        boolean hurt=p.hurt(soulSource(),BalanceRules.damage(amount,BalanceRules.Category.BOSS_ATTACK));
         if(hurt&&knock)fx(GojoFx.HIT,p.getBoundingBox().getCenter(),Vec3.ZERO,1.4f,10,p.getId());
         return hurt;
     }

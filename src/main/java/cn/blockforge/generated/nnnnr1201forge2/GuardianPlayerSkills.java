@@ -112,7 +112,7 @@ public final class GuardianPlayerSkills {
     }
     private static void boost(State s,boolean enabled){
         attribute(s.p,Attributes.MOVEMENT_SPEED,SPEED,enabled?s.v("SpeedMultiplier"):0);
-        attribute(s.p,Attributes.ATTACK_DAMAGE,ATTACK,enabled?BalanceRules.strength(s.v("DamageMultiplier")):0);
+        attribute(s.p,Attributes.ATTACK_DAMAGE,ATTACK,enabled?BalanceRules.strength(s.v("DamageMultiplier"),BalanceRules.Category.DAMAGE):0);
         attribute(s.p,Attributes.ATTACK_SPEED,ATTACK_SPEED,enabled?s.v("AttackSpeedMultiplier"):0);
     }
     private static void attribute(ServerPlayer p,Attribute key,UUID id,double value){var a=MaidBridge.body(p).getAttribute(key);if(a==null)return;a.removeModifier(id);if(value!=0)a.addTransientModifier(new AttributeModifier(id,"赤鳞跃动",value,AttributeModifier.Operation.ADDITION));}
@@ -131,7 +131,7 @@ public final class GuardianPlayerSkills {
                 if(age>wind&&(age-wind-1)%gap==0&&(age-wind-1)/gap<count&&t!=null){fx(s,142,p.getEyePosition(),t.getEyePosition(),1,5,(age-wind-1)/gap);if(reach(s,t)&&hit(s,t,s.v("Punch"),true))t.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,s.ticks("ComboSlowSeconds"),Math.max(0,s.count("ComboSlow",10)-1)));}
                 if(age>=wind+Math.max(1,count*gap))s.casting=-1;
             }
-            case 7 -> {int wind=s.ticks("HealWindup"),duration=s.ticks("HealSeconds");if(age<=wind+duration&&age%5==0)fx(s,137,p.position(),Vec3.ZERO,1,8,0);if(age>wind&&age<=wind+duration)p.heal(BalanceRules.damage(10.0/20.0));if(age>=wind+duration+s.ticks("HealRecovery"))s.casting=-1;}
+            case 7 -> {int wind=s.ticks("HealWindup"),duration=s.ticks("HealSeconds");if(age<=wind+duration&&age%5==0)fx(s,137,p.position(),Vec3.ZERO,1,8,0);if(age>wind&&age<=wind+duration)p.heal(BalanceRules.damage(10.0/20.0,BalanceRules.Category.HEALING));if(age>=wind+duration+s.ticks("HealRecovery"))s.casting=-1;}
             case 8 -> {if(age>=s.ticks("GuardWindup")){s.guardUntil=s.level.getGameTime()+s.ticks("GuardSeconds");fx(s,127,p.position().add(0,1,0),Vec3.ZERO,1,10,0);s.casting=-1;}}
             case 9 -> {int wind=s.ticks("BeamWindup"),duration=s.ticks("BeamSeconds");Vec3 origin=p.getEyePosition().add(p.getLookAngle().scale(0.3));
                 LivingEntity aim=Skills.aimTarget(p);Vec3 dir=aim==null?p.getLookAngle():aim.getBoundingBox().getCenter().subtract(origin).normalize();

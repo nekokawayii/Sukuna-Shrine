@@ -93,7 +93,7 @@ public class BuddhaEntity extends Monster {
         switch(action()){
             case 1 -> {
                 setNoGravity(true);setDeltaMovement(0,(anchor.y+1-getY())*0.12,0);
-                if(t%10==0){for(LivingEntity p:BossTargets.nearby(this,revealRange(12))){double drain=p instanceof ServerPlayer player?BalanceRules.strength(Curse.drain(player,(phase()==2?0.08:0.05)*(revealed?2:1))):BalanceRules.strength(Math.min(20,p.getMaxHealth()*0.05));if(!(p instanceof Player))strike(p,(float)BalanceRules.raw(drain));heal((float)drain);effect(31,p.getBoundingBox().getCenter(),getBoundingBox().getCenter(),1,12,p.getId());}if(t%40==0){sound(SoundEvents.WARDEN_HEARTBEAT,0.65f);sound(SoundEvents.EVOKER_PREPARE_SUMMON,0.5f);}}
+                if(t%10==0){for(LivingEntity p:BossTargets.nearby(this,revealRange(12))){double drain=p instanceof ServerPlayer player?BalanceRules.strength(Curse.drain(player,(phase()==2?0.08:0.05)*(revealed?2:1)),BalanceRules.Category.BOSS_ATTACK):BalanceRules.strength(Math.min(20,p.getMaxHealth()*0.05),BalanceRules.Category.BOSS_ATTACK);if(!(p instanceof Player))strike(p,(float)BalanceRules.raw(drain,BalanceRules.Category.BOSS_ATTACK));heal((float)drain);effect(31,p.getBoundingBox().getCenter(),getBoundingBox().getCenter(),1,12,p.getId());}if(t%40==0){sound(SoundEvents.WARDEN_HEARTBEAT,0.65f);sound(SoundEvents.EVOKER_PREPARE_SUMMON,0.5f);}}
                 if(t>=100)finish(35);
             }
             case 2 -> {if(t==20){int count=((phase()==2?10:6)+random.nextInt(3))*(revealed?2:1);for(int i=0;i<count;i++)spawnParasite(false,i*Math.PI*2/count);sound(SoundEvents.GHAST_AMBIENT,1.8f);}if(t>=45)finish(35);}
@@ -113,7 +113,7 @@ public class BuddhaEntity extends Monster {
     }
     private boolean blocked(LivingEntity p){return p.isBlocking()&&p.getLookAngle().dot(position().subtract(p.position()).normalize())>0;}
     private void strike(LivingEntity p,float amount){strike(p,amount,castBonus);}
-    private void strike(LivingEntity p,float amount,float bonus){if(!BossTargets.hostile(this,p))return;p.invulnerableTime=0;p.hurt(damageSources().mobAttack(this),BalanceRules.damage((amount+bonus)*BossControl.value(this,"BuddhaDamage",1)));}
+    private void strike(LivingEntity p,float amount,float bonus){if(!BossTargets.hostile(this,p))return;p.invulnerableTime=0;p.hurt(damageSources().mobAttack(this),BalanceRules.damage((amount+bonus)*BossControl.value(this,"BuddhaDamage",1),BalanceRules.Category.BOSS_ATTACK));}
     private void pushAway(LivingEntity p,double force,double up){Vec3 d=p.position().subtract(position()).multiply(1,0,1).normalize();p.push(d.x*force,up,d.z*force);p.hurtMarked=true;}
     private void processMarks(){for(Iterator<Mark> it=marks.iterator();it.hasNext();){Mark m=it.next();if(tickCount<m.due)continue;effect(m.type==2?40:32,m.pos,new Vec3(0,1,0),m.radius,18,m.type);for(LivingEntity p:BossTargets.nearby(this,64)){if(p.position().distanceToSqr(m.pos)>m.radius*m.radius)continue;if(m.type==3){p.addEffect(new MobEffectInstance(MobEffects.GLOWING,60,0));continue;}strike(p,m.damage,m.bonus);p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,10,6));if(m.radius>=5)pushAway(p,0.6,0.8);}sound(SoundEvents.ANVIL_LAND,0.6f);it.remove();}}
     private ParasiteEntity spawnParasite(boolean large,double angle){ParasiteEntity mob=(large?Content.MOTHER:Content.PARASITE).get().create(level());if(mob==null)return null;mob.moveTo(getX()+Math.cos(angle)*3,getY(),getZ()+Math.sin(angle)*3,0,0);mob.owner=getUUID();mob.setTarget(getTarget());level().addFreshEntity(mob);effect(37,mob.position(),Vec3.ZERO,large?5:1,25,1);return mob;}
@@ -129,7 +129,7 @@ public class BuddhaEntity extends Monster {
         if(action()==11)adjusted=Math.min(adjusted,Math.max(0,getHealth()-1));
         if(transitionDone&&!finaleUsed&&action()!=11)adjusted=Math.min(adjusted,Math.max(0,getHealth()-getMaxHealth()*0.09f));
         boolean hit=super.hurt(source,adjusted);
-        if(hit&&reflect&&source.getEntity() instanceof LivingEntity p){p.hurt(damageSources().sonicBoom(this),BalanceRules.damage(amount*(revealed?0.85f:phase()==2?0.45f:0.3f)));effect(42,p.getEyePosition(),Vec3.ZERO,amount*(revealed?0.85f:phase()==2?0.45f:0.3f),12,p.getId());sound(SoundEvents.AMETHYST_BLOCK_HIT,1.8f);}
+        if(hit&&reflect&&source.getEntity() instanceof LivingEntity p){p.hurt(damageSources().sonicBoom(this),BalanceRules.damage(amount*(revealed?0.85f:phase()==2?0.45f:0.3f),BalanceRules.Category.BOSS_ATTACK));effect(42,p.getEyePosition(),Vec3.ZERO,amount*(revealed?0.85f:phase()==2?0.45f:0.3f),12,p.getId());sound(SoundEvents.AMETHYST_BLOCK_HIT,1.8f);}
         return hit;
     }
     @Override protected void dropCustomDeathLoot(DamageSource source,int looting,boolean recentlyHit){super.dropCustomDeathLoot(source,looting,recentlyHit);spawnAtLocation(Content.BODY.get());spawnAtLocation(Content.RELIC.get());spawnAtLocation(ProgressionContent.FETUS.get());effect(43,position(),Vec3.ZERO,8,80,0);sound(SoundEvents.PLAYER_LEVELUP,0.6f);}

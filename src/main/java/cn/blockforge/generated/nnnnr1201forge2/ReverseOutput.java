@@ -15,9 +15,9 @@ public final class ReverseOutput {
         return false;
     }
     // 耐久只能是整数；2.5点拆成每次2点、另有50%概率补1点，避免取整变成3点。
-    private static int repairAmount(ServerPlayer p){double amount=BalanceRules.strength(25);int whole=(int)amount;return whole+(p.getRandom().nextDouble()<amount-whole?1:0);}
+    private static int repairAmount(ServerPlayer p){double amount=BalanceRules.strength(25,BalanceRules.Category.HEALING);int whole=(int)amount;return whole+(p.getRandom().nextDouble()<amount-whole?1:0);}
     private static void healTarget(ServerPlayer p,LivingEntity target){
-        if(!Curse.spend(p,100))return;Curse.status(p,"ReverseOutputCooldown",20);target.heal(BalanceRules.damage(10));
+        if(!Curse.spend(p,100))return;Curse.status(p,"ReverseOutputCooldown",20);target.heal(BalanceRules.damage(10,BalanceRules.Category.HEALING));
         for(var armor:target.getArmorSlots())if(armor.isDamageableItem())armor.setDamageValue(Math.max(0,armor.getDamageValue()-repairAmount(p)));
         Network.send(p.serverLevel(),new Network.Effect(137,target.getId(),target.position(),Vec3.ZERO,1,20,0));
     }
@@ -28,7 +28,7 @@ public final class ReverseOutput {
         LivingEntity target=p.serverLevel().getEntitiesOfClass(LivingEntity.class,p.getBoundingBox().inflate(32),e->e!=p&&e.isAlive()&&p.hasLineOfSight(e)&&e.getBoundingBox().getCenter().distanceToSqr(eye)<=1024&&e.getBoundingBox().getCenter().subtract(eye).normalize().dot(dir)>=Math.cos(Math.toRadians(12))).stream().min(Comparator.<LivingEntity>comparingDouble(e->1-e.getBoundingBox().getCenter().subtract(eye).normalize().dot(dir)).thenComparingDouble(p::distanceToSqr)).orElse(null);
         if(target==null){if(Curse.spend(p,100)){Curse.status(p,"ReverseOutputCooldown",20);Network.send(p.serverLevel(),new Network.Effect(137,p.getId(),Skills.aimPoint(p,16),Vec3.ZERO,1,20,0));}return;}
         if(!Curse.canSpend(p,100))return;healTarget(p,target);
-        p.displayClientMessage(Component.literal("术式反转外放：恢复"+BalanceRules.number(BalanceRules.strength(10))+"生命，每件护甲平均修复"+BalanceRules.number(BalanceRules.strength(25))+"耐久"),true);
+        p.displayClientMessage(Component.literal("术式反转外放：恢复"+BalanceRules.number(BalanceRules.strength(10,BalanceRules.Category.HEALING))+"生命，每件护甲平均修复"+BalanceRules.number(BalanceRules.strength(25,BalanceRules.Category.HEALING))+"耐久"),true);
     }
     private ReverseOutput(){}
 }

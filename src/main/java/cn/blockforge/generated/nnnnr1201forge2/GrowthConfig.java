@@ -14,13 +14,17 @@ public final class GrowthConfig {
     public static final Stage FINGER,BODY,NINE,SOUL,VOID,GUARDIAN;
     public record Stage(ForgeConfigSpec.DoubleValue health,ForgeConfigSpec.DoubleValue attack,
                         ForgeConfigSpec.DoubleValue spell,ForgeConfigSpec.DoubleValue energy) {
-        public String description(){return description(BalanceRules.factor());}
-        public String description(double factor){return "生命+"+number(value(health)*factor)+"、普攻+"+number(value(attack)*factor)+"、术式+"+number(value(spell)*factor)+"、咒力上限+"+number(value(energy));}
+        /** 生命/普攻/术式各自按分类比值换算（关闭模式不再是同一个因子），咒力上限始终用原值。 */
+        public String description(){return description(BalanceRules.factor(BalanceRules.modpackMode(),BalanceRules.Category.PLAYER_HEALTH),BalanceRules.factor(BalanceRules.modpackMode(),BalanceRules.Category.PLAYER_ATTACK),BalanceRules.factor(BalanceRules.modpackMode(),BalanceRules.Category.DAMAGE));}
+        /** 客户端按当前模式的分类比值展开（与服务端同步的 modpackMode 一致）。 */
+        public String description(double healthFactor,double attackFactor,double spellFactor){return "生命+"+number(value(health)*healthFactor)+"、普攻+"+number(value(attack)*attackFactor)+"、术式+"+number(value(spell)*spellFactor)+"、咒力上限+"+number(value(energy));}
     }
     static {
         ForgeConfigSpec.Builder b=new ForgeConfigSpec.Builder();
+        // 关闭模式的分类比值与推导依据直接取自 BalanceRules，避免注释与实际数值脱节。
+        String ratioComment=BalanceRules.ratios();for(String line:BalanceRules.RATIONALE)ratioComment=ratioComment+"\n"+line;
         b.comment("整合包模式：配置内始终填写原始数值；修改后彻底重启游戏或服务器。联机战斗以服务端为准。").push("balance");
-        MODPACK_MODE=b.comment("true：保留r63战斗强度；false（默认）：本模组的生命/攻击成长、术式与首领伤害、首领生命/护甲/受伤上限、治疗均为原值10%。", "咒力上限、恢复、消耗始终使用配置原值，不受此开关影响。不改持续时间、冷却、数量、次数、概率、阶段阈值、范围、移动/弹道速度、减伤比例、物品掉落和任务条件；不改原版/其他模组的基础属性。女仆术式原有减半仍保留。").define("modpackMode",false);
+        MODPACK_MODE=b.comment("true：保留r63战斗强度，全部数值严格按配置原值生效；false（默认）：本模组的生命/攻击成长、术式与首领伤害、首领生命/护甲/受伤上限、治疗按分类比值缩放（完整比值与推导见本注释末尾）。", "分类比值定标：传承（最终阶段）一发解 = 100，正好砍死铁傀儡（100生命0护甲）；开启模式全部为100%。", "咒力上限、恢复、消耗始终使用配置原值，不受此开关影响。不改持续时间、冷却、数量、次数、概率、阶段阈值、范围、移动/弹道速度、减伤比例、物品掉落和任务条件；不改原版/其他模组的基础属性。女仆术式原有减半仍保留。", ratioComment).define("modpackMode",false);
         b.pop();
         b.comment("固定成长：全部采用加法；文件位于游戏主目录 config/sukuna-growth.toml。修改后重启游戏或服务器，已有角色也会重新计算。生命2点=1颗心。").push("growth");
         BASE_ENERGY=b.comment("无成长时的基础咒力上限").defineInRange("baseEnergy",1000.0,0.0,1000000.0);

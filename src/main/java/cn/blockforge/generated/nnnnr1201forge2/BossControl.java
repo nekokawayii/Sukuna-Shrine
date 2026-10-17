@@ -21,7 +21,7 @@ public final class BossControl extends SavedData {
     public static boolean war(LivingEntity boss){return value(boss,"AllHostile",0)>0;}
     public static CompoundTag guardian(MinecraftServer server){CompoundTag tag=get(server).values.getCompound("Guardian").copy();GuardianSettings.defaults(tag);return tag;}
     public void guardian(MinecraftServer server,String key,double value){CompoundTag tag=guardian(server);tag.putDouble(key,value);values.put("Guardian",tag);setDirty();for(ServerLevel level:server.getAllLevels())for(var e:level.getAllEntities())if(e instanceof GuardianEntity g)g.refreshSettings(tag,key);}
-    // 五条悟固定 150000、魔虚罗固定 400000 原值（普通模式按10%生效），都不受控制器遗留值影响。
+    // 五条悟固定 150000、魔虚罗固定 400000 原值（普通模式按"首领面板"比值生效），都不受控制器遗留值影响。
     private static String healthKey(LivingEntity boss){return boss instanceof GojoEntity||boss instanceof MahoragaEntity?null:boss instanceof YujiEntity?"YujiHealth":boss instanceof BuddhaEntity?"BuddhaHealth":null;}
     private static boolean managed(LivingEntity boss){return BossTargets.managed(boss);}
     private static boolean excluded(LivingEntity boss){return boss instanceof GuardianEntity g&&g.friendly()||boss instanceof YujiEntity y&&(y.decoy()||y.familyMember())||boss instanceof MahoragaEntity m&&m.ally();} // 友方魔虚罗固定 800 血，不受控制面板缩放
@@ -36,10 +36,10 @@ public final class BossControl extends SavedData {
         var a=boss.getAttribute(key);if(a==null)return;
         if(key==Attributes.ATTACK_DAMAGE){
             // 放在总倍率末端，戴天的力量药水加伤也只缩放一次。
-            a.setBaseValue(raw);var previous=a.getModifier(ATTACK_SCALE);double amount=BalanceRules.factor()-1;
+            a.setBaseValue(raw);var previous=a.getModifier(ATTACK_SCALE);double amount=BalanceRules.factor(BalanceRules.modpackMode(),BalanceRules.Category.BOSS_ATTACK)-1;
             if(previous!=null&&previous.getAmount()==amount)return;
             a.removeModifier(ATTACK_SCALE);if(amount!=0)a.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(ATTACK_SCALE,"整合包模式攻击缩放",amount,net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.MULTIPLY_TOTAL));
-        }else if(a.getBaseValue()!=BalanceRules.strength(raw))a.setBaseValue(BalanceRules.strength(raw));
+        }else if(a.getBaseValue()!=BalanceRules.strength(raw,key==Attributes.ARMOR?BalanceRules.Category.BOSS_ARMOR:BalanceRules.Category.BOSS))a.setBaseValue(BalanceRules.strength(raw,key==Attributes.ARMOR?BalanceRules.Category.BOSS_ARMOR:BalanceRules.Category.BOSS));
     }
     private static void stats(LivingEntity boss,boolean fill){
         if(!managed(boss)||excluded(boss)||boss instanceof GuardianEntity)return;

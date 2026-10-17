@@ -39,7 +39,7 @@ public final class MahitoLimbEntity extends Monster {
         var wall=level().clip(new net.minecraft.world.level.ClipContext(start,end,net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,this));
         if(wall.getType()!=net.minecraft.world.phys.HitResult.Type.MISS){discard();return;}
         setDeltaMovement(Vec3.ZERO);setPos(end);Network.send(server(),new Network.Effect(132,getId(),position(),flight,0.55f,3,age));
-        if(player.getBoundingBox().inflate(0.3).clip(start,end).isPresent()){player.hurt(damageSources().indirectMagic(this,boss),BalanceRules.damage(40+castBonus));Network.send(server(),new Network.Effect(133,getId(),player.getBoundingBox().getCenter(),flight,1.2f,12,player.getId()));discard();}
+        if(player.getBoundingBox().inflate(0.3).clip(start,end).isPresent()){player.hurt(damageSources().indirectMagic(this,boss),BalanceRules.damage(40+castBonus,BalanceRules.Category.BOSS_ATTACK));Network.send(server(),new Network.Effect(133,getId(),player.getBoundingBox().getCenter(),flight,1.2f,12,player.getId()));discard();}
     }
     @Override public boolean hurt(DamageSource source,float amount){
         if(level().isClientSide)return false;

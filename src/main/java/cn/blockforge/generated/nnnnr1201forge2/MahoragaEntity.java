@@ -907,7 +907,7 @@ public final class MahoragaEntity extends Monster {
       }
 
       target.invulnerableTime = 0;
-      float damage = BalanceRules.damage(this.getAttributeValue(Attributes.ATTACK_DAMAGE) * (double)scale);
+      float damage = BalanceRules.damage(this.getAttributeValue(Attributes.ATTACK_DAMAGE) * (double)scale,BalanceRules.Category.BOSS_ATTACK);
       if (!target.hurt(this.damageSources().mobAttack(this), damage)) {
          return;
       }

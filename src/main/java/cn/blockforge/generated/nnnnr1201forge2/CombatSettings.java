@@ -32,7 +32,7 @@ public final class CombatSettings {
     /** 保留既有60%及御厨子额外削弱；女仆的基础伤害和成长整体再减半。 */
     public static float casterDamage(Player p,double amount){return BalanceRules.damage(CasterDamageRules.scale(amount,MaidBridge.isCaster(p)));}
     public static double unscaledSpellMultiplier(Player p){return 0.6*multiplier(p)*Curse.damageFactor(p)*Curse.residueFactor(p);}
-    public static double baseSpellMultiplier(Player p){return BalanceRules.strength(unscaledSpellMultiplier(p)*CasterDamageRules.casterFactor(MaidBridge.isCaster(p)));}
+    public static double baseSpellMultiplier(Player p){return BalanceRules.strength(unscaledSpellMultiplier(p)*CasterDamageRules.casterFactor(MaidBridge.isCaster(p)),BalanceRules.Category.DAMAGE);}
     public static double spellMultiplier(Player p){return baseSpellMultiplier(p);}
     public static float spellDamage(Player p,double base){return BalanceRules.damage(CasterDamageRules.spell(base,multiplier(p),Curse.spellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),false,MaidBridge.isCaster(p)));}
     public static float domainSpellDamage(Player p,double base){return BalanceRules.damage(CasterDamageRules.spell(base,multiplier(p),Curse.domainSpellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),true,MaidBridge.isCaster(p)));}
@@ -125,7 +125,8 @@ public final class CombatSettings {
     }
     @SubscribeEvent public static void commands(RegisterCommandsEvent event){
         event.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("balance").executes(c->{
-            c.getSource().sendSuccess(()->Component.literal((BalanceRules.modpackMode()?"整合包模式：开启，强度100%":"整合包模式：关闭，强度10%（降低90%）")+"。咒力上限、恢复、消耗始终使用原值；持续时间、冷却、数量和范围不变。配置：config/sukuna-growth.toml 的 [balance] modpackMode，修改后重启。"),false);return 1;
+            c.getSource().sendSuccess(()->Component.literal((BalanceRules.modpackMode()?"整合包模式：开启，全部数值严格 100%（与配置原值逐值一致）":"整合包模式：关闭，按分类比值缩放（术式伤害 "+BalanceRules.number(BalanceRules.percent(BalanceRules.factor(false,BalanceRules.Category.DAMAGE)))+"%，一发解 = 100 正好砍死铁傀儡）")+"。咒力上限、恢复、消耗始终使用原值；持续时间、冷却、数量和范围不变。配置：config/sukuna-growth.toml 的 [balance] modpackMode，修改后重启。"),false);
+            c.getSource().sendSuccess(()->Component.literal("各分类比值："+BalanceRules.ratios()),false);return 1;
         })));
         event.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("damage")
             .executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();

@@ -46,7 +46,7 @@ public final class BrokenMahitoEntity extends Monster {
         if(windup>0){
             getNavigation().stop();setDeltaMovement(0,getDeltaMovement().y,0);
             if(--windup==0){Vec3 end=strikeOrigin.add(strikeDirection.scale(castBonus>0?6.4:3.2));
-                for(LivingEntity victim:BossTargets.nearby(this,64))if(hasLineOfSight(victim)&&victim.getBoundingBox().inflate(0.3).clip(strikeOrigin,end).isPresent())victim.hurt(damageSources().mobAttack(this),BalanceRules.damage(40+castBonus));
+                for(LivingEntity victim:BossTargets.nearby(this,64))if(hasLineOfSight(victim)&&victim.getBoundingBox().inflate(0.3).clip(strikeOrigin,end).isPresent())victim.hurt(damageSources().mobAttack(this),BalanceRules.damage(40+castBonus,BalanceRules.Category.BOSS_ATTACK));
                 fx(130,end,strikeOrigin,1.5f,10,0);entityData.set(ACTION,0);attackCooldown=26;
             }return;
         }

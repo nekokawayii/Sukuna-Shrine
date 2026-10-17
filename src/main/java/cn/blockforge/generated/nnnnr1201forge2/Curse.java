@@ -32,8 +32,8 @@ public final class Curse {
     public static double soulSlashBonus(Player p){return Math.max(0,Math.min(300,data(p).getInt("SoulFeasts")));}
     private static boolean soul(Player p){return data(p).getBoolean("SoulPowerDouble");}
     private static double rawHealthBonus(Player p){return GrowthRules.health(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p));}
-    public static double healthBonus(Player p){return BalanceRules.strength(rawHealthBonus(p));}
-    public static double attackBonus(Player p){return BalanceRules.strength(GrowthRules.attack(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p)));}
+    public static double healthBonus(Player p){return BalanceRules.strength(rawHealthBonus(p),BalanceRules.Category.PLAYER_HEALTH);}
+    public static double attackBonus(Player p){return BalanceRules.strength(GrowthRules.attack(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p)),BalanceRules.Category.PLAYER_ATTACK);}
     public static double spellBonus(Player p){return GrowthRules.spell(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p),0);}
     public static double domainSpellBonus(Player p){return spellBonus(p)*0.5;}
     public static double rawMaximum(Player p){return EnergyRules.maximum(GrowthRules.energy(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p)),Uraume.fish(p));}
@@ -50,7 +50,7 @@ public final class Curse {
         long until=data(p).getLong("TechniqueBurnoutUntil");
         return (int)Math.max(0,until-p.level().getGameTime());
     }
-    public static double reverseHealing(Player p){return BalanceRules.strength(ReverseRules.healing(rawHealthBonus(p)));}
+    public static double reverseHealing(Player p){return BalanceRules.strength(ReverseRules.healing(rawHealthBonus(p)),BalanceRules.Category.HEALING);}
     public static double reverseCost(Player p){return DomainClash.penalized(p)?DomainClashRules.healCost(maximum(p)):ReverseRules.cost(rawHealthBonus(p));}
     public static boolean repaired(Player p){return active(p,"TechniqueRepairedUntil");}
     public static boolean canUseTechnique(Player p){return !SixfoldFinale.active(p)&&!SixfoldFinale.controlled(p)&&!burnout(p)&&!DomainClash.active(p)&&!NetBranches.locked(p)&&!Uraume.locked(p)&&!CombatExpansion.controlled(p);}

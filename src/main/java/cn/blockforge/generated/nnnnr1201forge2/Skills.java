@@ -105,7 +105,7 @@ public final class Skills {
             var tag=target.getPersistentData();UUID id=tag.getUUID("SukunaSoulFireOwner");ServerPlayer caster=target.level() instanceof ServerLevel level?MaidBridge.find(level,id):null;
             if(caster!=null)tag.putBoolean("SukunaSoulFireMaid",MaidBridge.isCaster(caster));
             if(!tag.contains("SukunaSoulFireMaid")){event.setCanceled(true);return;}
-            burn=new Burn(id,Long.MAX_VALUE,BalanceRules.strength(CasterDamageRules.scale(0.5,tag.getBoolean("SukunaSoulFireMaid"))));
+            burn=new Burn(id,Long.MAX_VALUE,BalanceRules.strength(CasterDamageRules.scale(0.5,tag.getBoolean("SukunaSoulFireMaid")),BalanceRules.Category.MAID_SPELL));
         }
         if(burn==null||target.level().getGameTime()>burn.until){VoidCombat.ignitionDamage(event);return;}
         ServerPlayer owner=target.level() instanceof ServerLevel level?MaidBridge.find(level,burn.owner):null;

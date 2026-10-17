@@ -15,7 +15,7 @@ public final class Network {
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation("sukuna", "skills"), () -> "99", "99"::equals, "99"::equals);
     public static Consumer<Effect> clientReceiver = e -> {};
     public static Boolean clientModpackMode;
-    public static double tooltipFactor(){return BalanceRules.factor(clientModpackMode!=null?clientModpackMode:BalanceRules.modpackMode());}
+    public static double tooltipFactor(BalanceRules.Category category){return BalanceRules.factor(clientModpackMode!=null?clientModpackMode:BalanceRules.modpackMode(),category);}
     public record Cast(SkillAction action) {}
     public record StreamToggle() {}
     public record TestReset() {}

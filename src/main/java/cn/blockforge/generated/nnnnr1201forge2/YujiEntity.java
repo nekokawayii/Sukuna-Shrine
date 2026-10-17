@@ -59,7 +59,7 @@ public class YujiEntity extends Monster {
         if(!BossTargets.valid(this,p)||!sureHit(p)&&(block(p)||respectFrames&&p.invulnerableTime>10))return false;
         if(p instanceof ServerPlayer)participants.add(p.getUUID());if(!respectFrames||sureHit(p))p.invulnerableTime=0;
         boolean flash=action()!=5&&(BossControl.value(this,"BlackFlash",100))>random.nextInt(100);
-        float dealt=BalanceRules.damage(((flash?amount*2.5f:amount)+bonus)*BossControl.value(this,"YujiDamage",1));
+        float dealt=BalanceRules.damage(((flash?amount*2.5f:amount)+bonus)*BossControl.value(this,"YujiDamage",1),BalanceRules.Category.BOSS_ATTACK);
         boolean hit=p.hurt(soul||sureHit(p)?damageSources().sonicBoom(this):damageSources().mobAttack(this),dealt);
         if(hit){fx(81,p.position().add(0,1,0),position(),1,8,p.getId());if(flash)fx(58,p.position(),Vec3.ZERO,dealt,10,p.getId());if(flash)SkillSounds.play(this,"black_flash");else sound(soul?SoundEvents.NOTE_BLOCK_BASEDRUM.value():SoundEvents.PLAYER_ATTACK_STRONG,soul?0.5f:0.8f);}return hit;
     }

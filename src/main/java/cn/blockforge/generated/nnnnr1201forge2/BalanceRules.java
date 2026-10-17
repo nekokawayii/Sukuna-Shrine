@@ -102,8 +102,16 @@ public final class BalanceRules {
     /** 旧存档换算：先按写入时的比值还原原值，再按当前分类比值缩放；比值不在表内的一律视为原值。 */
     public static float storedDamage(float stored,double previousFactor){if(!Float.isFinite(stored)||stored<0)return 0;if(!KNOWN.contains(previousFactor)||previousFactor==1.0)return damage(stored);return damage(stored/previousFactor);}
     /** 首领生命：上界交给属性本身（GeneratedMod 已把 MAX_HEALTH 上限抬到 1000000），这里不再夹断，避免把配置原值改写掉。 */
+    /** 用户指定的"关闭模式固定血量"：按**原值**查表覆盖（这些首领不按统一比值缩）。
+     *  戴天 150 / 即身佛 500 / 五条悟 450 / 魔虚罗 600 / 虎杖残影 550 / 净土守护者 1200。 */
+    private static final java.util.Map<Double,Double> OFF_HEALTH=java.util.Map.of(
+        200.0,150.0,5000.0,500.0,150000.0,450.0,400000.0,600.0,30000.0,550.0,800000.0,1200.0);
     public static double health(double raw){return health(raw,Category.BOSS);}
-    public static double health(double raw,Category category){return Math.max(1,strength(Math.max(1,raw),category));}
+    public static double health(double raw,Category category){
+        Double fixed=OFF_HEALTH.get(raw);
+        if(fixed!=null&&!modpackMode)return fixed;                 // 关闭模式：用指定固定值（开启模式不受影响）
+        return Math.max(1,strength(Math.max(1,raw),category));
+    }
     public static double healthAfterResize(double health,double oldMax,double newMax){return oldMax<=0?newMax:Math.max(0,Math.min(newMax,health/oldMax*newMax));}
     /** 黑闪先按原值完成乘方，最后缩放伤害；其余伤害参数也在命中口统一处理。表外键保持原值。 */
     public static double guardianAttribute(String key,double raw){return strength(raw,guardianCategory(key));}

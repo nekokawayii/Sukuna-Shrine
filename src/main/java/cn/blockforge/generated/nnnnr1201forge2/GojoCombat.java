@@ -264,6 +264,21 @@ public final class GojoCombat {
     }
     public static void clashVisual(ServerPlayer p,boolean show){State s=states.get(p.getUUID());if(s==null||s.domainUntil<=0)return;if(show)fx(p,GojoFx.DOMAIN,s.center,p.getLookAngle(),GojoFx.DOMAIN_RADIUS,400,0);else fx(p,GojoFx.DOMAIN_CLOSE,s.center,Vec3.ZERO,1,4,0);}
     public static void extendDomain(ServerPlayer p,int ticks){State s=states.get(p.getUUID());if(s!=null&&s.domainUntil>0)s.domainUntil+=ticks;}
+    /** 赫的爆炸半径（格）与范围内伤害/击退（用户指定：半径 3.5 格内都有伤害和击退）。 */
+    public static final double RED_RADIUS=3.5;
+    public static final double RED_AREA_DAMAGE=60;
+    /** 赫 爆炸：以爆心为中心，半径 {@link #RED_RADIUS} 内每个生物都吃一次伤害 + 沿径向击退。 */
+    private static void redBurst(ServerPlayer p,Vec3 center,net.minecraft.server.level.ServerLevel level){
+        var box=new net.minecraft.world.phys.AABB(center,center).inflate(RED_RADIUS);
+        for(LivingEntity victim:level.getEntitiesOfClass(LivingEntity.class,box,v->v!=p&&v.isAlive()&&CombatSettings.canHit(p,v))){
+            if(victim.distanceToSqr(center)>RED_RADIUS*RED_RADIUS)continue;      // 球形范围
+            hit(p,victim,RED_AREA_DAMAGE,false,1f,AttackTypes.MAGIC_RED);        // 独立适应占位：赫
+            Vec3 push=victim.position().subtract(center);
+            if(push.lengthSqr()<1e-4)push=p.getLookAngle();
+            push=push.normalize().scale(1.15);
+            victim.push(push.x,0.42,push.z);victim.hurtMarked=true;              // 击退（向外 + 上抛）
+        }
+    }
     private static boolean hit(ServerPlayer p,LivingEntity target,double damage,boolean knock){return hit(p,target,damage,knock,1f,AttackTypes.MAGIC);}
     /** 命中结算。{@code bossMultiplier} 只对<b>魔虚罗</b>生效：茈打它 **10 倍**（{@link #MAHORAGA_DAMAGE}），
      *  无限制茈 3 倍（{@link #MAHORAGA_DAMAGE_UNLIMITED}）；
@@ -402,7 +417,8 @@ public final class GojoCombat {
                     if(hit(o.owner,victim,500,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE))purpleSlow(victim);
                 }else{
                     fx(o.owner,GojoFx.RED_END,o.pos,Vec3.ZERO,7,30,o.id);
-                    hit(o.owner,victim,60,true,1f,AttackTypes.MAGIC_RED); // 赫 60（独立适应）
+                    // 赫：击中即爆炸 —— 半径 RED_RADIUS 格内所有目标都吃伤害 + 击退（用户要求：范围伤害）
+                    redBurst(o.owner,o.pos,o.level);
                 }
                 if(o.purple)continue; // 茈穿透：继续撞后面的目标
                 hitSomething=true;break; // 赫：打到就停

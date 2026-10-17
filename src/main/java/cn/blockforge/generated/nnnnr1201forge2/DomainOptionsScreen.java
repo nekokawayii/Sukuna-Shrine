@@ -23,7 +23,7 @@ public final class DomainOptionsScreen extends Screen {
             minus[i]=addRenderableWidget(Button.builder(Component.literal("-"),b->adjust(index,-1)).bounds(left,y,26,20).build());
             plus[i]=addRenderableWidget(Button.builder(Component.literal("+"),b->adjust(index,1)).bounds(right,y,26,20).build());
         }
-        addRenderableWidget(Button.builder(Component.literal("确定并保存"),b->{Network.CHANNEL.sendToServer(new Network.DomainOptions(radiusPts,damagePts,speedPts));minecraft.setScreen(null);}).bounds(left,height/2+40,220,20).build());
+        addRenderableWidget(Button.builder(Component.literal("确定并选中"),b->{Network.CHANNEL.sendToServer(new Network.DomainOptions(radiusPts,damagePts,speedPts));minecraft.setScreen(null);}).bounds(left,height/2+40,220,20).build());
         refresh();
     }
     private int[] points(){return new int[]{radiusPts,damagePts,speedPts};}

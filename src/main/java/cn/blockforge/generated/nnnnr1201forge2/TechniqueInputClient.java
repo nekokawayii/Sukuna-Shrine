@@ -42,10 +42,6 @@ public final class TechniqueInputClient {
             // 与服务端那条"是否接管"配对看，一眼分清"客户端压根没发包"和"发了但服务端状态对不上"。
             if(GojoPlayer.voidKey(heldSkill))com.mojang.logging.LogUtils.getLogger().info("[无量空处] 客户端按下 发出 skill="+heldSkill+" phase=0（再按一次 = 放下/收起）");
             send(heldSkill,0);
-            // 技能5「伏魔御厨子」：上一条包已经把结印发出去了（照常开始，不被界面阻塞），这里紧接着弹出点数分配
-            // 界面——玩家正好用结印那 3 秒分配点数，第 80 刻展开时取那一刻已保存的点数。只在"开启"的那一次按下弹：
-            // 第二次（放下）与第三次（收起）时领域已经开着（下面的 shrineDomainOpen），不再弹。
-            if(heldSkill==5&&Client.availableSkill(heldSkill)&&!Client.progress.burnout()&&!Client.shrineDomainOpen())mc.setScreen(new DomainOptionsScreen());
         }
         previous=down;
     }

@@ -38,6 +38,8 @@ public final class Client {
     public static boolean soulStage(){return progress.soulShrine()&&!progress.voidShrine();}
     /** 本地玩家的伏魔御厨子是不是已经开着（服务端展开/收起时会广播 kind=1 / kind=5 的领域表现，这里读的就是它）：
      *  点数分配界面只在"开启御厨子"的那一次按下弹，第二次（放下）与第三次（收起）不弹。 */
+    /** 上一次的轮盘选中项：用于"在轮盘里**选中**御厨子(技能5)时"弹出点数分配界面（用户要求：选中后出现、调整完确定，再按释放键释放）。 */
+    private static int lastShrineSel=-1;
     public static boolean shrineDomainOpen(){var p=Minecraft.getInstance().player;return p!=null&&domains.containsKey(p.getId());}
     public static int wheelPage;
     public static int wheelCount(){return wheelPage==1&&progress.pureLandVictory()?GuardianPlayerSkills.COUNT-1:baseWheelCount();}
@@ -135,7 +137,10 @@ public final class Client {
             if(mc.player!=null)Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.CANCEL_CHARGE));
             charging=cleaveHeld=false;
         }
-        if(mc.level==null||mc.player==null||mc.isPaused())return;if(progress.unlocked()&&!availableSkill(selected))selected=fallbackSkill();tick++;tripleJump(mc);DismantleMotionClient.tick();SlashFormVisuals.tick();FreehandClient.tick(selected==SlashFormRules.FREEHAND&&FreehandClient.keyDown());BranchVisuals.tick();NetBranchVisuals.tick();VoidTechniqueClient.tick();VoidBossClient.tick();FurnaceMaxClient.tick();GojoFx.tick();MahoragaWheelClient.tick();ShinbukeVisuals.tick();SoulClient.tick();FistFlameClient.tick();VoidVisuals.tick();if(charging&&tick-chargeBorn>200)charging=false;
+        if(mc.level==null||mc.player==null||mc.isPaused())return;if(progress.unlocked()&&!availableSkill(selected))selected=fallbackSkill();
+        // 轮盘里刚选中御厨子(5) → 弹出点数分配界面；确定后按释放键正常释放
+        if(selected==5&&lastShrineSel!=5&&mc.screen==null&&!shrineDomainOpen()&&availableSkill(5))mc.setScreen(new DomainOptionsScreen());
+        lastShrineSel=selected;tick++;tripleJump(mc);DismantleMotionClient.tick();SlashFormVisuals.tick();FreehandClient.tick(selected==SlashFormRules.FREEHAND&&FreehandClient.keyDown());BranchVisuals.tick();NetBranchVisuals.tick();VoidTechniqueClient.tick();VoidBossClient.tick();FurnaceMaxClient.tick();GojoFx.tick();MahoragaWheelClient.tick();ShinbukeVisuals.tick();SoulClient.tick();FistFlameClient.tick();VoidVisuals.tick();if(charging&&tick-chargeBorn>200)charging=false;
         if(tick-window>=20){window=tick;generated=0;}
         if(FinaleClient.local()||DomainClashClient.active()||NetBranchVisuals.locked()||DismantleMotionClient.locked()){
             charging=cleaveHeld=false;castHeld=ClientInput.held(CAST);heldLast=wheelHeld();

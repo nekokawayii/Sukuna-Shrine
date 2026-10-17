@@ -78,6 +78,8 @@ public final class Network {
     /** 伏魔御厨子的三项点数（每项 0~总点数，三项之和 ≤ 可用总点数：开关开=10 / 关=11）与「纵向伤敌」开关：界面按「确定」立刻发这条保存，
      *  服务端整包校验后才写 NBT（存档键名与合法性由 {@link SukunaBranches#configureDomain} 负责；可用总点数见裸类 {@code DomainOptions.total(boolean)}）。
      *  注意：同包顶层还有一个同名的 {@code DomainOptions}（数值换算表），本文件里这个名字指的是这条网络记录。 */
+    /** 黑闪标记打击（客户端→服务端）：玩家瞄准红圈并左键。 */
+    public record BlackFlashStrike(int targetId){}
     public record DomainOptions(int radiusPts,int damagePts,int speedPts,boolean verticalKill){}
     /** 三击空格：请服务端把自己送上御厨子的神龛（无领域时服务端只提示）。 */
     public record ShrineLeap(){}
@@ -189,6 +191,10 @@ public final class Network {
         // 25 = 伏魔御厨子的点数分配（界面「确定」时发来）。这里只校验"能开御厨子的玩家"再落盘，不查冷却/结印：
         // 玩家通常在结印那 3 秒里按确定，用 Skills.available 会把这次保存挡掉。
         CHANNEL.messageBuilder(DomainOptions.class,25,NetworkDirection.PLAY_TO_SERVER).encoder((m,b)->{b.writeVarInt(m.radiusPts());b.writeVarInt(m.damagePts());b.writeVarInt(m.speedPts());b.writeBoolean(m.verticalKill());}).decoder(b->new DomainOptions(b.readVarInt(),b.readVarInt(),b.readVarInt(),b.readBoolean())).consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null&&Journey.unlocked(p)){SukunaBranches.configureDomain(p,m.radiusPts(),m.damagePts(),m.speedPts(),m.verticalKill());Curse.sync(p);}c.get().setPacketHandled(true);}).add();
+    // 26：黑闪标记打击（PLAY_TO_SERVER）；237 标记特效复用 Effect 包
+    CHANNEL.messageBuilder(BlackFlashStrike.class,26,NetworkDirection.PLAY_TO_SERVER)
+        .encoder((m,b)->b.writeVarInt(m.targetId())).decoder(b->new BlackFlashStrike(b.readVarInt()))
+        .consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null)BlackFlashMarks.strike(p,m.targetId());c.get().setPacketHandled(true);}).add();
     }
     public static void registerDrawing(){
         WallpaperPackets.register();

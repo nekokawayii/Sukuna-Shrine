@@ -322,3 +322,5 @@
 [2026-10-17T01:53:06.971Z] hit-chain pid=2656 sid=4e31b730 textLen=121 hit=null
 [2026-10-17T01:56:09.910Z] hit-chain pid=2656 sid=4e31b730 textLen=187 hit=null
 [2026-10-17T01:56:47.265Z] hit-chain pid=2656 sid=4e31b730 textLen=207 hit=null
+[2026-10-17T01:58:13.290Z] turn-stopping pid=2656 sid=4e31b730 reason=none wasDream=false
+[2026-10-17T02:01:49.485Z] hit-chain pid=2656 sid=4e31b730 textLen=73 hit=null

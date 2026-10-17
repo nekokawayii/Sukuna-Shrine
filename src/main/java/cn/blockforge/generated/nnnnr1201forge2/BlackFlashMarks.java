@@ -123,9 +123,9 @@ public final class BlackFlashMarks {
             if(mc.level.getEntity(m.entityId())==null)continue;
             Vec3 d=m.point().subtract(eye);
             double t=d.dot(look);
-            if(t<=0||t>24)continue;
+            if(t<=0||t>6.0)continue;
             double dist=d.subtract(look.scale(t)).length();
-            if(dist<=MARK_RADIUS+0.15&&t<best){best=t;hit=m;}
+            if(dist<=MARK_RADIUS+0.45&&t<best){best=t;hit=m;}
         }
         return hit;
     }
@@ -147,22 +147,27 @@ public final class BlackFlashMarks {
             float left=(m.until()-t)/MARK_TICKS;                        // 0~1 剩余
             if(left<0)continue;
             int a=(int)((0.55+0.45*Math.abs(Math.sin(t*0.6)))*255*Math.min(1,left*3));
-            ring(b,ps,m.point(),MARK_RADIUS,a);
+            ring(b,ps,m.point(),MARK_RADIUS,a,cam);
         }
         BufferUploader.drawWithShader(b.end());
         ps.popPose();RenderSystem.enableCull();RenderSystem.enableDepthTest();RenderSystem.disableBlend();
     }
     /** 一个水平红圈（朝向相机的细环，用两圈三角带近似）。 */
-    private static void ring(BufferBuilder b,PoseStack ps,Vec3 c,double r,int alpha){
-        int color=(alpha<<24)|0xFF2A18,inner=(int)(alpha*0.6)<<24|0xFFFFFF;
+    private static void ring(BufferBuilder b,PoseStack ps,Vec3 c,double r,int alpha,Vec3 cam){
+        // 竖着画（面向相机的竖直圆环）——横圈贴着地面根本瞄不到
+        Vec3 n=cam.subtract(c);if(n.lengthSqr()<1e-6)n=new Vec3(0,0,1);n=n.normalize();
+        Vec3 up0=new Vec3(0,1,0).subtract(n.scale(n.y));
+        if(up0.lengthSqr()<1e-4)up0=new Vec3(1,0,0);
+        Vec3 right=n.cross(up0).normalize(),upv=up0.normalize();
+        int color=(alpha<<24)|0xFF2A18;
         int seg=24;
         for(int i=0;i<seg;i++){
             double a0=i*Math.PI*2/seg,a1=(i+1)*Math.PI*2/seg;
-            double x0=c.x+Math.cos(a0)*r,z0=c.z+Math.sin(a0)*r,x1=c.x+Math.cos(a1)*r,z1=c.z+Math.sin(a1)*r;
-            quad(b,ps,new Vec3(x0,c.y,z0),new Vec3(x1,c.y,z1),new Vec3(x1,c.y+r*0.12,z1),new Vec3(x0,c.y+r*0.12,z0),color);
-            quad(b,ps,new Vec3(x0,c.y+r*0.12,z0),new Vec3(x1,c.y+r*0.12,z1),
-                      new Vec3(c.x+(x1-c.x)*0.75,c.y+r*0.12,c.z+(z1-c.z)*0.75),
-                      new Vec3(c.x+(x0-c.x)*0.75,c.y+r*0.12,c.z+(z0-c.z)*0.75),inner);
+            Vec3 p0=c.add(right.scale(Math.cos(a0)*r)).add(upv.scale(Math.sin(a0)*r));
+            Vec3 p1=c.add(right.scale(Math.cos(a1)*r)).add(upv.scale(Math.sin(a1)*r));
+            Vec3 p0b=c.add(right.scale(Math.cos(a0)*r*0.72)).add(upv.scale(Math.sin(a0)*r*0.72));
+            Vec3 p1b=c.add(right.scale(Math.cos(a1)*r*0.72)).add(upv.scale(Math.sin(a1)*r*0.72));
+            quad(b,ps,p0,p1,p1b,p0b,color);
         }
     }
     private static void quad(BufferBuilder b,PoseStack ps,Vec3 p0,Vec3 p1,Vec3 p2,Vec3 p3,int color){

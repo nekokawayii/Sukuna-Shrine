@@ -214,6 +214,8 @@ public final class VoidCombat {
         if(p.distanceToSqr(e.getEntity())>16||!CombatSettings.canHit(p,e.getEntity()))return;
         long now=p.level().getGameTime();if(now<p.getPersistentData().getLong("VoidContactCooldown")||!Curse.spend(p,30))return;
         p.getPersistentData().putLong("VoidContactCooldown",now+20);contacts.add(new ContactHit(p,e.getEntity()));
+        // 咒力附拳的附加伤害改成固定值（用户要求：开启整合包 +50，关闭 +5）
+        CombatSettings.hurt(p,e.getEntity(),p.damageSources().playerAttack(p),BalanceRules.modpackMode()?50f:5f);
     }
     @SubscribeEvent public static void heal(LivingHealEvent e){
         if(e.getEntity().level().isClientSide)return;

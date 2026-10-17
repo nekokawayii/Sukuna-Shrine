@@ -9,13 +9,14 @@ public final class BalanceRules {
     /** 定标目标：铁傀儡 100 点生命、0 点护甲（原版 1.20.1）。 */
     public static final double GOLEM_HEALTH=100;
     /** r250 的统一定标比值 = 100 / 一发解原值；r251 起不再用于缩放，只作为旧存档写入过的因子保留。 */
-    private static final double OFF=GOLEM_HEALTH/DISMANTLE_RAW;
+    /** 关闭模式统一基数：净土守护者原值 800000 → 1200（用户指定：以此比值为基数，全部类别同用）。 */
+    private static final double OFF=1200/800000.0;
     private static final double ON=1.0;
     /**
      * 关闭模式各分类比值（r251 起不再是一刀切，由战斗模型逐类推导）。
      * <p>模型：1 指档（最早的首领战）的满配玩家打首领，武器＝下界合金剑（锋利V、满护甲下界合金、保护IV）
      * 每秒 4 次命中、术式＝每秒 1 发「解」；据此反推「原版武器伤害占首领战总伤害 ≥ 40%」，
-     * 得到术式伤害类别的关闭比值上限：1 指档 0.377、3 指 0.294、5 指 0.246、10 指 0.184（逐档收窄）。</p>
+     * 关闭模式统一基数＝净土守护者 800000→1200（×0.0015）；下表全部类别同用此基数（用户指定）。原武器占比推导上限：1 指档 0.377、3 指 0.294、5 指 0.246、10 指 0.184（逐档收窄）。</p>
      * <p>本表取 0.18：在 1～10 指档都满足武器占比 ≥ 40%（60.1% / 54.0% / 49.6% / 42.4%），
      * 与 r250 的 0.153361 同为"术式仍明显强于武器"的档位，相对上一轮改动最小。</p>
      * <p>注意：术式成长是"二次增长"（基段与成长段同吃一个比值），武器只随普攻成长线性增长，
@@ -23,17 +24,7 @@ public final class BalanceRules {
      * 那就等于废掉招牌招式，故不取。越到后期术式占比越高，这一取舍已在报告里明确列出。</p>
      * <p>逐项算式见 scripts/verify-balance.mjs（node scripts/verify-balance.mjs 直接复算）。</p>
      */
-    private static final double OFF_PLAYER_HEALTH=0.256;
-    private static final double OFF_PLAYER_ATTACK=0.256;
-    private static final double OFF_DAMAGE=0.18;
-    private static final double OFF_HEALING=0.256;
-    private static final double OFF_MAID_SPELL=0.18;
-    private static final double OFF_BOSS=0.18;
-    private static final double OFF_BOSS_FIXED=0.18;
-    private static final double OFF_BOSS_GUARDIAN=1200/800000.0;
-    private static final double OFF_BOSS_ATTACK=0.256;
-    private static final double OFF_BOSS_ARMOR=0.18;
-    private static final double OFF_BOSS_HIT_CAP=0.18;
+    /** 关闭模式统一基数：净土守护者原值 800000 → 1200（用户指定：以此比值为基数，全部类别同用）。 */
     /** 分类：同一分类在关闭模式共用一个比值，改一处即可覆盖同类数值。 */
     public enum Category {
         PLAYER_HEALTH("玩家生命成长"), PLAYER_ATTACK("玩家普攻成长"), DAMAGE("术式伤害"), HEALING("治疗"),
@@ -45,17 +36,17 @@ public final class BalanceRules {
     }
     /** 分类比值表：[分类, 开启模式, 关闭模式]。开启模式恒为 1.0，关闭模式按类定标。 */
     private static final Object[][] TABLE={
-        {Category.PLAYER_HEALTH,ON,OFF_PLAYER_HEALTH},
-        {Category.PLAYER_ATTACK,ON,OFF_PLAYER_ATTACK},
-        {Category.DAMAGE,ON,OFF_DAMAGE},
-        {Category.HEALING,ON,OFF_HEALING},
-        {Category.MAID_SPELL,ON,OFF_MAID_SPELL},
-        {Category.BOSS,ON,OFF_BOSS},
-        {Category.BOSS_FIXED,ON,OFF_BOSS_FIXED},
-        {Category.BOSS_GUARDIAN,ON,OFF_BOSS_GUARDIAN},
-        {Category.BOSS_ATTACK,ON,OFF_BOSS_ATTACK},
-        {Category.BOSS_ARMOR,ON,OFF_BOSS_ARMOR},
-        {Category.BOSS_HIT_CAP,ON,OFF_BOSS_HIT_CAP}};
+        {Category.PLAYER_HEALTH,ON,OFF},
+        {Category.PLAYER_ATTACK,ON,OFF},
+        {Category.DAMAGE,ON,OFF},
+        {Category.HEALING,ON,OFF},
+        {Category.MAID_SPELL,ON,OFF},
+        {Category.BOSS,ON,OFF},
+        {Category.BOSS_FIXED,ON,OFF},
+        {Category.BOSS_GUARDIAN,ON,OFF},
+        {Category.BOSS_ATTACK,ON,OFF},
+        {Category.BOSS_ARMOR,ON,OFF},
+        {Category.BOSS_HIT_CAP,ON,OFF}};
     /** 关闭模式比值推导依据：每个分类一行，改标定时把这张表和 {@link #TABLE} 一起改。 */
     public static final String[] RATIONALE={
         "战斗模型：满配玩家（下界合金剑锋利V、满护甲下界合金、保护IV、附拳）每秒 4 次命中 + 一发「解」每秒 1 次，逐成长档比较原版武器与术式的 DPS 占比",
@@ -65,11 +56,11 @@ public final class BalanceRules {
         "治疗 0.256：与生命成长同值，回血占最大生命的比例不变（净土每秒治疗、术式反转、反转外放）",
         "女仆术式 0.18：与玩家术式同值（女仆原有的整体减半在结算层，不重复缩）",
         "首领生命 0.18：与玩家总 DPS（武器+术式）同比值（0.18 ≤ DPS 比 0.193），首领战时长与开启模式同量级（略偏难，不会变纸糊）",
-        "固定值首领生命 0.18：五条悟/魔虚罗等原版固定值不随玩家成长，按同一比例给关闭值（五条悟 150000→"+number(150000*OFF_BOSS_FIXED)+"）",
-        "净土守护者生命 0.0015：定标项——守护者原值 800000 × "+ratio(OFF_BOSS_GUARDIAN)+" = "+number(800000*OFF_BOSS_GUARDIAN)+"，关闭模式以 1200 为基数",
+        "固定值首领生命 0.18：五条悟/魔虚罗等原版固定值不随玩家成长，按同一比例给关闭值（五条悟 150000→"+number(150000*OFF)+"）",
+        "净土守护者生命 0.0015：定标项——守护者原值 800000 × "+ratio(OFF)+" = "+number(800000*OFF)+"，关闭模式以 1200 为基数",
         "首领伤害 0.256：对玩家的伤害同比值缩小，玩家的耐打程度与原比值一致",
-        "首领护甲 0.18：与首领生命同比值，保留同比例物理减伤（守护者 80→"+number(80*OFF_BOSS_ARMOR)+"）",
-        "首领单次受伤上限 0.18：与首领生命同比值（守护者 10000→"+number(10000*OFF_BOSS_HIT_CAP)+"），几刀砍死/砍不动的关系不变"};
+        "首领护甲 0.18：与首领生命同比值，保留同比例物理减伤（守护者 80→"+number(80*OFF)+"）",
+        "首领单次受伤上限 0.18：与首领生命同比值（守护者 10000→"+number(10000*OFF)+"），几刀砍死/砍不动的关系不变"};
     private static final Map<Category,Double> MODPACK=new EnumMap<>(Category.class),NORMAL=new EnumMap<>(Category.class);
     /** 表内因子全集：旧存档换算只认这些值，其余一律按原值处理。 */
     private static final Set<Double> KNOWN;

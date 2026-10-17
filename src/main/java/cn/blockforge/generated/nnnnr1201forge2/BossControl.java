@@ -21,16 +21,20 @@ public final class BossControl extends SavedData {
     public static boolean war(LivingEntity boss){return value(boss,"AllHostile",0)>0;}
     public static CompoundTag guardian(MinecraftServer server){CompoundTag tag=get(server).values.getCompound("Guardian").copy();GuardianSettings.defaults(tag);return tag;}
     public void guardian(MinecraftServer server,String key,double value){CompoundTag tag=guardian(server);tag.putDouble(key,value);values.put("Guardian",tag);setDirty();for(ServerLevel level:server.getAllLevels())for(var e:level.getAllEntities())if(e instanceof GuardianEntity g)g.refreshSettings(tag,key);}
-    // 五条悟固定 150000、魔虚罗固定 400000 原值（普通模式按"首领面板"比值生效），都不受控制器遗留值影响。
+    // 五条悟固定 150000、魔虚罗固定 400000 原值（关闭模式按"固定值首领生命"比值生效），都不受控制器遗留值影响。
     private static String healthKey(LivingEntity boss){return boss instanceof GojoEntity||boss instanceof MahoragaEntity?null:boss instanceof YujiEntity?"YujiHealth":boss instanceof BuddhaEntity?"BuddhaHealth":null;}
     private static boolean managed(LivingEntity boss){return BossTargets.managed(boss);}
     private static boolean excluded(LivingEntity boss){return boss instanceof GuardianEntity g&&g.friendly()||boss instanceof YujiEntity y&&(y.decoy()||y.familyMember())||boss instanceof MahoragaEntity m&&m.ally();} // 友方魔虚罗固定 800 血，不受控制面板缩放
     private static void resize(LivingEntity boss,double raw,boolean fill){
         var a=boss.getAttribute(Attributes.MAX_HEALTH);if(a==null)return;
-        double expected=BalanceRules.health(raw);float oldMax=boss.getMaxHealth(),old=boss.getHealth();
+        // 五条悟/魔虚罗等"固定值首领"走 BOSS_FIXED 列，其余首领走 BOSS 列；开启模式两列都是 1.0。
+        BalanceRules.Category category=fixed(boss)?BalanceRules.Category.BOSS_FIXED:BalanceRules.Category.BOSS;
+        double expected=BalanceRules.health(raw,category);float oldMax=boss.getMaxHealth(),old=boss.getHealth();
         if(a.getBaseValue()!=expected||!a.getModifiers().isEmpty()){a.removeModifiers();a.setBaseValue(expected);boss.setHealth((float)BalanceRules.healthAfterResize(old,oldMax,boss.getMaxHealth()));}
         if(fill)boss.setHealth(boss.getMaxHealth());
     }
+    /** 原版固定值首领：生命不随控制器原值变化，关闭模式也要有按新基数的关闭值。 */
+    private static boolean fixed(LivingEntity boss){return boss instanceof GojoEntity||boss instanceof MahoragaEntity;}
     private static final java.util.UUID ATTACK_SCALE=java.util.UUID.fromString("ee670b21-4d44-4c54-84a8-b6eab9696401");
     private static void attribute(LivingEntity boss,net.minecraft.world.entity.ai.attributes.Attribute key,double raw){
         var a=boss.getAttribute(key);if(a==null)return;

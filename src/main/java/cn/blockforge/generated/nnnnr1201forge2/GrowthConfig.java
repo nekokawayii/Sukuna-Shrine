@@ -24,7 +24,7 @@ public final class GrowthConfig {
         // 关闭模式的分类比值与推导依据直接取自 BalanceRules，避免注释与实际数值脱节。
         String ratioComment=BalanceRules.ratios();for(String line:BalanceRules.RATIONALE)ratioComment=ratioComment+"\n"+line;
         b.comment("整合包模式：配置内始终填写原始数值；修改后彻底重启游戏或服务器。联机战斗以服务端为准。").push("balance");
-        MODPACK_MODE=b.comment("true：保留r63战斗强度，全部数值严格按配置原值生效；false（默认）：本模组的生命/攻击成长、术式与首领伤害、首领生命/护甲/受伤上限、治疗按分类比值缩放（完整比值与推导见本注释末尾）。", "分类比值定标：传承（最终阶段）一发解 = 100，正好砍死铁傀儡（100生命0护甲）；开启模式全部为100%。", "咒力上限、恢复、消耗始终使用配置原值，不受此开关影响。不改持续时间、冷却、数量、次数、概率、阶段阈值、范围、移动/弹道速度、减伤比例、物品掉落和任务条件；不改原版/其他模组的基础属性。女仆术式原有减半仍保留。", ratioComment).define("modpackMode",false);
+        MODPACK_MODE=b.comment("true：保留r63战斗强度，全部数值严格按配置原值生效；false（默认）：本模组的生命/攻击成长、术式与首领伤害、首领生命/护甲/受伤上限、治疗按分类比值缩放（完整比值与推导见本注释末尾）。", "关闭模式定标：①净土守护者生命 = 1200（原值 800000 × 0.0015）；②原版下界合金剑占首领战总伤害 ≥ 40%，据此定术式伤害比值上限。开启模式全部分类都是 100%。", "咒力上限、恢复、消耗始终使用配置原值，不受此开关影响。不改持续时间、冷却、数量、次数、概率、阶段阈值、范围、移动/弹道速度、减伤比例、物品掉落和任务条件；不改原版/其他模组的基础属性（原版武器本体伤害不缩放）。女仆术式原有减半仍保留。", ratioComment).define("modpackMode",false);
         b.pop();
         b.comment("固定成长：全部采用加法；文件位于游戏主目录 config/sukuna-growth.toml。修改后重启游戏或服务器，已有角色也会重新计算。生命2点=1颗心。").push("growth");
         BASE_ENERGY=b.comment("无成长时的基础咒力上限").defineInRange("baseEnergy",1000.0,0.0,1000000.0);

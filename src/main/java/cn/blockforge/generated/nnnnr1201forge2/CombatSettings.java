@@ -125,8 +125,9 @@ public final class CombatSettings {
     }
     @SubscribeEvent public static void commands(RegisterCommandsEvent event){
         event.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("balance").executes(c->{
-            c.getSource().sendSuccess(()->Component.literal((BalanceRules.modpackMode()?"整合包模式：开启，全部数值严格 100%（与配置原值逐值一致）":"整合包模式：关闭，按分类比值缩放（术式伤害 "+BalanceRules.number(BalanceRules.percent(BalanceRules.factor(false,BalanceRules.Category.DAMAGE)))+"%，一发解 = 100 正好砍死铁傀儡）")+"。咒力上限、恢复、消耗始终使用原值；持续时间、冷却、数量和范围不变。配置：config/sukuna-growth.toml 的 [balance] modpackMode，修改后重启。"),false);
-            c.getSource().sendSuccess(()->Component.literal("各分类比值："+BalanceRules.ratios()),false);return 1;
+            c.getSource().sendSuccess(()->Component.literal((BalanceRules.modpackMode()?"整合包模式：开启，全部数值严格 100%（与配置原值逐值一致）":"整合包模式：关闭，按分类比值缩放（术式伤害 "+BalanceRules.percentText(BalanceRules.factor(false,BalanceRules.Category.DAMAGE))+"%；定标：净土守护者生命 = 1200，原版下界合金剑占首领战总伤害 ≥ 40%）")+"。咒力上限、恢复、消耗始终使用原值；持续时间、冷却、数量和范围不变。配置：config/sukuna-growth.toml 的 [balance] modpackMode，修改后重启。"),false);
+            c.getSource().sendSuccess(()->Component.literal("各分类比值："+BalanceRules.ratios()),false);
+            c.getSource().sendSuccess(()->Component.literal("关闭模式首领生命：五条悟 150000 → "+BalanceRules.number(BalanceRules.strength(150000,BalanceRules.Category.BOSS_FIXED))+" · 魔虚罗 400000 → "+BalanceRules.number(BalanceRules.strength(400000,BalanceRules.Category.BOSS_FIXED))+" · 净土守护者 800000 → "+BalanceRules.number(BalanceRules.strength(800000,BalanceRules.Category.BOSS_GUARDIAN))+"（开启模式三者都是原值）"),false);return 1;
         })));
         event.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("damage")
             .executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();

@@ -11,6 +11,9 @@ public final class BalanceRules {
     /** r250 的统一定标比值 = 100 / 一发解原值；r251 起不再用于缩放，只作为旧存档写入过的因子保留。 */
     /** 关闭模式统一基数：净土守护者原值 800000 → 1200（用户指定：以此比值为基数，全部类别同用）。 */
     private static final double OFF=1200/800000.0;
+    /** 玩家侧术式单独定标（用户指定）：**传承阶段两发解砍死铁傀儡** ⇒ 一发解 = 50。
+     *  该阶段解的原值 R = 652.056 ⇒ 比值 = 50 / 652.056。 */
+    private static final double OFF_DAMAGE=50/652.0560302734375;
     private static final double ON=1.0;
     /**
      * 关闭模式各分类比值（r251 起不再是一刀切，由战斗模型逐类推导）。
@@ -38,9 +41,9 @@ public final class BalanceRules {
     private static final Object[][] TABLE={
         {Category.PLAYER_HEALTH,ON,OFF},
         {Category.PLAYER_ATTACK,ON,OFF},
-        {Category.DAMAGE,ON,OFF},
+        {Category.DAMAGE,ON,OFF_DAMAGE},
         {Category.HEALING,ON,OFF},
-        {Category.MAID_SPELL,ON,OFF},
+        {Category.MAID_SPELL,ON,OFF_DAMAGE},
         {Category.BOSS,ON,OFF},
         {Category.BOSS_FIXED,ON,OFF},
         {Category.BOSS_GUARDIAN,ON,OFF},

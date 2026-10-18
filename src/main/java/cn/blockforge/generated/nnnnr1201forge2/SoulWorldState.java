@@ -23,6 +23,7 @@ public final class SoulWorldState extends SavedData {
         state.mahitoDefeated=tag.getBoolean("MahitoDefeated");
         state.mahitoRespawnAt=tag.getLong("MahitoRespawnAt");
         state.yujiSummoned=tag.getBoolean("YujiSummoned");state.guardianSummoned=tag.getBoolean("GuardianSummoned");state.photoChestRepaired=tag.getBoolean("PhotoChestRepaired");
+        state.beyondDone=tag.getBoolean("BeyondDone");
         return state;
     }
     public boolean mahitoSpawned(){return mahitoSpawned;}
@@ -33,6 +34,12 @@ public final class SoulWorldState extends SavedData {
     public boolean photoChestRepaired(){return photoChestRepaired;}
     public void markPhotoChestRepaired(){photoChestRepaired=true;setDirty();}
     public boolean yujiSummoned(){return yujiSummoned;}
+    /** 隐藏剧情「观测者的低语」已经发生过：虎天帝消失、信已留下，不再重复触发。 */
+    private boolean beyondDone;
+    public boolean beyondDone(){return beyondDone;}
+    public void markBeyondDone(){if(!beyondDone){beyondDone=true;setDirty();}}
+    /** 测试用：把隐藏剧情与守护者召唤记录一起清掉，合照可以重新唤醒虎天帝。 */
+    public void resetBeyond(){beyondDone=false;guardianSummoned=false;setDirty();}
     public void markMahitoSpawned(){mahitoSpawned=true;setDirty();}
     public void markMahitoDefeated(long now){mahitoSpawned=true;mahitoDefeated=true;mahitoRespawnAt=now+1200;setDirty();}
     public void markYujiSummoned(){yujiSummoned=true;setDirty();}
@@ -43,6 +50,7 @@ public final class SoulWorldState extends SavedData {
         tag.putBoolean("MahitoDefeated",mahitoDefeated);
         tag.putLong("MahitoRespawnAt",mahitoRespawnAt);
         tag.putBoolean("YujiSummoned",yujiSummoned);tag.putBoolean("GuardianSummoned",guardianSummoned);tag.putBoolean("PhotoChestRepaired",photoChestRepaired);
+        tag.putBoolean("BeyondDone",beyondDone);
         return tag;
     }
 }

@@ -372,6 +372,7 @@ public final class Client {
         SoulClient.draw(b,ps,cam,e.getPartialTick());
         NetBranchVisuals.draw(b,ps,cam,e.getPartialTick());
         BranchVisuals.draw(b,ps,cam,e.getPartialTick());
+        BeyondRiftClient.draw(b,ps,cam,e.getPartialTick());
         // 背景先画、低透明度、不写入深度；方块与神龛已写入的深度会正常遮住斩击。
         for(Visual v:visuals)if(v.background)drawSlash(b,ps,v,cam,e.getPartialTick());
         for(DomainVisual d:domains.values())domain(b,ps,d,cam,e.getPartialTick());

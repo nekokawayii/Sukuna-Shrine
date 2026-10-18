@@ -50,7 +50,8 @@ public final class CombatExpansion {
     private static final Map<UUID,Rain> rains=new HashMap<>();
     private static final Map<UUID,Chant> chants=new HashMap<>();
     private static final Map<UUID,Star> drawing=new HashMap<>();
-    private static final Map<UUID,ServerPlayer> streams=new HashMap<>();
+    /** 断流：一次性斩掉半径多少格内的全部流体（不碰方块、不看破坏方块开关）。 */
+    public static final int STREAM_RADIUS=16;
     private static long holdId;
     static boolean valid(ServerPlayer p,ServerLevel l){return p.isAlive()&&!p.isRemoved()&&!p.isSpectator()&&p.level()==l&&MaidBridge.body(p).isAlive()&&!EternalLove.settling(MaidBridge.body(p))&&(MaidBridge.isCaster(p)||!p.hasDisconnected());}
     public static boolean allowed(ServerPlayer p){return valid(p,p.serverLevel())&&Journey.unlocked(p)&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p)&&!MaidBridge.recovering(p)&&!GuardianPlayerSkills.locked(p);}
@@ -227,21 +228,16 @@ public final class CombatExpansion {
         Curse.status(p,"PurpleFurnaceCooldown",60);Skills.purpleBow(p);
     }
     public static void toggleStream(ServerPlayer p){
-        if(streams.remove(p.getUUID())!=null){Curse.sync(p);CastFeedback.tell(p,"断流：关闭");return;}
         if(!allowed(p))return;
-        if(!SkillDestruction.enabled(p.serverLevel())){CastFeedback.tell(p,"断流需要先开启技能地形破坏：/sukuna gamerule desblock true");return;}
-        streams.put(p.getUUID(),p);Curse.sync(p);CastFeedback.tell(p,"断流：开启 · 周围10×10×10格强制掀块、斩除流体");
+        int erased=SkillDestruction.flushFluids(p,STREAM_RADIUS);
+        Curse.sync(p);
+        CastFeedback.tell(p,"断流 · 一刀斩灭周围 "+STREAM_RADIUS+" 格内流体 "+erased+" 格（不破坏方块，无需开启破坏方块）");
     }
-    public static boolean streaming(ServerPlayer p){return streams.containsKey(p.getUUID());}
+    public static boolean streaming(ServerPlayer p){return false;}
     public static int lingerCount(ServerPlayer p){return (int)projectiles.stream().filter(b->b.p==p&&b.level==p.level()&&b.kind==LINGER&&b.stationary>=0&&b.stationary<CombatExpansionRules.LINGER_LIFE).count();}
     public static void consumeLingers(ServerPlayer p){projectiles.removeIf(b->b.p==p&&b.kind==LINGER&&b.stationary>=0);}
     private static void stream(ServerPlayer p){
-        BlockPos c=MaidBridge.body(p).blockPosition();int erased=0;
-        for(BlockPos at:BlockPos.betweenClosed(c.offset(-5,-5,-5),c.offset(4,4,4))){
-            if(!p.serverLevel().hasChunkAt(at))continue;
-            Vec3 center=Vec3.atCenterOf(at);
-            if(SkillDestruction.forceStream(p,at.immutable(),center.subtract(p.position()))){line(p,center.add(-.55,0,-.55),center.add(.55,0,.55),8,0);if(++erased>=30)break;}
-        }
+        // 断流已改为"按下即一次性斩完"，这里保留空实现只为兼容旧调用点。
     }
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e){
         if(e.phase!=TickEvent.Phase.END)return;
@@ -294,16 +290,15 @@ public final class CombatExpansion {
             List<LivingEntity> targets=Skills.crosshairOrder(star.p,near(star.p,star.center,96));
             for(int i=0;i<CombatExpansionRules.METEORS_PER_STAR;i++){double a=i*2.399963,y=1-2*(i+.5)/20.0,r=Math.sqrt(1-y*y);Projectile b=new Projectile(star.p,star.center,new Vec3(Math.cos(a)*r,y,Math.sin(a)*r),METEOR,1.3);if(!targets.isEmpty())b.target=targets.get(i%targets.size()).getUUID();add(b);}
         }
-        for(ServerPlayer p:List.copyOf(streams.values())){if(!allowed(p)||!SkillDestruction.enabled(p.serverLevel())){streams.remove(p.getUUID());continue;}if(p.level().getGameTime()%4==0)stream(p);}
     }
     private static void afterWorld(Chant c){TechniqueInput.withIntent(c.p,c.input,()->afterCast(c.p,SlashFormRules.WORLD));}
     public static void protect(ServerPlayer owner,UUID target){Rain r=rains.get(target);if(r!=null&&r.p==owner)releaseRain(r);}
     public static void cancel(ServerPlayer p){
-        automatic.remove(p.getUUID());TechniqueInput.cancel(p);cutSeries.removeIf(c->c.p==p);projectiles.removeIf(b->b.p==p);scheduled.removeIf(s->s.p==p);stars.removeIf(s->s.p==p);falls.values().removeIf(f->f.p==p);chants.remove(p.getUUID());drawing.remove(p.getUUID());streams.remove(p.getUUID());
+        automatic.remove(p.getUUID());TechniqueInput.cancel(p);cutSeries.removeIf(c->c.p==p);projectiles.removeIf(b->b.p==p);scheduled.removeIf(s->s.p==p);stars.removeIf(s->s.p==p);falls.values().removeIf(f->f.p==p);chants.remove(p.getUUID());drawing.remove(p.getUUID());
         for(Rain r:List.copyOf(rains.values()))if(r.p==p||r.target==MaidBridge.body(p))releaseRain(r);
     }
     @SubscribeEvent public static void logout(PlayerEvent.PlayerLoggedOutEvent e){if(e.getEntity() instanceof ServerPlayer p)cancel(p);}
     @SubscribeEvent public static void dimension(PlayerEvent.PlayerChangedDimensionEvent e){if(e.getEntity() instanceof ServerPlayer p)cancel(p);}
-    @SubscribeEvent public static void stop(ServerStoppedEvent e){for(Rain r:List.copyOf(rains.values()))releaseRain(r);projectiles.clear();cutSeries.clear();scheduled.clear();stars.clear();falls.clear();chants.clear();drawing.clear();streams.clear();automatic.clear();TechniqueInput.clear();}
+    @SubscribeEvent public static void stop(ServerStoppedEvent e){for(Rain r:List.copyOf(rains.values()))releaseRain(r);projectiles.clear();cutSeries.clear();scheduled.clear();stars.clear();falls.clear();chants.clear();drawing.clear();automatic.clear();TechniqueInput.clear();}
     private CombatExpansion(){}
 }

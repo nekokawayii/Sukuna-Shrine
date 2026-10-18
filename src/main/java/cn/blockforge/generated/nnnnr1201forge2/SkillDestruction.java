@@ -74,6 +74,30 @@ public final class SkillDestruction {
         falling.setDeltaMovement(away.normalize().scale(.5).add(0,.85,0));falling.hurtMarked=true;
         return falling;
     }
+    /** **断流专用**：把球形范围内所有流体一次斩掉（水/岩浆源与含水方块），**完全不碰方块、不看 {@link #RULE} 开关**。
+     *  仍尊重领地（mayInteract）、保护方块与世界边界 —— 用户要求"不管开没开破坏方块都强制斩没流体，而且一瞬间全斩掉"。 */
+    public static int flushFluids(ServerPlayer p,double radius){
+        ServerLevel l=p.serverLevel();if(!p.isAlive())return 0;
+        ServerPlayer authority=p instanceof MaidBridge.Actor a?MaidBridge.owner(a):p;
+        if(authority==null)return 0;
+        BlockPos c=BlockPos.containing(p.getEyePosition());int r=(int)Math.ceil(radius),erased=0;
+        double limit=radius*radius;
+        for(BlockPos pos:BlockPos.betweenClosed(c.offset(-r,-r,-r),c.offset(r,r,r))){
+            if(Vec3.atCenterOf(pos).distanceToSqr(c.getX()+0.5,c.getY()+0.5,c.getZ()+0.5)>limit)continue;
+            if(!l.hasChunkAt(pos)||!l.getWorldBorder().isWithinBounds(pos))continue;
+            if(l.getFluidState(pos).isEmpty())continue;
+            if(SoulJourney.protectedBlock(l,pos))continue;
+            if(!l.mayInteract(authority,pos.immutable()))continue;
+            net.minecraft.world.level.block.state.BlockState state=l.getBlockState(pos);
+            if(state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED)){
+                l.setBlock(pos,state.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED,false),3);
+            }else{
+                l.setBlock(pos,net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(),3);
+            }
+            erased++;
+        }
+        return erased;
+    }
     public static boolean forceStream(ServerPlayer p,BlockPos pos,Vec3 away){
         var state=p.serverLevel().getBlockState(pos);if(state.isAir())return false;
         // 纯流体直接清除；固体（含含水方块）直接化为下落实体。

@@ -12,16 +12,10 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 /** 所有飞行线段共用扫掠命中，不追踪已发射的方向。 */
 public final class SlashForms {
     public record Line(Vec3 a,Vec3 b){}
-    /** 剑气横截面按 BLADE_SEG 格一段切开做"部分遮挡"：撞墙的那一段被吃掉并留斩痕，其余段照常飞、照常造成伤害。 */
-    private static final double BLADE_SEG=1.0;
-    /** 撞墙后先扎进方块这么多格再结算（用户要求 0.5）。 */
-    private static final double WALL_PENETRATION=0.5;
     private static final class Blade {
         final ServerPlayer owner;final ServerLevel level;final List<Line> lines;final Vec3 dir;final double fraction;
         final long due;final boolean accelerating,world;final Set<UUID> hit=new HashSet<>();int age;
-        /** 每条斩线一段的"已被墙吃掉"标记（世界斩不用）。 */
-        final List<boolean[]> blocked=new ArrayList<>();
-        Blade(ServerPlayer p,List<Line> lines,Vec3 dir,double fraction,long due,boolean accelerating,boolean world){owner=p;level=p.serverLevel();this.lines=lines;this.dir=dir;this.fraction=fraction;this.due=due;this.accelerating=accelerating;this.world=world;for(Line l:lines)blocked.add(new boolean[Math.max(1,(int)Math.ceil(l.a.distanceTo(l.b)/BLADE_SEG))]);}
+        Blade(ServerPlayer p,List<Line> lines,Vec3 dir,double fraction,long due,boolean accelerating,boolean world){owner=p;level=p.serverLevel();this.lines=lines;this.dir=dir;this.fraction=fraction;this.due=due;this.accelerating=accelerating;this.world=world;}
     }
     private static final List<Blade> blades=new ArrayList<>();
     private record Pending(ServerPlayer owner,ServerLevel level,Line line,Vec3 dir,long due,boolean moving){}
@@ -133,28 +127,10 @@ public final class SlashForms {
         if(t.isAlive()&&VoidJourney.evolved(p))VoidCombat.formHit(p,t);
     }
     private static boolean intersects(Line line,Vec3 motion,Vec3 step,LivingEntity t,boolean infinite){
-        return intersects(line,motion,step,t,infinite,(boolean[])null);
-    }
-    /** 世界斩（infinite）整条扫过；普通剑气按 blocked 段跳过被墙吃掉的部分。 */
-    private static boolean intersects(Line line,Vec3 motion,Vec3 step,LivingEntity t,boolean infinite,boolean[] blocked){
         Vec3 a=line.a.add(motion),b=line.b.add(motion);AABB box=t.getBoundingBox().inflate(infinite?WorldSlashRules.HALF_WIDTH:0.35);
-        if(infinite){Vec3 c=a.lerp(b,0.5),axis=b.subtract(a).normalize();double reach=t.getBoundingBox().getCenter().distanceTo(c)+t.getBbHeight()+t.getBbWidth()+4;a=c.subtract(axis.scale(reach));b=c.add(axis.scale(reach));return scan(a,b,step,box);}
-        int n=blocked==null?1:blocked.length;
-        for(int seg=0;seg<n;seg++){
-            if(blocked!=null&&blocked[seg])continue;
-            if(scan(a.lerp(b,seg/(double)n),a.lerp(b,(seg+1)/(double)n),step,box))return true;
-        }
-        return false;
-    }
-    private static boolean intersects(Line line,Vec3 motion,Vec3 step,LivingEntity t,boolean infinite,Blade blade){
-        int idx=blade.lines.indexOf(line);
-        return intersects(line,motion,step,t,infinite,blade.world||idx<0?null:blade.blocked.get(idx));
-    }
-    /** 每0.4格扫描移动面，65格/秒也不会漏掉细小目标。 */
-    private static boolean scan(Vec3 from,Vec3 to,Vec3 step,AABB box){
-        int n=Math.max(1,(int)Math.ceil(step.length()/0.4));
-        for(int i=0;i<=n;i++){Vec3 move=step.scale(i/(double)n),f=from.add(move),z=to.add(move);if(box.contains(f)||box.contains(z)||box.clip(f,z).isPresent())return true;}
-        return false;
+        if(infinite){Vec3 c=a.lerp(b,0.5),axis=b.subtract(a).normalize();double reach=t.getBoundingBox().getCenter().distanceTo(c)+t.getBbHeight()+t.getBbWidth()+4;a=c.subtract(axis.scale(reach));b=c.add(axis.scale(reach));}
+        // 每0.4格扫描移动面，65格/秒也不会漏掉细小目标。
+        int n=Math.max(1,(int)Math.ceil(step.length()/0.4));for(int i=0;i<=n;i++){Vec3 move=step.scale(i/(double)n),from=a.add(move),to=b.add(move);if(box.contains(from)||box.contains(to)||box.clip(from,to).isPresent())return true;}return false;
     }
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event){
         if(event.phase!=TickEvent.Phase.END)return;
@@ -169,30 +145,10 @@ public final class SlashForms {
             Vec3 motion=b.dir.scale(SlashFormRules.travel(b.age,b.accelerating)),step=b.dir.scale(SlashFormRules.travel(b.age+1,b.accelerating)-SlashFormRules.travel(b.age,b.accelerating));
             boolean merged=false;for(Line l:b.lines){for(int sample=0;sample<=8;sample++){Vec3 offset=motion.add(step.scale(sample/8.0));if(CombatExpansion.collideSlash(b.owner,l.a.add(offset),l.b.add(offset),b.dir)){merged=true;break;}}if(merged)break;}
             if(merged){for(Line l:b.lines)Network.send(b.level,new Network.Effect(CombatExpansionRules.FX_BLADE_STOP,b.owner.getId(),l.a,l.b.subtract(l.a),1,1,pack(b.dir)));blades.remove(b);continue;}
-            if(!b.world){ // 非世界斩：逐段判墙，撞到的那一段留下斩痕并失效，剩下的段继续飞
-                int free=0;
-                for(int li=0;li<b.lines.size();li++){
-                    Line l=b.lines.get(li);boolean[] bl=b.blocked.get(li);int n=bl.length;
-                    for(int seg=0;seg<n;seg++){
-                        if(bl[seg])continue;
-                        Vec3 from=l.a.lerp(l.b,(seg+0.5)/n).add(motion),to=from.add(step);
-                        var wall=b.level.clip(new net.minecraft.world.level.ClipContext(from,to,net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,b.owner));
-                        if(wall.getType()==net.minecraft.world.phys.HitResult.Type.BLOCK){
-                            bl[seg]=true;
-                            Vec3 pen=b.dir.scale(WALL_PENETRATION);   // 先扎进方块 0.5 格再结算
-                            Vec3 sa=l.a.lerp(l.b,seg/(double)n).add(pen),sb=l.a.lerp(l.b,(seg+1)/(double)n).add(pen);
-                            Network.send(b.level,new Network.Effect(SlashFormRules.STILL,b.owner.getId(),sa,sb.subtract(sa),1,18,0)); // 斩痕
-                            continue;
-                        }
-                        free++;
-                    }
-                }
-                if(free==0){for(Line l:b.lines)Network.send(b.level,new Network.Effect(CombatExpansionRules.FX_BLADE_STOP,b.owner.getId(),l.a,l.b.subtract(l.a),1,1,pack(b.dir)));blades.remove(b);continue;}
-            }
             List<LivingEntity> targets=new ArrayList<>();if(b.world){for(var e:b.level.getAllEntities())if(e instanceof LivingEntity t&&CombatSettings.canHit(b.owner,t))targets.add(t);}else{
                 AABB bounds=new AABB(b.lines.get(0).a,b.lines.get(0).b);for(Line l:b.lines)bounds=bounds.minmax(new AABB(l.a,l.b));targets=b.level.getEntitiesOfClass(LivingEntity.class,bounds.move(motion).expandTowards(step).inflate(1),t->CombatSettings.canHit(b.owner,t));
             }
-            for(LivingEntity t:targets){if(DomainClash.active(t)||b.hit.contains(t.getUUID()))continue;for(Line l:b.lines)if(intersects(l,motion,step,t,b.world,b)){b.hit.add(t.getUUID());if(b.world){t.invulnerableTime=0;float amount=WorldSlashRules.damage(t.getMaxHealth(),NetBranches.dismantleDamage(b.owner,t));t.getPersistentData().putBoolean("SukunaWorldSlashHit",true);try{CombatSettings.hurt(b.owner,t,b.level.damageSources().sonicBoom(b.owner),amount);}finally{t.getPersistentData().remove("SukunaWorldSlashHit");}}else hit(b.owner,t,b.fraction);break;}}
+            for(LivingEntity t:targets){if(DomainClash.active(t)||b.hit.contains(t.getUUID()))continue;for(Line l:b.lines)if(intersects(l,motion,step,t,b.world)){b.hit.add(t.getUUID());if(b.world){t.invulnerableTime=0;float amount=WorldSlashRules.damage(t.getMaxHealth(),NetBranches.dismantleDamage(b.owner,t));t.getPersistentData().putBoolean("SukunaWorldSlashHit",true);try{CombatSettings.hurt(b.owner,t,b.level.damageSources().sonicBoom(b.owner),amount);}finally{t.getPersistentData().remove("SukunaWorldSlashHit");}}else hit(b.owner,t,b.fraction);break;}}
             for(Line l:b.lines){Vec3 a=l.a.add(motion),z=l.b.add(motion);int n=(int)Math.ceil(step.length()/0.65);for(int i=0;i<=n;i++){Vec3 offset=step.scale(i/(double)Math.max(1,n));if(b.world)SkillDestruction.infinite(b.owner,a.add(offset).lerp(z.add(offset),0.5),z.subtract(a).normalize(),WorldSlashRules.HALF_WIDTH);else SkillDestruction.immediate(b.owner,a.add(offset),z.add(offset),0.45);}}
             b.age++;
         }

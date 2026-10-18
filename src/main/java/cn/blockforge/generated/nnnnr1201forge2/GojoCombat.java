@@ -63,6 +63,8 @@ public final class GojoCombat {
     private static final class Orb {
         final ServerPlayer owner;final ServerLevel level;final boolean blue;final boolean purple;
         Vec3 pos,dir;UUID target;int age,life;final int id;boolean guide;boolean dead;
+        /** 茈·点按版：走自己的小弹体特效（PURPLE_TAP），不跟对撞版共用那个大球。 */
+        boolean small;
         /** 已经结算过的目标：茈会穿透，途中碰到的每一只都吃伤害，但同一只只吃一次。 */
         final java.util.Set<UUID> struck=new java.util.HashSet<>();
         Orb(ServerPlayer owner,boolean blue,boolean purple,Vec3 pos,Vec3 dir,UUID target,int life){this.owner=owner;this.level=owner.serverLevel();this.blue=blue;this.purple=purple;this.pos=pos;this.dir=dir;this.target=target;this.life=life;this.id=++orbId;}
@@ -209,8 +211,10 @@ public final class GojoCombat {
         Vec3 dir=p.getLookAngle();
         LivingEntity aim=Skills.aimTarget(p);
         if(aim!=null){Vec3 to=aim.getBoundingBox().getCenter().subtract(from);if(to.lengthSqr()>1.0E-4)dir=to.normalize();}
-        orbs.add(new Orb(p,false,true,from,dir.scale(1.0),null,100));
-        fx(p,GojoFx.PURPLE_FORM,from,Vec3.ZERO,1.0f,20,0);
+        Orb shot=new Orb(p,false,true,from,dir.scale(1.0),null,100);
+        shot.small=true; // 点按版：小紫球弹体，用 PURPLE_TAP 那套独立小特效
+        orbs.add(shot);
+        fx(p,GojoFx.PURPLE_TAP_BURST,from,Vec3.ZERO,1.4f,12,0); // 出膛：小闪光，不是 12 格的大爆
         SkillSounds.play(p,"guardian_7");
         p.displayClientMessage(Component.literal("茈 · 点按发射"),true);
     }
@@ -449,7 +453,9 @@ public final class GojoCombat {
                 continue;
             }
             o.pos=o.pos.add(o.dir); // 赫与茈全程直线：出膛后不追人，命中与否取决于发射时的瞄准
-            fx(o.owner,o.purple?GojoFx.PURPLE:GojoFx.RED,o.pos,o.pos.add(o.dir),o.purple?3:1,6,o.id);
+            // 茈·点按版走自己的小弹体特效（PURPLE_TAP），对撞版仍用原来那个大球（PURPLE）
+            fx(o.owner,o.purple?(o.small?GojoFx.PURPLE_TAP:GojoFx.PURPLE):GojoFx.RED,
+                o.pos,o.pos.add(o.dir),o.purple?(o.small?1.0f:3):1,6,o.id);
             // 场上的苍还在、赫撞上就直接爆无限制茈（玩家侧不需要念咒词），且先判对撞再判命中
             if(!o.purple){
                 boolean collided=false;
@@ -466,7 +472,7 @@ public final class GojoCombat {
                 if(o.purple){
                     if(!o.struck.add(victim.getUUID()))continue; // 茈：同一只只结算一次
                     // 命中演出：变大 + 渐隐，纯视觉效果，不再附带溅射伤害
-                    fx(o.owner,GojoFx.PURPLE_BURST,o.pos,Vec3.ZERO,12,30,o.id);
+                    fx(o.owner,o.small?GojoFx.PURPLE_TAP_BURST:GojoFx.PURPLE_BURST,o.pos,Vec3.ZERO,o.small?2.5f:12,o.small?12:30,o.id);
                     // 茈 500：打魔虚罗 ×10（{@link #MAHORAGA_DAMAGE}），并且命中后给它挂 30 秒缓慢
                     boolean hurt=hit(o.owner,victim,500,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE);
                     if(hurt)purpleSlow(victim);
@@ -487,7 +493,7 @@ public final class GojoCombat {
             }
             if(o.age>=o.life||(hitSomething&&!o.purple)){ // 茈只在飞满生命周期后消散
                 if(!hitSomething&&!o.purple)fx(o.owner,GojoFx.RED_END,o.pos,Vec3.ZERO,0,4,o.id); // 自然消散：只消失，不爆
-                if(o.purple)fx(o.owner,GojoFx.PURPLE_BURST,o.pos,Vec3.ZERO,0,4,o.id);
+                if(o.purple)fx(o.owner,o.small?GojoFx.PURPLE_TAP_BURST:GojoFx.PURPLE_BURST,o.pos,Vec3.ZERO,o.small?1.0f:0,4,o.id);
                 it.remove();
             }
         }

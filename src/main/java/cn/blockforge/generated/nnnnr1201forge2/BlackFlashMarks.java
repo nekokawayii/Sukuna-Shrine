@@ -28,7 +28,7 @@ public final class BlackFlashMarks {
     /** 特效号：客户端据此在指定点画红圈（position=点，owner=敌人 id，life=持续时间刻）。 */
     public static final int FX_MARK=237;
     public static final double RANGE=5.0,MARK_RADIUS=0.3;
-    public static final int MARK_TICKS=14;      // 0.7 秒
+    public static final int MARK_TICKS=20;      // 1 秒（用户指定）
     public static final int ROLL_TICKS=10;      // 0.5 秒
     public static final double CHANCE=0.05;     // 5%（用户指定）
     public static final double MAX_DAMAGE=1.0e7;
@@ -73,12 +73,14 @@ public final class BlackFlashMarks {
 
     /** 服务端：玩家在有效时间内瞄准并左键 → 瞬移到敌人身前，打出"普攻伤害³"的黑闪。 */
     public static void strike(ServerPlayer p,int targetId){
+        var log=com.mojang.logging.LogUtils.getLogger();
         Map<Integer,Long> mine=MARKS.get(p.getUUID());
-        if(mine==null||!mine.containsKey(targetId))return;
-        if(p.level().getGameTime()>mine.getOrDefault(targetId,0L)){mine.remove(targetId);return;}
+        if(mine==null||!mine.containsKey(targetId)){log.info("[黑闪] 服务端拒绝：没有该标记 target={}",targetId);return;}
+        if(p.level().getGameTime()>mine.getOrDefault(targetId,0L)){log.info("[黑闪] 服务端拒绝：标记已过期 target={}",targetId);mine.remove(targetId);return;}
         if(!(p.level().getEntity(targetId) instanceof LivingEntity target)||!target.isAlive()){mine.remove(targetId);return;}
         if(target.distanceToSqr(p)>RANGE*RANGE*4)return;                       // 距离兜底
         mine.remove(targetId);
+        log.info("[黑闪] 结算 target={} 伤害={}",targetId,Math.min(MAX_DAMAGE,Math.pow(Math.max(1,p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)),3)));
         // 跳到敌人身前：沿"玩家→敌人"方向退 1.2 格，朝敌人面朝
         Vec3 dir=target.position().subtract(p.position());
         if(dir.lengthSqr()<1e-4)dir=p.getLookAngle();
@@ -105,6 +107,8 @@ public final class BlackFlashMarks {
     private record Mark(int entityId,Vec3 point,long until){}
     private static final List<Mark> CLIENT=new ArrayList<>();
     private static final List<Mark> DESYNC=new ArrayList<>();
+    /** 左键上一刻是否按下（用于取上升沿，避开原版攻击把 consumeClick 吃掉）。 */
+    private static boolean attackDown;
 
     public static void receive(Network.Effect e){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
@@ -119,8 +123,13 @@ public final class BlackFlashMarks {
         CLIENT.removeIf(m->now>m.until());
         if(!Client.progress.fist()||mc.screen!=null)return;
         Mark aimed=aimed();
-        if(aimed!=null&&mc.options.keyAttack.consumeClick())
-            Network.CHANNEL.sendToServer(new Network.BlackFlashStrike(aimed.entityId()));
+        boolean down=mc.options.keyAttack.isDown();
+        Mark aimedNow=aimed();
+        if(down&&!attackDown&&aimedNow!=null){
+            com.mojang.logging.LogUtils.getLogger().info("[黑闪] 瞄准红圈+左键 → 发送 strike target={} dist={:.2f}",aimedNow.entityId(),mc.player.position().distanceTo(mc.level.getEntity(aimedNow.entityId())==null?mc.player.position():mc.level.getEntity(aimedNow.entityId()).position()));
+            Network.CHANNEL.sendToServer(new Network.BlackFlashStrike(aimedNow.entityId()));
+        }
+        attackDown=down;
     }
     /** 准星射线与红圈（半径 0.3 + 0.15 容差）求交；取最近的那个。 */
     private static Mark aimed(){

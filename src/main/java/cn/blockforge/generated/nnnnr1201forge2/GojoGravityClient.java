@@ -61,7 +61,7 @@ public final class GojoGravityClient {
         double spin=(time+partial)*0.045+h.phase;
         double rH=s*0.92;                        // 视界半径：比光球本体略小一圈
         // ① 视界：纯黑盘面。相机钻进视界内侧时就不画了，免得整屏糊黑
-        if(cam.distanceTo(at)>rH*0.85)disc(b,ps,at,sv,uv,rH,0xFF000000,40);
+        if(cam.distanceTo(at)>rH*0.85)disc(b,ps,at,sv,uv,rH*0.92,0x2EA8D8FF,40);   // 引力透镜：中间只留极淡的冷蓝雾，不再是实心黑盘
         // ② 光子环：贴着视界的硬白边 + 外侧淡蓝过渡
         band(b,ps,at,sv,uv,rH*1.00,rH*1.10,0xFFF4FFFF,40);
         band(b,ps,at,sv,uv,rH*1.10,rH*1.26,0x99CFE4FF,40);

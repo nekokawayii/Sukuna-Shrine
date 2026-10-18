@@ -29,6 +29,15 @@ public final class GojoCombat {
     private static void purpleSlow(LivingEntity target){
         if(target instanceof MahoragaEntity)target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,PURPLE_SLOW_TICKS,PURPLE_SLOW_AMPLIFIER,false,false,false));
     }
+    /** 茈：轮盘第 3 格（内部技能 3）。**短按** = 手心聚一颗小紫球，慢慢长到一格大再打出去（全程 0.7 秒）；
+     *  **长按**（按住超过 0.5 秒）= 原来那套苍赫对撞。两条路共用同一个技能号/咒力/冷却。 */
+    public static final int PURPLE_SLOT=2,PURPLE_SKILL=3;
+    /** 点按全程 14 刻 = 0.7 秒（出现 → 一格大 → 发射）。 */
+    private static final int PURPLE_TAP_TICKS=14;
+    /** 按住超过 10 刻（0.5 秒）判定为长按，改走对撞。 */
+    private static final int PURPLE_HOLD_TICKS=10;
+    /** 紫球的视觉尺寸：从 0.20 长到 1.00（一格大）。 */
+    private static final float PURPLE_MIN_SIZE=0.20f,PURPLE_MAX_SIZE=1.00f;
     private static final Map<UUID,Orb> guiding=new HashMap<>();
     private static final class State {
         final ServerPlayer p;final ServerLevel level;
@@ -37,6 +46,8 @@ public final class GojoCombat {
         boolean controlOnly;
         /** 展开音效的时间轴：>0 表示还要在那一刻播放 gojodomainmid（起手音 1.445 秒之后）。 */
         long midSoundAt;
+        /** 茈·点按蓄力中：起始刻、是否已松手（松手前没越过长按阈值就算点按）。 */
+        boolean purpleCharging;long purpleAt;boolean purpleReleased;
         State(ServerPlayer p){this.p=p;level=p.serverLevel();}
     }
     /** 无量空处：持续 **90 秒**（1 分半）。 */
@@ -145,10 +156,14 @@ public final class GojoCombat {
         if(!available(p,skill)){reject(p,skill);return;} // 不再静默失败：直接说明是哪一道门槛
         State s=states.computeIfAbsent(p.getUUID(),k->new State(p));
         s.chargeSkill=slot;s.chargeAt=p.level().getGameTime();s.chargeFired=false;
+        // 茈：按下时先聚球（不扣咒力），松手＝点按发射、按住不放＝原来的对撞，见 purpleTick
+        if(slot==PURPLE_SLOT){s.chargeSkill=-1;s.chargeFired=false;startPurpleTap(p);return;}
         if(slot>1){cast(p,skill);s.chargeSkill=-1;} // 其余技能按下即放
     }
     /** 松手：没越过阈值就是普通版；已进入最大功率则由引导/蓄力自行收尾。 */
     public static void chargeRelease(ServerPlayer p,int slot){
+        // 茈：只记"已经松手"，真正的发射由 purpleTick 按时间轴走到第 14 刻时执行
+        if(slot==PURPLE_SLOT){State st=states.get(p.getUUID());if(st!=null)st.purpleReleased=true;return;}
         State s=states.get(p.getUUID());
         if(s==null||s.chargeSkill!=slot)return;
         boolean fired=s.chargeFired;
@@ -164,6 +179,40 @@ public final class GojoCombat {
         if(held<threshold)return;
         s.chargeFired=true;
         cast(s.p,s.chargeSkill==0?8:2);
+    }
+    /** 茈·点按起手：只记时间点，**不扣咒力**（长按会改走対撞，扣费留给真正打出去的那一下）。 */
+    private static void startPurpleTap(ServerPlayer p){
+        State s=states.computeIfAbsent(p.getUUID(),k->new State(p));
+        if(s.p!=p||s.level!=p.level()){states.put(p.getUUID(),s=new State(p));}
+        s.purpleCharging=true;s.purpleAt=p.level().getGameTime();s.purpleReleased=false;
+        fx(p,GojoFx.PURPLE_CHARGE,hand(p).add(p.getLookAngle().scale(0.2)),Vec3.ZERO,PURPLE_MIN_SIZE,4,0);
+    }
+    /** 茈的时间轴：0.7 秒内小紫球长到一格大后发射；按住越 0.5 秒则改走原来的苍赫対撞。 */
+    private static void purpleTick(State s){
+        if(!s.purpleCharging)return;
+        ServerPlayer p=s.p;long age=p.level().getGameTime()-s.purpleAt;
+        if(!s.purpleReleased&&age>=PURPLE_HOLD_TICKS){ // 长按
+            s.purpleCharging=false;
+            if(available(p,PURPLE_SKILL))cast(p,PURPLE_SKILL);else reject(p,PURPLE_SKILL);
+            return;
+        }
+        if(age>=PURPLE_TAP_TICKS){s.purpleCharging=false;launchPurpleTap(p);return;}
+        double t=Math.min(1.0,(double)Math.max(0,age)/PURPLE_TAP_TICKS);
+        float size=(float)(PURPLE_MIN_SIZE+(PURPLE_MAX_SIZE-PURPLE_MIN_SIZE)*t);
+        fx(p,GojoFx.PURPLE_CHARGE,hand(p).add(p.getLookAngle().scale(0.2)),Vec3.ZERO,size,4,0);
+    }
+    /** 点按版发射：从手心沿准星（有目标就朝目标）直线打出，伤害/速度与対撞版一致。 */
+    private static void launchPurpleTap(ServerPlayer p){
+        if(!Curse.spend(p,GojoPlayer.COST[PURPLE_SKILL])){reject(p,PURPLE_SKILL);return;}
+        if(GojoPlayer.COOLDOWN[PURPLE_SKILL]>0)Curse.status(p,key(PURPLE_SKILL),GojoPlayer.COOLDOWN[PURPLE_SKILL]);
+        Vec3 from=hand(p).add(p.getLookAngle().scale(0.45));
+        Vec3 dir=p.getLookAngle();
+        LivingEntity aim=Skills.aimTarget(p);
+        if(aim!=null){Vec3 to=aim.getBoundingBox().getCenter().subtract(from);if(to.lengthSqr()>1.0E-4)dir=to.normalize();}
+        orbs.add(new Orb(p,false,true,from,dir.scale(1.0),null,100));
+        fx(p,GojoFx.PURPLE_FORM,from,Vec3.ZERO,1.0f,20,0);
+        SkillSounds.play(p,"guardian_7");
+        p.displayClientMessage(Component.literal("茈 · 点按发射"),true);
     }
     public static void cast(ServerPlayer p,int skill){
         // 无量空处不再按下即展开：走 Skills 里那一套结印时间轴（按下=结印，第 80 刻才真正展开）
@@ -380,6 +429,7 @@ public final class GojoCombat {
                 }
             }
             chargeTick(s);
+            purpleTick(s);
             if(s.casting>=0)channel(s);
         }
         for(Iterator<Orb> it=orbs.iterator();it.hasNext();){

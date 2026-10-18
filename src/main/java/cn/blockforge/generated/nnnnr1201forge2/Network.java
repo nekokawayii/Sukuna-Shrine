@@ -208,9 +208,6 @@ public final class Network {
         CHANNEL.messageBuilder(DrawState.class,14,NetworkDirection.PLAY_TO_CLIENT).encoder((m,b)->{b.writeUUID(m.id());b.writeVarInt(m.state());b.writeDouble(m.pixels());}).decoder(b->new DrawState(b.readUUID(),b.readVarInt(),b.readDouble())).consumerMainThread((m,c)->{drawReceiver.accept(m);c.get().setPacketHandled(true);}).add();
     }
     public static void send(ServerLevel level, Effect e) {
-        // 苍 / 赫 / 茈 的真彩色光照：所有特效下发都过这里，所以在这里统一把光源方块搬过去
-        // （只在装了 Colorful Lighting 时写世界，实现在 GojoColoredLights）。
-        GojoColoredLights.onEffect(level,e);
         SkillDestruction.effect(level,e);
         var entity=level.getEntity(e.owner());ServerPlayer caster=entity instanceof ServerPlayer p?p:MaidBridge.caster(entity);
         // 定位在受击者身上的消息必须由发送点明确提供施术者，不在这里猜测。

@@ -9,7 +9,7 @@ public final class GojoFx {
     // 204-218 是魔虚罗、219-220 是信夫（ShinbukeVisuals），所以「宇宙大爆炸」只能取 221。
     public static final int BLOCK=187,HIT=188,CHARGE=189,BEAM=190,BLUE=191,BLUE_END=192,RED=193,RED_END=194,
         PURPLE=195,PURPLE_GATHER=196,PURPLE_FORM=197,PURPLE_BURST=198,UNLIMITED=199,TELEPORT=200,
-        DOMAIN=201,DOMAIN_OPEN=202,DOMAIN_CLOSE=203,BIG_BANG=221;
+        DOMAIN=201,DOMAIN_OPEN=202,DOMAIN_CLOSE=203,BIG_BANG=221,PURPLE_CHARGE=222;
     /** 无量空处的绝对半径：画布、领域判定、对拼范围共用同一个数。 */
     public static final float DOMAIN_RADIUS=100f;
     private record Entry(PhotonFx.Handle handle,long end,boolean sticky){}
@@ -111,6 +111,12 @@ public final class GojoFx {
                 if(t>=0.98)spark(at,2.2,2.1,0xC0C08CFF,0xFF3E1C63,GALAXY,true,3,8,30,1.2);
             }
             case PURPLE_FORM->spark(at,Math.max(1.5,e.size()),Math.max(1.5,e.size())*0.95,0xC0C08CFF,0xFF3E1C63,GALAXY,true,4,10,40,1.2);
+            // 茈·点按蓄力：手心一颗小紫球，size 由服务端从 0.20 逐步长到 1.00（一格大）
+            case PURPLE_CHARGE->{
+                double sz=Math.max(0.12,e.size());
+                spark(at,sz*0.55,sz*0.55,0xC0C08CFF,0xFF3E1C63,GALAXY,true,2,3,30,1.2);
+                spark(at,sz*0.75,sz*0.28,0xA8D8C8FF,0,GLOW,true,2,3,14,1.6);
+            }
             case PURPLE_BURST->GojoBlastClient.spawn(at,Math.max(0,e.size()),0xCCB15C);
             case UNLIMITED->{
                 keep("unlimited",PhotonFx.purple(at,Math.max(4,e.size()),60),60,false);

@@ -457,7 +457,6 @@ public final class Skills {
             if(p.level().getGameTime()%FIST_AURA_INTERVAL!=0)continue;
             if(!Curse.data(p).getBoolean("Fist"))continue;
             fx(p,FistFlameClient.FX,p.getEyePosition(),Vec3.ZERO,1,FIST_AURA_INTERVAL+20,p.getId());
-            BlackFlashMarks.tick(p);
             sent++;
         }
         // 验证埋点：每 15 刻（=发送节奏）最多写一行，说明服务端确实在广播

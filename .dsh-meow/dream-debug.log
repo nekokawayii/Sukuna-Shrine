@@ -324,3 +324,6 @@
 [2026-10-17T01:56:47.265Z] hit-chain pid=2656 sid=4e31b730 textLen=207 hit=null
 [2026-10-17T01:58:13.290Z] turn-stopping pid=2656 sid=4e31b730 reason=none wasDream=false
 [2026-10-17T02:01:49.485Z] hit-chain pid=2656 sid=4e31b730 textLen=73 hit=null
+[2026-10-17T02:02:55.864Z] turn-stopping pid=2656 sid=4e31b730 reason=none wasDream=false
+[2026-10-18T02:33:38.319Z] pre-step first pid=4920 sid=4e31b730 priorUser=230 userMsgs=1
+[2026-10-18T02:33:38.328Z] hit-chain pid=4920 sid=4e31b730 textLen=25 hit=null

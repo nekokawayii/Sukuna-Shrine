@@ -39,6 +39,14 @@ public final class BlackFlashMarks {
     private static final Map<UUID,Map<Integer,Long>> MARKS=new HashMap<>();
 
     // ------------------------------------------------------------------ 服务端
+    /** 独立的服务端每刻钩子：**每刻都跑**，内部再按 10 刻（0.5 秒）掷骰。
+     *  （之前挂在附拳每 15 刻的广播循环里，和 10 刻取最小公倍数 → 实际 30 刻才掷一次，看起来像只出现一次。） */
+    @SubscribeEvent public static void serverTick(TickEvent.ServerTickEvent e){
+        if(e.phase!=TickEvent.Phase.END)return;
+        var server=net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+        if(server==null)return;
+        for(ServerPlayer p:server.getPlayerList().getPlayers())tick(p);
+    }
     /** 每 0.5 秒掷一次骰子：附拳开启 + 半径 5 格内有敌人时，1% 概率给**每个**敌人一个随机点标记。 */
     public static void tick(ServerPlayer p){
         if(p.level().getGameTime()%ROLL_TICKS!=0)return;

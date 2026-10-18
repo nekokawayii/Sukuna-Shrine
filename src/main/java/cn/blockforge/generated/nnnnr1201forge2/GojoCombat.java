@@ -38,6 +38,11 @@ public final class GojoCombat {
     private static final int PURPLE_HOLD_TICKS=10;
     /** 紫球的视觉尺寸：从 0.20 长到 1.00（一格大）。 */
     private static final float PURPLE_MIN_SIZE=0.20f,PURPLE_MAX_SIZE=1.00f;
+    /** 茈的伤害：对撞版 {@link #PURPLE_DAMAGE}；**点按版 = 45%**。 */
+    public static final float PURPLE_DAMAGE=500f,PURPLE_TAP_DAMAGE_SCALE=0.45f;
+    /** 点按**没有冷却**；但 5 秒（100 刻）内连续点按，每次咒力消耗 **+75%（累进）**，超时清零。 */
+    private static final int PURPLE_TAP_WINDOW_TICKS=100;
+    private static final float PURPLE_TAP_COST_STEP=0.75f;
     private static final Map<UUID,Orb> guiding=new HashMap<>();
     private static final class State {
         final ServerPlayer p;final ServerLevel level;
@@ -48,6 +53,8 @@ public final class GojoCombat {
         long midSoundAt;
         /** 茈·点按蓄力中：起始刻、是否已松手（松手前没越过长按阈值就算点按）。 */
         boolean purpleCharging;long purpleAt;boolean purpleReleased;
+        /** 点按的连击惩罚：上一次点按的时刻 + 5 秒内已经连点的次数（每多一次咒力 +75%）。 */
+        long purpleLast;int purpleChain;
         State(ServerPlayer p){this.p=p;level=p.serverLevel();}
     }
     /** 无量空处：持续 **90 秒**（1 分半）。 */
@@ -203,10 +210,21 @@ public final class GojoCombat {
         float size=(float)(PURPLE_MIN_SIZE+(PURPLE_MAX_SIZE-PURPLE_MIN_SIZE)*t);
         fx(p,GojoFx.PURPLE_CHARGE,hand(p).add(p.getLookAngle().scale(0.2)),Vec3.ZERO,size,4,0);
     }
-    /** 点按版发射：从手心沿准星（有目标就朝目标）直线打出，伤害/速度与対撞版一致。 */
+    /** 点按版发射：从手心沿准星（有目标就朝目标）直线打出。**无冷却**，伤害 45%，连点咒力 +75%/次。 */
     private static void launchPurpleTap(ServerPlayer p){
-        if(!Curse.spend(p,GojoPlayer.COST[PURPLE_SKILL])){reject(p,PURPLE_SKILL);return;}
-        if(GojoPlayer.COOLDOWN[PURPLE_SKILL]>0)Curse.status(p,key(PURPLE_SKILL),GojoPlayer.COOLDOWN[PURPLE_SKILL]);
+        State s=states.computeIfAbsent(p.getUUID(),k->new State(p));
+        if(s.p!=p||s.level!=p.level()){states.put(p.getUUID(),s=new State(p));}
+        long now=p.level().getGameTime();
+        // 上一次点按还在 5 秒窗口内 → 连点计数 +1，本次消耗 = 基础 ×(1 + 0.75×连点次数)
+        s.purpleChain=s.purpleLast>0&&now-s.purpleLast<=PURPLE_TAP_WINDOW_TICKS?s.purpleChain+1:0;
+        s.purpleLast=now;
+        double mult=1.0+PURPLE_TAP_COST_STEP*s.purpleChain;
+        int cost=(int)Math.round(GojoPlayer.COST[PURPLE_SKILL]*mult);
+        if(!Curse.spend(p,cost)){
+            CastFeedback.tell(p,"茈·点按 需要 "+BalanceRules.number(cost)+" 咒力（当前 "+BalanceRules.number(Curse.energy(p))+"）");
+            return;
+        }
+        // 注意：这里**不写冷却**（点按无冷却）；技能 3 的冷却只由长按对撞那条路 cast() 负责
         Vec3 from=hand(p).add(p.getLookAngle().scale(0.45));
         Vec3 dir=p.getLookAngle();
         LivingEntity aim=Skills.aimTarget(p);
@@ -216,7 +234,7 @@ public final class GojoCombat {
         orbs.add(shot);
         fx(p,GojoFx.PURPLE_TAP_BURST,from,Vec3.ZERO,1.4f,12,0); // 出膛：小闪光，不是 12 格的大爆
         SkillSounds.play(p,"guardian_7");
-        p.displayClientMessage(Component.literal("茈 · 点按发射"),true);
+        p.displayClientMessage(Component.literal("茈 · 点按发射"+(s.purpleChain>0?"（连点消耗 ×"+String.format(java.util.Locale.ROOT,"%.2f",mult)+"）":"")),true);
     }
     public static void cast(ServerPlayer p,int skill){
         // 无量空处不再按下即展开：走 Skills 里那一套结印时间轴（按下=结印，第 80 刻才真正展开）
@@ -473,12 +491,13 @@ public final class GojoCombat {
                     if(!o.struck.add(victim.getUUID()))continue; // 茈：同一只只结算一次
                     // 命中演出：变大 + 渐隐，纯视觉效果，不再附带溅射伤害
                     fx(o.owner,o.small?GojoFx.PURPLE_TAP_BURST:GojoFx.PURPLE_BURST,o.pos,Vec3.ZERO,o.small?2.5f:12,o.small?12:30,o.id);
-                    // 茈 500：打魔虚罗 ×10（{@link #MAHORAGA_DAMAGE}），并且命中后给它挂 30 秒缓慢
-                    boolean hurt=hit(o.owner,victim,500,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE);
+                    // 茈 基础 500（对撞版）；点按版只有 45%。打魔虚罗 ×10，命中后挂 30 秒缓慢
+                    double purpleDamage=o.small?PURPLE_DAMAGE*PURPLE_TAP_DAMAGE_SCALE:PURPLE_DAMAGE;
+                    boolean hurt=hit(o.owner,victim,purpleDamage,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE);
                     if(hurt)purpleSlow(victim);
                     // 一下打死 → 继续飞（穿透，去撞后面的人）；一下打不死 → 引爆：补 25% 伤害 + 宇宙大爆炸 + 自身消散
                     if(hurt&&victim.isAlive()&&victim.getHealth()>0){
-                        hit(o.owner,victim,500*PURPLE_BANG_BONUS,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE);
+                        hit(o.owner,victim,purpleDamage*PURPLE_BANG_BONUS,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE);
                         o.level.playSound(null,o.pos.x,o.pos.y,o.pos.z,SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.5f,0.55f);
                         fx(o.owner,GojoFx.BIG_BANG,o.pos,Vec3.ZERO,PURPLE_BANG_SIZE,40,o.id);
                         o.dead=true;

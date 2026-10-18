@@ -219,7 +219,7 @@ public final class Client {
     public static void collectSlashes(Vec3 center,double radius,List<Vec3> out){visuals.removeIf(v->{if(!slashEffect(v.e.kind()))return false;Vec3 at=v.e.position();if(at.distanceToSqr(center)>radius*radius)return false;if(out.size()<6000)out.add(at);PhotonBridge.stop(v.handle);return true;});}
     public static void receive(Network.Effect e){
         if(Minecraft.getInstance().level==null)return;
-        if(e.kind()>=ObserverRitual.FX_START&&e.kind()<=ObserverRitual.FX_END){ObserverClient.receive(e);return;}
+        if(e.kind()>=ObserverRitual.FX_START&&e.kind()<=ObserverRitual.FX_FIGHT){ObserverClient.receive(e);return;}
         if(e.kind()>=FurnaceMax.FX_CHARGE&&e.kind()<=FurnaceMax.FX_BURN){FurnaceMaxClient.receive(e);return;}
         if((e.kind()>=GojoFx.BLOCK&&e.kind()<=GojoFx.DOMAIN_CLOSE)||e.kind()==GojoFx.BIG_BANG
             ||e.kind()==GojoFx.PURPLE_CHARGE||e.kind()==GojoFx.PURPLE_TAP||e.kind()==GojoFx.PURPLE_TAP_BURST

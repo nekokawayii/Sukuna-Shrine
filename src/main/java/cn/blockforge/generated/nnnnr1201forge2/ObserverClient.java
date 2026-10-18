@@ -40,13 +40,14 @@ public final class ObserverClient {
             case ObserverRitual.FX_DIALOG -> {dialogHold=true;ObserverDialog.show();}
             case ObserverRitual.FX_LINE -> {lineFrom=tick;lineTo=tick+Math.max(1,e.life());}
             case ObserverRitual.FX_ATTACK -> {ScreenCracks.trigger(e.seed());Client.shake(16);}
+            case ObserverRitual.FX_FIGHT -> ObserverFight.start();
             case ObserverRitual.FX_END -> end();
             default -> {}
         }
     }
     private static void end(){
         active=false;dialogHold=false;blackTo=Long.MIN_VALUE;lineTo=Long.MIN_VALUE;blackFrom=lineFrom=Long.MIN_VALUE;
-        deferred.clear();ScreenCracks.clear();
+        deferred.clear();ScreenCracks.clear();ObserverFight.end();
         if(savedCamera!=null){Minecraft.getInstance().options.setCameraType(savedCamera);savedCamera=null;}
     }
     /** 进世界/退世界时清干净，别让"隐藏 HUD + 强制第三人称"漏进下一局。 */

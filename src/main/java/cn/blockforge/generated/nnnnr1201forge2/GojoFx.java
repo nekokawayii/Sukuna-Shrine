@@ -17,7 +17,7 @@ public final class GojoFx {
     private static final Map<String,Long> throttled=new HashMap<>();
     /** 记录发射器真正的创建时刻：Photon 的 lifetime 到期后不会自己续命。 */
     private static long time;
-    public static void clear(){for(Entry e:active.values())PhotonFx.stop(e.handle());active.clear();throttled.clear();time=0;GojoVoidClient.close();GojoBlastClient.clear();GojoBeamClient.clear();GojoTrailClient.clear();GojoGravityClient.clear();GojoLightSpill.clear();}
+    public static void clear(){for(Entry e:active.values())PhotonFx.stop(e.handle());active.clear();throttled.clear();time=0;GojoVoidClient.close();GojoBlastClient.clear();GojoBeamClient.clear();GojoTrailClient.clear();GojoGravityClient.clear();}
     public static void tick(){
         time++;GojoVoidClient.tick();GojoBlastClient.tick();GojoBeamClient.tick();GojoTrailClient.tick();GojoGravityClient.tick();
         active.values().removeIf(e->{
@@ -74,8 +74,6 @@ public final class GojoFx {
         long orb=orbKey(e);
         if(e.kind()==BLUE||e.kind()==PURPLE)GojoTrailClient.feed(e.kind()==BLUE?GojoTrailClient.BLUE:GojoTrailClient.PURPLE,orb,at);
         if(e.kind()==BLUE)GojoGravityClient.track(orb,at,Math.max(0.8,e.size()));
-        // 加法光斑层：不依赖 Photon，所以放在 ready() 门槛之前（没装前置也照样"亮"）。
-        if(e.kind()==BLUE||e.kind()==RED||e.kind()==PURPLE)GojoLightSpill.track(e.kind(),at,Math.max(0.6,e.size()));
         if(!PhotonFx.ready())return;
         switch(e.kind()){
             case BLOCK->{if(throttle("block/"+owner,5))keep("block/"+owner,PhotonFx.shockwave(at,0x66BFE4FF,1.6,10),10,false);}

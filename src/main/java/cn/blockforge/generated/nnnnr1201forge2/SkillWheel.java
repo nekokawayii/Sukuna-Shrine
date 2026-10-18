@@ -113,7 +113,7 @@ public final class SkillWheel extends Screen {
         case 4->"粉尘焚爆，领域或觉醒后可用";
         case 5->"开放领域 · 半径"+DomainOptions.radius(Client.progress.domainRadiusPts())+"格 · 密集60～120格斩击";
         case 6->"灵魂剥离 · 单体虚弱5秒 · 冷却90秒";
-        default->skill>=34?GojoPlayer.desc(skill-34):skill>=7&&skill<17?GuardianPlayerSkills.DESC[skill-7]:"";
+        default->skill>=34?GojoPlayer.descOfSlot(skill-34):skill>=7&&skill<17?GuardianPlayerSkills.DESC[skill-7]:"";
     };}
     private void gojoRing(GuiGraphics g,int cx,int cy,int outer){
         int inner=outer/2;
@@ -160,12 +160,12 @@ public final class SkillWheel extends Screen {
             for(int i=0;i<GojoPlayer.SLOTS;i++){
                 double a=-Math.PI/2+(i+0.5)*Math.PI*2/GojoPlayer.SLOTS;
                 int lx=gx+(int)Math.round(Math.cos(a)*gr*0.75),ly=cy+(int)Math.round(Math.sin(a)*gr*0.75);
-                String name=GojoPlayer.shortName(GojoPlayer.WHEEL[i]);
+                String name=GojoPlayer.WHEEL_LABELS[i];
                 boolean on=34+i==current;
                 if(on){int w=font.width(name);g.fill(lx-w/2-3,ly-6,lx+w/2+3,ly+6,0x99000000);} // 选中格加个底片，明确"这个字属于这一格"
                 g.drawCenteredString(font,name,lx,ly-4,on?0xFFFFFFFF:0xFFE6DCE6);
             }
-            g.drawCenteredString(font,sel>=0&&sel<GojoPlayer.SLOTS?GojoPlayer.shortName(GojoPlayer.WHEEL[sel]):"五条悟",gx,cy-4,0xFFFFFFFF);
+            g.drawCenteredString(font,sel>=0&&sel<GojoPlayer.SLOTS?GojoPlayer.WHEEL_LABELS[sel]:"五条悟",gx,cy-4,0xFFFFFFFF);
             g.drawCenteredString(font,"六眼",gx,cy+8,0xFF9FC7F0);
             g.drawCenteredString(font,"五条悟技能",gx,cy-gr-14,0xFFBEE0FF);
             g.drawCenteredString(font,"碎片已食用 · 7 式（苍/赫长按为最大功率）",gx,cy+gr+7,0xFFA9C8F1);

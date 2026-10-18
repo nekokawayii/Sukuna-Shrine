@@ -477,7 +477,7 @@ public final class GojoCombat {
                 }
                 if(age>=80)s.casting=-1;
             }
-            case 3->{ // 5 秒对撞后打出紫球
+            case 3->{ // 5 秒对撞后打出紫球（横向收拢）
                 Vec3 gather=p.getEyePosition().add(p.getLookAngle().scale(5.4)); // 前移 3 格
                 if(age<=100)fx(p,GojoFx.PURPLE_GATHER,gather,Vec3.ZERO,3,100,age);
                 if(age==100){
@@ -487,9 +487,9 @@ public final class GojoCombat {
                 }
                 if(age>=115)s.casting=-1;
             }
-            case 4->{ // 咏唱·茈：苍与赫旋转对撞 3 秒，打出 200% 大小 / 200% 伤害的茈
+            case 4->{ // 咏唱·茈：苍与赫**旋转**对撞 3 秒，打出 200% 大小 / 200% 伤害的茈
                 Vec3 gather=p.getEyePosition().add(p.getLookAngle().scale(5.4));
-                if(age<=CHANT_TICKS)fx(p,GojoFx.PURPLE_GATHER,gather,Vec3.ZERO,3,100,Math.min(95,age*95/CHANT_TICKS));
+                if(age<=CHANT_TICKS)fx(p,GojoFx.PURPLE_GATHER_SPIN,gather,Vec3.ZERO,3,100,Math.min(95,age*95/CHANT_TICKS));
                 if(age==CHANT_TICKS){
                     fx(p,GojoFx.PURPLE_FORM,gather,Vec3.ZERO,3*CHANT_SCALE,30,0);
                     Orb orb=new Orb(p,false,true,gather,p.getLookAngle().scale(1.0),null,140);
@@ -619,20 +619,16 @@ public final class GojoCombat {
         tickSuck();
         tickZones();
         for(Iterator<Beam> it=beams.iterator();it.hasNext();){
-            Beam b=it.next();
+            // 赫·最大功率：**改回一次性判定**（用户 r275：激光点燃+持续掉血不要了）
+            Beam b=it.next();it.remove();
             Vec3 end=b.from.add(b.dir.scale(b.length));
-            boolean first=b.ticks==BEAM_ZONE_TICKS;
             for(LivingEntity victim:Skills.targets(b.level,b.owner,b.from,b.length+2)){
                 if(victim.getBoundingBox().inflate(0.7).clip(b.from,end).isEmpty()&&!victim.getBoundingBox().inflate(0.7).contains(b.from))continue;
-                if(first&&hit(b.owner,victim,b.damage,false)){
+                if(hit(b.owner,victim,b.damage,false)){
                     Vec3 push=b.dir.multiply(1,0,1).normalize();
                     victim.push(push.x*6,2.4,push.z*6);victim.hurtMarked=true;
                 }
-                // 激光特效持续期间：特效内的生物一直被点燃，每秒 400（每刻 20）
-                victim.setSecondsOnFire(2);
-                hit(b.owner,victim,MAX_POWER_DPS/20.0,false);
             }
-            if(--b.ticks<=0)it.remove();
         }
     }
     @SubscribeEvent public static void stop(ServerStoppedEvent event){states.clear();orbs.clear();beams.clear();zones.clear();sucked.clear();}

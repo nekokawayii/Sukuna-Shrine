@@ -16,6 +16,8 @@ public final class GojoPlayer {
     // 技能 4 = 咏唱·茈（原无限制茈）：蓄力 3 秒、200% 大小/伤害、冷却 **300 秒 = 6000 刻**。
     public static final int[] COOLDOWN={160,200,600,400,6000,100,0,1200,240};
     public static final int COUNT=9;
+    /** 轮盘 7 格的显示名：**按下标与 WHEEL 一一对应**，不经过 shortName 的 switch，杜绝任何错位。 */
+    public static final String[] WHEEL_LABELS={"苍","赫","茈","咏唱","瞬移","体术","无量"};
     /** 轮盘 7 格 → 技能号。**只放常规技能**：赫·最大功率（2）与苍·最大功率（8）是长按触发的，
      *  不占格；之前把它们当独立格摆出来，就是你看到的"废弃的苍极与最又出现了"。 */
     public static final int[] WHEEL={0,1,3,4,5,6,7};
@@ -45,12 +47,16 @@ public final class GojoPlayer {
         "斥力球 60 伤害与超级击退",
         "赫·最大功率：蓄力3秒后射出圆柱激光，沿直线贯穿并击飞（长按赫也能进）",
         "双手合十对撞成银河紫球 · 命中 500 伤害（打魔虚罗 10 倍） · 一下打不死就原地引爆：+25% 伤害并消散；一下打死则继续贯穿",
-        "念完四句咒词原地引爆 48 格 · 999 伤害（打魔虚罗 3 倍） · 反噬自己 40% 生命",
+        "咏唱·茈：苍与赫旋转对撞蓄力 3 秒，打出 200% 大小 / 200% 伤害的茈（冷却 300 秒）",
         "向准星方向瞬移最多 8 格，遇墙停止",
         "近距离三连拳，命中附加缓慢",
         "领域展开：结印 4 秒后展开，范围内敌人无法行动并持续受伤 · 再按=放下(仅控制、无伤害) · 放下后再按一次=收起（关闭后术式熔断，可修复）",
         "苍·最大功率：长按引导的光球，松手后停留 5 秒（长按苍也能进）"};
     public static String desc(int skill){return skill>=0&&skill<DESC.length?DESC[skill]:"";}
+    /** **轮盘格号 → 说明**：必须先用 {@link #WHEEL} 换成技能号再查 DESC。
+     *  之前轮盘直接拿格号索引 DESC（格号 2 = 茈，却取到 DESC[2] 的赫·最大功率），
+     *  所以悬停"茈"时显示的说明是"赫·最大功率"——这就是用户报的"普通茈在轮盘变成了赫·最大功率"。 */
+    public static String descOfSlot(int slot){return slot>=0&&slot<SLOTS?desc(WHEEL[slot]):"";}
     public static boolean unlocked(Player p){return Curse.data(p).getBoolean("GojoMemory");}
     /** 吃下六眼：玩家与女仆共用同一条数据位；女仆不能走 displayClientMessage（没有连接会崩）。 */
     public static boolean consume(Player p){

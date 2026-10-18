@@ -74,6 +74,7 @@ public final class BlackFlashMarks {
     /** 服务端：玩家在有效时间内瞄准并左键 → 瞬移到敌人身前，打出"普攻伤害³"的黑闪。 */
     public static void strike(ServerPlayer p,int targetId){
         var log=com.mojang.logging.LogUtils.getLogger();
+        log.info("[黑闪] 服务端收到 strike target={} marks={}",targetId,MARKS.containsKey(p.getUUID())?MARKS.get(p.getUUID()).size():-1);
         Map<Integer,Long> mine=MARKS.get(p.getUUID());
         if(mine==null||!mine.containsKey(targetId)){log.info("[黑闪] 服务端拒绝：没有该标记 target={}",targetId);return;}
         if(p.level().getGameTime()>mine.getOrDefault(targetId,0L)){log.info("[黑闪] 服务端拒绝：标记已过期 target={}",targetId);mine.remove(targetId);return;}

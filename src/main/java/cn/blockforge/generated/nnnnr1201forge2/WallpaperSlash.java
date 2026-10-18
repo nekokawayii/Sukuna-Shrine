@@ -43,9 +43,12 @@ public final class WallpaperSlash {
         if(across.lengthSqr()<1e-8)across=z.subtract(a).cross(camera.subtract(a.lerp(z,.5)));
         if(across.lengthSqr()<1e-8)across=z.subtract(a).cross(new Vec3(0,1,0));
         if(across.lengthSqr()<1e-8)across=z.subtract(a).cross(new Vec3(1,0,0));
-        Vec3 mid=a.lerp(z,.5),side=across.normalize().scale(WorldSlashRules.HALF_WIDTH);
+        // 【睁眼】虚空/传承阶段：世界斩同样先是一道闭合黑线，再张开露出壁纸。
+        boolean eye=SlashAppearance.desktop();
+        double half=WorldSlashRules.HALF_WIDTH;if(eye)half=SlashEye.width(half,SlashAppearance.open());
+        Vec3 mid=a.lerp(z,.5),side=across.normalize().scale(half);
         var mc=Minecraft.getInstance();int opacity=(int)(255*Math.min(1,alpha))<<24;double time=mc.level==null?0:mc.level.getGameTime()+mc.getFrameTime();
-        Client.quad(b,ps,a,mid.add(side),z,mid.subtract(side),opacity|SlashStyle.edge(time));
+        Client.quad(b,ps,a,mid.add(side),z,mid.subtract(side),opacity|(eye?SlashEye.RIM:SlashStyle.edge(time)));
         Vec3 toward=camera.subtract(mid).normalize().scale(.008);
         Vec3 p=a.lerp(z,SlashStyleRules.TIP_INSET).add(toward),q=mid.add(side.scale(SlashStyleRules.CORE)).add(toward),r=z.lerp(a,SlashStyleRules.TIP_INSET).add(toward),s=mid.subtract(side.scale(SlashStyleRules.CORE)).add(toward);
         Client.quad(b,ps,p,q,r,s,opacity|0x000000);

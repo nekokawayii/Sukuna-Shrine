@@ -376,7 +376,7 @@ public final class Client {
         for(Visual v:visuals)if(v.background)drawSlash(b,ps,v,cam,e.getPartialTick());
         for(DomainVisual d:domains.values())domain(b,ps,d,cam,e.getPartialTick());
         for(AuraVisual a:auras.values())aura(b,ps,a,cam,e.getPartialTick());
-        for(Visual v:visuals){if(v.background)continue;SlashAppearance.use(v.e);float age=tick-v.born+e.getPartialTick();int kind=v.e.kind();
+        for(Visual v:visuals){if(v.background)continue;SlashAppearance.use(v.e);float age=tick-v.born+e.getPartialTick();SlashAppearance.age(age);int kind=v.e.kind();
             if(v.e.size()==SlashReach.INFINITE&&(kind==96||kind==72||kind==123)){drawInfiniteCut(b,ps,v.e,cam,age);continue;}
             if(kind==96){Vec3 axis=slashAxis(v.e);SlashStyle.draw(b,ps,v.e.position().subtract(axis.scale(v.e.size()/2)),v.e.position().add(axis.scale(v.e.size()/2)),.12,Math.max(0,1-age/v.e.life()),cam);}
             if(kind==0||kind==12||kind==72||kind==123)drawSlash(b,ps,v,cam,e.getPartialTick());
@@ -407,15 +407,15 @@ public final class Client {
     }
     /** 无限线按相机可见区段绘制；长度不进入伤害判定，也不发送无穷浮点数。 */
     public static void drawInfiniteCut(BufferBuilder b,PoseStack ps,Network.Effect e,Vec3 cam,float age){
-        SlashAppearance.use(e);Vec3 axis=SlashReach.axis(e.direction(),e.seed()),center=e.position().add(axis.scale(cam.subtract(e.position()).dot(axis)));
+        SlashAppearance.use(e);SlashAppearance.age(age);Vec3 axis=SlashReach.axis(e.direction(),e.seed()),center=e.position().add(axis.scale(cam.subtract(e.position()).dot(axis)));
         double half=Math.max(128,Minecraft.getInstance().options.renderDistance().get()*24.0);
         float fade=Math.min(1,Math.max(0,(e.life()-age)/4));
         SlashStyle.draw(b,ps,center.subtract(axis.scale(half)),center.add(axis.scale(half)),.3,fade,cam);
     }
     private static void drawSlash(BufferBuilder b,PoseStack ps,Visual v,Vec3 cam,float partial){
-        SlashAppearance.use(v.e);if(v.background&&VoidBossClient.shrine(v.e.owner())){float age=tick-v.born+partial;VoidTechniqueClient.cut(b,ps,v.e.position(),slashAxis(v.e),v.e.size()*SlashMotion.progress(age),Math.max(0,1-age/v.e.life()),cam,VoidBossClient.blue(v.e.owner()));return;}
+        SlashAppearance.use(v.e);if(v.background&&VoidBossClient.shrine(v.e.owner())){float age=tick-v.born+partial;SlashAppearance.age(age);VoidTechniqueClient.cut(b,ps,v.e.position(),slashAxis(v.e),v.e.size()*SlashMotion.progress(age),Math.max(0,1-age/v.e.life()),cam,VoidBossClient.blue(v.e.owner()));return;}
         redCut=v.e.seed()>=720&&v.e.seed()<2000;soulCut=v.e.seed()>=2000;
-        float age=tick-v.born+partial,fade=Math.min(1,Math.max(0,(v.e.life()-age)/4f));
+        float age=tick-v.born+partial,fade=Math.min(1,Math.max(0,(v.e.life()-age)/4f));SlashAppearance.age(age);
         Vec3 p=v.e.kind()==12||v.e.kind()==72||v.e.kind()==123||v.background?v.e.position():position(v,partial),axis=slashAxis(v.e);
         if(v.e.kind()==123){
             Vec3 near=cam.subtract(p).normalize().scale(0.08);p=p.add(near);
@@ -440,7 +440,7 @@ public final class Client {
     }
     private static void drawHit(BufferBuilder b,PoseStack ps,Visual v,Vec3 cam,float partial){
         SlashAppearance.use(v.e);redCut=v.e.kind()==11;
-        float age=tick-v.born+partial,fade=Math.max(0,1-age/v.e.life());
+        float age=tick-v.born+partial,fade=Math.max(0,1-age/v.e.life());SlashAppearance.age(age);
         var level=Minecraft.getInstance().level;
         var target=level==null?null:level.getEntity(v.e.owner());
         Vec3 center=target==null?v.e.position():target.getPosition(partial).add(v.e.direction());

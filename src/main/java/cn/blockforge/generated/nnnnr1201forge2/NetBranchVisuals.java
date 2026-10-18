@@ -31,7 +31,7 @@ public final class NetBranchVisuals {
     @SubscribeEvent public static void input(MovementInputUpdateEvent event){if(!locked()||event.getEntity()!=Minecraft.getInstance().player)return;var input=event.getInput();input.forwardImpulse=input.leftImpulse=0;input.up=input.down=input.left=input.right=input.jumping=input.shiftKeyDown=false;event.getEntity().setDeltaMovement(Vec3.ZERO);}
     public static void draw(BufferBuilder b,PoseStack ps,Vec3 camera,float partial){
         // direction是角到对顶角的完整位移；在一半路程处穿过受控目标。
-        for(Visual v:crosses){Network.Effect e=v.effect;SlashAppearance.use(e);double age=tick-v.born+partial;Vec3 p=e.position().add(e.direction().scale(NetBranchRules.crossTravel(age)));
+        for(Visual v:crosses){Network.Effect e=v.effect;SlashAppearance.use(e);double age=tick-v.born+partial;SlashAppearance.age(age);Vec3 p=e.position().add(e.direction().scale(NetBranchRules.crossTravel(age)));
             float fade=(float)Math.min(1,Math.max(0,(e.life()-age)/2));
             for(int arm=0;arm<2;arm++){
                 Vec3 forward=e.direction().normalize(),side=NetBranches.side(forward),up=forward.cross(side).normalize();
@@ -42,7 +42,7 @@ public final class NetBranchVisuals {
             }
         }
         for(Visual v:qi.values()){
-            Network.Effect e=v.effect;SlashAppearance.use(e);float age=tick-v.born+partial;Vec3 direction=e.direction(),side=new Vec3(-direction.z,0,direction.x).normalize(),p=e.position().add(direction.scale(age*NetBranchRules.QI_SPEED));if(side.lengthSqr()<0.01)side=new Vec3(1,0,0);
+            Network.Effect e=v.effect;SlashAppearance.use(e);float age=tick-v.born+partial;SlashAppearance.age(age);Vec3 direction=e.direction(),side=new Vec3(-direction.z,0,direction.x).normalize(),p=e.position().add(direction.scale(age*NetBranchRules.QI_SPEED));if(side.lengthSqr()<0.01)side=new Vec3(1,0,0);
             // 与服务端剑气半径一致的黑芯白边尖梭。
             SlashStyle.draw(b,ps,p.subtract(side.scale(NetBranchRules.QI_RADIUS)),p.add(side.scale(NetBranchRules.QI_RADIUS)),.4,Math.min(1,(e.life()-age)/3),camera);
         }

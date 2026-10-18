@@ -44,7 +44,7 @@ public final class VoidTechniqueClient {
         }
     }
     public static void drawSwordQi(BufferBuilder b,PoseStack ps,Network.Effect e,Vec3 cam,float age){
-        SlashAppearance.use(e);blueTint=VoidBossClient.blue(e.owner());
+        SlashAppearance.use(e);SlashAppearance.age(age);blueTint=VoidBossClient.blue(e.owner());
         float fade=Math.max(0,1-age/e.life());Vec3 axis=e.direction().normalize();Vec3 side=axis.cross(cam.subtract(e.position())).normalize();
         if(side.lengthSqr()<0.01)side=new Vec3(0,1,0);Vec3 start=e.position().subtract(axis.scale(e.size()*0.5)),end=e.position().add(axis.scale(e.size()*0.5));
         SlashStyle.draw(b,ps,start,end,Math.min(.6,e.size()*.06),fade,cam);
@@ -54,7 +54,7 @@ public final class VoidTechniqueClient {
     public static void draw(BufferBuilder b,PoseStack ps,Vec3 cam,float partial){
         var level=Minecraft.getInstance().level;if(level==null)return;float time=tick+partial;
         for(Visual v:wounds.values()){
-            Network.Effect e=v.e;SlashAppearance.use(e);blueTint=VoidBossClient.blue(e.owner());var target=level.getEntity((int)e.seed());if(target==null||!target.isAlive())continue;
+            Network.Effect e=v.e;SlashAppearance.use(e);SlashAppearance.age(tick-v.born);blueTint=VoidBossClient.blue(e.owner());var target=level.getEntity((int)e.seed());if(target==null||!target.isAlive())continue;
             Vec3 center=target.getPosition(partial).add(0,target.getBbHeight()*0.5,0),toward=cam.subtract(center).normalize();
             double surface=Math.min(target.getBbWidth()/2/Math.max(0.001,Math.max(Math.abs(toward.x),Math.abs(toward.z))),target.getBbHeight()/2/Math.max(0.001,Math.abs(toward.y)));
             Vec3 p=center.add(toward.scale(surface+0.055)),side=new Vec3(-toward.z,0,toward.x).normalize();
@@ -73,7 +73,7 @@ public final class VoidTechniqueClient {
             if((flags&1)!=0)flames(b,ps,center,VoidTechniqueRules.FIRE_SCALE,time,cam);
             if((flags&2)!=0&&Client.voidPulse(e.owner(),partial))ring(b,ps,center,Math.max(0.6,target.getBbWidth()),0.08,0xEDA75AE8,cam);
         }
-        for(Visual v:effects){Network.Effect e=v.e;SlashAppearance.use(e);blueTint=VoidBossClient.blue(e.owner());float age=time-v.born,fade=Math.max(0,1-age/e.life());Vec3 p=e.position();
+        for(Visual v:effects){Network.Effect e=v.e;SlashAppearance.use(e);blueTint=VoidBossClient.blue(e.owner());float age=time-v.born,fade=Math.max(0,1-age/e.life());SlashAppearance.age(age);Vec3 p=e.position();
             if(e.size()==SlashReach.INFINITE){Client.drawInfiniteCut(b,ps,e,cam,age);continue;}
             switch(e.kind()){
                 case 115->{Vec3 side=new Vec3(-e.direction().z,0,e.direction().x).normalize();if(side.lengthSqr()<0.01)side=new Vec3(1,0,0);Vec3 up=e.direction().cross(side).normalize();double a=Math.toRadians(e.seed());Vec3 axis=side.scale(Math.cos(a)).add(up.scale(Math.sin(a)));cut(b,ps,p,axis,e.size()*Math.min(1,age/3),fade,cam);}

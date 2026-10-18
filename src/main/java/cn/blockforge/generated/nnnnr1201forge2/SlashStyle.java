@@ -12,12 +12,16 @@ public final class SlashStyle {
         alpha=Math.min(1,alpha);Vec3 axis=z.subtract(a).normalize(),mid=a.lerp(z,.5),side=axis.cross(camera.subtract(mid));
         if(side.lengthSqr()<1e-8)side=axis.cross(new Vec3(0,1,0));
         if(side.lengthSqr()<1e-8)side=axis.cross(new Vec3(1,0,0));
-        side=side.normalize().scale(Math.max(.012,width));
+        // 【睁眼】全部斩击露壁纸的阶段里，斩击先闭合成一条黑线，再按进度张开；其余阶段宽度不变。
+        boolean eye=SlashAppearance.desktop();
+        double half=Math.max(.012,width);if(eye)half=SlashEye.width(half,SlashAppearance.open());
+        side=side.normalize().scale(half);
         var mc=Minecraft.getInstance();double time=mc.level==null?0:mc.level.getGameTime()+mc.getFrameTime();int opacity=(int)(255*alpha)<<24;
-        Client.quad(b,ps,a,mid.add(side),z,mid.subtract(side),opacity|edge(time));
+        int rim=eye?SlashEye.RIM:edge(time);
+        Client.quad(b,ps,a,mid.add(side),z,mid.subtract(side),opacity|rim);
         Vec3 toward=camera.subtract(mid).normalize().scale(.006);
         Vec3 p=a.lerp(z,SlashStyleRules.TIP_INSET).add(toward),q=mid.add(side.scale(SlashStyleRules.CORE)).add(toward),r=z.lerp(a,SlashStyleRules.TIP_INSET).add(toward),s=mid.subtract(side.scale(SlashStyleRules.CORE)).add(toward);
-        Client.quad(b,ps,p,q,r,s,opacity|0x020202);
+        Client.quad(b,ps,p,q,r,s,opacity|(eye?SlashEye.RIM:0x020202));
         WallpaperSlash.core(b,ps,p,q,r,s,alpha,SlashAppearance.desktop()?SlashAppearance.source():null);
     }
     /** 斩痕分叉与尾迹：低阶段保留原效果，高阶段也显示壁纸。 */

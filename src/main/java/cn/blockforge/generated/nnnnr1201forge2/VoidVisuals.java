@@ -23,7 +23,7 @@ public final class VoidVisuals {
     public static void clear(){for(Needle n:NEEDLES.values())PhotonBridge.stop(n.photon);NEEDLES.clear();}
     public static void render(BufferBuilder b,PoseStack ps,Vec3 cam,float partial){
         for(Needle n:NEEDLES.values()){
-            SlashAppearance.use(n.appearance);Vec3 p=n.previous.lerp(n.pos,partial);boolean opening=n.age<12||n.trail.isEmpty();Vec3 axis=opening?n.dir:n.dir.normalize();double length=opening?3.2*Math.min(1,(n.age+partial)/6):4.8,width=opening?0.30:0.12;
+            SlashAppearance.use(n.appearance);SlashAppearance.age(n.age+partial);Vec3 p=n.previous.lerp(n.pos,partial);boolean opening=n.age<12||n.trail.isEmpty();Vec3 axis=opening?n.dir:n.dir.normalize();double length=opening?3.2*Math.min(1,(n.age+partial)/6):4.8,width=opening?0.30:0.12;
             Vec3 a=p.subtract(axis.scale(length*0.5)),z=p.add(axis.scale(length*0.5));needle(b,ps,a,z,width,1,cam);
             if(opening){for(int i=0;i<5;i++){Vec3 q=p.add(axis.scale((i-2)*0.5)),side=axis.cross(cam.subtract(p)).normalize().scale((i%2==0?1:-1)*0.6);SlashStyle.detail(b,ps,q,q.add(side),0.022,0xEFFFCD58,cam);}}
             Vec3 old=null;int index=0;for(Vec3 q:n.trail){if(old!=null){float alpha=(++index)/(float)Math.max(1,n.trail.size());SlashStyle.detail(b,ps,old,q,0.14,((int)(150*alpha)<<24)|0xC02083,cam);SlashStyle.detail(b,ps,old,q,0.025,((int)(220*alpha)<<24)|0xFFD563,cam);}old=q;}

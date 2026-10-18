@@ -91,7 +91,7 @@ public final class SoulClient {
     public static void draw(BufferBuilder b,PoseStack ps,Vec3 cam,float partial){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         BlackFlashRender.draw(b,ps,cam,partial);   // 黑闪的纯黑核心（自绘，不依赖 .fx）
-        for(Visual v:effects){Network.Effect e=v.e;SlashAppearance.use(e);float age=time-v.start+partial,fade=Math.max(0,1-age/Math.max(1,e.life()));Vec3 p=e.position(),q=e.direction();int alpha=(int)(220*fade);
+        for(Visual v:effects){Network.Effect e=v.e;SlashAppearance.use(e);float age=time-v.start+partial;SlashAppearance.age(age);float fade=Math.max(0,1-age/Math.max(1,e.life()));Vec3 p=e.position(),q=e.direction();int alpha=(int)(220*fade);
             // 超新星：红色弹幕。弹头按本刻位移前进，拖一段同色短尾，不再走斩击剑气与壁纸通路。
             if(e.kind()==125){
                 Vec3 step=q.subtract(p),head=step.lengthSqr()<1e-8?p:p.lerp(q,Math.min(1,age));

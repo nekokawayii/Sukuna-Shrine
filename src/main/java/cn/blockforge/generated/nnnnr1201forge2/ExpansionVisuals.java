@@ -15,7 +15,7 @@ public final class ExpansionVisuals {
     private static void cut(BufferBuilder b,PoseStack ps,Vec3 a,Vec3 z,Vec3 camera,int color,double width){SlashStyle.draw(b,ps,a,z,width*2.5,((color>>>24)&255)/255f,camera);}
     private static void fire(BufferBuilder b,PoseStack ps,Vec3 a,Vec3 z,Vec3 camera,int color,double width){Client.ribbon(b,ps,a,z,width*3,0xB518091F,camera);Client.ribbon(b,ps,a,z,width,color,camera);}
     public static void draw(BufferBuilder b,PoseStack ps,Vec3 camera,float partial){
-        for(Visual v:visuals){var e=v.e;SlashAppearance.use(e);double age=tick-v.born+partial,fade=Math.min(1,(e.life()-age)/3);int alpha=(int)(255*Math.max(0,fade));
+        for(Visual v:visuals){var e=v.e;SlashAppearance.use(e);double age=tick-v.born+partial;SlashAppearance.age(age);double fade=Math.min(1,(e.life()-age)/3);int alpha=(int)(255*Math.max(0,fade));
             Vec3 p=e.position(),forward=e.direction().lengthSqr()<.01?new Vec3(0,0,1):e.direction().normalize(),side=NetBranches.side(forward),up=side.cross(forward).normalize();
             if(e.kind()==CombatExpansionRules.FX_SLASH&&e.seed()==3){Vec3 center=p.add(e.direction().scale(Math.min(1,age/3)));cut(b,ps,center.add(-2,0,0),center.add(2,0,0),camera,(alpha<<24)|0xFFE5F5,.055);continue;}
             if(e.kind()==CombatExpansionRules.FX_SLASH){cut(b,ps,p,p.add(e.direction()),camera,(alpha<<24)|(e.seed()==2?0xBFD8FF:e.seed()==1?0xDC99FF:0xFFE5F5),e.seed()==1?.14:.035);continue;}

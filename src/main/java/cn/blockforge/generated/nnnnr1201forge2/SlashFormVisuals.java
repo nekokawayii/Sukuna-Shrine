@@ -15,7 +15,7 @@ public final class SlashFormVisuals {
         tick++;visuals.removeIf(v->tick-v.born>=v.e.life());
     }
     public static void draw(BufferBuilder b,PoseStack ps,Vec3 camera,float partial){
-        for(Visual v:visuals){var e=v.e;SlashAppearance.use(e);double age=tick-v.born+partial;
+        for(Visual v:visuals){var e=v.e;SlashAppearance.use(e);double age=tick-v.born+partial;SlashAppearance.age(age);
             if(e.kind()==DismantleMotionRules.RING_FX){
                 double radius=DismantleMotionRules.ringRadius(age);int alpha=(int)(255*Math.min(1,(e.life()-age)/4));
                 for(int i=0;i<DismantleMotionRules.RING_SEGMENTS;i++){double a=i*Math.PI*2/DismantleMotionRules.RING_SEGMENTS,z=(i+1)*Math.PI*2/DismantleMotionRules.RING_SEGMENTS;Vec3 from=e.position().add(Math.cos(a)*radius,0,Math.sin(a)*radius),to=e.position().add(Math.cos(z)*radius,0,Math.sin(z)*radius);SlashStyle.draw(b,ps,from,to,.12,alpha/255f,camera);}continue;

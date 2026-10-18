@@ -25,7 +25,7 @@ public final class BranchVisuals {
         }
     }
     public static void draw(BufferBuilder b,PoseStack ps,Vec3 camera,float partial){
-        for(Visual v:effects){Network.Effect e=v.e;SlashAppearance.use(e);double age=tick-v.born+partial;float fade=(float)Math.min(1,(e.life()-age)/3);Vec3 from=e.position(),to=from.add(e.direction());
+        for(Visual v:effects){Network.Effect e=v.e;SlashAppearance.use(e);double age=tick-v.born+partial;SlashAppearance.age(age);float fade=(float)Math.min(1,(e.life()-age)/3);Vec3 from=e.position(),to=from.add(e.direction());
             if(e.kind()==BranchRules.FX_WALL){Vec3 motion=SukunaBranches.unpack(e.seed()).scale(age*1.5);from=from.add(motion);to=to.add(motion);SlashStyle.draw(b,ps,from,to,.16,fade,camera);}
             else if(e.kind()==BranchRules.FX_LINE){SlashStyle.draw(b,ps,from,to,age>=19?.15:.08,fade,camera);}
             else if(e.kind()==BranchRules.FX_ICE){Vec3 point=from.add(e.direction().scale(age));crystal(b,ps,point,e.direction().normalize(),0.32,2.8,fade,camera);}

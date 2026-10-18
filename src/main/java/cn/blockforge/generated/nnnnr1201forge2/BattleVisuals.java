@@ -8,7 +8,7 @@ import static cn.blockforge.generated.nnnnr1201forge2.Client.*;
 /** 战斗提示与术式演出，不在客户端决定伤害。 */
 public final class BattleVisuals {
     public static void draw(BufferBuilder b,PoseStack ps,Network.Effect e,Vec3 cam,float age){
-        SlashAppearance.use(e);int k=e.kind();float fade=Math.max(0,1-age/Math.max(1,e.life()));Vec3 c=e.position();var owner=Minecraft.getInstance().level.getEntity(e.owner());int gold=((int)(220*fade)<<24)|0xE5BA65,purple=((int)(210*fade)<<24)|0x9D4EE6,red=((int)(240*fade)<<24)|0xE82348;
+        SlashAppearance.use(e);SlashAppearance.age(age);int k=e.kind();float fade=Math.max(0,1-age/Math.max(1,e.life()));Vec3 c=e.position();var owner=Minecraft.getInstance().level.getEntity(e.owner());int gold=((int)(220*fade)<<24)|0xE5BA65,purple=((int)(210*fade)<<24)|0x9D4EE6,red=((int)(240*fade)<<24)|0xE82348;
         if(k>=136&&k<=142){GuardianVisuals.draw(b,ps,e,cam,age);return;}
         if(k==60)NineVisuals.draw(b,ps,e,cam,age);
         if(k==64){for(int i=0;i<9;i++){double a=i*2.39996;Vec3 d=new Vec3(Math.cos(a),Math.sin(a*1.7),Math.sin(a)).normalize();VoidVisuals.needle(b,ps,c.add(d.scale(age*0.2)),c.add(d.scale(1+age*0.35)),0.09,fade,cam);}ring(b,ps,c,age*0.18,0.1,gold,cam);}

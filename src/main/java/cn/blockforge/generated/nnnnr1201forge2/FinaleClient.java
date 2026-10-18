@@ -128,14 +128,14 @@ public final class FinaleClient {
     public static void draw(BufferBuilder b,PoseStack ps,Vec3 cam,float partial){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         for(State s:states.values()){
-            SlashAppearance.use(s.e);Entity owner=mc.level.getEntity(s.e.owner());if(owner==null)continue;double age=s.age+partial;
+            SlashAppearance.use(s.e);Entity owner=mc.level.getEntity(s.e.owner());if(owner==null)continue;double age=s.age+partial;SlashAppearance.age(age);
             if(age<FinaleRules.TRIGGERS[0]){
                 Vec3 center=owner.getPosition(partial).add(0,5,0);double charge=Math.min(1,age/FinaleRules.CHARGE);sphere(b,ps,center,.25+charge*1.1,0xECFFFFFF);
                 for(int i=0;i<100;i++){double a=i*2.399963,t=(age*.025+i*.031)%1,r=(1-t)*(4+charge*9),y=Math.sin(i*1.7)*r*.7;Vec3 at=center.add(Math.cos(a+age*.01)*r,y,Math.sin(a+age*.01)*r);Vec3 axis=center.subtract(at).normalize();cut(b,ps,at.subtract(axis.scale(.5+charge)),at.add(axis.scale(.5+charge)),cam,.09,(float)(.4+.6*t));}
             }
             if(age>=FinaleRules.TRIGGERS[4]&&age<FinaleRules.SHATTER){Vec3 h=hand(owner,partial);sphere(b,ps,h,.045,0xFFFFFFFF);}
         }
-        for(Visual v:effects){Network.Effect e=v.e;SlashAppearance.use(e);double age=tick-v.born+partial;float fade=(float)Math.min(1,(e.life()-age)/3);Vec3 p=e.position();
+        for(Visual v:effects){Network.Effect e=v.e;SlashAppearance.use(e);double age=tick-v.born+partial;SlashAppearance.age(age);float fade=(float)Math.min(1,(e.life()-age)/3);Vec3 p=e.position();
             if(e.kind()==FinaleRules.FX_SHRINE){double r=Math.min(FinaleRules.RADIUS,age*10);for(int j=0;j<3;j++)Client.ring(b,ps,p.add(0,.15+j*.3,0),Math.max(.1,r-j*2),.3,((int)(fade*200)<<24)|0xFFFFFF,cam);}
             if(e.kind()==FinaleRules.FX_WALL){double y=-age*2;for(int i=-150;i<=150;i++){cut(b,ps,p.add(i,y,-150),p.add(i,y,150),cam,.12,fade);cut(b,ps,p.add(-150,y,i),p.add(150,y,i),cam,.12,fade);}}
             if(e.kind()==FinaleRules.FX_WORLD){double radius=Math.min(FinaleRules.RADIUS,(age+1)*15);for(int i=0;i<96;i++){double a=i*Math.PI/48,z=(i+1)*Math.PI/48;WallpaperSlash.draw(b,ps,p.add(Math.cos(a)*radius,.08,Math.sin(a)*radius),p.add(Math.cos(z)*radius,.08,Math.sin(z)*radius),new Vec3(0,1,0),fade,cam,e.wallpaperOwner());if(i%2==0)WallpaperSlash.drawBillboard(b,ps,p.add(0,.04,0),p.add(Math.cos(a)*radius,.04,Math.sin(a)*radius),fade,cam,e.wallpaperOwner());}}

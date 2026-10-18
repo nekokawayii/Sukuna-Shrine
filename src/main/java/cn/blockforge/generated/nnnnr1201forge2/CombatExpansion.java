@@ -50,8 +50,12 @@ public final class CombatExpansion {
     private static final Map<UUID,Rain> rains=new HashMap<>();
     private static final Map<UUID,Chant> chants=new HashMap<>();
     private static final Map<UUID,Star> drawing=new HashMap<>();
-    /** 断流：一次性斩掉半径多少格内的全部流体（不碰方块、不看破坏方块开关）。 */
-    public static final int STREAM_RADIUS=16;
+    /** 断流：**持续状态**。每道斩击消耗"解"的 50% 咒力（解 = {@code Curse.COST[0]} = 35 → 17.5），付不出就自动中断。
+     *  只斩流体不斩方块，且不看破坏方块开关（走 {@link SkillDestruction#flushFluids}）。 */
+    public static final double STREAM_COST_SCALE=0.5;
+    private static final int STREAM_INTERVAL=4;           // 每 4 刻一道斩击
+    private static final double STREAM_SLASH_RADIUS=5.0;  // 每道斩击清这个半径内的流体
+    private static final Map<UUID,ServerPlayer> streams=new HashMap<>();
     private static long holdId;
     static boolean valid(ServerPlayer p,ServerLevel l){return p.isAlive()&&!p.isRemoved()&&!p.isSpectator()&&p.level()==l&&MaidBridge.body(p).isAlive()&&!EternalLove.settling(MaidBridge.body(p))&&(MaidBridge.isCaster(p)||!p.hasDisconnected());}
     public static boolean allowed(ServerPlayer p){return valid(p,p.serverLevel())&&Journey.unlocked(p)&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p)&&!MaidBridge.recovering(p)&&!GuardianPlayerSkills.locked(p);}
@@ -215,7 +219,7 @@ public final class CombatExpansion {
     }
     private static Vec3[] starEdge(Star s,int stroke){int[][] edges={{0,2},{2,4},{4,0},{1,3},{3,5},{5,1}};Vec3[] result=new Vec3[2];for(int i=0;i<2;i++){double a=-Math.PI/2+edges[stroke][i]*Math.PI/3;result[i]=s.center.add(s.side.scale(Math.cos(a)*4)).add(s.up.scale(Math.sin(a)*4));}return result;}
     public static void dragonHold(ServerPlayer p){Star s=drawing.get(p.getUUID());if(s!=null&&s.strokes==6&&!chants.containsKey(p.getUUID())&&allowed(p))chants.put(p.getUUID(),new Chant(p,true,TechniqueInput.intent(p)));}
-    public static void stopDragonChant(ServerPlayer p){Chant c=chants.get(p.getUUID());if(c!=null&&c.dragon){chants.remove(p.getUUID());drawing.remove(p.getUUID());}}
+    public static void stopDragonChant(ServerPlayer p){Chant c=chants.get(p.getUUID());if(c!=null&&c.dragon){chants.remove(p.getUUID());drawing.remove(p.getUUID());streams.remove(p.getUUID());}}
     private static void announce(ServerPlayer p,String word){
         Component message=Component.literal(word);for(ServerPlayer listener:p.server.getPlayerList().getPlayers()){
             if(TechniqueConfig.chat())listener.sendSystemMessage(Component.literal("["+MaidBridge.body(p).getName().getString()+"] "+word));
@@ -228,16 +232,28 @@ public final class CombatExpansion {
         Curse.status(p,"PurpleFurnaceCooldown",60);Skills.purpleBow(p);
     }
     public static void toggleStream(ServerPlayer p){
+        if(streams.remove(p.getUUID())!=null){Curse.sync(p);CastFeedback.tell(p,"断流：关闭");return;}
         if(!allowed(p))return;
-        int erased=SkillDestruction.flushFluids(p,STREAM_RADIUS);
-        Curse.sync(p);
-        CastFeedback.tell(p,"断流 · 一刀斩灭周围 "+STREAM_RADIUS+" 格内流体 "+erased+" 格（不破坏方块，无需开启破坏方块）");
+        double cost=Curse.COST[0]*STREAM_COST_SCALE;
+        if(!Curse.canSpend(p,cost)){CastFeedback.unavailable(p,cost);return;}
+        streams.put(p.getUUID(),p);Curse.sync(p);
+        CastFeedback.tell(p,"断流：开启 · 持续斩除周围流体（不斩方块，无需开启破坏方块）· 每道斩击消耗 "+BalanceRules.number(cost)+" 咒力");
     }
-    public static boolean streaming(ServerPlayer p){return false;}
+    public static boolean streaming(ServerPlayer p){return streams.containsKey(p.getUUID());}
     public static int lingerCount(ServerPlayer p){return (int)projectiles.stream().filter(b->b.p==p&&b.level==p.level()&&b.kind==LINGER&&b.stationary>=0&&b.stationary<CombatExpansionRules.LINGER_LIFE).count();}
     public static void consumeLingers(ServerPlayer p){projectiles.removeIf(b->b.p==p&&b.kind==LINGER&&b.stationary>=0);}
+    /** 一道斩击：先扣"解"的 50% 咒力，付不出就自动中断；然后斩掉身周流体（不斩方块）并画一道剑气。 */
     private static void stream(ServerPlayer p){
-        // 断流已改为"按下即一次性斩完"，这里保留空实现只为兼容旧调用点。
+        if(!streams.containsKey(p.getUUID()))return;
+        double cost=Curse.COST[0]*STREAM_COST_SCALE;
+        if(!Curse.spend(p,cost)){streams.remove(p.getUUID());Curse.sync(p);CastFeedback.tell(p,"断流：咒力不足，已中断");return;}
+        SkillDestruction.flushFluids(p,STREAM_SLASH_RADIUS);
+        LivingEntity body=MaidBridge.body(p);
+        Vec3 look=body.getLookAngle();
+        Vec3 side=new Vec3(-look.z,0,look.x);
+        side=side.lengthSqr()<1e-6?new Vec3(1,0,0):side.normalize();
+        Vec3 c=body.getEyePosition().add(look.scale(1.5));
+        line(p,c.subtract(side.scale(3)),c.add(side.scale(3)),8,0);
     }
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e){
         if(e.phase!=TickEvent.Phase.END)return;
@@ -290,15 +306,20 @@ public final class CombatExpansion {
             List<LivingEntity> targets=Skills.crosshairOrder(star.p,near(star.p,star.center,96));
             for(int i=0;i<CombatExpansionRules.METEORS_PER_STAR;i++){double a=i*2.399963,y=1-2*(i+.5)/20.0,r=Math.sqrt(1-y*y);Projectile b=new Projectile(star.p,star.center,new Vec3(Math.cos(a)*r,y,Math.sin(a)*r),METEOR,1.3);if(!targets.isEmpty())b.target=targets.get(i%targets.size()).getUUID();add(b);}
         }
+        // 断流：持续状态，每 STREAM_INTERVAL 刻一道斩击（每道扣解的 50% 咒力）
+        for(ServerPlayer p:List.copyOf(streams.values())){
+            if(!allowed(p)){streams.remove(p.getUUID());Curse.sync(p);continue;}
+            if(p.level().getGameTime()%STREAM_INTERVAL==0)stream(p);
+        }
     }
     private static void afterWorld(Chant c){TechniqueInput.withIntent(c.p,c.input,()->afterCast(c.p,SlashFormRules.WORLD));}
     public static void protect(ServerPlayer owner,UUID target){Rain r=rains.get(target);if(r!=null&&r.p==owner)releaseRain(r);}
     public static void cancel(ServerPlayer p){
-        automatic.remove(p.getUUID());TechniqueInput.cancel(p);cutSeries.removeIf(c->c.p==p);projectiles.removeIf(b->b.p==p);scheduled.removeIf(s->s.p==p);stars.removeIf(s->s.p==p);falls.values().removeIf(f->f.p==p);chants.remove(p.getUUID());drawing.remove(p.getUUID());
+        automatic.remove(p.getUUID());TechniqueInput.cancel(p);cutSeries.removeIf(c->c.p==p);projectiles.removeIf(b->b.p==p);scheduled.removeIf(s->s.p==p);stars.removeIf(s->s.p==p);falls.values().removeIf(f->f.p==p);chants.remove(p.getUUID());drawing.remove(p.getUUID());streams.remove(p.getUUID());
         for(Rain r:List.copyOf(rains.values()))if(r.p==p||r.target==MaidBridge.body(p))releaseRain(r);
     }
     @SubscribeEvent public static void logout(PlayerEvent.PlayerLoggedOutEvent e){if(e.getEntity() instanceof ServerPlayer p)cancel(p);}
     @SubscribeEvent public static void dimension(PlayerEvent.PlayerChangedDimensionEvent e){if(e.getEntity() instanceof ServerPlayer p)cancel(p);}
-    @SubscribeEvent public static void stop(ServerStoppedEvent e){for(Rain r:List.copyOf(rains.values()))releaseRain(r);projectiles.clear();cutSeries.clear();scheduled.clear();stars.clear();falls.clear();chants.clear();drawing.clear();automatic.clear();TechniqueInput.clear();}
+    @SubscribeEvent public static void stop(ServerStoppedEvent e){for(Rain r:List.copyOf(rains.values()))releaseRain(r);projectiles.clear();cutSeries.clear();scheduled.clear();stars.clear();falls.clear();chants.clear();drawing.clear();streams.clear();automatic.clear();TechniqueInput.clear();}
     private CombatExpansion(){}
 }

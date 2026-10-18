@@ -124,6 +124,13 @@ public final class NetBranches {
             if(!projectiles.contains(q))continue;
             if(!valid(q.owner,q.level)||DomainClash.active(q.owner)||q.age>=NetBranchRules.QI_LIFE){projectiles.remove(q);stop(q.owner,q.level,q.position,q.id);continue;}
             Vec3 next=q.position.add(q.direction.scale(NetBranchRules.QI_SPEED));
+            // **剑气不能穿墙**（用户 r279 要求；只有世界斩例外，而世界斩不走这条通道）：
+            // 这一格飞出去撞到方块，就在墙前停住、视觉收尾，不再往后穿透。
+            var wall=q.level.clip(new net.minecraft.world.level.ClipContext(q.position,next,
+                net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,q.owner));
+            if(wall.getType()==net.minecraft.world.phys.HitResult.Type.BLOCK){
+                projectiles.remove(q);stop(q.owner,q.level,wall.getLocation(),q.id);continue;
+            }
             if(CombatExpansion.collideSlash(q.owner,q.position,next,q.direction)){projectiles.remove(q);stop(q.owner,q.level,q.position,q.id);continue;}
             for(int step=0;step<=5;step++){Vec3 center=q.position.lerp(next,step/5.0);Vec3 previous=null;for(int i=0;i<=16;i++){double angle=-Math.PI/2+Math.PI*i/16;Vec3 point=center.add(q.side.scale(NetBranchRules.qiSide(angle))).add(q.direction.cross(q.side).scale(NetBranchRules.qiBend(angle)));if(previous!=null)SkillDestruction.immediate(q.owner,previous,point,0.5);previous=point;}}
             for(LivingEntity target:q.level.getEntitiesOfClass(LivingEntity.class,new AABB(q.position,next).inflate(NetBranchRules.QI_RADIUS+0.5),e->!q.hit.contains(e.getUUID())&&CombatSettings.canHit(q.owner,e))){

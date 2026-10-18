@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " C ",
+    "CBC",
+    " O "
+  ],
+  "key": {
+    "C": { "item": "minecraft:crying_obsidian" },
+    "B": { "item": "minecraft:netherite_sword" },
+    "O": { "item": "minecraft:obsidian" }
+  },
+  "result": { "item": "sukuna:shinbuke" }
+}

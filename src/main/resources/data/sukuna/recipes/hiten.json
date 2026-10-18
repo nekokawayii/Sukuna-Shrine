@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " F ",
+    "FBF",
+    " L "
+  ],
+  "key": {
+    "F": { "item": "minecraft:feather" },
+    "B": { "item": "minecraft:netherite_sword" },
+    "L": { "item": "minecraft:leather" }
+  },
+  "result": { "item": "sukuna:hiten" }
+}

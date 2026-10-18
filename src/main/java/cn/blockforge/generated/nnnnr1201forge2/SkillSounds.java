@@ -26,6 +26,9 @@ public final class SkillSounds {
         for(String id:List.of("yuji_soul_impact","iwate_wind","soul_shrine","soul_peel","soul_feast","guardian_victory"))register(id);
         register("black_flash");   // 黑闪命中音效
         register("gojo_domain_start");register("gojo_domain_mid");register("domainshatter");   // 无量空处展开：起手 + 1.445 秒后无缝接 mid
+        // 咏唱·茈：四句咒词（九纲/偏光/乌与声明/表里之间）+ 释放音；音频长度决定蓄力时长，见 GojoCombat 的 CHANT_*
+        for(int i=1;i<=4;i++)register("gojo_chant_"+i);
+        register("gojo_chant_release");
         for(int i=1;i<=11;i++)register("buddha_"+i);
         for(int i:new int[]{1,3,4,5,6,8,9,10,11,12})register("guardian_"+i);
         for(String id:AWAKENED)register("nine_"+id);

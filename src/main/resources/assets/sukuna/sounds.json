@@ -67,5 +67,10 @@
   "black_flash":{"sounds":[{"name":"sukuna:blackflash"}]},
   "gojo_domain_start":{"sounds":[{"name":"sukuna:gojodomainstart"}]},
   "gojo_domain_mid":{"sounds":[{"name":"sukuna:gojodomainmid"}]},
-  "domainshatter":{"sounds":[{"name":"sukuna:domainshatter"}]}
+  "domainshatter":{"sounds":[{"name":"sukuna:domainshatter"}]},
+  "gojo_chant_1": {"sounds": [{"name": "sukuna:gojo_chant_1"}]},
+  "gojo_chant_2": {"sounds": [{"name": "sukuna:gojo_chant_2"}]},
+  "gojo_chant_3": {"sounds": [{"name": "sukuna:gojo_chant_3"}]},
+  "gojo_chant_4": {"sounds": [{"name": "sukuna:gojo_chant_4"}]},
+  "gojo_chant_release": {"sounds": [{"name": "sukuna:gojo_chant_release"}]}
 }

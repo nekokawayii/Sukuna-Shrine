@@ -230,6 +230,19 @@ public final class GojoCombat {
         float size=(float)(PURPLE_MIN_SIZE+(PURPLE_MAX_SIZE-PURPLE_MIN_SIZE)*t);
         fx(p,GojoFx.PURPLE_CHARGE,hand(p).add(p.getLookAngle().scale(0.2)),Vec3.ZERO,size,4,0);
     }
+    /** 一句咒词：给全服打 title（与世界斩同款）+ 在施法者位置播这一句的音频。 */
+    private static void chantLine(ServerPlayer p,int i){
+        String speaker=MaidBridge.body(p).getName().getString();
+        for(ServerPlayer listener:p.server.getPlayerList().getPlayers()){
+            if(TechniqueConfig.chat())listener.sendSystemMessage(Component.literal("["+speaker+"] "+CHANT_WORDS[i]));
+            else{
+                listener.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket(2,CHANT_STAY[i],2));
+                listener.connection.send(new net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket(Component.literal(speaker+" · 咏唱·茈")));
+                listener.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket(Component.literal(CHANT_WORDS[i])));
+            }
+        }
+        SkillSounds.play(p,CHANT_SOUNDS[i]);
+    }
     /** 点按版发射：从手心沿准星（有目标就朝目标）直线打出。**无冷却**，伤害 45%，连点咒力 +75%/次。 */
     private static void launchPurpleTap(ServerPlayer p){
         State s=states.computeIfAbsent(p.getUUID(),k->new State(p));
@@ -292,7 +305,7 @@ public final class GojoCombat {
                 // 对撞特效由 channel 每刻发送（跟着自己），这里不再提前发一发造成闪一下
             }
             case 4->{ // 咏唱·茈
-                p.displayClientMessage(Component.literal("咏唱·茈：苍与赫旋转对撞 3 秒，打出 200% 大小/伤害的茈"),true);
+                p.displayClientMessage(Component.literal("咏唱·茈：四句咒词（九纲/偏光/乌与声明/表里之间）念完约 7 秒，然后打出 200% 的茈"),true);
             }
             case 5->{ // 瞬移
                 Vec3 from=p.position();
@@ -371,8 +384,15 @@ public final class GojoCombat {
     private static final int BEAM_ZONE_TICKS=20;
     /** 无限制茈同样的持续伤害区：60 刻（3 秒）× 每秒 400。 */
     private static final int UNLIMITED_ZONE_TICKS=60;
-    /** 咏唱·茈：蓄力 3 秒（60 刻），尺寸/伤害都是 200%。 */
-    private static final int CHANT_TICKS=60;
+    /** 咏唱·茈：四句咒词，**每句音频必须播完**才进下一句，四句放完才蓄力完成（所以对撞时长由音频决定）。
+     *  实测（44.1kHz 源，已转 Ogg Vorbis）：九纲 0.906s / 偏光 1.509s / 乌与声明 1.974s / 表里之间 2.670s，
+     *  累加 **7.059 秒 = 141 刻**；四句起播刻 {@link #CHANT_AT}，标题停留刻 {@link #CHANT_STAY}。 */
+    private static final int CHANT_TICKS=141;
+    private static final int[] CHANT_AT={0,18,48,88};
+    private static final int[] CHANT_STAY={14,26,35,49};
+    private static final String[] CHANT_WORDS={"九纲","偏光","乌与声明","表里之间"};
+    private static final String[] CHANT_SOUNDS={"gojo_chant_1","gojo_chant_2","gojo_chant_3","gojo_chant_4"};
+    private static final String CHANT_RELEASE="gojo_chant_release";
     private static final float CHANT_SCALE=2.0f;
     /** 长按阈值：苍 14 刻、赫/其它 10 刻（太低会让轮盘里普通点选误触最大功率）。 */
     private static final int BLUE_MAX_HOLD_TICKS=14,MAX_POWER_HOLD_TICKS=10;
@@ -487,17 +507,21 @@ public final class GojoCombat {
                 }
                 if(age>=115)s.casting=-1;
             }
-            case 4->{ // 咏唱·茈：苍与赫**旋转**对撞 3 秒，打出 200% 大小 / 200% 伤害的茈
+            case 4->{ // 咏唱·茈：四句咒词（title + 音频，放完才算蓄力完）→ 旋转对撞 → 打出 200% 的茈
+                int ct=age-1;   // channel() 里 age 从 1 开始，这里换成从 0 计的时间轴
                 Vec3 gather=p.getEyePosition().add(p.getLookAngle().scale(5.4));
-                if(age<=CHANT_TICKS)fx(p,GojoFx.PURPLE_GATHER_SPIN,gather,Vec3.ZERO,3,100,Math.min(95,age*95/CHANT_TICKS));
-                if(age==CHANT_TICKS){
+                if(ct<=CHANT_TICKS)fx(p,GojoFx.PURPLE_GATHER_SPIN,gather,Vec3.ZERO,3,100,Math.min(95,ct*95/Math.max(1,CHANT_TICKS)));
+                for(int i=0;i<CHANT_AT.length;i++)if(ct==CHANT_AT[i])chantLine(p,i);
+                if(ct>=CHANT_TICKS){
+                    // 释放的一瞬间：播释放音 + 打出 200% 大小/伤害的茈
+                    SkillSounds.play(p,CHANT_RELEASE);
                     fx(p,GojoFx.PURPLE_FORM,gather,Vec3.ZERO,3*CHANT_SCALE,30,0);
                     Orb orb=new Orb(p,false,true,gather,p.getLookAngle().scale(1.0),null,140);
                     orb.damage=PURPLE_DAMAGE*CHANT_SCALE;
                     orb.vis=3f*CHANT_SCALE;      // 视觉也是 200%
                     orbs.add(orb);
+                    s.casting=-1;
                 }
-                if(age>=CHANT_TICKS+15)s.casting=-1;
             }
             case 6->{ // 三连拳
                 if(age==1||age==8||age==15){

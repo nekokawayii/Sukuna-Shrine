@@ -38,3 +38,14 @@ mandatory=false
 versionRange="[1.2.5,)"
 ordering="AFTER"
 side="BOTH"
+
+# 苍/赫/茈 的**彩色光照**前置：Colorful Lighting（客户端 mod，1.20.1 Forge）。
+# 不装不影响任何玩法——只少掉"光真的照亮周围"这一层（退回模组自绘的发光壳）。
+# 装了之后我们放的 sukuna:blue_light / red_light / purple_light 会被它按
+# assets/sukuna/light/emitters.json 上色，走原版光照引擎传播，跟 Oculus 光影也兼容。
+[[dependencies.${mod_id}]]
+modId="colorful_lighting"
+mandatory=false
+versionRange="[2.0,)"
+ordering="AFTER"
+side="CLIENT"

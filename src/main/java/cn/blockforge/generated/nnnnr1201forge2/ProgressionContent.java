@@ -32,6 +32,11 @@ public final class ProgressionContent {
         @Override public InteractionResultHolder<ItemStack> use(Level l,Player p,InteractionHand h){ItemStack stack=p.getItemInHand(h);if(p instanceof ServerPlayer sp){if(!Curse.awakened(p)){sp.sendSystemMessage(Component.literal("先吞噬即身佛肉体，才能凝聚咒胎祭坛"));return InteractionResultHolder.fail(stack);}if(p.getInventory().countItem(Items.NETHERITE_INGOT)<6||p.getInventory().countItem(CORE.get())<3){sp.sendSystemMessage(Component.literal("祭坛合成需要：禁忌之胎×1、下界合金锭×6、下界核心×3；材料放在背包后右键禁忌之胎"));return InteractionResultHolder.fail(stack);}take(p,Items.NETHERITE_INGOT,6);take(p,CORE.get(),3);stack.shrink(1);Journey.give(sp,new ItemStack(ALTAR_ITEM.get()));sp.sendSystemMessage(Component.literal("咒胎祭坛已凝聚。放置后右键查看任务，持咒胎右键可合成九相图。"));}return InteractionResultHolder.sidedSuccess(stack,l.isClientSide);}
         @Override public void appendHoverText(ItemStack s,Level l,List<Component> lines,TooltipFlag f){lines.add(Component.literal("觉醒后右键：消耗本物品、6下界合金锭、3下界核心合成祭坛"));}
     });
+    /** 苍 / 赫 / 茈 的不可见彩色光源（无对应物品、拿不到、砸不掉）：Colorful Lighting 按 id 给它们上色。
+     *  颜色表在 {@code assets/sukuna/light/emitters.json}，搬运逻辑在 {@link GojoColoredLights}。 */
+    public static final RegistryObject<Block> BLUE_LIGHT=BLOCKS.register("blue_light",()->new ColoredLightBlock(GojoColoredLights.LIGHT_BLUE));
+    public static final RegistryObject<Block> RED_LIGHT=BLOCKS.register("red_light",()->new ColoredLightBlock(GojoColoredLights.LIGHT_RED));
+    public static final RegistryObject<Block> PURPLE_LIGHT=BLOCKS.register("purple_light",()->new ColoredLightBlock(GojoColoredLights.LIGHT_PURPLE));
     public static final RegistryObject<Block> TRANSFIGURED_FLESH=BLOCKS.register("idle_transfigured_flesh",()->new Block(BlockBehaviour.Properties.copy(Blocks.NETHER_WART_BLOCK).strength(4,12).sound(SoundType.SLIME_BLOCK)));
     public static final RegistryObject<Item> TRANSFIGURED_FLESH_ITEM=item("idle_transfigured_flesh",()->new BlockItem(TRANSFIGURED_FLESH.get(),new Item.Properties().rarity(Rarity.RARE)));
     public static final RegistryObject<Block> ALTAR=BLOCKS.register("cursed_altar",()->new Block(BlockBehaviour.Properties.copy(Blocks.CRYING_OBSIDIAN).strength(6,1200).lightLevel(s->10)){

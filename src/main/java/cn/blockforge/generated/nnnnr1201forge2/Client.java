@@ -404,7 +404,10 @@ public final class Client {
                 for(int j=0;j<20;j++){double a=j*Math.PI/10+v.e.seed()%100;Vec3 dir=new Vec3(Math.cos(a),0.3+(j%4)*0.15,Math.sin(a)).normalize();Vec3 p=v.e.position().add(dir.scale(radius));ribbon(b,ps,p,p.add(dir.scale(1.5+f*3)),0.07,((int)(230*fade)<<24)|0xFFF4BC,cam);}
             }
         }
-        BufferUploader.drawWithShader(b.end());WallpaperSlash.end(ps);RenderSystem.depthMask(true);RenderSystem.enableCull();RenderSystem.disableBlend();ps.popPose();
+        BufferUploader.drawWithShader(b.end());WallpaperSlash.end(ps);
+        // 桌面是在 end() 里最后 flush 的：红色乱码条必须等它画完再另起一批，才能压在桌面之上。
+        BeyondRiftClient.overlay(ps,cam,e.getPartialTick());
+        RenderSystem.depthMask(true);RenderSystem.enableCull();RenderSystem.disableBlend();ps.popPose();
     }
     /** 无限线按相机可见区段绘制；长度不进入伤害判定，也不发送无穷浮点数。 */
     public static void drawInfiniteCut(BufferBuilder b,PoseStack ps,Network.Effect e,Vec3 cam,float age){

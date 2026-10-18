@@ -8,7 +8,9 @@ import net.minecraft.world.phys.Vec3;
 /**
  * 灵魂通道北端那道常驻裂隙的表现层：撕裂的黑色口子，里面是**玩家的电脑桌面**
  * （复用斩击壁纸那条按屏幕坐标采样的管线，所以真的是"从裂口里看见桌面"而不是贴一张图）。
- * 没有开启壁纸共享时退化成一块没有信号的暗屏 + 红色乱码条，不影响剧情判定。
+ * 没有开启壁纸共享时退化成一块没有信号的暗屏。
+ * 分工：draw() 画"桌面及以下"，overlay() 画"压在桌面之上的红色乱码"——
+ * 桌面是在 WallpaperSlash.end() 里最后 flush 的，乱码条必须等它画完再另起一批，否则会被盖掉。
  */
 public final class BeyondRiftClient {
     private static final int SLICES=56;
@@ -51,7 +53,23 @@ public final class BeyondRiftClient {
             double w=BeyondRift.HALF_WIDTH*0.55*(0.55+0.45*noise(i*31));
             Client.quad(b,ps,new Vec3(BeyondRift.CENTER.x-w,y,z+0.04),new Vec3(BeyondRift.CENTER.x+w,y,z+0.04),new Vec3(BeyondRift.CENTER.x+w,y+0.05,z+0.04),new Vec3(BeyondRift.CENTER.x-w,y+0.05,z+0.04),i%3==0?0x2AFF3A4C:0x1AFFFFFF);
         }
-        // ③ 红色乱码条：位置、长度、粗细都随时间跳，模拟"越界数据"（限制在裂口内部）
+        // ③ 上下缘的暗红描边，让裂口在漆黑里也有轮廓
+        for(int i=0;i<n;i++){
+            edge(b,ps,xs[i],top[i],xs[i+1],top[i+1],0.085,0xFF5E0B18,z+0.05);
+            edge(b,ps,xs[i],bot[i],xs[i+1],bot[i+1],0.085,0xFF4A0712,z+0.05);
+        }
+    }
+
+    /** 上层：红色乱码条 + 竖直撕裂。必须由 Client 在 WallpaperSlash.end() 之后调用，压在桌面之上。 */
+    public static void overlay(PoseStack ps,Vec3 cam,float partial){
+        var mc=Minecraft.getInstance();
+        if(mc.level==null||mc.player==null)return;
+        if(mc.level.dimension()!=SoulJourney.CORRIDOR)return;
+        if(cam.distanceToSqr(BeyondRift.CENTER)>256*256)return;
+        double time=mc.level.getGameTime()+partial,z=BeyondRift.CENTER.z;
+        BufferBuilder b=Tesselator.getInstance().getBuilder();
+        b.begin(VertexFormat.Mode.QUADS,DefaultVertexFormat.POSITION_COLOR);
+        // 红色乱码条：位置、长度、粗细都随时间跳，模拟"越界数据"（限制在裂口内部）
         for(int i=0;i<10;i++){
             double seed=i*13.7,phase=time*0.9+seed;
             double pick=fract(Math.sin(phase*1.7+seed)*43758.5453);
@@ -65,14 +83,8 @@ public final class BeyondRiftClient {
             int color=pick>0.82?0xA6FFFFFF:0x8CFF2A3C;
             Client.quad(b,ps,new Vec3(x0,y-h,z+0.06),new Vec3(x0+width,y-h,z+0.06),new Vec3(x0+width,y+h,z+0.06),new Vec3(x0,y+h,z+0.06),color);
         }
-        // ④ 上下缘的暗红描边，让裂口在漆黑里也有轮廓
-        for(int i=0;i<n;i++){
-            edge(b,ps,xs[i],top[i],xs[i+1],top[i+1],0.085,0xFF5E0B18,z+0.05);
-            edge(b,ps,xs[i],bot[i],xs[i+1],bot[i+1],0.085,0xFF4A0712,z+0.05);
-        }
-        // ⑤ 偶尔一道竖直撕裂
-        double tear=fract(Math.sin(time*0.11)*9871.3);
-        if(tear>0.87){
+        // 偶尔一道竖直撕裂
+        if(fract(Math.sin(time*0.11)*9871.3)>0.87){
             double x=BeyondRift.CENTER.x+(fract(Math.sin(time*0.07)*3571.7)-0.5)*BeyondRift.HALF_WIDTH*1.1;
             double env=env(x);
             if(env>0.12){
@@ -80,15 +92,16 @@ public final class BeyondRiftClient {
                 Client.quad(b,ps,new Vec3(x-0.05,BeyondRift.CENTER.y+half,z+0.07),new Vec3(x+0.05,BeyondRift.CENTER.y+half,z+0.07),new Vec3(x+0.05,BeyondRift.CENTER.y-half,z+0.07),new Vec3(x-0.05,BeyondRift.CENTER.y-half,z+0.07),0xA8FF5060);
             }
         }
+        BufferUploader.drawWithShader(b.end());
+    }
+    private static void edge(BufferBuilder b,PoseStack ps,double x0,double y0,double x1,double y1,double width,int color,double z){
+        Client.quad(b,ps,new Vec3(x0,y0+width,z),new Vec3(x1,y1+width,z),new Vec3(x1,y1-width,z),new Vec3(x0,y0-width,z),color);
     }
     /** 平滑的裂口轮廓：与切片同一套 sin^0.62 包络，用来把乱码条限制在口子内部。 */
     private static double env(double x){
         double t=(x-BeyondRift.CENTER.x+BeyondRift.HALF_WIDTH)/(2*BeyondRift.HALF_WIDTH);
         if(t<=0||t>=1)return 0;
         return Math.pow(Math.sin(Math.PI*t),0.62);
-    }
-    private static void edge(BufferBuilder b,PoseStack ps,double x0,double y0,double x1,double y1,double width,int color,double z){
-        Client.quad(b,ps,new Vec3(x0,y0+width,z),new Vec3(x1,y1+width,z),new Vec3(x1,y1-width,z),new Vec3(x0,y0-width,z),color);
     }
     private static double noise(int i){return fract(Math.sin(i*12.9898+78.233)*43758.5453);}
     private static double fract(double v){return v-Math.floor(v);}

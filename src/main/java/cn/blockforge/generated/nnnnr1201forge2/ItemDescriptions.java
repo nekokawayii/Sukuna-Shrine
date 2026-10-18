@@ -36,7 +36,6 @@ public final class ItemDescriptions {
             case "mahoraga_wheel_recall"->"召唤友方魔虚罗后由法轮变成。|右键：把场上的友方魔虚罗收回，并**变回法轮**（可继续戴在头上）。|场上已经没有友方魔虚罗时右键，同样会变回法轮。";
             case "mahoraga_spawn_egg"->"测试用：直接生成魔虚罗。|没有调伏仪式的独自限制，但它依然不分敌我、并且照常按攻击类型适应。";
             case "nine_death_paintings"->"九种试炼咒胎各一个合成，完成即身佛阶段后吞噬一次。|"+GrowthConfig.NINE.description(Network.tooltipFactor(BalanceRules.Category.PLAYER_HEALTH),Network.tooltipFactor(BalanceRules.Category.PLAYER_ATTACK),Network.tooltipFactor(BalanceRules.Category.DAMAGE))+"。|斩击命中1秒后联合追击；V开启15秒九相轮转。";
-            case "beyond_fragment"->"击败五条悟之后，走到灵魂通道北端那道裂隙前，它会从里面掉出来。|带着它回到岩手地形的虎杖家（Y=1301 的四方庭院），那里有人在等你。|它不属于这个世界：图片里有光标、有窗口的边框，却读不出任何文字。";
             case "nether_core"->"祭坛材料；黑曜石放中央，上下左右各一份烈焰粉合成。";
             case "forbidden_fetus"->"即身佛掉落的禁忌胚胎，凝聚咒胎祭坛的核心。";
             case "cursed_altar"->"放置后右键查看当前试炼。|背包带齐九种咒胎时右键，消耗各一个凝聚九相图。";

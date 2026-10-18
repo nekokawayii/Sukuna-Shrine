@@ -68,7 +68,6 @@ public final class BeyondRift {
         level.playSound(null,from.x,from.y,from.z,SoundEvents.ENDERMAN_TELEPORT,SoundSource.PLAYERS,1.2f,0.55f);
         Curse.data(p).putInt(STAGE,1);
         com.mojang.logging.LogUtils.getLogger().info("[裂隙] 碎片掉出：玩家={} 位置=({},{},{})",p.getName().getString(),String.format(Locale.ROOT,"%.1f",from.x),String.format(Locale.ROOT,"%.1f",from.y),String.format(Locale.ROOT,"%.1f",from.z));
-        p.sendSystemMessage(Component.literal("【裂隙】有什么东西从裂缝里掉了出来……").withStyle(ChatFormatting.DARK_PURPLE));
     }
 
     /** 信：带着碎片走进虎杖家，虎天帝消失、地上留信、屏幕报错。 */

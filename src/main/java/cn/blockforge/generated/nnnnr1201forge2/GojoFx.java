@@ -92,14 +92,17 @@ public final class GojoFx {
             case BLUE,BLUE_END->{
                 if(e.kind()==BLUE_END){GojoTrailClient.drop(orb);GojoGravityClient.drop(orb);GojoBlastClient.spawn(at,Math.max(0,e.size()),0x5AA8FF);return;}
                 spark(at,Math.max(0.8,e.size()),Math.max(0.8,e.size())*0.62,0xB43A8CFF,0xFF12304F,GLOW,true,2,5,22,4.5);
+                volumes(at,0x553A8CFF);   // 苍：蓝光体积雾
                 if(time%2==0)spark(at,Math.max(1.4,e.size())*1.8,1.1,0x66FFFFFF,0,GLOW,true,2,6,8,2.2);
             }
             case RED,RED_END->{
                 if(e.kind()==RED_END){GojoBlastClient.spawn(at,Math.max(0,e.size()),0xFF5B3A);return;}
                 spark(at,Math.max(0.6,e.size()),0.7,0xC0FF2A16,0xFF7A1206,GLOW,true,2,5,26,2.0);
+                volumes(at,0x55FF2A16);   // 赫：红光体积雾
             }
             case PURPLE->{
                 spark(at,Math.max(1.2,e.size()),Math.max(1.2,e.size())*0.95,0xC0C08CFF,0xFF3E1C63,GALAXY,true,2,6,26,1.2);
+                volumes(at,0x55B062FF);   // 茈：紫光体积雾
                 if(time%2==0)spark(at,Math.max(1.2,e.size())*1.6,0.32,0x77CFE4FF,0,GLOW,true,2,6,8,2.0);
             }
             // 对撞过程：苍球与赫球从两侧收拢，收拢位置每刻都由服务端给出，所以全程跟着人
@@ -131,6 +134,11 @@ public final class GojoFx {
             case DOMAIN_CLOSE->{drop("domain");GojoVoidClient.close();}
             default->{}
         }
+    }
+    /** **体积雾近似**（1.20.1 没有真体积雾/光追）：在光源位置叠三层同心的大半径圆形加法薄雾，
+     *  由内向外逐渐变淡、寿命错开，肉眼看上去就像光线在雾里被散射——这是能用现有加法管线做到的最接近体积雾的画法。 */
+    private static void volumes(Vec3 at,int color){
+        for(int i=0;i<3;i++)spark(at,2.6+i*1.6,2.0+i*1.2,color,0,GLOW,true,1,5+i*2,6+i*3,0.9+i*0.5);
     }
     private static void spark(Vec3 at,double radius,double size,int color,int bloom,String texture,boolean additive,int duration,int life,double rate,double orbit){
         PhotonFx.spark(at,radius,size,color,bloom,texture,additive,duration,life,rate,orbit);

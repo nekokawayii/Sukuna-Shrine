@@ -39,10 +39,10 @@ public final class GojoPlayer {
         return skill>=34&&skill<34+SLOTS&&WHEEL[skill-34]==7;
     }
     public static int costOf(int skill){return skill>=0&&skill<COST.length?COST[skill]:0;}
-    private static final String[] DESC={"引力拉扯+每秒10伤害 · 长按为苍·最大功率：光球每秒5格跟随准星，松手停留5秒",
+    private static final String[] DESC={"引力拉扯+每秒10伤害 · 光球自带引力视界（黑洞同款扭曲）与拖尾 · 长按为苍·最大功率：光球每秒5格跟随准星，松手停留5秒",
         "斥力球 60 伤害与超级击退",
         "赫·最大功率：蓄力3秒后射出圆柱激光，沿直线贯穿并击飞（长按赫也能进）",
-        "双手合十对撞成银河紫球 · 命中 500 伤害（打魔虚罗 3 倍）",
+        "双手合十对撞成银河紫球 · 命中 500 伤害（打魔虚罗 10 倍） · 一下打不死就原地引爆：+25% 伤害并消散；一下打死则继续贯穿",
         "念完四句咒词原地引爆 48 格 · 999 伤害（打魔虚罗 3 倍） · 反噬自己 40% 生命",
         "向准星方向瞬移最多 8 格，遇墙停止",
         "近距离三连拳，命中附加缓慢",

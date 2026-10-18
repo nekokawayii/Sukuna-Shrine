@@ -291,7 +291,17 @@ public final class GojoEntity extends Monster {
                     }
                     if(o.purple){
                         fx(GojoFx.PURPLE_BURST,o.pos,Vec3.ZERO,12,30,o.id); // 命中演出：变大 + 渐隐，无溅射伤害
-                    }else fx(GojoFx.RED_END,o.pos,Vec3.ZERO,7,30,o.id);
+                        // 一下打死 → 继续飞；一下打不死 → 补 25% 伤害 + 宇宙大爆炸 + 自毁
+                        if(hurt&&p.isAlive()&&p.getHealth()>0){
+                            hit(p,125,false);
+                            level().playSound(null,o.pos.x,o.pos.y,o.pos.z,SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.5f,0.55f);
+                            fx(GojoFx.BIG_BANG,o.pos,Vec3.ZERO,GojoCombat.PURPLE_BANG_SIZE,40,o.id);
+                            it.remove();
+                            break;
+                        }
+                        continue;
+                    }
+                    fx(GojoFx.RED_END,o.pos,Vec3.ZERO,7,30,o.id);
                     it.remove();break;
                 }
             }

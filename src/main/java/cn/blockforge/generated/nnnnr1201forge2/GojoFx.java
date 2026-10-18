@@ -5,10 +5,11 @@ import net.minecraft.world.phys.Vec3;
 
 /** 五条悟招式编号与客户端 Photon 演出：服务端只发编号，客户端按编号即时构建 Photon 特效。 */
 public final class GojoFx {
-    // 编号必须避开终式 180-186，否则会被 Client.receive 的终式分支抢先处理。
+    // 编号必须避开终式 180-186，否则会被 Client.receive 的终式分支抢先处理；
+    // 204-218 是魔虚罗、219-220 是信夫（ShinbukeVisuals），所以「宇宙大爆炸」只能取 221。
     public static final int BLOCK=187,HIT=188,CHARGE=189,BEAM=190,BLUE=191,BLUE_END=192,RED=193,RED_END=194,
         PURPLE=195,PURPLE_GATHER=196,PURPLE_FORM=197,PURPLE_BURST=198,UNLIMITED=199,TELEPORT=200,
-        DOMAIN=201,DOMAIN_OPEN=202,DOMAIN_CLOSE=203;
+        DOMAIN=201,DOMAIN_OPEN=202,DOMAIN_CLOSE=203,BIG_BANG=221;
     /** 无量空处的绝对半径：画布、领域判定、对拼范围共用同一个数。 */
     public static final float DOMAIN_RADIUS=100f;
     private record Entry(PhotonFx.Handle handle,long end,boolean sticky){}
@@ -16,9 +17,9 @@ public final class GojoFx {
     private static final Map<String,Long> throttled=new HashMap<>();
     /** 记录发射器真正的创建时刻：Photon 的 lifetime 到期后不会自己续命。 */
     private static long time;
-    public static void clear(){for(Entry e:active.values())PhotonFx.stop(e.handle());active.clear();throttled.clear();time=0;GojoVoidClient.close();GojoBlastClient.clear();GojoBeamClient.clear();}
+    public static void clear(){for(Entry e:active.values())PhotonFx.stop(e.handle());active.clear();throttled.clear();time=0;GojoVoidClient.close();GojoBlastClient.clear();GojoBeamClient.clear();GojoTrailClient.clear();GojoGravityClient.clear();}
     public static void tick(){
-        time++;GojoVoidClient.tick();GojoBlastClient.tick();GojoBeamClient.tick();
+        time++;GojoVoidClient.tick();GojoBlastClient.tick();GojoBeamClient.tick();GojoTrailClient.tick();GojoGravityClient.tick();
         active.values().removeIf(e->{
             if(e.sticky()&&time<e.end())return false;
             if(time>=e.end()){PhotonFx.stop(e.handle());return true;}
@@ -56,8 +57,24 @@ public final class GojoFx {
         return new Vec3(-dir.z,0,dir.x);
     }
     public static void receive(Network.Effect e){
-        if(!PhotonFx.ready())return;
         Vec3 at=e.position();String owner=String.valueOf(e.owner());
+        // 宇宙大爆炸走模组自己的顶点通路（GojoBlastClient），**不依赖 Photon**：
+        // 必须在 ready() 门槛之前处理，否则没装 Photon 的客户端就只剩一声响。
+        if(e.kind()==BIG_BANG){
+            GojoBlastClient.bigBang(at,Math.max(1,e.size()));
+            GojoTrailClient.drop(orbKey(e));
+            GojoGravityClient.drop(orbKey(e));
+            if(!PhotonFx.ready())return;
+            // 星尘 + 一圈冲击波：给自绘的大爆炸再叠一层粒子（银河贴图自带星野感）
+            spark(at,Math.max(3,e.size())*0.85,1.1,0xC0C08CFF,0xFF3E1C63,GALAXY,true,3,8,34,1.4);
+            PhotonFx.shockwave(at,0xE0C8A0FF,Math.max(4,e.size())*1.8,30);
+            return;
+        }
+        // 拖尾同样是自绘的：先把这一包的坐标记进缎带，再决定要不要叠粒子。
+        long orb=orbKey(e);
+        if(e.kind()==BLUE||e.kind()==PURPLE)GojoTrailClient.feed(e.kind()==BLUE?GojoTrailClient.BLUE:GojoTrailClient.PURPLE,orb,at);
+        if(e.kind()==BLUE)GojoGravityClient.track(orb,at,Math.max(0.8,e.size()));
+        if(!PhotonFx.ready())return;
         switch(e.kind()){
             case BLOCK->{if(throttle("block/"+owner,5))keep("block/"+owner,PhotonFx.shockwave(at,0x66BFE4FF,1.6,10),10,false);}
             case HIT->{if(throttle("hit/"+owner,3))keep("hit/"+owner,PhotonFx.shockwave(at,0x88FFD9C8,1.3,9),9,false);}
@@ -73,7 +90,7 @@ public final class GojoFx {
                 GojoBeamClient.spawn(at,e.direction(),Math.max(0.14,e.size()),Math.max(3,e.life()));
             }
             case BLUE,BLUE_END->{
-                if(e.kind()==BLUE_END){GojoBlastClient.spawn(at,Math.max(0,e.size()),0x5AA8FF);return;}
+                if(e.kind()==BLUE_END){GojoTrailClient.drop(orb);GojoGravityClient.drop(orb);GojoBlastClient.spawn(at,Math.max(0,e.size()),0x5AA8FF);return;}
                 spark(at,Math.max(0.8,e.size()),Math.max(0.8,e.size())*0.62,0xB43A8CFF,0xFF12304F,GLOW,true,2,5,22,4.5);
                 if(time%2==0)spark(at,Math.max(1.4,e.size())*1.8,1.1,0x66FFFFFF,0,GLOW,true,2,6,8,2.2);
             }
@@ -118,4 +135,7 @@ public final class GojoFx {
     private static void spark(Vec3 at,double radius,double size,int color,int bloom,String texture,boolean additive,int duration,int life,double rate,double orbit){
         PhotonFx.spark(at,radius,size,color,bloom,texture,additive,duration,life,rate,orbit);
     }
+    /** 拖尾 / 引力视界的键：**加害者 id + 弹体 id**。
+     *  五条悟实体与玩家的弹体 id 各自从 1 起，只按弹体 id 会把两人的弹体并成同一条拖尾。 */
+    private static long orbKey(Network.Effect e){return ((long)e.owner()<<32)^(e.seed()&0xFFFFFFFFL);}
 }

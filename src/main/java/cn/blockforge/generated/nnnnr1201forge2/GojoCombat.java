@@ -17,6 +17,10 @@ public final class GojoCombat {
     public static final int COUNT=GojoPlayer.COUNT;
     /** 「茈」打魔虚罗的伤害倍率：**10 倍**（其余目标不受影响）。 */
     public static final float MAHORAGA_DAMAGE=10f;
+    /** 茈「一下打不死」时的引爆补伤：在 500 本体之上再补 **25%**（同一套加成与适应占位）。 */
+    public static final float PURPLE_BANG_BONUS=0.25f;
+    /** 宇宙大爆炸的视觉尺寸（客户端按这个半径铺三层冲击壳 + 光针）。 */
+    public static final float PURPLE_BANG_SIZE=10f;
     /** 「无限制茈」打魔虚罗的倍率：沿用旧值 3 倍（本次需求只点了茈，要一起改就把这里也换成 10）。 */
     public static final float MAHORAGA_DAMAGE_UNLIMITED=3f;
     /** 茈命中魔虚罗后的**缓慢**时长与等级：30 秒 · 缓慢 I。 */
@@ -409,18 +413,26 @@ public final class GojoCombat {
             boolean hitSomething=false;
             for(LivingEntity victim:Skills.targets(o.level,o.owner,o.pos,5)){
                 if(victim.getBoundingBox().inflate(0.7).distanceToSqr(o.pos)>2.25)continue;
-                if(o.purple&&!o.struck.add(victim.getUUID()))continue; // 茈：同一只只结算一次，然后继续飞
-                // 命中演出：变大 + 渐隐，纯视觉效果，不再附带溅射伤害
                 if(o.purple){
+                    if(!o.struck.add(victim.getUUID()))continue; // 茈：同一只只结算一次
+                    // 命中演出：变大 + 渐隐，纯视觉效果，不再附带溅射伤害
                     fx(o.owner,GojoFx.PURPLE_BURST,o.pos,Vec3.ZERO,12,30,o.id);
                     // 茈 500：打魔虚罗 ×10（{@link #MAHORAGA_DAMAGE}），并且命中后给它挂 30 秒缓慢
-                    if(hit(o.owner,victim,500,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE))purpleSlow(victim);
-                }else{
-                    fx(o.owner,GojoFx.RED_END,o.pos,Vec3.ZERO,7,30,o.id);
-                    // 赫：击中即爆炸 —— 半径 RED_RADIUS 格内所有目标都吃伤害 + 击退（用户要求：范围伤害）
-                    redBurst(o.owner,o.pos,o.level);
+                    boolean hurt=hit(o.owner,victim,500,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE);
+                    if(hurt)purpleSlow(victim);
+                    // 一下打死 → 继续飞（穿透，去撞后面的人）；一下打不死 → 引爆：补 25% 伤害 + 宇宙大爆炸 + 自身消散
+                    if(hurt&&victim.isAlive()&&victim.getHealth()>0){
+                        hit(o.owner,victim,500*PURPLE_BANG_BONUS,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE);
+                        o.level.playSound(null,o.pos.x,o.pos.y,o.pos.z,SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.5f,0.55f);
+                        fx(o.owner,GojoFx.BIG_BANG,o.pos,Vec3.ZERO,PURPLE_BANG_SIZE,40,o.id);
+                        o.dead=true;
+                        break;
+                    }
+                    continue;
                 }
-                if(o.purple)continue; // 茈穿透：继续撞后面的目标
+                fx(o.owner,GojoFx.RED_END,o.pos,Vec3.ZERO,7,30,o.id);
+                // 赫：击中即爆炸 —— 半径 RED_RADIUS 格内所有目标都吃伤害 + 击退（用户要求：范围伤害）
+                redBurst(o.owner,o.pos,o.level);
                 hitSomething=true;break; // 赫：打到就停
             }
             if(o.age>=o.life||(hitSomething&&!o.purple)){ // 茈只在飞满生命周期后消散

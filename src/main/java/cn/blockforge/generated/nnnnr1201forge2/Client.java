@@ -220,7 +220,7 @@ public final class Client {
     public static void receive(Network.Effect e){
         if(Minecraft.getInstance().level==null)return;
         if(e.kind()>=FurnaceMax.FX_CHARGE&&e.kind()<=FurnaceMax.FX_BURN){FurnaceMaxClient.receive(e);return;}
-        if(e.kind()>=GojoFx.BLOCK&&e.kind()<=GojoFx.DOMAIN_CLOSE){GojoFx.receive(e);return;}
+        if((e.kind()>=GojoFx.BLOCK&&e.kind()<=GojoFx.DOMAIN_CLOSE)||e.kind()==GojoFx.BIG_BANG){GojoFx.receive(e);return;}
         if(e.kind()>=MahoragaVisuals.FIRST&&e.kind()<=MahoragaVisuals.LAST){MahoragaVisuals.receive(e);return;}
         if(e.kind()==ShinbukeVisuals.STRIKE||e.kind()==ShinbukeVisuals.CHARGE){ShinbukeVisuals.receive(e);return;}
         if(e.kind()>=FinaleRules.FX_STATE&&e.kind()<=FinaleRules.FX_ABSORB){FinaleClient.receive(e);return;}

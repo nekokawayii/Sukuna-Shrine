@@ -31,8 +31,8 @@ import net.minecraftforge.fml.common.Mod;
  */
 @Mod.EventBusSubscriber(modid="sukuna")
 public final class GojoColoredLights {
-    /** 三个方块的亮度（Colorful Lighting 不写 {@code ;N} 时就吃这个值）。 */
-    public static final int LIGHT_BLUE=15,LIGHT_RED=12,LIGHT_PURPLE=15;
+    /** 三个方块的亮度（Colorful Lighting 不写 {@code ;N} 时就吃这个值）。**15 是原版上限**，三个都顶满了。 */
+    public static final int LIGHT_BLUE=15,LIGHT_RED=15,LIGHT_PURPLE=15;
     /** 同时存在的光源上限；超了先回收最早的一条。 */
     private static final int MAX=4;
     /** 光源方块最快多少刻挪一次：光照是延迟结算的，每刻清+放会让队列一直失效（表现＝完全没有光）。 */

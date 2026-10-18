@@ -123,7 +123,7 @@ public final class Client {
     public static class Registration {
         @SubscribeEvent public static void setup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent e){e.enqueueWork(()->{ItemBlockRenderTypes.setRenderLayer(SoulContent.THREAD.get(),RenderType.cutout());ItemBlockRenderTypes.setRenderLayer(SoulContent.RICE.get(),RenderType.cutout());MahoragaArmorModel.register();});}
         @SubscribeEvent public static void keys(RegisterKeyMappingsEvent e){e.register(WHEEL);e.register(CAST);e.register(GUIDE);e.register(ROTATE);e.register(RELATIONS);e.register(FIST);e.register(STREAM);e.register(AMPLIFY);Network.aimReceiver=AimAssistClient::receive;Network.testResetReceiver=Client::testReset;WallpaperPackets.receiver=WallpaperClient::receive;Network.motionReceiver=DismantleMotionClient::receive;Network.drawReceiver=FreehandClient::receive;Network.clashReceiver=DomainClashClient::receive;Network.clientReceiver=Client::receive;Network.progressReceiver=p->progress=p;Network.combatReceiver=FinaleClient::state;Network.relationsReceiver=p->{if(Minecraft.getInstance().screen instanceof RelationsScreen screen)screen.receive(p);};Network.controllerReceiver=p->{if(Minecraft.getInstance().screen instanceof VoidControllerScreen screen)screen.receive(p);else if(Minecraft.getInstance().screen instanceof AimOptionsScreen screen)screen.receive(p);};}
-        @SubscribeEvent public static void entities(EntityRenderersEvent.RegisterRenderers e){e.registerEntityRenderer(VoidContent.GOJO.get(),GojoRenderer::new);e.registerEntityRenderer(VoidContent.MAHORAGA.get(),MahoragaRenderer::new);e.registerEntityRenderer(SoulContent.YUJI.get(),YujiRenderer::new);e.registerEntityRenderer(SoulContent.GUARDIAN.get(),GuardianRenderer::new);e.registerEntityRenderer(Content.DAITIAN.get(),DaitianRenderer::new);e.registerEntityRenderer(Content.BROKEN_MAHITO.get(),BrokenMahitoRenderer::new);e.registerEntityRenderer(Content.MAHITO_LIMB.get(),net.minecraft.client.renderer.entity.NoopRenderer::new);e.registerEntityRenderer(Content.BUDDHA.get(),BuddhaRenderer::new);e.registerEntityRenderer(Content.PARASITE.get(),BuddhaRenderer::new);e.registerEntityRenderer(Content.MOTHER.get(),BuddhaRenderer::new);}
+        @SubscribeEvent public static void entities(EntityRenderersEvent.RegisterRenderers e){e.registerEntityRenderer(VoidContent.GOJO.get(),GojoRenderer::new);e.registerEntityRenderer(VoidContent.MAHORAGA.get(),MahoragaRenderer::new);e.registerEntityRenderer(SoulContent.YUJI.get(),YujiRenderer::new);e.registerEntityRenderer(SoulContent.GUARDIAN.get(),GuardianRenderer::new);e.registerEntityRenderer(Content.OBSERVER.get(),ObserverRenderer::new);e.registerEntityRenderer(Content.DAITIAN.get(),DaitianRenderer::new);e.registerEntityRenderer(Content.BROKEN_MAHITO.get(),BrokenMahitoRenderer::new);e.registerEntityRenderer(Content.MAHITO_LIMB.get(),net.minecraft.client.renderer.entity.NoopRenderer::new);e.registerEntityRenderer(Content.BUDDHA.get(),BuddhaRenderer::new);e.registerEntityRenderer(Content.PARASITE.get(),BuddhaRenderer::new);e.registerEntityRenderer(Content.MOTHER.get(),BuddhaRenderer::new);}
     }
     public static boolean wheelHeld(){return ClientInput.held(WHEEL);}
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut e){clear();world=null;}
@@ -219,6 +219,7 @@ public final class Client {
     public static void collectSlashes(Vec3 center,double radius,List<Vec3> out){visuals.removeIf(v->{if(!slashEffect(v.e.kind()))return false;Vec3 at=v.e.position();if(at.distanceToSqr(center)>radius*radius)return false;if(out.size()<6000)out.add(at);PhotonBridge.stop(v.handle);return true;});}
     public static void receive(Network.Effect e){
         if(Minecraft.getInstance().level==null)return;
+        if(e.kind()>=ObserverRitual.FX_START&&e.kind()<=ObserverRitual.FX_END){ObserverClient.receive(e);return;}
         if(e.kind()>=FurnaceMax.FX_CHARGE&&e.kind()<=FurnaceMax.FX_BURN){FurnaceMaxClient.receive(e);return;}
         if((e.kind()>=GojoFx.BLOCK&&e.kind()<=GojoFx.DOMAIN_CLOSE)||e.kind()==GojoFx.BIG_BANG
             ||e.kind()==GojoFx.PURPLE_CHARGE||e.kind()==GojoFx.PURPLE_TAP||e.kind()==GojoFx.PURPLE_TAP_BURST
@@ -295,17 +296,18 @@ public final class Client {
     /** 蓄力期间的视角变化（最大功率·开：FOV 放大 2 倍）。 */
     @SubscribeEvent public static void computeFov(net.minecraftforge.client.event.ViewportEvent.ComputeFov e){FurnaceMaxClient.fov(e);}
     private static boolean bossDark(){var mc=Minecraft.getInstance();return mc.player!=null&&mc.player.hasEffect(net.minecraft.world.effect.MobEffects.DARKNESS)&&visuals.stream().anyMatch(v->v.e.kind()==38&&mc.player.distanceToSqr(v.e.position())<2304);}
-    @SubscribeEvent public static void fog(ViewportEvent.ComputeFogColor e){if(bossDark()){e.setRed(0.028f);e.setGreen(0.008f);e.setBlue(0.045f);}else if(insideBlueVoid()){e.setRed(0.02f);e.setGreen(0.10f);e.setBlue(0.24f);}else if(insideVoid()){e.setRed(0.11f);e.setGreen(0.045f);e.setBlue(0.19f);}else if(inside()){e.setRed(0.40f);e.setGreen(0.018f);e.setBlue(0.045f);}FurnaceMaxClient.fog(e);}
-    @SubscribeEvent public static void fogDistance(ViewportEvent.RenderFog e){if(bossDark()&&e.getType()==net.minecraft.world.level.material.FogType.NONE){e.setNearPlaneDistance(1);e.setFarPlaneDistance(5);e.setCanceled(true);}}
+    @SubscribeEvent public static void fog(ViewportEvent.ComputeFogColor e){if(ObserverClient.active()){e.setRed(1);e.setGreen(1);e.setBlue(1);return;}if(bossDark()){e.setRed(0.028f);e.setGreen(0.008f);e.setBlue(0.045f);}else if(insideBlueVoid()){e.setRed(0.02f);e.setGreen(0.10f);e.setBlue(0.24f);}else if(insideVoid()){e.setRed(0.11f);e.setGreen(0.045f);e.setBlue(0.19f);}else if(inside()){e.setRed(0.40f);e.setGreen(0.018f);e.setBlue(0.045f);}FurnaceMaxClient.fog(e);}
+    @SubscribeEvent public static void fogDistance(ViewportEvent.RenderFog e){if(ObserverClient.active()&&e.getType()==net.minecraft.world.level.material.FogType.NONE){e.setNearPlaneDistance(0.2f);e.setFarPlaneDistance(64);e.setCanceled(true);return;}if(bossDark()&&e.getType()==net.minecraft.world.level.material.FogType.NONE){e.setNearPlaneDistance(1);e.setFarPlaneDistance(5);e.setCanceled(true);}}
     @SubscribeEvent public static void screenSeverance(RenderGuiEvent.Pre e){
         Minecraft mc=Minecraft.getInstance();
+        if(ObserverClient.active())return;
         FurnaceMaxClient.overlay(e.getGuiGraphics());
         boolean heat=mc.player!=null&&domains.values().stream().anyMatch(d->d.burning&&mc.player.position().distanceToSqr(d.center)<d.radius*d.radius);
         if(heat)FistAura.heat(e.getGuiGraphics(),tick+e.getPartialTick());
         if(!heat)FistAura.clear();
     }
     @SubscribeEvent public static void hud(RenderGuiEvent.Post e){
-        Minecraft mc=Minecraft.getInstance();if(mc.player==null||mc.options.hideGui||(mc.screen instanceof SkillWheel||mc.screen instanceof WallOptionsScreen||mc.screen instanceof DomainOptionsScreen||mc.screen instanceof RelationsScreen))return;
+        Minecraft mc=Minecraft.getInstance();if(mc.player==null||mc.options.hideGui||ObserverClient.active()||(mc.screen instanceof SkillWheel||mc.screen instanceof WallOptionsScreen||mc.screen instanceof DomainOptionsScreen||mc.screen instanceof RelationsScreen))return;
         int h=mc.getWindow().getGuiScaledHeight(),w=mc.getWindow().getGuiScaledWidth();var g=e.getGuiGraphics();FreehandClient.hud(g);
         if(!progress.unlocked()){
             boolean holding=mc.player.getMainHandItem().is(ProgressionContent.MEMORY.get())||mc.player.getOffhandItem().is(ProgressionContent.MEMORY.get());
@@ -352,7 +354,7 @@ public final class Client {
     }
     @SubscribeEvent public static void render(RenderLevelStageEvent e){
         Minecraft mc=Minecraft.getInstance();if(mc.level==null)return;
-        if(e.getStage()==RenderLevelStageEvent.Stage.AFTER_SKY){if(inside())sky(e);return;}
+        if(e.getStage()==RenderLevelStageEvent.Stage.AFTER_SKY){if(ObserverClient.active()){ObserverClient.whiteSky(e);return;}if(inside())sky(e);return;}
         if(e.getStage()!=RenderLevelStageEvent.Stage.AFTER_PARTICLES)return;
         PoseStack ps=e.getPoseStack();Vec3 cam=e.getCamera().getPosition();ps.pushPose();ps.translate(-cam.x,-cam.y,-cam.z);
         MultiBufferSource.BufferSource source=mc.renderBuffers().bufferSource();

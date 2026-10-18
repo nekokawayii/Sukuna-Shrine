@@ -58,6 +58,14 @@ public final class WallpaperSlash {
         Vec3 across=z.subtract(a).cross(camera.subtract(a.lerp(z,.5)));
         draw(b,ps,a,z,across,alpha,camera,owner);
     }
+    /** 屏幕空间的"裂口/窗口"效果可以直接拿这套着色器：它按 gl_FragCoord 采样，与几何在哪无关。 */
+    public static ShaderInstance shader(){return shader;}
+    /** 绑定桌面采样需要的两个 uniform（FrameSize / DesktopRegion），调用前必须先 setShader(shader())。 */
+    public static void desktopUniforms(){
+        if(shader==null)return;var mc=Minecraft.getInstance();var window=WallpaperClient.window();var desktop=WallpaperClient.desktop();
+        shader.safeGetUniform("FrameSize").set((float)mc.getMainRenderTarget().width,(float)mc.getMainRenderTarget().height);
+        shader.safeGetUniform("DesktopRegion").set((window.x()-desktop.x())/desktop.width(),(window.y()-desktop.y())/desktop.height(),window.width()/desktop.width(),window.height()/desktop.height());
+    }
     public static void flush(PoseStack ps){
         if(pending.isEmpty()||shader==null){pending.clear();return;}var mc=Minecraft.getInstance();var window=WallpaperClient.window();var desktop=WallpaperClient.desktop();
         shader.safeGetUniform("FrameSize").set((float)mc.getMainRenderTarget().width,(float)mc.getMainRenderTarget().height);

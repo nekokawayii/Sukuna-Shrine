@@ -118,6 +118,14 @@ public final class BeyondRift {
                 if(!p.getInventory().add(new ItemStack(Content.BEYOND_FRAGMENT.get())))p.drop(new ItemStack(Content.BEYOND_FRAGMENT.get()),false);
                 p.sendSystemMessage(Component.literal("已获得：不属于这个世界的碎片"));
                 return 1;}))
+            .then(net.minecraft.commands.Commands.literal("boss").executes(c->{
+                ServerPlayer p=c.getSource().getPlayerOrException();
+                if(p.level().dimension()!=VoidJourney.ARENA){p.sendSystemMessage(Component.literal("先站到虚空竞技场里再试（或右键碎片）。"));return 0;}
+                ObserverRitual.start(p);
+                return 1;}))
+            .then(net.minecraft.commands.Commands.literal("leave").executes(c->{
+                ObserverRitual.leave(c.getSource().getPlayerOrException());
+                return 1;}))
             .then(net.minecraft.commands.Commands.literal("reset").requires(s->s.hasPermission(2)).executes(c->{
                 ServerPlayer p=c.getSource().getPlayerOrException();
                 Curse.data(p).remove(SEEN);Curse.data(p).remove(STAGE);

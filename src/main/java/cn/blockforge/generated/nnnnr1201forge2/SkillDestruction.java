@@ -63,6 +63,17 @@ public final class SkillDestruction {
         if(state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED))state=state.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED,false);
         var falling=net.minecraft.world.entity.item.FallingBlockEntity.fall(p.serverLevel(),pos,state);falling.dropItem=false;falling.disableDrop();falling.setDeltaMovement(away.normalize().scale(.5).add(0,.85,0));falling.hurtMarked=true;return true;
     }
+    /** 同 {@link #fling}，但把生成的下落实体交回调用方 —— 苍的"吸入"要每刻把它往球心拽，赫的"掀飞"要它自己飞。 */
+    public static net.minecraft.world.entity.item.FallingBlockEntity flingEntity(ServerPlayer p,BlockPos pos,Vec3 away){
+        if(!mayChange(p,pos))return null;
+        var state=p.serverLevel().getBlockState(pos);
+        if(state.getCollisionShape(p.serverLevel(),pos).isEmpty())return null;
+        if(state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED))state=state.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED,false);
+        var falling=net.minecraft.world.entity.item.FallingBlockEntity.fall(p.serverLevel(),pos,state);
+        falling.dropItem=false;falling.disableDrop();
+        falling.setDeltaMovement(away.normalize().scale(.5).add(0,.85,0));falling.hurtMarked=true;
+        return falling;
+    }
     public static boolean forceStream(ServerPlayer p,BlockPos pos,Vec3 away){
         var state=p.serverLevel().getBlockState(pos);if(state.isAir())return false;
         // 纯流体直接清除；固体（含含水方块）直接化为下落实体。

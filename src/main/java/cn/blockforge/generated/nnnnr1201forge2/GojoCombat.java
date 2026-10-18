@@ -1,6 +1,7 @@
 package cn.blockforge.generated.nnnnr1201forge2;
 
 import java.util.*;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.*;
 import net.minecraft.sounds.*;
@@ -72,11 +73,29 @@ public final class GojoCombat {
         Vec3 pos,dir;UUID target;int age,life;final int id;boolean guide;boolean dead;
         /** 茈·点按版：走自己的小弹体特效（PURPLE_TAP），不跟对撞版共用那个大球。 */
         boolean small;
+        /** 这颗弹体的伤害与视觉尺寸：对撞 500/3、点按 225/1、咏唱 1000/6。 */
+        double damage=PURPLE_DAMAGE;float vis=3f;
         /** 已经结算过的目标：茈会穿透，途中碰到的每一只都吃伤害，但同一只只吃一次。 */
         final java.util.Set<UUID> struck=new java.util.HashSet<>();
         Orb(ServerPlayer owner,boolean blue,boolean purple,Vec3 pos,Vec3 dir,UUID target,int life){this.owner=owner;this.level=owner.serverLevel();this.blue=blue;this.purple=purple;this.pos=pos;this.dir=dir;this.target=target;this.life=life;this.id=++orbId;}
     }
-    private record Beam(ServerPlayer owner,ServerLevel level,Vec3 from,Vec3 dir,double length,float damage){}
+    /** 赫·最大功率的激光：不再是一次性判定，而是一个活 {@link #BEAM_ZONE_TICKS} 刻的持续伤害区。 */
+    private static final class Beam {
+        final ServerPlayer owner;final ServerLevel level;final Vec3 from,dir;final double length;final float damage;int ticks=BEAM_ZONE_TICKS;
+        Beam(ServerPlayer owner,ServerLevel level,Vec3 from,Vec3 dir,double length,float damage){this.owner=owner;this.level=level;this.from=from;this.dir=dir;this.length=length;this.damage=damage;}
+    }
+    /** 持续伤害区（无限制茈）：每秒 {@link #MAX_POWER_DPS} 点 + 点燃。 */
+    private static final class Zone {
+        final ServerPlayer owner;final Vec3 center;final double radius;int ticks;
+        Zone(ServerPlayer owner,Vec3 center,double radius,int ticks){this.owner=owner;this.center=center;this.radius=radius;this.ticks=ticks;}
+    }
+    /** 苍吸上来的方块（下落实体）：每刻朝苍球飞，碰到就消失。 */
+    private static final class Suck {
+        final net.minecraft.world.entity.item.FallingBlockEntity e;final Orb orb;int ttl;
+        Suck(net.minecraft.world.entity.item.FallingBlockEntity e,Orb orb,int ttl){this.e=e;this.orb=orb;this.ttl=ttl;}
+    }
+    private static final List<Zone> zones=new ArrayList<>();
+    private static final List<Suck> sucked=new ArrayList<>();
     /** 六眼本身就是全部门槛：不再要求宿傩之路，女仆与未开阶段的玩家都能直接用。 */
     private static boolean unlocked(ServerPlayer p){return GojoPlayer.unlocked(p)&&!MaidBridge.recovering(p)&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p);}
     private static String key(int skill){return "GojoCooldown"+skill;}
@@ -88,7 +107,7 @@ public final class GojoCombat {
     }
     /** 被拒时逐条报出真实原因，避免"按了没反应"这种无法排查的体验。 */
     private static void reject(ServerPlayer p,int skill){
-        String name=GojoPlayer.NAMES[skill];
+        String name=GojoPlayer.nameOf(skill);
         if(!GojoPlayer.unlocked(p)){CastFeedback.tell(p,"尚未睁开六眼：右键使用六眼即可，无需任何阶段");return;}
         if(DomainClash.penalized(p)){CastFeedback.tell(p,"领域对拼败北熔断 · 剩余 "+((DomainClash.penaltyTicks(p)+19)/20)+" 秒 · 不能提前修复");return;}
         if(Curse.burnout(p)){CastFeedback.tell(p,"术式熔断中：用术式反转或修复熔断解除");return;}
@@ -184,7 +203,8 @@ public final class GojoCombat {
     private static void chargeTick(State s){
         if(s.chargeSkill<0||s.chargeFired)return;
         long held=s.p.level().getGameTime()-s.chargeAt;
-        int threshold=s.chargeSkill==0?6:10;
+        // 长按阈值：苍 14 刻（0.7 秒）—— 之前只有 6 刻，在轮盘里点一下苍就会变成「苍·最大功率」，这就是用户报的"轮盘出现苍最大功率"
+        int threshold=s.chargeSkill==0?BLUE_MAX_HOLD_TICKS:MAX_POWER_HOLD_TICKS;
         if(held<threshold)return;
         s.chargeFired=true;
         cast(s.p,s.chargeSkill==0?8:2);
@@ -231,6 +251,8 @@ public final class GojoCombat {
         if(aim!=null){Vec3 to=aim.getBoundingBox().getCenter().subtract(from);if(to.lengthSqr()>1.0E-4)dir=to.normalize();}
         Orb shot=new Orb(p,false,true,from,dir.scale(1.0),null,100);
         shot.small=true; // 点按版：小紫球弹体，用 PURPLE_TAP 那套独立小特效
+        shot.damage=PURPLE_DAMAGE*PURPLE_TAP_DAMAGE_SCALE; // 伤害 = 长按的 45%
+        shot.vis=1.0f;
         orbs.add(shot);
         fx(p,GojoFx.PURPLE_TAP_BURST,from,Vec3.ZERO,1.4f,12,0); // 出膛：小闪光，不是 12 格的大爆
         SkillSounds.play(p,"guardian_7");
@@ -269,8 +291,8 @@ public final class GojoCombat {
                 p.displayClientMessage(Component.literal("茈：苍与赫对撞中"),true);
                 // 对撞特效由 channel 每刻发送（跟着自己），这里不再提前发一发造成闪一下
             }
-            case 4->{ // 无限制茈
-                p.displayClientMessage(Component.literal("无限制茈：需要念完四句咒词，反噬由自己承受"),true);
+            case 4->{ // 咏唱·茈
+                p.displayClientMessage(Component.literal("咏唱·茈：苍与赫旋转对撞 3 秒，打出 200% 大小/伤害的茈"),true);
             }
             case 5->{ // 瞬移
                 Vec3 from=p.position();
@@ -320,6 +342,8 @@ public final class GojoCombat {
     public static void unlimited(ServerPlayer p,Vec3 at,String reason){
         double radius=48;
         fx(p,GojoFx.UNLIMITED,at,Vec3.ZERO,(float)radius,60,0);
+        // 特效持续期间（60 刻）范围内的生物都被点燃并每秒吃 400（每刻 20）
+        zones.add(new Zone(p,at,radius,UNLIMITED_ZONE_TICKS));
         for(LivingEntity victim:Skills.targets(p.serverLevel(),p,at,radius))if(victim.position().distanceToSqr(at)<=radius*radius)hit(p,victim,999,false,MAHORAGA_DAMAGE_UNLIMITED,AttackTypes.MAGIC_PURPLE); // 无限制茈 999（打魔虚罗 ×3）
         p.invulnerableTime=0;
         p.hurt(p.serverLevel().damageSources().indirectMagic(p,p),Math.max(1,p.getMaxHealth()*0.4f));
@@ -339,9 +363,19 @@ public final class GojoCombat {
     }
     public static void clashVisual(ServerPlayer p,boolean show){State s=states.get(p.getUUID());if(s==null||s.domainUntil<=0)return;if(show)fx(p,GojoFx.DOMAIN,s.center,p.getLookAngle(),GojoFx.DOMAIN_RADIUS,400,0);else fx(p,GojoFx.DOMAIN_CLOSE,s.center,Vec3.ZERO,1,4,0);}
     public static void extendDomain(ServerPlayer p,int ticks){State s=states.get(p.getUUID());if(s!=null&&s.domainUntil>0)s.domainUntil+=ticks;}
-    /** 赫的爆炸半径（格）与范围内伤害/击退（用户指定：半径 3.5 格内都有伤害和击退）。 */
-    public static final double RED_RADIUS=3.5;
+    /** 赫的爆炸半径（格）与范围内伤害/击退（用户指定：**半径 5 格**内都有伤害和击退）。 */
+    public static final double RED_RADIUS=5.0;
     public static final double RED_AREA_DAMAGE=60;
+    /** 最大功率特效内的持续伤害：**每秒 400**（每刻 400/20=20 点）+ 点燃；持续 {@link #BEAM_ZONE_TICKS} 刻。 */
+    public static final double MAX_POWER_DPS=400;
+    private static final int BEAM_ZONE_TICKS=20;
+    /** 无限制茈同样的持续伤害区：60 刻（3 秒）× 每秒 400。 */
+    private static final int UNLIMITED_ZONE_TICKS=60;
+    /** 咏唱·茈：蓄力 3 秒（60 刻），尺寸/伤害都是 200%。 */
+    private static final int CHANT_TICKS=60;
+    private static final float CHANT_SCALE=2.0f;
+    /** 长按阈值：苍 14 刻、赫/其它 10 刻（太低会让轮盘里普通点选误触最大功率）。 */
+    private static final int BLUE_MAX_HOLD_TICKS=14,MAX_POWER_HOLD_TICKS=10;
     /** 赫 爆炸：以爆心为中心，半径 {@link #RED_RADIUS} 内每个生物都吃一次伤害 + 沿径向击退。 */
     private static void redBurst(ServerPlayer p,Vec3 center,net.minecraft.server.level.ServerLevel level){
         var box=new net.minecraft.world.phys.AABB(center,center).inflate(RED_RADIUS);
@@ -352,6 +386,54 @@ public final class GojoCombat {
             if(push.lengthSqr()<1e-4)push=p.getLookAngle();
             push=push.normalize().scale(1.15);
             victim.push(push.x,0.42,push.z);victim.hurtMarked=true;              // 击退（向外 + 上抛）
+        }
+    }
+    /** 赫爆炸时把爆心周围的方块掀成实体方块飞出去（破坏方块开启时）。 */
+    private static void redBlockFling(ServerPlayer p,Vec3 center,ServerLevel level){
+        if(!SkillDestruction.enabled(level))return;
+        BlockPos mid=BlockPos.containing(center);int n=0;
+        for(BlockPos pos:BlockPos.betweenClosed(mid.offset(-3,-2,-3),mid.offset(3,2,3))){
+            if(n>=24)break;
+            Vec3 at=Vec3.atCenterOf(pos);
+            if(at.distanceToSqr(center)>9.0)continue;
+            if(SkillDestruction.flingEntity(p,pos.immutable(),at.subtract(center))!=null)n++;
+        }
+    }
+    /** 苍：把范围内随机一块方块变成下落实体吸向苍球（每秒 10 个，靠 age%2 控频）。 */
+    private static void suckOne(Orb orb){
+        if(!SkillDestruction.enabled(orb.level))return;
+        ServerPlayer p=orb.owner;var rnd=p.getRandom();
+        for(int tries=0;tries<8;tries++){
+            double a=rnd.nextDouble()*Math.PI*2,r=2.5+rnd.nextDouble()*9.5;
+            BlockPos pos=BlockPos.containing(orb.pos.x+Math.cos(a)*r,orb.pos.y+(rnd.nextDouble()-0.5)*4,orb.pos.z+Math.sin(a)*r);
+            var e=SkillDestruction.flingEntity(p,pos,orb.pos.subtract(Vec3.atCenterOf(pos)));
+            if(e==null)continue;
+            sucked.add(new Suck(e,orb,80));
+            return;
+        }
+    }
+    /** 被吸住的方块每刻朝苍球飞；贴近 1.6 格或被回收就消失。 */
+    private static void tickSuck(){
+        for(Iterator<Suck> it=sucked.iterator();it.hasNext();){
+            Suck s=it.next();
+            boolean gone=s.e.isRemoved()||--s.ttl<=0||!orbs.contains(s.orb);
+            if(gone){if(!s.e.isRemoved())s.e.discard();it.remove();continue;}
+            Vec3 to=s.orb.pos.subtract(s.e.position());
+            if(to.length()<1.6){s.e.discard();it.remove();continue;}
+            s.e.setDeltaMovement(to.normalize().scale(0.9));s.e.hurtMarked=true;
+        }
+    }
+    /** 持续伤害区（无限制茈）：每刻 400/20 点 + 点燃。 */
+    private static void tickZones(){
+        for(Iterator<Zone> it=zones.iterator();it.hasNext();){
+            Zone z=it.next();
+            ServerLevel level=z.owner.serverLevel();
+            if(z.owner.isAlive())for(LivingEntity v:Skills.targets(level,z.owner,z.center,z.radius)){
+                if(v.distanceToSqr(z.center)>z.radius*z.radius)continue;
+                v.setSecondsOnFire(2);
+                hit(z.owner,v,MAX_POWER_DPS/20.0,false);
+            }
+            if(--z.ticks<=0)it.remove();
         }
     }
     private static boolean hit(ServerPlayer p,LivingEntity target,double damage,boolean knock){return hit(p,target,damage,knock,1f,AttackTypes.MAGIC);}
@@ -405,17 +487,17 @@ public final class GojoCombat {
                 }
                 if(age>=115)s.casting=-1;
             }
-            case 4->{ // 四句咒词后引爆：念咒期间掌间的苍与赫收拢，始终跟着自己
-                if(age<=120)fx(p,GojoFx.PURPLE_GATHER,p.getEyePosition().add(p.getLookAngle().scale(1.8)),Vec3.ZERO,2,100,Math.min(95,age*95/120));
-                if(age%25==1){
-                    int step=(age-1)/25;
-                    if(step<4)p.displayClientMessage(Component.literal("「"+new String[]{"九纲","偏光","乌与声明","表里之间"}[step]+"」"),false);
+            case 4->{ // 咏唱·茈：苍与赫旋转对撞 3 秒，打出 200% 大小 / 200% 伤害的茈
+                Vec3 gather=p.getEyePosition().add(p.getLookAngle().scale(5.4));
+                if(age<=CHANT_TICKS)fx(p,GojoFx.PURPLE_GATHER,gather,Vec3.ZERO,3,100,Math.min(95,age*95/CHANT_TICKS));
+                if(age==CHANT_TICKS){
+                    fx(p,GojoFx.PURPLE_FORM,gather,Vec3.ZERO,3*CHANT_SCALE,30,0);
+                    Orb orb=new Orb(p,false,true,gather,p.getLookAngle().scale(1.0),null,140);
+                    orb.damage=PURPLE_DAMAGE*CHANT_SCALE;
+                    orb.vis=3f*CHANT_SCALE;      // 视觉也是 200%
+                    orbs.add(orb);
                 }
-                if(age==126){
-                    unlimited(p,p.position(),"四句咒词念毕"); // 48 格 999，反噬由自己承受
-                    s.casting=-1;
-                }
-                if(age>140)s.casting=-1;
+                if(age>=CHANT_TICKS+15)s.casting=-1;
             }
             case 6->{ // 三连拳
                 if(age==1||age==8||age==15){
@@ -467,13 +549,30 @@ public final class GojoCombat {
                     if(d<6){victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN,40,1));victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS,40,0));}
                     if(o.age%20==0)hit(o.owner,victim,10,false,1f,AttackTypes.MAGIC_BLUE); // 苍：每秒 10（独立适应）
                 }
+                // 破坏方块开启时：范围内随机方块变成下落实体被吸过来，碰到苍球就消失（每秒 10 个＝每 2 刻 1 个）
+                if(o.age%2==0)suckOne(o);
                 if(o.age>=o.life){fx(o.owner,GojoFx.BLUE_END,o.pos,Vec3.ZERO,5,4,o.id);it.remove();}
                 continue;
+            }
+            if(!o.purple){
+                // 赫不再穿墙：这一格飞出去就撞到方块，命中点就地引爆
+                Vec3 next=o.pos.add(o.dir);
+                var wall=o.level.clip(new ClipContext(o.pos,next,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,o.owner));
+                if(wall.getType()==HitResult.Type.BLOCK){
+                    Vec3 at=wall.getLocation();
+                    fx(o.owner,GojoFx.RED_END,at,Vec3.ZERO,4.5f,30,o.id);
+                    redBurst(o.owner,at,o.level);
+                    redBlockFling(o.owner,at,o.level); // 破坏开启时：方块掀成实体方块飞出去
+                    o.dead=true;
+                    continue;
+                }
             }
             o.pos=o.pos.add(o.dir); // 赫与茈全程直线：出膛后不追人，命中与否取决于发射时的瞄准
             // 茈·点按版走自己的小弹体特效（PURPLE_TAP），对撞版仍用原来那个大球（PURPLE）
             fx(o.owner,o.purple?(o.small?GojoFx.PURPLE_TAP:GojoFx.PURPLE):GojoFx.RED,
-                o.pos,o.pos.add(o.dir),o.purple?(o.small?1.0f:3):1,6,o.id);
+                o.pos,o.pos.add(o.dir),o.purple?(o.small?1.0f:o.vis):1,6,o.id);
+            // 茈：碰到什么方块就直接消除（破坏方块开启时才真的动手）
+            if(o.purple)SkillDestruction.immediate(o.owner,o.pos,o.pos,o.small?1.4:2.2);
             // 场上的苍还在、赫撞上就直接爆无限制茈（玩家侧不需要念咒词），且先判对撞再判命中
             if(!o.purple){
                 boolean collided=false;
@@ -491,8 +590,8 @@ public final class GojoCombat {
                     if(!o.struck.add(victim.getUUID()))continue; // 茈：同一只只结算一次
                     // 命中演出：变大 + 渐隐，纯视觉效果，不再附带溅射伤害
                     fx(o.owner,o.small?GojoFx.PURPLE_TAP_BURST:GojoFx.PURPLE_BURST,o.pos,Vec3.ZERO,o.small?2.5f:12,o.small?12:30,o.id);
-                    // 茈 基础 500（对撞版）；点按版只有 45%。打魔虚罗 ×10，命中后挂 30 秒缓慢
-                    double purpleDamage=o.small?PURPLE_DAMAGE*PURPLE_TAP_DAMAGE_SCALE:PURPLE_DAMAGE;
+                    // 茈：对撞 500 / 点按 225 / 咏唱 1000，全部记在 Orb.damage 上。打魔虚罗 ×10，命中后挂 30 秒缓慢
+                    double purpleDamage=o.damage;
                     boolean hurt=hit(o.owner,victim,purpleDamage,false,MAHORAGA_DAMAGE,AttackTypes.MAGIC_PURPLE);
                     if(hurt)purpleSlow(victim);
                     // 一下打死 → 继续飞（穿透，去撞后面的人）；一下打不死 → 引爆：补 25% 伤害 + 宇宙大爆炸 + 自身消散
@@ -505,7 +604,7 @@ public final class GojoCombat {
                     }
                     continue;
                 }
-                fx(o.owner,GojoFx.RED_END,o.pos,Vec3.ZERO,7,30,o.id);
+                fx(o.owner,GojoFx.RED_END,o.pos,Vec3.ZERO,4.0f,30,o.id);
                 // 赫：击中即爆炸 —— 半径 RED_RADIUS 格内所有目标都吃伤害 + 击退（用户要求：范围伤害）
                 redBurst(o.owner,o.pos,o.level);
                 hitSomething=true;break; // 赫：打到就停
@@ -517,20 +616,27 @@ public final class GojoCombat {
             }
         }
         if(orbs.removeIf(o->o.dead))guiding.values().removeIf(o->o.dead);
+        tickSuck();
+        tickZones();
         for(Iterator<Beam> it=beams.iterator();it.hasNext();){
-            Beam b=it.next();it.remove();
-            Vec3 end=b.from().add(b.dir().scale(b.length()));
-            for(LivingEntity victim:Skills.targets(b.level(),b.owner(),b.from(),b.length()+2)){
-                if(victim.getBoundingBox().inflate(0.7).clip(b.from(),end).isEmpty()&&!victim.getBoundingBox().inflate(0.7).contains(b.from()))continue;
-                if(hit(b.owner(),victim,b.damage(),false)){
-                    Vec3 push=b.dir().multiply(1,0,1).normalize();
+            Beam b=it.next();
+            Vec3 end=b.from.add(b.dir.scale(b.length));
+            boolean first=b.ticks==BEAM_ZONE_TICKS;
+            for(LivingEntity victim:Skills.targets(b.level,b.owner,b.from,b.length+2)){
+                if(victim.getBoundingBox().inflate(0.7).clip(b.from,end).isEmpty()&&!victim.getBoundingBox().inflate(0.7).contains(b.from))continue;
+                if(first&&hit(b.owner,victim,b.damage,false)){
+                    Vec3 push=b.dir.multiply(1,0,1).normalize();
                     victim.push(push.x*6,2.4,push.z*6);victim.hurtMarked=true;
                 }
+                // 激光特效持续期间：特效内的生物一直被点燃，每秒 400（每刻 20）
+                victim.setSecondsOnFire(2);
+                hit(b.owner,victim,MAX_POWER_DPS/20.0,false);
             }
+            if(--b.ticks<=0)it.remove();
         }
     }
-    @SubscribeEvent public static void stop(ServerStoppedEvent event){states.clear();orbs.clear();beams.clear();}
-    @SubscribeEvent public static void logout(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event){if(event.getEntity() instanceof ServerPlayer p){states.remove(p.getUUID());orbs.removeIf(o->o.owner==p);beams.removeIf(b->b.owner()==p);}}
-    public static void cancel(ServerPlayer p){State s=states.remove(p.getUUID());if(s!=null)s.casting=-1;Skills.endVoidSeal(p);orbs.removeIf(o->o.owner==p);beams.removeIf(b->b.owner()==p);}
+    @SubscribeEvent public static void stop(ServerStoppedEvent event){states.clear();orbs.clear();beams.clear();zones.clear();sucked.clear();}
+    @SubscribeEvent public static void logout(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event){if(event.getEntity() instanceof ServerPlayer p){states.remove(p.getUUID());orbs.removeIf(o->o.owner==p);beams.removeIf(b->b.owner==p);zones.removeIf(z->z.owner==p);sucked.removeIf(s->s.orb.owner==p);}}
+    public static void cancel(ServerPlayer p){State s=states.remove(p.getUUID());if(s!=null)s.casting=-1;Skills.endVoidSeal(p);orbs.removeIf(o->o.owner==p);beams.removeIf(b->b.owner==p);zones.removeIf(z->z.owner==p);sucked.removeIf(x->x.orb.owner==p);}
     private GojoCombat(){}
 }

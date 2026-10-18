@@ -103,12 +103,15 @@ public final class GojoFx {
                 spark(at,Math.max(1.2,e.size()),Math.max(1.2,e.size())*0.95,0xC0C08CFF,0xFF3E1C63,GALAXY,true,2,6,26,1.2);
                 if(time%2==0)spark(at,Math.max(1.2,e.size())*1.6,0.32,0x77CFE4FF,0,GLOW,true,2,6,8,2.0);
             }
-            // 对撞过程：苍球与赫球从两侧收拢，收拢位置每刻都由服务端给出，所以全程跟着人
+            // 对撞过程：苍球与赫球**绕着彼此旋转**收拢（用户要求"苍和赫为旋转对撞"），位置每刻由服务端给
             case PURPLE_GATHER->{
                 double t=Math.max(0,Math.min(1,e.seed()/100.0));
-                Vec3 side=sideOf(at),off=side.scale(Math.max(0.2,e.size())*(1-t));
-                spark(at.add(off),1.5,0.95,0xB43A8CFF,0xFF12304F,GLOW,true,2,5,16,5.0);
-                spark(at.subtract(off),0.9,0.6,0xC0FF2A16,0xFF7A1206,GLOW,true,2,5,16,2.0);
+                Vec3 side=sideOf(at);
+                double ang=t*Math.PI*3.0;                                   // 收拢全程转 1.5 圈
+                double rad=Math.max(0.18,e.size())*(1-t)+0.12;
+                Vec3 base=side.scale(Math.cos(ang)*rad).add(0,Math.sin(ang)*rad,0);
+                spark(at.add(base),1.5,0.95,0xB43A8CFF,0xFF12304F,GLOW,true,2,5,16,5.0);
+                spark(at.subtract(base),0.9,0.6,0xC0FF2A16,0xFF7A1206,GLOW,true,2,5,16,2.0);
                 if(t>=0.98)spark(at,2.2,2.1,0xC0C08CFF,0xFF3E1C63,GALAXY,true,3,8,30,1.2);
             }
             case PURPLE_FORM->spark(at,Math.max(1.5,e.size()),Math.max(1.5,e.size())*0.95,0xC0C08CFF,0xFF3E1C63,GALAXY,true,4,10,40,1.2);

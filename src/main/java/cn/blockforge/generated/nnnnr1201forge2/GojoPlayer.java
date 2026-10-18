@@ -9,11 +9,12 @@ import net.minecraft.world.entity.player.Player;
 public final class GojoPlayer {
     /** 与首领完全同款：直接引用首领技能表，顺序、名称、冷却一一对应。 */
     public static final String[] NAMES=GojoEntity.NAMES;
-    /** 轮盘短名：**直接按技能号**取（苍/赫/最大/茈/无限制/瞬移/体术/无量/苍极）。 */
-    public static final String[] SHORT={"苍","赫","最大","茈","无限制","瞬移","体术","无量","苍极"};
+    /** 轮盘短名：**直接按技能号**取（苍/赫/最大/茈/咏唱/瞬移/体术/无量/苍极）。 */
+    public static final String[] SHORT={"苍","赫","最大","茈","咏唱","瞬移","体术","无量","苍极"};
     // 无量空处原来要 1200 咒力，比宿傩自己的领域（70）高出一大截，很多存档根本付不起而表现为"按了没反应"，降到 300。
     public static final int[] COST={120,150,400,600,900,60,40,300,200};
-    public static final int[] COOLDOWN={160,200,600,400,3600,100,0,1200,240};
+    // 技能 4 = 咏唱·茈（原无限制茈）：蓄力 3 秒、200% 大小/伤害、冷却 **300 秒 = 6000 刻**。
+    public static final int[] COOLDOWN={160,200,600,400,6000,100,0,1200,240};
     public static final int COUNT=9;
     /** 轮盘 7 格 → 技能号。**只放常规技能**：赫·最大功率（2）与苍·最大功率（8）是长按触发的，
      *  不占格；之前把它们当独立格摆出来，就是你看到的"废弃的苍极与最又出现了"。 */
@@ -28,7 +29,8 @@ public final class GojoPlayer {
             default->skill>=0&&skill<7?SHORT[skill]:"术式";
         };
     }
-    public static String nameOf(int skill){return skill>=0&&skill<NAMES.length?NAMES[skill]:"五条悟";}
+    /** 玩家侧显示名：技能 4 在轮盘里叫「咏唱·茈」（首领那边仍是原来的「无限制茈」，行为没变）。 */
+    public static String nameOf(int skill){if(skill==4)return "咏唱·茈";return skill>=0&&skill<NAMES.length?NAMES[skill]:"五条悟";}
     /** 释放键选的这个技能号是不是「无量空处」。
      *  <b>输入侧的技能号一律是「34 + 轮盘格」</b>（{@link SkillWheel} 用 {@code 34+gojoSector}，服务端再用
      *  {@code WHEEL[skill-34]} 换成内部技能号）。无量空处 = 内部 7 = 轮盘第 6 格（{@link #WHEEL} 去掉了不占格

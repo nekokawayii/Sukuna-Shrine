@@ -42,7 +42,7 @@ public final class BlackFlashRender {
     private static final List<Flash> FLASHES=new ArrayList<>();
     private static final Random RND=new Random();
     /** —— 用户要求"要很多"：闪电 26 道、火花 72 颗 —— */
-    private static final int BOLTS=26,SPARKS=72,CORE_SPARKS=14,SEG_MIN=10,SEG_MAX=14,LIFE=13,WIND_LIFE=10;
+    private static final int BOLTS=36,SPARKS=112,CORE_SPARKS=18,SEG_MIN=10,SEG_MAX=14,LIFE=13,WIND_LIFE=10;
     private static final double WIND_RADIUS=4.2;
     private static final int RED=0xFFE02418,BLACK=0xFF060606,WIND=0xFFE6ECF2;
     private static final int BLOOM_RED=0xFF8A1208;
@@ -55,10 +55,12 @@ public final class BlackFlashRender {
         FLASHES.add(new Flash(pos,d,mc.level.getGameTime(),RND));
         if(FLASHES.size()>12)FLASHES.remove(0);
         try{
-            PhotonFx.spark(pos,0.6,0.45,0xFF2A10,BLOOM_RED,GLOW,true,1,9,26,0.55);
+            PhotonFx.spark(pos,0.9,0.7,0xFF2A10,BLOOM_RED,GLOW,true,1,9,40,0.6);   // 打击感：更亮更大的闪核
+            PhotonFx.spark(pos,1.4,1.2,0xFFFFFF,0xFFFFFFFF,GLOW,true,1,6,18,0.4);   // 白色冲击核
+            PhotonFx.ring(pos,3.2,1.1,0xFFFFFF,0xFFFFFFFF,20,2,8);                 // 冲击波环
             if(d.lengthSqr()>1e-6)PhotonFx.ring(pos.add(d.scale(1.6)),2.4,0.8,0xFFD8E6F2,BLOOM_RED,26,2,9);
         }catch(Throwable ignored){}
-        Client.shake(13);
+        Client.shake(24);
     }
     public static void tick(){}
     public static void clear(){FLASHES.clear();}

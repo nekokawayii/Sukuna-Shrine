@@ -100,7 +100,7 @@ public final class BlackFlashMarks {
     private static void fx(ServerPlayer p,Vec3 at,Vec3 dir){
         Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY_AND_SELF.with(()->p),
             new Network.Effect(85,p.getId(),at,dir,1,16,p.getId()));
-        SkillSounds.play(p,"black_flash");
+        SkillSounds.play(p,"black_flash",3.5f);   // 打击感：音效更响
     }
 
     // ------------------------------------------------------------------ 客户端

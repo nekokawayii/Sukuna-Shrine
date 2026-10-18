@@ -78,7 +78,7 @@ public final class SoulClient {
                 g.fill(x-sz,y-sz,x+sz,y+sz,(a<<24)|0x0A0A0A);                                // 近黑火花
             }
         }
-        if(time<whiteEnd)g.fill(0,0,w,h,((int)(150*(whiteEnd-time)/7.0)<<24)|0xFFF5DC);
+        if(time<whiteEnd)g.fill(0,0,w,h,((int)(230*Math.min(1,(whiteEnd-time)/9.0))<<24)|0xFFFFFF);   // 打击感：更亮更久的白闪
     }
     @SubscribeEvent public static void scene(RenderLevelStageEvent e){var mc=Minecraft.getInstance();Domain d=inside();if(d==null||mc.level==null||e.getStage()!=RenderLevelStageEvent.Stage.AFTER_TRIPWIRE_BLOCKS)return;
         PoseStack ps=e.getPoseStack();Vec3 cam=e.getCamera().getPosition();ps.pushPose();ps.translate(-cam.x,-cam.y,-cam.z);

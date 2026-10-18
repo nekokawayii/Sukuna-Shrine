@@ -92,17 +92,14 @@ public final class GojoFx {
             case BLUE,BLUE_END->{
                 if(e.kind()==BLUE_END){GojoTrailClient.drop(orb);GojoGravityClient.drop(orb);GojoBlastClient.spawn(at,Math.max(0,e.size()),0x5AA8FF);return;}
                 spark(at,Math.max(0.8,e.size()),Math.max(0.8,e.size())*0.62,0xB43A8CFF,0xFF12304F,GLOW,true,2,5,22,4.5);
-                GojoOrbGlow.track(BLUE,at,Math.max(0.8,e.size()));
                 if(time%2==0)spark(at,Math.max(1.4,e.size())*1.8,1.1,0x66FFFFFF,0,GLOW,true,2,6,8,2.2);
             }
             case RED,RED_END->{
                 if(e.kind()==RED_END){GojoBlastClient.spawn(at,Math.max(0,e.size()),0xFF5B3A);return;}
                 spark(at,Math.max(0.6,e.size()),0.7,0xC0FF2A16,0xFF7A1206,GLOW,true,2,5,26,2.0);
-                GojoOrbGlow.track(RED,at,Math.max(0.6,e.size()));
             }
             case PURPLE->{
                 spark(at,Math.max(1.2,e.size()),Math.max(1.2,e.size())*0.95,0xC0C08CFF,0xFF3E1C63,GALAXY,true,2,6,26,1.2);
-                GojoOrbGlow.track(PURPLE,at,Math.max(1.2,e.size()));
                 if(time%2==0)spark(at,Math.max(1.2,e.size())*1.6,0.32,0x77CFE4FF,0,GLOW,true,2,6,8,2.0);
             }
             // 对撞过程：苍球与赫球从两侧收拢，收拢位置每刻都由服务端给出，所以全程跟着人

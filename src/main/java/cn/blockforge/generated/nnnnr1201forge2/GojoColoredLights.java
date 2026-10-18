@@ -32,19 +32,25 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid="sukuna")
 public final class GojoColoredLights {
     /** 三个方块的亮度（Colorful Lighting 不写 {@code ;N} 时就吃这个值）。 */
-    public static final int LIGHT_BLUE=12,LIGHT_RED=9,LIGHT_PURPLE=13;
+    public static final int LIGHT_BLUE=15,LIGHT_RED=12,LIGHT_PURPLE=15;
     /** 同时存在的光源上限；超了先回收最早的一条。 */
     private static final int MAX=4;
+    /** 光源方块最快多少刻挪一次：光照是延迟结算的，每刻清+放会让队列一直失效（表现＝完全没有光）。 */
+    private static final int MOVE_TICKS=2;
     /** 超过这么多刻没收到光球刷新就回收（光球每刻都会发 BLUE/RED/PURPLE，所以只是兜底）。 */
     private static final int STALE=8;
     /** 前置 modid：Colorful Lighting（客户端 mod，装上才有颜色）。 */
     public static final String DEPENDENCY="colorful_lighting";
 
     /** 一条光源记录；{@code pos} 为 null 表示"当前没放成"（光球埋在方块里），但仍然记着这个弹体。 */
-    private record Held(long key,ServerLevel level,BlockPos pos,Block block,long seen){}
+    private record Held(long key,ServerLevel level,BlockPos pos,Block block,long seen,long movedAt){}
     private static final Map<Long,Held> HELD=new LinkedHashMap<>();
     private static Boolean present;
     private static boolean announced;
+    private static final Set<Block> SEEN=new HashSet<>();
+    private record Probe(ServerLevel level,BlockPos pos){}
+    private static final List<Probe> PROBE=new ArrayList<>();
+    private static int probes;
     private static final org.slf4j.Logger LOG=com.mojang.logging.LogUtils.getLogger();
 
     /** 前置是否在场（缓存一次）。单机=集成服务端与客户端同一个 JVM，所以这里就是"客户端装没装"。 */
@@ -76,9 +82,13 @@ public final class GojoColoredLights {
         long now=level.getGameTime();
         Held old=HELD.get(key);
         if(old!=null){
-            if(old.level()==level&&old.block()==block&&target.equals(old.pos())){
-                HELD.put(key,new Held(key,level,target,block,now));   // 同一格：只续期，不动世界
-                return;
+            if(old.level()==level&&old.block()==block){
+                // 同一格只续期；跨格也要隔 MOVE_TICKS 才挪 —— 光照是延迟结算的，
+                // 每刻清+放会让光照队列一直失效，看起来就是"完全没有光"。
+                if(target.equals(old.pos())||now-old.movedAt()<MOVE_TICKS){
+                    HELD.put(key,new Held(key,level,old.pos(),block,now,old.movedAt()));
+                    return;
+                }
             }
             HELD.remove(key);
             clear(old);
@@ -91,9 +101,13 @@ public final class GojoColoredLights {
         if(spot!=null){
             level.setBlock(spot,block.defaultBlockState(),Block.UPDATE_CLIENTS);
             level.getLightEngine().checkBlock(spot);
+            if(SEEN.add(block))LOG.info("[彩色光照] 放下 {} @ {}",blockName(block),spot);
+            if(probes<3){PROBE.add(new Probe(level,spot));probes++;}
             if(!announced){announced=true;LOG.info("[彩色光照] 已接管苍/赫/茈：光源方块开始跟随光球（亮度 苍{} 赫{} 茈{}，颜色见 assets/sukuna/light/emitters.json）",LIGHT_BLUE,LIGHT_RED,LIGHT_PURPLE);}
+        }else if(SEEN.add(block)){
+            LOG.info("[彩色光照] {} 这一格没有空气（光球埋在方块里），本次不发光",blockName(block));
         }
-        HELD.put(key,new Held(key,level,spot,block,now));
+        HELD.put(key,new Held(key,level,spot,block,now,now));
     }
 
     /** 光球中心那一格如果不是空气（埋进地形/建筑里），就往上/四周找一格空气，绝不覆盖别人的方块。 */
@@ -129,7 +143,16 @@ public final class GojoColoredLights {
 
     /** 光球一直在刷新，正常轮不到这里；这里只兜底丢包/异常的情况。 */
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event){
-        if(event.phase!=TickEvent.Phase.END||HELD.isEmpty())return;
+        if(event.phase!=TickEvent.Phase.END)return;
+        if(!PROBE.isEmpty()){
+            // 放下一格后隔一刻回读光源处的方块光：=0 说明光照引擎没接管，>0 说明传播正常。
+            for(Probe probe:PROBE)
+                LOG.info("[彩色光照] 源处方块亮度={} @ {}（期望 苍{}/赫{}/茈{}）",
+                    probe.level().getBrightness(net.minecraft.world.level.LightLayer.BLOCK,probe.pos()),
+                    probe.pos(),LIGHT_BLUE,LIGHT_RED,LIGHT_PURPLE);
+            PROBE.clear();
+        }
+        if(HELD.isEmpty())return;
         Iterator<Map.Entry<Long,Held>> it=HELD.entrySet().iterator();
         while(it.hasNext()){
             Held held=it.next().getValue();
@@ -154,6 +177,16 @@ public final class GojoColoredLights {
     /** 状态自检（给 /sukuna 之类的诊断用，也方便日志里确认前置在不在）。 */
     public static String status(){
         return "彩色光照 前置="+(present()?"已装 "+DEPENDENCY:"未装，退回自绘发光壳")+" 活动光源="+HELD.size()+"/"+MAX;
+    }
+
+    /** 日志里的中文名，省得自己去翻注册名。 */
+    private static String blockName(Block block){
+        var id=net.minecraftforge.registries.ForgeRegistries.BLOCKS.getKey(block);
+        String path=id==null?"?":id.getPath();
+        if(path.startsWith("blue"))return "苍光("+path+")";
+        if(path.startsWith("red"))return "赫光("+path+")";
+        if(path.startsWith("purple"))return "茈光("+path+")";
+        return path;
     }
 
     private GojoColoredLights(){}

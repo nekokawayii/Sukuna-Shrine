@@ -28,26 +28,10 @@ public final class NetBranches {
             anchor=start.add(0,NetBranchRules.crossRise(clearAbove),0);born=level.getGameTime();id=++nextId;
         }
     }
-    /** 月牙横截面切成几段做"部分遮挡"：QI_RADIUS=3 → 7 段（约每格一段）。 */
-    private static final int QI_SEGS=7;
-    private static double qiAngle(int i){return -Math.PI/2+Math.PI*i/(QI_SEGS-1);}
-    private static Vec3 qiOffset(Qi q,double angle){return q.side.scale(NetBranchRules.qiSide(angle)).add(q.direction.cross(q.side).scale(NetBranchRules.qiBend(angle)));}
-    /** 把 0..steps 的密集采样映射到 QI_SEGS 段上。 */
-    private static int qiSeg(int raster,int steps){return Math.max(0,Math.min(QI_SEGS-1,(int)Math.round((double)raster*(QI_SEGS-1)/steps)));}
     private static final class Qi {
         final ServerPlayer owner;final ServerLevel level;final Vec3 direction,side;final long id;
         final Set<UUID> hit=new HashSet<>();Vec3 position;int age;
-        /** 哪几段月牙已经被方块"吃掉"：被吃掉的段不再造成伤害，其余段照常飞。 */
-        final boolean[] blocked=new boolean[QI_SEGS];
         Qi(ServerPlayer p){owner=p;level=p.serverLevel();position=p.getEyePosition();direction=p.getLookAngle().normalize();side=side(direction);id=++nextId;}
-    }
-    /** 在墙上按这一段的**角度**留一道斩痕（世界空间切线，方向随角度变化）。 */
-    private static void scar(Qi q,Vec3 at,double angle){
-        Vec3 tangent=q.side.scale(Math.cos(angle)).subtract(q.direction.cross(q.side).scale(Math.sin(angle)));
-        if(tangent.lengthSqr()<1e-6)tangent=q.side;
-        tangent=tangent.normalize();
-        Vec3 a=at.subtract(tangent.scale(1.4));
-        Network.send(q.level,new Network.Effect(CombatExpansionRules.FX_SLASH,q.owner.getId(),a,tangent.scale(2.8),1,14,q.id));
     }
     static Vec3 side(Vec3 direction){Vec3 side=new Vec3(-direction.z,0,direction.x).normalize();return side.lengthSqr()<0.01?new Vec3(1,0,0):side;}
     private static String cooldownKey(int skill){return skill==NetBranchRules.CROSS_SKILL?"NetCrossCooldown":"NetQiCooldown";}
@@ -141,31 +125,19 @@ public final class NetBranches {
             if(!valid(q.owner,q.level)||DomainClash.active(q.owner)||q.age>=NetBranchRules.QI_LIFE){projectiles.remove(q);stop(q.owner,q.level,q.position,q.id);continue;}
             Vec3 next=q.position.add(q.direction.scale(NetBranchRules.QI_SPEED));
             // **剑气不能穿墙**（用户 r279 要求；只有世界斩例外，而世界斩不走这条通道）：
-            // **部分遮挡**（用户要求）：把月牙横截面切成 QI_SEGS 段逐段判墙。
-            // 撞墙的那一段被"吃掉"并留下斩痕，其余段照常飞行、照常造成伤害；全部被吃掉才收尾。
-            int freeSeg=0;
-            for(int i=0;i<QI_SEGS;i++){
-                if(q.blocked[i])continue;
-                double angle=qiAngle(i);
-                Vec3 offset=qiOffset(q,angle);
-                var wall=q.level.clip(new net.minecraft.world.level.ClipContext(q.position.add(offset),next.add(offset),
-                    net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,q.owner));
-                if(wall.getType()==net.minecraft.world.phys.HitResult.Type.BLOCK){
-                    q.blocked[i]=true;
-                    scar(q,wall.getLocation(),angle);   // 按这一段的角度在墙上留斩痕
-                    continue;
-                }
-                freeSeg++;
+            // 这一格飞出去撞到方块，就在墙前停住、视觉收尾，不再往后穿透。
+            var wall=q.level.clip(new net.minecraft.world.level.ClipContext(q.position,next,
+                net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,q.owner));
+            if(wall.getType()==net.minecraft.world.phys.HitResult.Type.BLOCK){
+                projectiles.remove(q);stop(q.owner,q.level,wall.getLocation(),q.id);continue;
             }
-            if(freeSeg==0){projectiles.remove(q);stop(q.owner,q.level,q.position,q.id);continue;}
             if(CombatExpansion.collideSlash(q.owner,q.position,next,q.direction)){projectiles.remove(q);stop(q.owner,q.level,q.position,q.id);continue;}
-            for(int step=0;step<=5;step++){Vec3 center=q.position.lerp(next,step/5.0);Vec3 previous=null;for(int i=0;i<=16;i++){double angle=-Math.PI/2+Math.PI*i/16;if(q.blocked[qiSeg(i,16)])continue;Vec3 point=center.add(q.side.scale(NetBranchRules.qiSide(angle))).add(q.direction.cross(q.side).scale(NetBranchRules.qiBend(angle)));if(previous!=null)SkillDestruction.immediate(q.owner,previous,point,0.5);previous=point;}}
+            for(int step=0;step<=5;step++){Vec3 center=q.position.lerp(next,step/5.0);Vec3 previous=null;for(int i=0;i<=16;i++){double angle=-Math.PI/2+Math.PI*i/16;Vec3 point=center.add(q.side.scale(NetBranchRules.qiSide(angle))).add(q.direction.cross(q.side).scale(NetBranchRules.qiBend(angle)));if(previous!=null)SkillDestruction.immediate(q.owner,previous,point,0.5);previous=point;}}
             for(LivingEntity target:q.level.getEntitiesOfClass(LivingEntity.class,new AABB(q.position,next).inflate(NetBranchRules.QI_RADIUS+0.5),e->!q.hit.contains(e.getUUID())&&CombatSettings.canHit(q.owner,e))){
                 if(DomainClash.active(target))continue;
                 boolean intersects=false;
-                // 只统计**没被墙吃掉**的那几段：撞墙的那一格不会穿过去打到后面的目标
+                // 整个月牙扫过的体积逐段检测；完全不做方块碰撞，所以穿墙且不限命中数量。
                 for(int i=0;i<=32&&!intersects;i++){
-                    if(q.blocked[qiSeg(i,32)])continue;
                     double angle=-Math.PI/2+Math.PI*i/32;Vec3 offset=q.side.scale(NetBranchRules.qiSide(angle)).add(q.direction.cross(q.side).scale(NetBranchRules.qiBend(angle)));
                     Vec3 from=q.position.add(offset),to=next.add(offset);AABB box=target.getBoundingBox().inflate(0.35);
                     intersects=box.contains(from)||box.contains(to)||box.clip(from,to).isPresent();

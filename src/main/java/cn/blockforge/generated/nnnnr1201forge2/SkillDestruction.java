@@ -114,6 +114,12 @@ public final class SkillDestruction {
             if(!miss&&low<=high)immediate(p,center.add(axis.scale(low)),center.add(axis.scale(high)),width);
         }
     }
+    /** 大范围终极技：同一刻结算，仍遵守总开关、领地、基岩和容器保护。 */
+    public static void sphere(ServerPlayer p,Vec3 center,double radius){
+        if(!enabled(p.serverLevel())||!p.isAlive()||DomainClash.active(p))return;
+        int r=(int)Math.ceil(Math.min(50,Math.max(0,radius)));BlockPos c=BlockPos.containing(center);
+        for(BlockPos pos:BlockPos.betweenClosed(c.offset(-r,-r,-r),c.offset(r,r,r)))if(Vec3.atCenterOf(pos).distanceToSqr(center)<=radius*radius&&mayChange(p,pos))p.serverLevel().destroyBlock(pos,false,MaidBridge.body(p));
+    }
     public static void impact(ServerPlayer p,Vec3 point,double radius){line(p,point,point,radius);}
     public static void effect(ServerLevel level,Network.Effect e){
         if(!enabled(level)||e.life()<=0)return;

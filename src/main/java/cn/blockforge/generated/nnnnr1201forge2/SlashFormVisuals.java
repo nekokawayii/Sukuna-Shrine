@@ -7,7 +7,7 @@ import net.minecraft.world.phys.Vec3;
 public final class SlashFormVisuals {
     private record Visual(Network.Effect e,long born){}
     private static final List<Visual> visuals=new ArrayList<>();private static long tick;
-    public static void collect(Vec3 center,double radius,List<Vec3> out){visuals.removeIf(v->{Vec3 at=v.e.position().add(v.e.direction().scale(.5));if(v.e.kind()!=SlashFormRules.STILL)at=at.add(SukunaBranches.unpack(v.e.seed()).scale(SlashFormRules.travel(tick-v.born,v.e.kind()==SlashFormRules.ACCELERATING)));if(at.distanceToSqr(center)>radius*radius)return false;if(out.size()<6000)out.add(at);return true;});}
+    public static void collect(Vec3 center,double radius,List<Vec3> out){SlashTerrainClient.collect(center,radius,out);visuals.removeIf(v->{Vec3 at=v.e.position().add(v.e.direction().scale(.5));if(v.e.kind()!=SlashFormRules.STILL)at=at.add(SukunaBranches.unpack(v.e.seed()).scale(SlashFormRules.travel(tick-v.born,v.e.kind()==SlashFormRules.ACCELERATING)));if(at.distanceToSqr(center)>radius*radius)return false;if(out.size()<6000)out.add(at);return true;});}
     public static void clear(){visuals.clear();tick=0;}
     public static void stop(Network.Effect e){visuals.removeIf(v->v.e.owner()==e.owner()&&v.e.position().distanceToSqr(e.position())<1e-8&&v.e.direction().distanceToSqr(e.direction())<1e-8&&v.e.seed()==e.seed());}
     public static void receive(Network.Effect e){if(visuals.size()<12000)visuals.add(new Visual(e,tick));}

@@ -194,6 +194,26 @@ public final class PhotonFx {
         if(now-lastFail>2000){lastFail=now;com.mojang.logging.LogUtils.getLogger().error("五条悟特效构建失败（本条只记录，不停用其他特效）",t);}
     }
 
+    /** 死胎星：不透明黑核、暗红吸积层、向内汇入的血线，不复用火焰配色。 */
+    public static Handle deathStar(Vec3 pos,double radius,boolean charge){
+        try{
+            Emitter core=emitter(SPHERE,radius*.7,1);Object c=core.config();
+            duration(c,8);particleLife(c,9);size(c,radius);rate(c,12);colour(c,0xFF100006);render(c,MODE_BILLBOARD,"textures/effect/glow.png",0,false);
+            Emitter rim=emitter(SHELL,radius*1.08,.08);Object r=rim.config();
+            duration(r,8);particleLife(r,8);size(r,radius*.25);rate(r,10);orbit(r,2.8);colour(r,0xB0BC062A);render(r,MODE_BILLBOARD,"textures/effect/glow.png",0xFF850018);
+            Emitter streams=emitter(SHELL,charge?5:radius*1.5,.05);Object s=streams.config();
+            duration(s,7);particleLife(s,charge?9:12);stretch(s,.045,charge?.7:1.1);speed(s,charge?-.55:.08);rate(s,12);colour(s,0xE8900620);render(s,MODE_BILLBOARD,"textures/effect/streak.png",0xFF5A0010,false);
+            return start(List.of(P(core,Vec3.ZERO),P(rim,Vec3.ZERO),P(streams,Vec3.ZERO)),pos);
+        }catch(Throwable t){fail(t);return null;}
+    }
+    /** 无火焰血超新星：高速血刺与暗红冲击雾，由调用方管理句柄清理。 */
+    public static Handle deathStarBurst(Vec3 pos){
+        try{
+            Emitter spikes=emitter(SHELL,1,.02);Object s=spikes.config();duration(s,2);particleLife(s,20);stretch(s,.12,3.5);speed(s,2.5);burst(s,256);colour(s,0xFFE01838);render(s,MODE_BILLBOARD,"textures/effect/streak.png",0xFF9A001A,false);
+            Emitter mist=emitter(SPHERE,7,1);Object m=mist.config();duration(m,3);particleLife(m,24);size(m,3);speed(m,.5);burst(m,80);colour(m,0x90760019);render(m,MODE_BILLBOARD,"textures/effect/dust.png",0,false);
+            return start(List.of(P(spikes,Vec3.ZERO),P(mist,Vec3.ZERO)),pos);
+        }catch(Throwable t){fail(t);return null;}
+    }
     // ------------------------------------------------------------ 苍
     /** 苍：蓝色三维光球，外围白色光点像星环一样环绕。 */
     public static Handle blue(Vec3 pos,double radius,int life){

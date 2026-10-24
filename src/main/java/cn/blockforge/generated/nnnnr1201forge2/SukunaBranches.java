@@ -19,11 +19,13 @@ public final class SukunaBranches {
     private record Multi(ServerPlayer owner,ServerLevel level,UUID target,long due,int left){}
     private static final class Wall {
         final ServerPlayer owner;final ServerLevel level;final Vec3 direction;final List<Line> lines;final AABB bounds;final Map<UUID,BitSet> hit=new HashMap<>();int age;
+        final long visualId=SlashTerrain.id();final List<List<SlashForms.Line>> fragments=new ArrayList<>();
         Wall(ServerPlayer p,List<Line> lines){
             owner=p;level=p.serverLevel();direction=p.getLookAngle().normalize();this.lines=lines;
             AABB box=new AABB(lines.get(0).from,lines.get(0).to);
             for(Line line:lines)box=box.minmax(new AABB(line.from,line.to));
             bounds=box.inflate(1);
+            for(Line line:lines)fragments.add(List.of(new SlashForms.Line(line.from,line.to)));
         }
     }
     private static final List<Web> webs=new ArrayList<>();
@@ -78,7 +80,7 @@ public final class SukunaBranches {
         List<Line> lines=new ArrayList<>();Vec3 center=p.getEyePosition().add(dir.scale(2));double spacing=BranchRules.spacing(wallSpacing(p)),half=wallSize(p)/2.0;
         int count=BranchRules.wallLines(wallSpacing(p),wallSize(p))/2;
         for(int i=0;i<count;i++){double v=(i-(count-1)/2.0)*spacing;lines.add(new Line(center.add(side.scale(v)).subtract(up.scale(half)),center.add(side.scale(v)).add(up.scale(half))));lines.add(new Line(center.add(up.scale(v)).subtract(side.scale(half)),center.add(up.scale(v)).add(side.scale(half))));}
-        if(walls.size()<128){Wall w=new Wall(p,lines);walls.add(w);for(Line line:lines)Network.send(w.level,new Network.Effect(BranchRules.FX_WALL,p.getId(),line.from,line.to.subtract(line.from),1,40,pack(dir)));}
+        if(walls.size()<128)walls.add(new Wall(p,lines));
     }
     // 量化方向供客户端重建移动速度，不使用客户端准星。
     private static long pack(Vec3 d){int yaw=(int)Math.round(Math.toDegrees(Math.atan2(d.z,d.x))*100)+18000,pitch=(int)Math.round(Math.asin(d.y)*18000/Math.PI)+9000;return ((long)yaw<<16)|(pitch&65535);}
@@ -137,16 +139,17 @@ public final class SukunaBranches {
         }
         for(Wall w:List.copyOf(walls)){
             if(!valid(w.owner,w.level)||DomainClash.active(w.owner)||w.age>=40){walls.remove(w);continue;}
-            Vec3 motion=w.direction.scale(w.age*1.5),next=motion.add(w.direction.scale(1.5));
-            AABB swept=w.bounds.move(motion).expandTowards(w.direction.scale(1.5));
-            for(LivingEntity t:w.level.getEntitiesOfClass(LivingEntity.class,swept,t->CombatSettings.canHit(w.owner,t)))if(!DomainClash.active(t)){
-                BitSet hitLines=w.hit.computeIfAbsent(t.getUUID(),id->new BitSet(w.lines.size()));
-                for(int i=0;i<w.lines.size()&&t.isAlive();i++){if(hitLines.get(i))continue;Line line=w.lines.get(i);boolean intersects=false;
-                    for(int sample=0;sample<=4;sample++){Vec3 offset=motion.lerp(next,sample/4.0);if(near(t,new Line(line.from.add(offset),line.to.add(offset)),.35)){intersects=true;break;}}
-                    if(intersects){hitLines.set(i);hit(w.owner,t,.5);}
+            Vec3 step=w.direction.scale(1.5);List<SlashTerrain.Sweep> frame=new ArrayList<>();boolean alive=false;
+            for(int i=0;i<w.fragments.size();i++){
+                if(w.age==0)w.fragments.set(i,SlashTerrain.launch(w.owner,w.fragments.get(i),w.direction));
+                var result=SlashTerrain.advance(w.owner,w.fragments.get(i),step);w.fragments.set(i,result.remaining());alive|=!result.remaining().isEmpty();frame.addAll(result.swept());
+                for(var sweep:result.swept())for(LivingEntity t:w.level.getEntitiesOfClass(LivingEntity.class,new AABB(sweep.a(),sweep.b()).expandTowards(sweep.step()).inflate(.01),t->CombatSettings.canHit(w.owner,t))){
+                    BitSet hitLines=w.hit.computeIfAbsent(t.getUUID(),id->new BitSet(w.lines.size()));
+                    if(!hitLines.get(i)&&!DomainClash.active(t)&&SlashTerrain.hits(sweep,t)){hitLines.set(i);hit(w.owner,t,.5);}
                 }
             }
-            for(Line line:w.lines)SkillDestruction.line(w.owner,line.from.add(next),line.to.add(next),0.5);w.age++;
+            SlashTerrain.send(w.owner,w.visualId,frame,w.lines.get(0).from.add(w.direction.scale(w.age*1.5)));w.age++;
+            if(!alive)walls.remove(w);
         }
     }
     public static void cancel(ServerPlayer p){webs.removeIf(w->w.owner==p);walls.removeIf(w->w.owner==p);multis.removeIf(m->m.owner==p);Curse.data(p).remove("MultiArmed");}

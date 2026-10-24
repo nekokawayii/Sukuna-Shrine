@@ -134,11 +134,13 @@ public final class MaidExtension implements ILittleMaid {
     @SubscribeEvent public void tick(LivingEvent.LivingTickEvent event){
         if(!(event.getEntity() instanceof EntityMaid maid)||maid.level().isClientSide||!maid.isAlive())return;
         syncMemory(maid);
+        if(Legion.member(maid))return;
         if(EternalLove.settling(maid)||NetBranches.locked(maid)||Uraume.locked(maid)||CombatExpansion.controlled(maid))return;
         var progress=maid.getPersistentData().getCompound("SukunaProgress");
         if(!progress.getBoolean("Memory")&&!progress.getBoolean("UraumeMemory")&&!progress.getBoolean("GojoMemory"))return;
         MaidBridge.Actor actor=MaidBridge.actor(maid);
         boolean sixTask=maid.getTask().getUid().equals(SIX_EYES_ID);
+        if((!maid.getTask().getUid().equals(ID)||maid.isMaidInSittingPose())&&BloodArts.ongoing(actor)){BloodArts.exit(actor);DeathStar.cancel(actor);}
         // 任务切走时收干净：领域、引导、飞行物都不留在场上
         if(!sixTask&&(GojoCombat.busy(actor)||GojoCombat.sustaining(actor))){if(GojoCombat.sustaining(actor))GojoCombat.closeDomain(actor);GojoCombat.cancel(actor);}
         // 六眼任务优先：只要选中「六眼」，不论她还吃没吃过宿傩记忆，都用五条悟技能组出手
@@ -148,7 +150,7 @@ public final class MaidExtension implements ILittleMaid {
         if(maid.tickCount%ShrineRules.ACTION_INTERVAL==0){absorbOrb(maid,actor);MaidBridge.rememberCondensed(actor);}
         boolean active=maid.getTask().getUid().equals(ID)&&!maid.isMaidInSittingPose();
         if(!active){CombatExpansion.cancel(actor);DismantleMotion.cancel(actor);if(Skills.domainActive(actor))Skills.closeDomain(actor);Skills.cancelSustained(actor);GuardianPlayerSkills.cancel(actor);actor.aim=null;return;}
-        if(CombatExpansion.automatic(actor)){stopMoving(maid);return;}
+        if(BloodArts.casting(actor)||CombatExpansion.automatic(actor)){stopMoving(maid);return;}
         if(DismantleMotion.active(actor)){stopMoving(maid);maid.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);return;}
         if(DomainClash.active(actor)){stopMoving(maid);DomainClash.hold(maid);return;}
         if(maid.tickCount%ShrineRules.ACTION_INTERVAL!=0)return;
@@ -172,6 +174,7 @@ public final class MaidExtension implements ILittleMaid {
         if(target!=null&&!SoulCombat.suppressed(actor)&&Curse.canUseTechnique(actor)){
             for(int i=0;i<6;i++)if(Skills.available(actor,i)&&!(i==2&&Skills.cleaveActive(actor))&&!(i==5&&(Skills.domainActive(actor)||GuardianPlayerSkills.sustaining(actor))))skills.add(i);
             if(Skills.peelAvailable(actor))skills.add(6);
+            if(BloodArts.unlocked(actor))for(int blood=BloodRules.FIRST;blood<=BloodRules.LAST;blood++)if(BloodArts.available(actor,blood))skills.add(blood);
             for(int form:new int[]{SlashFormRules.SHAPE,SlashFormRules.CROSS_FLIGHT,SlashFormRules.WORLD})if(SlashForms.available(actor,form))skills.add(form);
             for(int branch:new int[]{CombatExpansionRules.LINGER,CombatExpansionRules.PURPLE_FURNACE,CombatExpansionRules.DRAGON_STAR})if(CombatExpansion.available(actor,branch))skills.add(branch);
             for(int motion:new int[]{MAID_BACKFLIP,MAID_KICK,DismantleMotionRules.RING_SKILL,103,104,105,106})if(DismantleMotion.available(actor,motionKind(motion)))skills.add(motion);
@@ -186,7 +189,8 @@ public final class MaidExtension implements ILittleMaid {
             return;
         }
         stopMoving(maid);int skill=chooseSkill(actor,skills);
-        if(CombatExpansionRules.branch(skill))CombatExpansion.castAutomatic(actor,skill);
+        if(BloodRules.skill(skill))BloodArts.automatic(actor,skill);
+        else if(CombatExpansionRules.branch(skill))CombatExpansion.castAutomatic(actor,skill);
         else if(motionKind(skill)!=0)DismantleMotion.start(actor,motionKind(skill));
         else if(skill==SlashFormRules.SHAPE||skill==SlashFormRules.CROSS_FLIGHT||skill==SlashFormRules.WORLD){
             boolean previous=SlashForms.qi(actor);
@@ -262,10 +266,11 @@ public final class MaidExtension implements ILittleMaid {
     }
     /** 低消耗术式权重更高，高消耗术式仍然有机会释放。 */
     private static int chooseSkill(MaidBridge.Actor actor,List<Integer> skills){
+        int followup=BloodArts.followup(actor);if(skills.contains(followup))return followup;
         double total=0;for(int skill:skills)total+=ShrineRules.skillWeight(skillCost(skill));
         double roll=actor.getRandom().nextDouble()*total;
         for(int skill:skills){roll-=ShrineRules.skillWeight(skillCost(skill));if(roll<=0)return skill;}
         return skills.get(skills.size()-1);
     }
-    private static int skillCost(int skill){if(CombatExpansionRules.branch(skill))return skill==CombatExpansionRules.DRAGON_STAR?2000:skill==CombatExpansionRules.PURPLE_FURNACE?Curse.COST[3]:Curse.COST[0];if(motionKind(skill)!=0)return Curse.COST[0];if(skill==SlashFormRules.SHAPE)return 120;if(skill==SlashFormRules.CROSS_FLIGHT)return 180;if(skill==SlashFormRules.WORLD)return 2000;if(skill==BranchRules.WEB)return 180;if(skill==BranchRules.MULTI)return 120;if(skill==BranchRules.WALL)return BranchRules.wallCost(4);return NetBranchRules.branch(skill)?NetBranchRules.cost(skill):skill<=6?Curse.COST[skill]:GuardianPlayerSkills.COST[skill-7];}
+    private static int skillCost(int skill){if(BloodRules.skill(skill))return BloodRules.cost(skill);if(CombatExpansionRules.branch(skill))return skill==CombatExpansionRules.DRAGON_STAR?2000:skill==CombatExpansionRules.PURPLE_FURNACE?Curse.COST[3]:Curse.COST[0];if(motionKind(skill)!=0)return Curse.COST[0];if(skill==SlashFormRules.SHAPE)return 120;if(skill==SlashFormRules.CROSS_FLIGHT)return 180;if(skill==SlashFormRules.WORLD)return 2000;if(skill==BranchRules.WEB)return 180;if(skill==BranchRules.MULTI)return 120;if(skill==BranchRules.WALL)return BranchRules.wallCost(4);return NetBranchRules.branch(skill)?NetBranchRules.cost(skill):skill<=6?Curse.COST[skill]:GuardianPlayerSkills.COST[skill-7];}
 }

@@ -31,6 +31,10 @@ public final class TechniqueInput {
     public static Input intent(ServerPlayer p){return intents.getOrDefault(p.getUUID(),new Input(0,0,false,false,false));}
     public static boolean holding(ServerPlayer p,int skill){Hold h=holds.get(p.getUUID());return h!=null&&h.skill==skill;}
     public static void receive(ServerPlayer p,Input input){
+        if(input.phase()==0)MeleeCombo.cancel(p);
+        if(PrisonSystem.locked(p)||ObserverRitual.active(p)||TenShadows.locked(p)||DeathStar.charging(p))return;
+        if(BloodRules.skill(input.skill())){BloodArts.input(p,input);return;}
+        if(AuthoritySkills.input(p,input))return;
         // 咒力附拳（技能号 45，轮盘页面 0 右上角那一格）：按一次开关；它不是术式，所以不经过任何术式守卫
         if(input.skill==Skills.FIST_SKILL){if(input.phase==0)Skills.toggleFist(p);return;}
         if(input.skill==FinaleRules.SKILL){
@@ -93,16 +97,7 @@ public final class TechniqueInput {
         // 动作解：客户端把"按下时的按键组合"带过来了，服务端据此挑一个动作（服务端的冲刺/离地状态更准）
         if(input.phase()==0&&input.skill()==0){
             LivingEntity body=MaidBridge.body(p);
-            // 客户端已经按"按下那一瞬间"的按键与疾跑/离地状态算好了动作意图，服务端复核并兜底
-            int kind=DismantleMotionRules.choose(input.crouch(),input.forward(),input.backward(),input.jump(),
-                body.isSprinting(),body.onGround(),body.getDeltaMovement().y);
-            if(kind==0&&input.motion()!=0&&DismantleMotionRules.valid(input.motion()))kind=input.motion();
-            if(kind!=0&&!DismantleMotionRules.valid(kind))kind=0;
-            if(kind!=0){
-                // 解动作已回档到 r101 行为：位移一律沿起手朝向（不再按移动键反向），所以这里不再传"转向意图"
-                DismantleMotion.start(p,kind);
-                return;
-            }
+            if(DismantleMotion.fromInput(p,input))return;
             // 埋点：玩家明显是想做动作（按住方向/蹲/疾跑）却没凑成动作 —— 把这组按键写进日志，
             // 否则"没触发"完全无从判断（服务端这里静默返回）。
             if(input.motion()!=0||input.forward()||input.backward()||input.crouch()||body.isSprinting())
@@ -136,7 +131,7 @@ public final class TechniqueInput {
         if(input.skill==0&&!Curse.canSpend(p,Curse.COST[0])){cancel(p);CastFeedback.unavailable(p,Curse.COST[0]);return;}
         cast(p,input.skill,input);hold.triggered=true;hold.slashes=1;
     }
-    static boolean allowed(ServerPlayer p){return !Shinbuke.holding(p)&&!GojoEntity.mindLocked(p)&&CombatExpansion.valid(p,p.serverLevel())&&(Journey.unlocked(p)||Uraume.unlocked(p)||GojoPlayer.unlocked(p))&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p)&&!MaidBridge.recovering(p)&&!CombatExpansion.controlled(p);}
+    static boolean allowed(ServerPlayer p){return !PrisonSystem.locked(p)&&!Shinbuke.holding(p)&&!GojoEntity.mindLocked(p)&&CombatExpansion.valid(p,p.serverLevel())&&(Journey.unlocked(p)||Uraume.unlocked(p)||GojoPlayer.unlocked(p))&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p)&&!MaidBridge.recovering(p)&&!CombatExpansion.controlled(p);}
     private static void cast(ServerPlayer p,int skill,Input input){
         intents.put(p.getUUID(),input);
         try{castRaw(p,skill);}finally{intents.remove(p.getUUID());}
@@ -184,7 +179,7 @@ public final class TechniqueInput {
             }
         }
     }
-    public static void cancel(ServerPlayer p){holds.remove(p.getUUID());intents.remove(p.getUUID());Skills.cancelCharge(p);CombatExpansion.cancelHeld(p);}
+    public static void cancel(ServerPlayer p){BloodArts.cancel(p);holds.remove(p.getUUID());intents.remove(p.getUUID());Skills.cancelCharge(p);CombatExpansion.cancelHeld(p);}
     public static void clear(){holds.clear();intents.clear();}
     /** 无量空处释放键的埋点：直接写 latest.log（{@link SdLog} 写的是另一个文件，排查时根本看不到）。 */
     private static void voidNote(String message){com.mojang.logging.LogUtils.getLogger().info("[无量空处] "+message);}

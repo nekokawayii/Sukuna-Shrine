@@ -12,7 +12,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.function.Consumer;
 
 public final class Network {
-    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation("sukuna", "skills"), () -> "99", "99"::equals, "99"::equals);
+    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation("sukuna", "skills"), () -> "sukuna-portable-prison-r131", "sukuna-portable-prison-r131"::equals, "sukuna-portable-prison-r131"::equals);
     public static Consumer<Effect> clientReceiver = e -> {};
     public static Boolean clientModpackMode;
     public static double tooltipFactor(BalanceRules.Category category){return BalanceRules.factor(clientModpackMode!=null?clientModpackMode:BalanceRules.modpackMode(),category);}
@@ -97,7 +97,7 @@ public final class Network {
         public Effect(int kind,int owner,Vec3 position,Vec3 direction,float size,int life,long seed){this(kind,owner,position,direction,size,life,seed,null,false);}
         public Effect wallpaper(java.util.UUID source,boolean all){return new Effect(kind,owner,position,direction,size,life,seed,source,all);}
         public Effect fromCaster(ServerPlayer caster){
-            ServerPlayer source=caster instanceof MaidBridge.Actor maid?MaidBridge.owner(maid):caster;
+            ServerPlayer source=caster instanceof MaidBridge.Actor maid?(Authority.owner(maid)!=null?Authority.owner(maid):MaidBridge.owner(maid)):caster;
             return wallpaper(source==null?null:source.getUUID(),WallpaperPolicy.allSlashes(VoidJourney.evolved(caster),GuardianCombat.awakened(caster)));
         }
         static Effect read(FriendlyByteBuf b) {
@@ -109,8 +109,16 @@ public final class Network {
     static Vec3 vec(FriendlyByteBuf b) { return new Vec3(b.readDouble(),b.readDouble(),b.readDouble()); }
     static void vec(FriendlyByteBuf b,Vec3 v) { b.writeDouble(v.x);b.writeDouble(v.y);b.writeDouble(v.z); }
     public static void init() {
+        ObserverPackets.register();
+        AuthorityPackets.register();
+        SlashTerrain.register();
+        TenShadows.register();
+        ShadowSystem.register();
+        MeleeCombo.register();
         CHANNEL.messageBuilder(Cast.class,0,NetworkDirection.PLAY_TO_SERVER).encoder((m,b)->b.writeUtf(m.action().name(),32)).decoder(b->new Cast(SkillAction.valueOf(b.readUtf(32)))).consumerMainThread((m,c)->{
             var p=c.get().getSender();
+            if(p!=null&&m.action()!=SkillAction.CANCEL_CHARGE)MeleeCombo.cancel(p);
+            if(p!=null&&(PrisonSystem.locked(p)||ObserverRitual.active(p)||TenShadows.locked(p)||DeathStar.charging(p))){c.get().setPacketHandled(true);return;}
             if(p!=null&&m.action()==SkillAction.CANCEL_CHARGE){Skills.cancelCharge(p);TechniqueInput.cancel(p);c.get().setPacketHandled(true);return;}
             // 无量空处的"收起"放行到所有守卫之前：熔断/对拼/其他动作都不能让它变成"按了不收、再按又放一遍"
             if(p!=null&&m.action()==SkillAction.GOJO_DOMAIN&&GojoCombat.domainOpen(p)){GojoCombat.toggleDomain(p);c.get().setPacketHandled(true);return;}

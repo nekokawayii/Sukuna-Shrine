@@ -21,12 +21,17 @@ public class ObserverEntity extends Monster {
     public void action(int value){entityData.set(ACTION,value);}
     @Override public void tick(){
         super.tick();
+        if(!level().isClientSide&&tickCount%40==0&&getPersistentData().hasUUID("HighOwner")){
+            var owner=((net.minecraft.server.level.ServerLevel)level()).getServer().getPlayerList().getPlayer(getPersistentData().getUUID("HighOwner"));
+            if(owner==null||!ObserverRitual.active(owner)){discard();return;}
+        }
         setDeltaMovement(Vec3.ZERO);setNoGravity(true);setInvulnerable(true);
     }
     @Override public boolean hurt(DamageSource source,float amount){return false;}
     @Override public boolean isPushable(){return false;}
     @Override public boolean canBeCollidedWith(){return false;}
     @Override public boolean removeWhenFarAway(double distance){return false;}
+    @Override protected boolean shouldDespawnInPeaceful(){return false;}
     @Override public void addAdditionalSaveData(CompoundTag tag){super.addAdditionalSaveData(tag);tag.putInt("ObserverAction",action());}
     @Override public void readAdditionalSaveData(CompoundTag tag){super.readAdditionalSaveData(tag);action(tag.getInt("ObserverAction"));}
 }

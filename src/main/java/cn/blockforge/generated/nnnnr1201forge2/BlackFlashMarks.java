@@ -38,6 +38,20 @@ public final class BlackFlashMarks {
     /** 服务端：玩家 -> 有效标记（敌人 id -> 到期刻）。 */
     private static final Map<UUID,Map<Integer,Long>> MARKS=new HashMap<>();
 
+    private record ServerMark(UUID entity,Vec3 offset,long until,boolean extended){}
+    public static void extendBloodVision(ServerPlayer p){var points=POINTS.get(p.getUUID());var mine=MARKS.get(p.getUUID());if(points==null||mine==null)return;long now=p.level().getGameTime();for(var entry:List.copyOf(points.entrySet())){ServerMark m=entry.getValue();if(m.extended||m.until<now)continue;if(!(p.level().getEntity(entry.getKey()) instanceof LivingEntity target)||!m.entity.equals(target.getUUID())||!CombatSafety.canTarget(p,target))continue;long until=m.until+40;points.put(entry.getKey(),new ServerMark(m.entity,m.offset,until,true));mine.put(entry.getKey(),until);Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(()->p),new Network.Effect(FX_MARK,target.getId(),target.position().add(m.offset),Vec3.ZERO,1,(int)(until-now),0));}}
+    private static final Map<UUID,Map<Integer,ServerMark>> POINTS=new HashMap<>();
+    /** 穿血使用服务端生成的红圈位置，不能仅因目标有红圈就算弱点。 */
+    public static boolean bloodWeakPoint(ServerPlayer p,LivingEntity target,Vec3 start,Vec3 end){
+        var marks=POINTS.get(p.getUUID());ServerMark mark=marks==null?null:marks.get(target.getId());
+        if(mark==null||!mark.entity.equals(target.getUUID())||mark.until<p.level().getGameTime())return false;
+        Vec3 point=target.position().add(mark.offset),line=end.subtract(start);double length=line.lengthSqr();
+        if(length<1e-8)return false;double t=point.subtract(start).dot(line)/length;
+        return t>=0&&t<=1&&point.distanceToSqr(start.add(line.scale(t)))<=MARK_RADIUS*MARK_RADIUS;
+    }
+    @SubscribeEvent public static void logout(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event){MARKS.remove(event.getEntity().getUUID());POINTS.remove(event.getEntity().getUUID());}
+    @SubscribeEvent public static void dimension(net.minecraftforge.event.entity.player.PlayerEvent.PlayerChangedDimensionEvent event){MARKS.remove(event.getEntity().getUUID());POINTS.remove(event.getEntity().getUUID());}
+    @SubscribeEvent public static void stopped(net.minecraftforge.event.server.ServerStoppedEvent event){MARKS.clear();POINTS.clear();}
     // ------------------------------------------------------------------ 服务端
     /** 独立的服务端每刻钩子：**每刻都跑**，内部再按 10 刻（0.5 秒）掷骰。
      *  （之前挂在附拳每 15 刻的广播循环里，和 10 刻取最小公倍数 → 实际 30 刻才掷一次，看起来像只出现一次。） */
@@ -58,15 +72,17 @@ public final class BlackFlashMarks {
             e->e!=p&&e.isAlive()&&e.distanceToSqr(p)<=RANGE*RANGE&&CombatSettings.canHit(p,e));
         if(enemies.isEmpty())return;
         Map<Integer,Long> mine=MARKS.computeIfAbsent(p.getUUID(),k->new HashMap<>());
-        long until=p.level().getGameTime()+MARK_TICKS;
+        int duration=BloodRules.markTicks(BloodArts.vision(p));long until=p.level().getGameTime()+duration;
         for(LivingEntity e:enemies){
             AABB b=e.getBoundingBox();
             Vec3 at=new Vec3(b.minX+p.getRandom().nextDouble()*b.getXsize(),
                              b.minY+p.getRandom().nextDouble()*b.getYsize(),
                              b.minZ+p.getRandom().nextDouble()*b.getZsize());
             mine.put(e.getId(),until);
+            var points=POINTS.computeIfAbsent(p.getUUID(),k->new HashMap<>());points.entrySet().removeIf(entry->entry.getValue().until<p.level().getGameTime());
+            points.put(e.getId(),new ServerMark(e.getUUID(),at.subtract(e.position()),until,BloodArts.vision(p)));
             Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(()->p),
-                new Network.Effect(FX_MARK,e.getId(),at,Vec3.ZERO,1,MARK_TICKS,0));
+                new Network.Effect(FX_MARK,e.getId(),at,Vec3.ZERO,1,duration,0));
             SkillSounds.play(p,"domainshatter",3.5f);   // 红圈出现音效（声音要大）
         }
     }
@@ -79,6 +95,7 @@ public final class BlackFlashMarks {
         if(mine==null||!mine.containsKey(targetId)){log.info("[黑闪] 服务端拒绝：没有该标记 target={}",targetId);return;}
         if(p.level().getGameTime()>mine.getOrDefault(targetId,0L)){log.info("[黑闪] 服务端拒绝：标记已过期 target={}",targetId);mine.remove(targetId);return;}
         if(!(p.level().getEntity(targetId) instanceof LivingEntity target)||!target.isAlive()){mine.remove(targetId);return;}
+        if(!CombatSafety.canAffect(p,target))return;
         if(target.distanceToSqr(p)>RANGE*RANGE*4)return;                       // 距离兜底
         mine.remove(targetId);
         log.info("[黑闪] 结算 target={} 伤害={}",targetId,Math.min(MAX_DAMAGE,Math.pow(Math.max(1,p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)),3)));
@@ -105,7 +122,8 @@ public final class BlackFlashMarks {
     }
 
     // ------------------------------------------------------------------ 客户端
-    private record Mark(int entityId,Vec3 point,long until){}
+    private record Mark(int entityId,Vec3 offset,long until){}
+    private static Vec3 point(Mark mark){var level=Minecraft.getInstance().level;var target=level==null?null:level.getEntity(mark.entityId);return target==null?null:target.position().add(mark.offset);}
     private static final List<Mark> CLIENT=new ArrayList<>();
     private static final List<Mark> DESYNC=new ArrayList<>();
     /** 左键上一刻是否按下（用于取上升沿，避开原版攻击把 consumeClick 吃掉）。 */
@@ -113,7 +131,7 @@ public final class BlackFlashMarks {
 
     public static void receive(Network.Effect e){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
-        CLIENT.add(new Mark(e.owner(),e.position(),mc.level.getGameTime()+Math.max(4,e.life())));
+        var target=mc.level.getEntity(e.owner());if(target==null)return;CLIENT.removeIf(m->m.entityId()==e.owner());CLIENT.add(new Mark(e.owner(),e.position().subtract(target.position()),mc.level.getGameTime()+Math.max(4,e.life())));
     }
 
     /** 客户端每刻：过期清理 + 准星是否压在某个红圈上。 */
@@ -139,7 +157,7 @@ public final class BlackFlashMarks {
         double best=Double.MAX_VALUE;Mark hit=null;
         for(Mark m:CLIENT){
             if(mc.level.getEntity(m.entityId())==null)continue;
-            Vec3 d=m.point().subtract(eye);
+            Vec3 position=point(m);if(position==null)continue;Vec3 d=position.subtract(eye);
             double t=d.dot(look);
             if(t<=0||t>6.0)continue;
             double dist=d.subtract(look.scale(t)).length();
@@ -165,7 +183,7 @@ public final class BlackFlashMarks {
             float left=(m.until()-t)/MARK_TICKS;                        // 0~1 剩余
             if(left<0)continue;
             int a=(int)((0.55+0.45*Math.abs(Math.sin(t*0.6)))*255*Math.min(1,left*3));
-            ring(b,ps,m.point(),MARK_RADIUS,a,cam);
+            Vec3 position=point(m);if(position!=null)ring(b,ps,position,MARK_RADIUS,a,cam);
         }
         BufferUploader.drawWithShader(b.end());
         ps.popPose();RenderSystem.enableCull();RenderSystem.enableDepthTest();RenderSystem.disableBlend();

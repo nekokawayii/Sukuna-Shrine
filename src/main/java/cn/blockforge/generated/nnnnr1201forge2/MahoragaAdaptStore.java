@@ -25,10 +25,7 @@ public final class MahoragaAdaptStore {
     public static final int HALF=12,IMMUNE=24;
     /** 挨打进度对应的伤害倍率：0~11 次 100%→50%，12~23 次 50%→0%，24 次起免疫（0）。 */
     public static float takenFactor(int hits){
-        if(hits<=0)return 1f;
-        if(hits>=IMMUNE)return 0f;
-        if(hits<=HALF)return 1f-0.5f*hits/HALF;
-        return 0.5f-0.5f*(hits-HALF)/(float)(IMMUNE-HALF);
+        return AdaptationRules.takenFactor(hits);
     }
     /** 完全适应之后的收益：对其伤害**翻倍**、转为**真伤**，且命中后 20 秒内它无法回血。 */
     public static final float ADAPTED_DAMAGE=2f;
@@ -60,6 +57,8 @@ public final class MahoragaAdaptStore {
     }
     private static String display(String key){
         if(ENVIRONMENT.equals(key))return "其他伤害";
+        if(key.equals("technique:blood"))return "血液";
+        if(key.equals("technique:ten_shadows"))return "十影";
         return TYPE_NAMES.computeIfAbsent(key,k->{
             try{
                 ResourceLocation id=new ResourceLocation(k);
@@ -82,6 +81,12 @@ public final class MahoragaAdaptStore {
         for(var e:map.entrySet())if(e.getValue()>0)tag.putInt(e.getKey(),Math.min(IMMUNE,e.getValue()));
         Curse.data(p).put(KEY,tag);
     }
+    /** 双向合并只取较大进度；收回、重召不会叠加次数，更不会覆盖较新的存档。 */
+    public static void merge(ServerPlayer owner,Map<String,Integer> incoming){
+        Map<String,Integer> saved=read(owner),merged=AdaptationRules.merge(saved,incoming,IMMUNE);
+        if(!saved.equals(merged)){write(owner,merged);sync(owner);}
+    }
+    private static boolean trueDamage;
     /** 记一次进度（被攻击 / 攻击共用）。 */
     private static boolean record(ServerPlayer p,String counter,LivingEntity source,DamageSource damageSource){
         String key=damageSource!=null?keyOf(damageSource):(source==null?null:keyOfEntity(source));
@@ -92,10 +97,11 @@ public final class MahoragaAdaptStore {
         if(hits>=IMMUNE)return false;
         int next=hits+1;map.put(slot,next);write(p,map);sync(p);
         String name=display(key);
-        boolean done=next>=CLEAR;
+        int threshold=counter.equals(TAKEN)?IMMUNE:CLEAR;
+        boolean done=next>=threshold;
         p.displayClientMessage(Component.literal(done
-            ?"法轮已完全适应「"+name+"」：它的攻击对你无效，你打它也不再造成伤害"
-            :"法轮适应「"+name+"」 "+(counter.equals(TAKEN)?"受击":"攻击")+" "+next+"/"+CLEAR)
+            ?"法轮已适应「"+name+"」："+(counter.equals(TAKEN)?"该来源伤害免疫":"对其真伤翻倍并禁疗20秒")
+            :"法轮适应「"+name+"」 "+(counter.equals(TAKEN)?"受击":"攻击")+" "+next+"/"+threshold)
             .setStyle(net.minecraft.network.chat.Style.EMPTY.withColor(done?0xFFD24A:0xE8D8FF)),true);
         if(done){
             p.serverLevel().playSound(null,p.blockPosition(),net.minecraft.sounds.SoundEvents.BEACON_ACTIVATE,net.minecraft.sounds.SoundSource.PLAYERS,1.6f,1.4f);
@@ -106,7 +112,7 @@ public final class MahoragaAdaptStore {
     /** 已完全适应的键集合（打满 {@link #CLEAR}）。 */
     public static Set<String> completed(ServerPlayer p){
         Set<String> out=new LinkedHashSet<>();
-        for(var e:read(p).entrySet())if(e.getValue()>=CLEAR)out.add(e.getKey().substring(e.getKey().indexOf('/')+1));
+        for(var e:read(p).entrySet())if(e.getValue()>=(e.getKey().startsWith(TAKEN)?IMMUNE:CLEAR))out.add(e.getKey().substring(e.getKey().indexOf('/')+1));
         return out;
     }
     /** 已完全适应的来源数量（含"其他伤害"）。 */
@@ -124,7 +130,7 @@ public final class MahoragaAdaptStore {
         String key=keyOf(source);
         if(key==null)return false;
         Map<String,Integer> map=read(p);
-        return map.getOrDefault(TAKEN+key,0)>=CLEAR||map.getOrDefault(DEALT+key,0)>=CLEAR;
+        return map.getOrDefault(TAKEN+key,0)>=IMMUNE;
     }
     /** 玩家打某个目标是否也不再造成伤害（攻击适应满了）。 */
     public static boolean adaptedDealt(ServerPlayer p,LivingEntity victim){
@@ -137,6 +143,7 @@ public final class MahoragaAdaptStore {
     /** 伤害来源对应的适应键：生物 → 它的实体类型；其余 → {@link #ENVIRONMENT}。 */
     public static String keyOf(DamageSource source){
         if(source==null)return null;
+        String type=AttackTypes.of(source);if(AttackTypes.BLOOD.equals(type))return "technique:blood";if(AttackTypes.TEN_SHADOWS.equals(type))return "technique:ten_shadows";
         Entity attacker=source.getEntity()!=null?source.getEntity():source.getDirectEntity();
         if(attacker instanceof LivingEntity&&!(attacker instanceof ServerPlayer))return typeKey(attacker);
         if(attacker instanceof ServerPlayer)return typeKey(attacker); // 玩家也按"整只生物"算
@@ -170,29 +177,44 @@ public final class MahoragaAdaptStore {
     public static final double SUMMON_RANGE=48;
     /** 潜行右键空气：放出（或叫回）**同一只**友方魔虚罗。 */
     public static boolean summonAlly(ServerPlayer owner){
+        if(!TenShadows.incarnated(owner)||!TenShadows.tamed(owner))return false;
         ServerLevel level=owner.serverLevel();
         MahoragaEntity ally=findAlly(level,owner);
         boolean fresh=false;
         if(ally==null){
+            recallAll(owner); // 远处或其他维度的旧实体先保存并收回，杜绝重复显现。
             ally=VoidContent.MAHORAGA.get().create(level);
             if(ally==null)return false;
             fresh=true;
-            level.addFreshEntity(ally);
         }
-        // 每次召唤：回到主人身边、血量回满、继承主人已有的自身适应
+        // 两种显现共用主人存档中的适应；不继承敌对调服本体的招式适应。
         var look=owner.getLookAngle();
         double x=owner.getX()-look.x*2.5,z=owner.getZ()-look.z*2.5;
         ally.moveTo(x,owner.getY(),z,owner.getYRot(),0);
+        if(!level.noCollision(ally))ally.moveTo(owner.getX(),owner.getY(),owner.getZ(),owner.getYRot(),0);
+        if(!level.noCollision(ally)){owner.displayClientMessage(Component.literal("这里容不下魔虚罗，请到更开阔的地方召唤"),true);return false;}
         ally.setAllyMode(owner.getUUID(),true);
-        ally.importAdaptation(owner);      // 继承之前所有适应（调伏仪式期间获得的不在此列）
+        ally.shareAdaptation(owner); // 先合并实体进度，再读取主人较新的进度
         ally.setHealth(ally.getMaxHealth()); // 每次召唤血量回满
         ally.clearRitual();
         if(ally.getMaxHealth()!=MahoragaEntity.ALLY_HEALTH)ally.resizeAllyHealth();
-        if(fresh)ally.emerge();
+        if(fresh){if(!level.addFreshEntity(ally))return false;ally.emerge();}
+        ShadowSystem.fx(level,0,owner.position(),owner.position(),2,40);
         swapHeld(owner,VoidContent.MAHORAGA_WHEEL_RECALL.get()); // 手里的法轮 → 法轮·收回
         owner.displayClientMessage(Component.literal("友方魔虚罗已就位 · 生命 "+BalanceRules.number(ally.getMaxHealth())
-            +" · 已继承适应 "+completedCount(owner)+" 项 · 手里的法轮变成「收回」").setStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0xFFD24A)),true);
+            +" · 与不完全显现共享适应").setStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0xFFD24A)),true);
         return true;
+    }
+    public static void recallAll(ServerPlayer owner){
+        java.util.List<MahoragaEntity> found=new java.util.ArrayList<>();
+        for(ServerLevel level:owner.server.getAllLevels())for(var entity:level.getAllEntities())if(entity instanceof MahoragaEntity ally&&ally.isAllyOf(owner.getUUID()))found.add(ally);
+        for(MahoragaEntity ally:found)recallSpecific(owner,ally);
+    }
+    public static void recallSpecific(ServerPlayer owner,MahoragaEntity ally){
+        if(!ally.isAllyOf(owner.getUUID()))return;
+        ShadowSystem.fx((ServerLevel)ally.level(),0,ally.position(),ally.position(),2,35);
+        ally.shareAdaptation(owner);ally.stopRiding();ally.discard();restoreWheel(owner);
+        owner.displayClientMessage(Component.literal("友方魔虚罗已收回"),true);
     }
     /** 收回：只有场上确实有友方魔虚罗时才成功，并把「收回」变回法轮。 */
     public static boolean recallAlly(ServerPlayer owner,net.minecraft.world.InteractionHand hand){
@@ -202,12 +224,21 @@ public final class MahoragaAdaptStore {
             owner.displayClientMessage(Component.literal("场上已经没有你的友方魔虚罗（被打掉或走远了），法轮已变回原样").setStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0xFF9A5A)),true);
             return false;
         }
-        // 收回：把它带走（下次召唤还是同一只，适应照旧继承）
-        ally.stopRiding();
+        // 收回前落盘；下一次实体重新创建但适应不清空。
+        ally.shareAdaptation(owner);ally.stopRiding();
         ally.discard();
         restoreWheel(owner);
         owner.displayClientMessage(Component.literal("友方魔虚罗已收回，法轮变回原样").setStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0xFFD24A)),true);
         return true;
+    }
+    /** 切到「不完全显现」时调用：两种显现互斥，场上若有友方魔虚罗则先收回（没有就什么都不做）。 */
+    public static void banishAlly(ServerPlayer owner){
+        MahoragaEntity ally=findAlly(owner.serverLevel(),owner);
+        if(ally==null)return;
+        ally.shareAdaptation(owner);ally.stopRiding();
+        ally.discard();
+        restoreWheel(owner);
+        owner.displayClientMessage(Component.literal("已选择不完全显现 · 友方魔虚罗先收回").setStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0xE8D8FF)),true);
     }
     /** 手上是否拿着「法轮 · 收回」。 */
     private static boolean holdsRecall(ServerPlayer owner){
@@ -286,7 +317,7 @@ public final class MahoragaAdaptStore {
         ServerPlayer wearer=victim instanceof ServerPlayer self?self:MaidBridge.progression(victim);
         if(wearer==null)return;
         if(!MahoragaRules.wheelOnHead(wearer))return; // 没戴法轮：没有自身适应
-        if(friendlyTo(wearer,event.getEntity()))return; // 打自己人（友方魔虚罗）不计适应
+        if(event.getSource().getEntity() instanceof LivingEntity attacker&&friendlyTo(wearer,attacker))return;
         // 被同一个来源打：0~11 次递减到 50%，12~23 次继续递减，24 次起完全免疫
         String srcKey=keyOf(event.getSource());
         if(srcKey!=null){
@@ -310,14 +341,14 @@ public final class MahoragaAdaptStore {
     /** 玩家打中某个生物：也计入"适应它的存在"（12 次后你打它、它打你都无效）。 */
     @net.minecraftforge.eventbus.api.SubscribeEvent(priority=net.minecraftforge.eventbus.api.EventPriority.LOW)
     public static void dealt(net.minecraftforge.event.entity.living.LivingHurtEvent event){
-        if(event.getAmount()<=0)return;
+        if(trueDamage||event.getAmount()<=0||event.getSource().getDirectEntity() instanceof MahoragaEntity)return;
         LivingEntity victim=event.getEntity();
         if(victim.level().isClientSide)return;
         ServerPlayer p=CombatSettings.caster(event.getSource());
         if(p==null&&event.getSource().getEntity() instanceof ServerPlayer sp)p=sp;
         if(p==null)return;
         if(!MahoragaRules.wheelOnHead(p))return;
-        if(friendlyTo(p,victim))return;             // 打自己人不算
+        if(!CombatSafety.canAffect(p,victim))return; // 友方、默认玩家和禁止 PvP 都不计适应
         if(victim instanceof MahoragaEntity m&&m.ally())return;
         if(adaptedDealt(p,victim)){
             // 已经完全适应它的存在：这一击变成**真伤**（无视护甲/抗性/无敌帧）且**伤害翻倍**，
@@ -325,8 +356,8 @@ public final class MahoragaAdaptStore {
             LivingEntity le=victim;
             float amount=event.getAmount()*ADAPTED_DAMAGE;
             le.invulnerableTime=0;
-            le.hurt(p.serverLevel().damageSources().genericKill(),amount);
-            applyNoHeal(le);
+            trueDamage=true;
+            try{if(CombatSafety.hurt(p,le,p.serverLevel().damageSources().genericKill(),amount))applyNoHeal(le);}finally{trueDamage=false;}
             event.setAmount(0);event.setCanceled(true);
             MahoragaVisuals.adaptAt(le.getBoundingBox().getCenter(),completedCount(p));
             if(le.tickCount%20==0)p.displayClientMessage(Component.literal("法轮 · 真伤 x"+BalanceRules.number(ADAPTED_DAMAGE)+" · 目标 20 秒禁疗")

@@ -146,7 +146,9 @@ public final class MahoragaEntity extends Monster {
    }
 
    private void pushMask() {
-      this.entityData.set(IMMUNE, this.immuneMask());
+      int mask=0;
+      for(int i=0;i<hits.length;i++)if(hits[i]>=CLEAR_HITS)mask|=1<<i;
+      this.entityData.set(IMMUNE,mask);
    }
 
    public boolean adapted(String type) {
@@ -193,7 +195,7 @@ public final class MahoragaEntity extends Monster {
       int[] saved = tag.getIntArray("MahoHits");
 
       for(int i = 0; i < Math.min(saved.length, this.hits.length); ++i) {
-         this.hits[i] = tag.getBoolean("MahoHitsPerTurn6") ? saved[i] : Math.min(4, Math.max(0, saved[i])) * 6;
+         this.hits[i] = tag.getBoolean("MahoHitsPerTurn6") ? Math.max(0,Math.min(CLEAR_HITS,saved[i])) : Math.min(4, Math.max(0, saved[i])) * 6;
       }
 
       this.entityData.set(RITUAL, tag.getInt("MahoRitual"));
@@ -298,6 +300,16 @@ public final class MahoragaEntity extends Monster {
    }
 
    public boolean hurt(DamageSource source, float amount) {
+      if(!level().isClientSide){
+         ServerPlayer sourceOwner=CombatSettings.caster(source);
+         if(sourceOwner!=null&&!CombatSafety.canAffect(sourceOwner,this))return false;
+         if(ritualState()==RITUAL_RUNNING){
+            tickRitual();if(isRemoved())return false;
+            ServerPlayer owner=summonerPlayer();
+            if(sourceOwner!=null&&owner!=null&&sourceOwner!=owner&&(!CombatSettings.canHit(owner,sourceOwner)||!CombatSettings.canHit(sourceOwner,owner)))fail("非敌对玩家从场外协助",owner);
+         }
+         if(ally()&&summonerPlayer()!=null)shareAdaptation(summonerPlayer());
+      }
       if (!this.level().isClientSide && this.ally()) {
          Entity src = source.getEntity() != null ? source.getEntity() : source.getDirectEntity();
          ServerPlayer var10000;
@@ -360,6 +372,7 @@ public final class MahoragaEntity extends Monster {
    /** **绕过"适应"吃一次伤害**：给"点名数值"的技能用（例如灶·最大功率·开 对魔虚罗固定 100000）。
     *  直接走父类的受击流程（照常吃护甲/免伤事件），只是跳过本类里"按招式/按来源适应"的那套判定。 */
    public boolean forceDamage(DamageSource source, float amount) {
+      if(!level().isClientSide){ServerPlayer owner=CombatSettings.caster(source);if(owner!=null&&!CombatSafety.canAffect(owner,this))return false;if(ritualState()==RITUAL_RUNNING){tickRitual();if(isRemoved())return false;}}
       return super.hurt(source, amount);
    }
 
@@ -455,10 +468,23 @@ public final class MahoragaEntity extends Monster {
     *  查表（{@link #hurt} / {@link #hitTarget}）用的也必须是同样的槽位键。此前这里把库里的
     *  槽位键原样放进 ownHits，但查表用的是<b>不带前缀的裸键</b>（{@code minecraft:zombie}），
     *  于是每一条都查不中 —— 表现为 <b>"友方魔虚罗一点适应都没继承"</b>。</p> */
+   public void resetAdaptation() {
+      java.util.Arrays.fill(hits,0);java.util.Arrays.fill(lastHit,0);ownHits.clear();
+      entityData.set(IMMUNE,0);entityData.set(OWN_MASK,0);entityData.set(WHEEL,-1);entityData.set(CELL,0);wheelSpin=wheelFlash=0;
+   }
+
+   public void shareAdaptation(ServerPlayer owner) {
+      if(!isAllyOf(owner.getUUID()))return;
+      MahoragaAdaptStore.merge(owner,ownHits);
+      importAdaptation(owner);
+   }
+
    public void importAdaptation(ServerPlayer owner) {
+      Map<String,Integer> snapshot=curseAdapt(owner);
+      if(ownHits.equals(snapshot))return;
       this.ownHits.clear();
 
-      for(Map.Entry<String, Integer> e : curseAdapt(owner).entrySet()) {
+      for(Map.Entry<String, Integer> e : snapshot.entrySet()) {
          String slot = normalizeSlot((String)e.getKey());
          int hits = Math.max(0, Math.min(MahoragaAdaptStore.IMMUNE, (Integer)e.getValue()));
          if (slot != null && hits > 0) {
@@ -499,7 +525,8 @@ public final class MahoragaEntity extends Monster {
 
       for(Map.Entry<String, Integer> e : this.ownHits.entrySet()) {
          // 与主人法轮同一判据：12 次（CLEAR）= 完全适应，一格法轮
-         if (e.getValue() >= MahoragaAdaptStore.CLEAR && bit < 24) {
+         int threshold=e.getKey().startsWith(MahoragaAdaptStore.TAKEN)?MahoragaAdaptStore.IMMUNE:MahoragaAdaptStore.CLEAR;
+         if (e.getValue() >= threshold && bit < OWN_MASK_BITS) {
             mask |= 1 << bit;
          }
 
@@ -522,10 +549,12 @@ public final class MahoragaEntity extends Monster {
          if (hits < MahoragaAdaptStore.IMMUNE) {
             int next = hits + 1;
             this.ownHits.put(slot, next);
+            ServerPlayer owner=summonerPlayer();
+            if(ally()&&owner!=null)MahoragaAdaptStore.merge(owner,ownHits);
             this.pushOwnMask();
             this.syncWheelOwn();
-            if (next == OWN_CLEAR) {
-               this.announce("\u9b54\u865a\u7f57 \u00b7 \u5df2\u5b8c\u5168\u9002\u5e94" + ownLabel(slot) + "\uff1a\u5b83\u5bf9\u8be5\u6765\u6e90\u7684\u5168\u90e8\u653b\u51fb\u65e0\u6548");
+            if (next == (slot.startsWith(MahoragaAdaptStore.TAKEN)?MahoragaAdaptStore.IMMUNE:OWN_CLEAR)) {
+               this.announce("魔虚罗 · 已完全适应" + ownLabel(slot) + (slot.startsWith(MahoragaAdaptStore.TAKEN)?"：该来源伤害免疫":"：对其真伤翻倍并禁疗20秒"));
                this.level().playSound((Player)null, this.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 2.0F, 1.3F);
             }
 
@@ -546,6 +575,8 @@ public final class MahoragaEntity extends Monster {
    private static String ownLabel(String key) {
       // ownHits 的键是槽位键（taken/ dealt/ 前缀），显示前先剥掉前缀
       String bare = key == null ? "" : (key.indexOf('/') >= 0 ? key.substring(key.indexOf('/') + 1) : key);
+      if ("technique:blood".equals(bare))return "「血液」";
+      if ("technique:ten_shadows".equals(bare))return "「十影」";
       if ("env".equals(bare)) {
          return "\u5176\u4ed6\u4f24\u5bb3";
       } else {
@@ -565,41 +596,25 @@ public final class MahoragaEntity extends Monster {
    // 现在魔虚罗只有两种适应——挨同一个来源打 12 次，或（友方）打对方 12 次。
 
    public void beginRitual(ServerPlayer owner) {
-      this.summoner = owner.getUUID();
-      this.ritualStart = this.level().getGameTime();
-      this.entityData.set(RITUAL, 1);
+      this.summoner=owner.getUUID();
+      this.ritualStart=this.level().getGameTime();
+      this.entityData.set(RITUAL,1);
       this.setAction(1);
-      this.rest = 40;
-      this.level().playSound((Player)null, this.blockPosition(), SoundEvents.WARDEN_ROAR, SoundSource.HOSTILE, 3.0F, 0.6F);
-      this.announce("\u8c03\u4f0f\u4eea\u5f0f\u5f00\u59cb\uff1a\u72ec\u81ea\u51fb\u8d25\u516b\u63e1\u5251\u5f02\u6212\u795e\u5c06\u00b7\u9b54\u865a\u7f57\u3002\u79bb\u5f00 500 \u683c\u3001\u6216\u8ba9\u5973\u4ec6/\u4e0e\u4f60\u4e92\u4e3a\u76df\u53cb\u7684\u73a9\u5bb6\u9760\u8fd1\uff0c\u90fd\u4f1a\u5931\u8d25\u3002");
-      List<LivingEntity> intruders = this.intruders();
-      if (!intruders.isEmpty()) {
-         this.fail("\u9644\u8fd1\u6709\u5973\u4ec6\u6216\u4e0e\u4f60\u4e92\u4e3a\u76df\u53cb\u7684\u73a9\u5bb6\uff08" + intruders.size() + " \u4f4d\uff09\uff0c\u8c03\u4f0f\u4eea\u5f0f\u81ea\u52a8\u5931\u8d25", owner);
-      }
-
+      this.rest=40;
+      this.level().playSound(null,this.blockPosition(),SoundEvents.WARDEN_ROAR,SoundSource.HOSTILE,3.0F,.6F);
+      this.announce("调服仪式开始：64格内不得有女仆、友方或未与召唤者交战的生物；只能由召唤者完成调服，逃出500格、死亡、离线或换维度判失败。可重新挑战。");
+      tickRitual();
    }
 
    private List<LivingEntity> intruders() {
-      List<LivingEntity> found = new ArrayList();
-      ServerPlayer owner = this.summonerPlayer();
-
-      for(LivingEntity e : this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(64.0D), (ex) -> ex != this && ex.isAlive())) {
-         if (!e.isSpectator() && (owner == null || !e.getUUID().equals(owner.getUUID()))) {
-            if (MaidBridge.isMaid(e)) {
-               found.add(e);
-            } else if (e instanceof ServerPlayer) {
-               ServerPlayer other = (ServerPlayer)e;
-               if (owner == null) {
-                  found.add(other);
-               } else if (CombatSettings.relation(owner, other.getUUID()) == 1) {
-                  found.add(other);
-               } else if (!CombatSettings.canHit(owner, other)) {
-                  found.add(other);
-               }
-            }
-         }
+      List<LivingEntity> found=new ArrayList<>();
+      ServerPlayer owner=summonerPlayer();
+      for(LivingEntity e:level().getEntitiesOfClass(LivingEntity.class,getBoundingBox().inflate(CLEAR_RANGE),ex->ex!=this&&ex.isAlive()&&!ex.isSpectator())) {
+         if(e==owner||!MahoragaRitualRules.participant(distanceToSqr(e)))continue;
+         boolean mutual=owner!=null&&e instanceof ServerPlayer other&&CombatSettings.canHit(owner,other)&&CombatSettings.canHit(other,owner);
+         boolean attacking=owner!=null&&e instanceof Mob mob&&mob.getTarget()==owner&&CombatSettings.canHit(owner,e);
+         if(MahoragaRitualRules.intruder(MaidBridge.isMaid(e),e instanceof Player,mutual,attacking))found.add(e);
       }
-
       return found;
    }
 
@@ -619,6 +634,8 @@ public final class MahoragaEntity extends Monster {
    private void succeed(ServerPlayer killer) {
       if (this.ritualState() != 3) {
          this.entityData.set(RITUAL, 3);
+         ServerPlayer ritualOwner=summonerPlayer();
+         if(ritualOwner!=null)TenShadows.tame(ritualOwner);
          this.announce("\u8c03\u4f0f\u6210\u529f\uff1a\u516b\u63e1\u5251\u5f02\u6212\u795e\u5c06\u00b7\u9b54\u865a\u7f57\u5df2\u88ab\u964d\u4f0f\u3002");
          if (killer != null) {
             killer.displayClientMessage(Component.literal("\u8c03\u4f0f\u6210\u529f\u3002").setStyle(Style.EMPTY.withColor(16765514)), false);
@@ -632,32 +649,14 @@ public final class MahoragaEntity extends Monster {
    }
 
    private void tickRitual() {
-      if (this.ritualState() == 1) {
-         long now = this.level().getGameTime();
-         ServerPlayer owner = this.summonerPlayer();
-         if (now % 20L == 0L) {
-            if (owner == null || !owner.isAlive() || owner.level() != this.level() || owner.distanceToSqr(this) > 250000.0D) {
-               this.fail(owner == null ? "\u53ec\u5524\u8005\u5df2\u79bb\u5f00\u6216\u79bb\u7ebf" : "\u9003\u51fa 500 \u683c\u8303\u56f4", owner);
-               if (owner != null && owner.level() != this.level()) {
-                  this.discard();
-               }
-
-               return;
-            }
-
-            List<LivingEntity> intruders = this.intruders();
-            if (!intruders.isEmpty()) {
-               this.fail("\u6709\u5176\u4ed6\u73a9\u5bb6\u6216\u5973\u4ec6\u5728\u573a\uff08" + intruders.size() + " \u4f4d\uff09", owner);
-            }
-         }
-
-         if (this.ritualState() == 2 && owner != null && owner.distanceToSqr(this) > 1000000.0D) {
-            this.discard();
-         }
-
+      if(ritualState()!=RITUAL_RUNNING)return;
+      ServerPlayer owner=summonerPlayer();
+      if(MahoragaRitualRules.escaped(owner!=null&& !owner.hasDisconnected(),owner!=null&&owner.isAlive(),owner!=null&&owner.level()==level(),owner==null?Double.POSITIVE_INFINITY:distanceToSqr(owner))){
+         fail("召唤者死亡、离线、换维度或离开500格挑战范围",owner);discard();return;
       }
+      List<LivingEntity> outsiders=intruders();
+      if(!outsiders.isEmpty())fail("64格内有非敌对参与者："+outsiders.get(0).getName().getString(),owner);
    }
-
 
    public boolean canAttack(LivingEntity target) {
       return this.ally() ? this.allyTarget(target) : MahoragaRules.valid(this, target);
@@ -672,6 +671,7 @@ public final class MahoragaEntity extends Monster {
          long now = this.level().getGameTime();
          this.bar.setName(Component.literal((this.ally() ? "\u53cb\u65b9 \u00b7 " : "") + "\u516b\u63e1\u5251\u5f02\u6212\u795e\u5c06\u00b7\u9b54\u865a\u7f57 \u00b7 " + (int)this.getHealth() + " / " + (int)this.getMaxHealth() + " \u00b7 \u9002\u5e94\u62db\u5f0f " + Integer.bitCount(this.immuneMask()) + "/" + AttackTypes.SLOTS + (this.ritualState() == 1 ? " \u00b7 \u8c03\u4f0f\u4eea\u5f0f" : (this.ritualState() == 2 ? " \u00b7 \u4eea\u5f0f\u5931\u8d25" : ""))));
          this.bar.setProgress(this.getHealth() / this.getMaxHealth());
+         if(ally()&&now%20==0&&summonerPlayer()!=null)shareAdaptation(summonerPlayer());
          if (!this.ally()) {
             this.tickRitual();
          }
@@ -748,23 +748,18 @@ public final class MahoragaEntity extends Monster {
    }
 
    private LivingEntity pickAllyTarget() {
-      ServerPlayer owner = this.summonerPlayer();
-      if (owner != null && owner.level() == this.level()) {
-         LivingEntity current = this.getTarget();
-         if (current != null && this.allyFilter(current)) {
-            return current;
-         } else {
-            LivingEntity ownerAttacker = owner.getLastHurtByMob();
-            if (ownerAttacker != null && this.allyFilter(ownerAttacker)) {
-               return ownerAttacker;
-            } else {
-               LivingEntity ownerVictim = owner.getLastHurtMob();
-               return ownerVictim != null && this.allyFilter(ownerVictim) ? ownerVictim : (LivingEntity)this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(24.0D), (e) -> this.allyFilter(e) && MaidBridge.progression(e) != owner).stream().min(Comparator.comparingDouble(this::distanceToSqr)).orElse(null);
-            }
-         }
-      } else {
-         return null;
-      }
+      ServerPlayer owner=this.summonerPlayer();
+      if(owner==null||owner.level()!=level())return null;
+      if(ally())return CombatSafety.summonTarget(owner,this,24);
+       LivingEntity victim=owner.getLastHurtMob();
+      if(owner.tickCount-owner.getLastHurtMobTimestamp()<200&&allyFilter(victim))return victim;
+      LivingEntity attacker=owner.getLastHurtByMob();
+      if(owner.tickCount-owner.getLastHurtByMobTimestamp()<200&&allyFilter(attacker))return attacker;
+      var nearby=level().getEntitiesOfClass(LivingEntity.class,getBoundingBox().inflate(24),this::allyFilter);
+      LivingEntity threat=nearby.stream().filter(e->e instanceof Mob m&&m.getTarget()==owner).min(Comparator.comparingDouble(this::distanceToSqr)).orElse(null);
+      if(threat!=null)return threat;
+      LivingEntity current=getTarget();if(allyFilter(current))return current;
+      return nearby.stream().filter(e->e instanceof net.minecraft.world.entity.monster.Enemy).min(Comparator.comparingDouble(this::distanceToSqr)).orElse(null);
    }
 
    private boolean allyFilter(LivingEntity e) {
@@ -772,6 +767,12 @@ public final class MahoragaEntity extends Monster {
    }
 
    private LivingEntity pickTarget() {
+      if (!this.ally()&&getPersistentData().hasUUID("MegumiHunt")) {
+         LivingEntity execution=getTarget();
+         if(execution instanceof MegumiEntity megumi&&!megumi.downed())return execution;
+         ServerPlayer hunter=server().getServer().getPlayerList().getPlayer(getPersistentData().getUUID("MegumiHunt"));
+         if(hunter!=null&&hunter.isAlive()&&hunter.level()==level())return hunter;
+      }
       if (this.ally()) {
          return this.pickAllyTarget();
       } else {
@@ -896,7 +897,7 @@ public final class MahoragaEntity extends Monster {
                }
             }
 
-            return MahoragaAdaptStore.friendlyTo(owner, target);
+            return ShadowSystem.friendly(owner,target)||!CombatSettings.canHit(owner,target)||MahoragaAdaptStore.friendlyTo(owner,target);
          }
       }
    }
@@ -906,26 +907,20 @@ public final class MahoragaEntity extends Monster {
          return;
       }
 
-      target.invulnerableTime = 0;
-      float damage = BalanceRules.damage(this.getAttributeValue(Attributes.ATTACK_DAMAGE) * (double)scale,BalanceRules.Category.BOSS_ATTACK);
-      if (!target.hurt(this.damageSources().mobAttack(this), damage)) {
-         return;
-      }
-
-      String victimKey = MahoragaAdaptStore.keyOfEntity(target);
-      if (this.ally() && victimKey != null) {   // 「攻击适应」也只属于友方魔虚罗
-         // 攻击适应：与主人法轮同一把尺（dealt/<实体id>，12 次 = 完全适应）
-         String victimSlot = MahoragaAdaptStore.DEALT + victimKey;
-         if (this.ownHits.getOrDefault(victimSlot, 0) >= OWN_CLEAR) {
-            // 已经"适应对方存在"：这一击是真伤（无视护甲/抗性/无敌帧）、伤害翻倍，且对方 20 秒不能回血
-            target.invulnerableTime = 0;
-            target.hurt(this.damageSources().genericKill(), damage * MahoragaAdaptStore.ADAPTED_DAMAGE);
-            target.getPersistentData().putLong(MahoragaAdaptStore.NO_HEAL_UNTIL,
-               this.level().getGameTime() + MahoragaAdaptStore.ADAPTED_NO_HEAL_TICKS);
-            target.getPersistentData().putBoolean("SukunaNoHeal", true);
-         } else {
-            this.turnOwn(victimSlot); // 打中一次就涨一点"适应对方"
-         }
+      ServerPlayer owner=ally()?summonerPlayer():null;
+      if(ally()&&(owner==null||!CombatSafety.canAffect(owner,target)))return;
+      if(owner!=null)shareAdaptation(owner);
+      target.invulnerableTime=0;
+      float damage=BalanceRules.damage(getAttributeValue(Attributes.ATTACK_DAMAGE)*scale,BalanceRules.Category.BOSS_ATTACK);
+      String victimKey=MahoragaAdaptStore.keyOfEntity(target),slot=MahoragaAdaptStore.DEALT+victimKey;
+      boolean adapted=ally()&&victimKey!=null&&ownHits.getOrDefault(slot,0)>=OWN_CLEAR;
+      DamageSource source=adapted?new DamageSource(damageSources().genericKill().typeHolder(),this,this):damageSources().mobAttack(this);
+      boolean accepted;
+      try{AttackTypes.mark(AttackTypes.TEN_SHADOWS);accepted=owner!=null?CombatSafety.hurt(owner,target,source,adapted?damage*MahoragaAdaptStore.ADAPTED_DAMAGE:damage):target.hurt(source,damage);}finally{AttackTypes.clear();}
+      if(!accepted)return;
+      if(ally()&&victimKey!=null){
+         if(adapted){target.getPersistentData().putLong(MahoragaAdaptStore.NO_HEAL_UNTIL,level().getGameTime()+MahoragaAdaptStore.ADAPTED_NO_HEAL_TICKS);target.getPersistentData().putBoolean("SukunaNoHeal",true);}
+         else turnOwn(slot);
       }
 
       Vec3 push = target.position().subtract(this.position()).multiply(1.0D, 0.0D, 1.0D);
@@ -948,14 +943,19 @@ public final class MahoragaEntity extends Monster {
             var10000 = null;
          }
 
-         ServerPlayer killer = var10000;
-         int state = this.ritualState();
-         if (state == 1) {
-            this.succeed(killer);
+         ServerPlayer killer=CombatSettings.caster(source);
+         if(ally()&&summonerPlayer()!=null)shareAdaptation(summonerPlayer());
+         tickRitual();
+         int state=this.ritualState();
+         if(state==RITUAL_RUNNING){
+            ServerPlayer owner=summonerPlayer();
+            if(MahoragaRitualRules.reward(state,owner!=null&&owner.isAlive()&&owner.level()==level(),killer==owner))succeed(killer);
+            else fail("必须由存活且在挑战范围内的召唤者击败魔虚罗",owner);
+            state=ritualState();
          }
 
          this.fxSummoner(MahoragaVisuals.WHEEL_END, MahoragaVisuals.WHEEL_END, this.position(), 0.0F, 0L);
-         if (state != 2) {
+         if (!ally()&&state != RITUAL_FAILED) {
             ItemStack wheel = ((Item)VoidContent.MAHORAGA_WHEEL.get()).getDefaultInstance();
             wheel.setDamageValue(0);
             this.spawnAtLocation(wheel);
@@ -968,6 +968,7 @@ public final class MahoragaEntity extends Monster {
    }
 
    public void remove(Entity.RemovalReason reason) {
+      if(!level().isClientSide&&ally()&&summonerPlayer()!=null)shareAdaptation(summonerPlayer());
       if (!this.level().isClientSide && !reason.shouldSave()) {
          this.fxSummoner(MahoragaVisuals.WHEEL_END, MahoragaVisuals.WHEEL_END, this.position(), 0.0F, 0L);
       }

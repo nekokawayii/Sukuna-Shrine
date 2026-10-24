@@ -24,6 +24,7 @@ public final class ItemDescriptions {
             case "buddha_incense"->"非和平难度右键召唤即身佛，前方8格需要空地。|96格内已有即身佛时无法再次召唤。";
             case "buddha_spawn_egg"->"测试用：对方块右键生成即身佛，当前模式默认"+BalanceRules.number(BalanceRules.strength(5000,BalanceRules.Category.BOSS))+"生命，拥有两阶段术式。";
             case "daitian_spawn_egg"->"测试用：生成咒胎戴天；当前模式"+BalanceRules.number(BalanceRules.strength(200,BalanceRules.Category.BOSS))+"生命，属性不随玩家成长改变。";
+            case "beyond_fragment"->"";
             case "void_key"->"击败虎杖残影后获得。右键进入基岩层虚空竞技场，再次右键返回。|击败五条悟后吃下虚空相咒胎，解锁虚空御厨子；虎杖残影通关后可前往Y=1000真人区域。|丢失后可用 /sukuna void key 补领。";
             case "gojo_spawn_egg"->"测试用：生成五条悟。|150000 生命、20 防御（关闭模式按固定值首领比值 "+BalanceRules.ratio(BalanceRules.factor(false,BalanceRules.Category.BOSS_FIXED))+" 生效，为 "+BalanceRules.number(BalanceRules.strength(150000,BalanceRules.Category.BOSS_FIXED))+" 生命），无下限免疫除世界斩与领域展延外的全部伤害。|击败固定掉落虚空相咒胎与六眼。";
             case "gojo_fragment"->"六眼：击败五条悟固定掉落 1 枚，没有任何阶段要求。|玩家：直接右键（潜行右键也行）即为吃下，屏幕最右侧开启五条悟技能轮盘。|女仆：对准自家女仆潜行右键喂下，之后在女仆任务里选择「六眼」，她会自己放苍、赫、茈与无量空处。|与宿傩记忆、里梅记忆共存，互不覆盖，任务随时可切回。|无限制茈会伤到自己，慎用。";
@@ -31,11 +32,11 @@ public final class ItemDescriptions {
             case "true_false_love"->"女仆饰品｜放入女仆饰品栏生效，放在背包或手中无效。|女仆需已吃下宿傩记忆、选择伏魔御厨子任务并站立，随后会与主人对战。|女仆降至1血时结束对战并恢复满血；主人死亡重生后也会摘下返还。|对战结束，饰品返回主人背包；背包已满则掉在主人身边。";
             case "eternal_love"->"右键生物：你的术式不再伤害或锁定它；Shift＋右键解除。|工作台：上中金锭；中排紫水晶碎片、钻石、紫水晶碎片；下中虞美人。";
             case "sukuna_memory"->"长按右键吞噬一次，解锁宿傩术式与成长任务。|N选择术式，R释放，J查看任务；纸与腐肉可合成补领。";
-            case "mahoraga_ritual"->"调伏仪式：右键在脚下展开法阵，召出八握剑异戒神将·魔虚罗（无阶段要求）。|必须独自参加：出现「与你不互为敌对」的玩家/女仆/旁观怪就立即失败；正在和你互相攻击的怪不算。|魔虚罗不分敌我，召唤者也会被打；逃出 500 格它会消失，仪式失败。|核心机制：法轮每受击 6 次转 1 格，转满 4 格（24 次）后该类攻击完全无效。|它还会每 60 秒适应「你本身」一次（最多 6 次，每次伤害 +20%），满层后攻击变真伤且命中 20 秒禁疗。|仪式失败后被打死的魔虚罗不掉任何东西。";
-            case "mahoraga_wheel"->"魔虚罗掉落物，也是一件**头盔**：普通右键直接戴到头上（潜行右键不会戴上），一圈法轮横着悬在头顶（不遮挡头部建模与皮肤）。|戴上后获得「自身适应」：打中同一个生物 12 次 → **完全适应它的存在**，之后你对它的伤害是**真伤**且**翻倍**，并让它 20 秒无法回血。|被同一个来源打也会累积：12 次时减伤到 **50%**，攒到 24 次**直接免疫**（魔虚罗与友方魔虚罗同规则）。|潜行右键（对着空气也行）：召唤友方魔虚罗；召唤后手里与背包的法轮全部变成「法轮 · 收回」，右键收回即变回法轮。|固定 800 生命、绝对友方、每次召唤满血、继承你已有的适应（不继承调伏仪式里的）。";
+            case "mahoraga_ritual"->"受肉伏黑惠后挑战魔虚罗，调服成功解锁两种显现。|参与范围64格：女仆、非互相标敌的玩家、未与召唤者交战的生物会使仪式失败。|挑战范围500格：死亡、离线、换维度或逃出范围时仪式失败并消失。|法轮每受击6次转1格，24次后免疫对应招式；没有时间适应。|由召唤者完成击杀才调服成功；失败不掉法轮，可重新挑战。";
+            case "mahoraga_wheel"->"魔虚罗掉落物，也是一件**头盔**：普通右键直接戴到头上（潜行右键不会戴上），一圈法轮横着悬在头顶（不遮挡头部建模与皮肤）。|戴上后获得「自身适应」：打中同一个生物 12 次 → **完全适应它的存在**，之后你对它的伤害是**真伤**且**翻倍**，并让它 20 秒无法回血。|被同一个来源打也会累积：12 次时减伤到 **50%**，攒到 24 次**直接免疫**（魔虚罗与友方魔虚罗同规则）。|潜行右键（对着空气也行）：召唤友方魔虚罗；召唤后手里与背包的法轮全部变成「法轮 · 收回」，右键收回即变回法轮。|固定 800 生命、绝对友方、每次召唤满血、与不完全显现双向共享适应，收回后保存（不继承敌对调服本体的招式适应）。";
             case "mahoraga_wheel_recall"->"召唤友方魔虚罗后由法轮变成。|右键：把场上的友方魔虚罗收回，并**变回法轮**（可继续戴在头上）。|场上已经没有友方魔虚罗时右键，同样会变回法轮。";
             case "mahoraga_spawn_egg"->"测试用：直接生成魔虚罗。|没有调伏仪式的独自限制，但它依然不分敌我、并且照常按攻击类型适应。";
-            case "nine_death_paintings"->"九种试炼咒胎各一个合成，完成即身佛阶段后吞噬一次。|"+GrowthConfig.NINE.description(Network.tooltipFactor(BalanceRules.Category.PLAYER_HEALTH),Network.tooltipFactor(BalanceRules.Category.PLAYER_ATTACK),Network.tooltipFactor(BalanceRules.Category.DAMAGE))+"。|斩击命中1秒后联合追击；V开启15秒九相轮转。";
+            case "nine_death_paintings"->"九种试炼咒胎各一个合成，完成即身佛阶段后吞噬一次。|"+GrowthConfig.NINE.description(Network.tooltipFactor(BalanceRules.Category.PLAYER_HEALTH),Network.tooltipFactor(BalanceRules.Category.PLAYER_ATTACK),Network.tooltipFactor(BalanceRules.Category.DAMAGE))+"。|斩击命中1秒后联合追击；V开启15秒九相轮转。|新增赤血操术：长按N后滚轮或方向键翻页，R释放，百敛长按2秒。";
             case "nether_core"->"祭坛材料；黑曜石放中央，上下左右各一份烈焰粉合成。";
             case "forbidden_fetus"->"即身佛掉落的禁忌胚胎，凝聚咒胎祭坛的核心。";
             case "cursed_altar"->"放置后右键查看当前试炼。|背包带齐九种咒胎时右键，消耗各一个凝聚九相图。";

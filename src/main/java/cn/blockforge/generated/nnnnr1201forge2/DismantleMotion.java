@@ -33,14 +33,29 @@ public final class DismantleMotion {
             &&!Uraume.locked(p)&&!GuardianPlayerSkills.locked(p);
     }
     private static boolean grounded(LivingEntity body){return !body.isPassenger()&&!body.isSleeping()&&!body.isFallFlying()&&!body.isInWater()&&body.onGround();}
-    /** 空中动作（冲拳）不要求落地；其余动作仍要求站在地面上。 */
-    private static boolean needsGround(int kind){return kind!=DismantleMotionRules.SPIN&&kind!=DismantleMotionRules.AIR_PUNCH;}
-    public static boolean available(ServerPlayer p,int kind){return DismantleMotionRules.valid(kind)&&!active(p)&&allowed(p)&&(!needsGround(kind)||grounded(MaidBridge.body(p)))&&Skills.available(p,0);}
+    private static boolean needsGround(int kind){return DismantleMotionRules.needsGround(kind);}
+    /** 普通轮盘与权限双持共用同一动作入口，避免权限瞬发提前吞掉组合键。 */
+    public static boolean fromInput(ServerPlayer p,TechniqueInput.Input input){
+        if(input.phase()!=0)return false;
+        LivingEntity body=MaidBridge.body(p);
+        int kind=DismantleMotionRules.resolve(input.crouch(),input.forward(),input.backward(),input.jump(),
+            body.isSprinting(),body.onGround(),body.getDeltaMovement().y,input.motion());
+        if(kind==0)return false;
+        if(!TechniqueInput.allowed(p)||SixfoldFinale.active(p)||Skills.sealing(p)||SimpleDomain.owns(p)||FurnaceMax.active(p)){
+            CastFeedback.unavailable(p,Curse.COST[0]);why(p,"动作被当前施术或控制状态阻止");return true;
+        }
+        TechniqueInput.cancel(p);start(p,kind);return true;
+    }
+    private static boolean mobile(LivingEntity body){return !body.isPassenger()&&!body.isSleeping()&&!body.isFallFlying()&&!body.isInWater();}
+    public static boolean available(ServerPlayer p,int kind){return DismantleMotionRules.valid(kind)&&!active(p)&&allowed(p)&&mobile(MaidBridge.body(p))&&(!needsGround(kind)||grounded(MaidBridge.body(p)))&&Skills.available(p,0);}
     public static void start(ServerPlayer p,int kind){
         if(!DismantleMotionRules.valid(kind)||active(p))return;
         // 动作期间不能重入，但收招后可以立刻继续使用解。
         if(!allowed(p)){CastFeedback.unavailable(p,Curse.COST[0]);why(p,"状态不允许（禁用/领域冲突/锁技/非本维度等）");return;}
         LivingEntity actor=MaidBridge.body(p);
+        if(!mobile(actor)){
+            CastFeedback.tell(p,"请先离开载具或水中并结束滑翔，再释放解动作");return;
+        }
         if(needsGround(kind)&&!grounded(actor)){CastFeedback.tell(p,"请站在地面上释放解动作");why(p,"不在地面");return;}
         // r204：**删掉"必须先蹲下"的限制**——蹲下就疾跑不了，导致"疾跑滑铲/空中冲拳"这类动作根本用不出来。
         // 现在由 choose() 的按键组合决定动作：蹲下前进/后退仍是飞踢/后翻，疾跑前进就是滑铲（起跳=冲拳）。
@@ -79,7 +94,7 @@ public final class DismantleMotion {
         Motion m=new Motion(p,kind);if(!free(m,m.position))return false;begin(m);return true;
     }
     private static void begin(Motion m){ServerPlayer p=m.player;LivingEntity actor=m.actor;
-        Skills.cancelCharge(p);FreehandDrawing.cancel(p);actor.stopUsingItem();
+        MeleeCombo.cancel(p);Skills.cancelCharge(p);FreehandDrawing.cancel(p);actor.stopUsingItem();
         motions.put(p.getUUID(),m);actor.setNoGravity(true);actor.setDeltaMovement(Vec3.ZERO);actor.fallDistance=0;
         send(m,false);SkillSounds.cast(p,0);
     }

@@ -1,0 +1,11 @@
+{
+  "type":"minecraft:crafting_shaped",
+  "pattern":["AGA","GNG","ABA"],
+  "key":{
+    "A":{"item":"minecraft:amethyst_shard"},
+    "G":{"item":"minecraft:glowstone"},
+    "N":{"item":"minecraft:nether_star"},
+    "B":{"item":"minecraft:book"}
+  },
+  "result":{"item":"sukuna:jacobs_ladder","count":1}
+}

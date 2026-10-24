@@ -12,12 +12,13 @@ import net.minecraftforge.eventbus.api.*;
 /** 只主动寻找玩家；保留受伤或外部模组赋予的生物仇恨。 */
 public final class BossTargets {
     public static boolean managed(LivingEntity e){return e instanceof GuardianEntity||e instanceof YujiEntity||e instanceof BrokenMahitoEntity||e instanceof BuddhaEntity||e instanceof DaitianEntity||e instanceof ParasiteEntity||e instanceof GojoEntity||e instanceof MahoragaEntity;}
-    public static boolean valid(Mob boss,LivingEntity target){return target!=null&&target!=boss&&target.isAlive()&&!target.isRemoved()&&target.level()==boss.level()&&!target.isSpectator()&&!(target instanceof Player p&&p.isCreative())&&!(target instanceof GuardianEntity g&&g.friendly())&&!(target instanceof YujiEntity y&&y.familyMember());}
+    public static boolean valid(Mob boss,LivingEntity target){if(Legion.member(boss)){ServerPlayer owner=Legion.owner(boss);return owner!=null&&target!=null&&target!=boss&&CombatSettings.canHit(owner,target)&&target.level()==boss.level();}return target!=null&&target!=boss&&target.isAlive()&&!target.isRemoved()&&target.level()==boss.level()&&!target.isSpectator()&&!(target instanceof Player p&&p.isCreative())&&!(target instanceof GuardianEntity g&&g.friendly())&&!(target instanceof YujiEntity y&&y.familyMember());}
     /** 友方魔虚罗的主人（给其他系统判断"别打自己人"用）。 */
     public static java.util.UUID allyOwner(LivingEntity e){return e instanceof MahoragaEntity m&&m.ally()?m.allyOwner():null;}
     /** 魔虚罗不分敌我：谁都打，召唤者也打。 */
     public static boolean hostile(Mob boss,LivingEntity target){
         if(!valid(boss,target))return false;
+        if(Legion.member(boss))return target==Legion.commanded(boss);
         // 友方魔虚罗只认"正在打主人的人/怪"与"主人正在打的怪"
         if(boss instanceof MahoragaEntity ally&&ally.ally()){
             java.util.UUID owner=ally.allyOwner();
@@ -28,6 +29,7 @@ public final class BossTargets {
         return boss instanceof MahoragaEntity||BossControl.war(boss)||target instanceof Player||MaidBridge.isMaid(target)||target==boss.getTarget()||target==boss.getLastHurtByMob();
     }
     public static LivingEntity select(Mob boss,double radius){
+        if(Legion.member(boss)){LivingEntity target=Legion.commanded(boss);boss.setTarget(target);return target;}
         if(boss instanceof GuardianEntity g&&g.friendly()||boss instanceof YujiEntity y&&y.familyMember()){boss.setTarget(null);return null;}
         LivingEntity current=boss.getTarget();
         if(valid(boss,current)&&boss.distanceToSqr(current)<=radius*radius)return current;

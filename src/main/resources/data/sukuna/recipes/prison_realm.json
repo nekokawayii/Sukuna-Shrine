@@ -1,0 +1,11 @@
+{
+  "type":"minecraft:crafting_shaped",
+  "pattern":["OEO","GNG","OEO"],
+  "key":{
+    "O":{"item":"minecraft:obsidian"},
+    "E":{"item":"minecraft:ender_eye"},
+    "G":{"item":"minecraft:ghast_tear"},
+    "N":{"item":"minecraft:nether_star"}
+  },
+  "result":{"item":"sukuna:prison_realm","count":1}
+}

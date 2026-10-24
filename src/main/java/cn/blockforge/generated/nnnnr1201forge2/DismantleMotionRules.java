@@ -16,6 +16,15 @@ public final class DismantleMotionRules {
         if(sprint&&forward)return jump||!ground&&vertical>0?AIR_PUNCH:SLIDE;
         return 0;
     }
+    /** 起跳后仍能后翻/飞踢；滑铲、跪地和砸地必须有地面支撑。 */
+    public static boolean needsGround(int kind){return kind==KNEEL||kind==SLIDE||kind==GROUND_SMASH;}
+    /** 服务端状态可能晚一刻才收到疾跑；只允许客户端补充按键实际支持的动作。 */
+    public static int resolve(boolean crouch,boolean forward,boolean backward,boolean jump,boolean sprint,boolean ground,double vertical,int requested){
+        int chosen=choose(crouch,forward,backward,jump,sprint,ground,vertical);
+        if(chosen!=0)return chosen;
+        if(forward&&!backward&&(requested==SLIDE||requested==AIR_PUNCH))return jump?AIR_PUNCH:requested;
+        return 0;
+    }
     public static boolean valid(int kind){return kind>=BACKFLIP&&kind<=GROUND_SMASH;}
     public static int release(int kind){return kind==BACKFLIP?30:kind==FLYING_KICK?38:kind==KNEEL?10:kind==AIR_PUNCH?16:kind==SLIDE?20:kind==GROUND_SMASH?8:18;}
     public static int duration(int kind){return Math.max(release(kind)+12,lastRelease(kind)+6);}

@@ -85,7 +85,7 @@ public class BuddhaEntity extends Monster {
             rest-=Math.max(1,(int)Math.ceil(BossControl.value(this,"BuddhaFrequency",1)));
              if(rest<=0){if(phase()==1)begin(1+(sequence++%5));else {int[] order={6,1,8,2,7,3,9,4,5};begin(order[sequence++%order.length]);}return;}
             getNavigation().moveTo(target,darkness>0?1.2:1.0);
-            if(distanceToSqr(target)<6&&melee<=0){doHurtTarget(target);melee=darkness>0?15:20;}
+            if(distanceToSqr(target)<6&&melee<=0){swing(net.minecraft.world.InteractionHand.MAIN_HAND);doHurtTarget(target);melee=darkness>0?15:20;}
             return;
         }
         actionTicks++;int t=actionTicks;

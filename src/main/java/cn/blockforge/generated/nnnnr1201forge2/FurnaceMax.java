@@ -107,6 +107,7 @@ public final class FurnaceMax {
         if(cooldownLeft(p)>0){CastFeedback.tell(p,NAME+" 冷却中（"+((cooldownLeft(p)+19)/20)+" 秒）");return false;}
         if(!VoidJourney.evolved(p)){CastFeedback.tell(p,NAME+" 需要解锁虚空御厨子阶段");return false;}
         if(!Curse.spend(p,COST))return false;
+        if(Authority.instant(p)){LivingEntity target=Skills.aimTarget(p);blast(p,p.serverLevel(),target==null?Skills.aimPoint(p,96):target.getBoundingBox().getCenter());cooldown(p,FIRE_COOLDOWN);return true;}
         Charge c=new Charge(p);charges.put(p.getUUID(),c);
         freeze(MaidBridge.body(p));
         // 失重：前 10 秒靠 teleport 一格格抬升，之后原地悬停。
@@ -177,7 +178,7 @@ public final class FurnaceMax {
             // **点名机制**：对魔虚罗固定 100000 伤害，且绕过它自己的"适应/免疫"
             // （不绕的话法轮转满就会判 0，等于白打）
             if(t instanceof MahoragaEntity mahoraga){
-                mahoraga.forceDamage(level.damageSources().genericKill(),MAHORAGA_DAMAGE);
+                mahoraga.forceDamage(new net.minecraft.world.damagesource.DamageSource(level.damageSources().genericKill().typeHolder(),MaidBridge.body(p),MaidBridge.body(p)),(float)(MAHORAGA_DAMAGE*Authority.damageScale(p)));
                 p.displayClientMessage(Component.literal(NAME+" · 对魔虚罗造成 "+BalanceRules.number(MAHORAGA_DAMAGE)+" 伤害")
                     .setStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0xFFFF7A2A)),true);
                 burnFx(level,t);

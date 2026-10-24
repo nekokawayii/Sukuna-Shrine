@@ -1,335 +1,219 @@
 package cn.blockforge.generated.nnnnr1201forge2;
 
-import java.util.*;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
-import org.joml.Matrix4f;
-import net.minecraft.ChatFormatting;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.*;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.joml.Vector4f;
 import org.lwjgl.glfw.GLFW;
 
-/**
- * 观测者战（第三阶段后半）：你不能控制史蒂夫，只能控制鼠标指针。
- * 护盾值在屏幕最上方；剑气球追着指针咬（5 秒寿命，被咬 15 口就强制崩端）；
- * 点身上的红光造成"世界外打击"；躲闪 QTE（猛甩鼠标）与按键 QTE（4 个随机键）；
- * 半血强制窗口化；打完进入黑屏 Connection Lost，靠 /sukuna reset 或退游戏收下胜利。
- */
+/** 客户端只上报输入；护盾、招式冷却、QTE 与通关由服务端计算。 */
 @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
 public final class ObserverFight {
-    public static final int SHIELD=15,SHIELD_MAX=15;
-    private static final float WEAK_STEP=0.075f;      // 一次弱点 = 7.5% 血
-    private static final int WEAK_LIFE=55;            // 红光持续刻数
-    private static final int QI_LIFE=100;             // 剑气球寿命 5 秒
+    private static ObserverPackets.State state;
+    private static java.util.List<ObserverPackets.Cursor> otherCursors=java.util.List.of();
+    public static java.util.List<ObserverPackets.Cursor> otherCursors(){return otherCursors;}
+    public static void cursors(ObserverPackets.Cursors packet){if(state!=null&&state.session().equals(packet.session()))otherCursors=packet.players();}
+    private static void drawCursors(GuiGraphics g,int w,int h){for(var c:otherCursors){int x=Math.max(3,Math.min(w-4,(int)(c.x()*w))),y=Math.max(3,Math.min(h-12,(int)(c.y()*h)));int color=0xFF000000|java.awt.Color.HSBtoRGB((c.player().hashCode()&255)/255f,.65f,1);for(int row=0;row<10;row++)g.fill(x,y+row,x+1+row/2,y+row+1,color);g.drawString(Minecraft.getInstance().font,c.name(),Math.min(w-Minecraft.getInstance().font.width(c.name())-2,x+7),y,color);}}
+    private static BattleScreen screen;
+    private static float weakX=-1000,weakY=-1000,radius=12,cursorX=.5f,cursorY=.5f;
+    private static int lastWeak=-1,stale;
+    private static WindowYuji windowYuji;
+    private static int slashAt=-1000;
+    public static void slash(){if(state!=null)slashAt=state.age();}
+    private static boolean exitRequested,closeOnVictory,drawingMelee;
+    public static boolean melee(){return state!=null&&state.phase()==1&&state.attack()==ObserverBattleRules.MELEE&&state.attackLeft()>0;}
+    @SubscribeEvent public static void hideTeleported(net.minecraftforge.client.event.RenderLivingEvent.Pre<?,?> e){
+        if(melee()&&!drawingMelee&&e.getEntity().getId()==state.boss())e.setCanceled(true);
+    }
+    public static boolean closeOnVictory(){return closeOnVictory;}
     private static final String[] CODE={
-        "public class Sukuna extends Monster {","WorldSlash.damage(target, 1.0e7F);","ObserverRitual.tick(session);",
-        "if(player.hp<=0) shatter();","SlashEye.open(age);","WallpaperSlash.core(b,ps,p,q,r,s,1f,self);",
-        "ScreenCracks.trigger(seed);","ObserverClient.end();","while(true){ world.tick(); }","player_not_found.exception();",
-        "if(!allowed) return; // 你无法逃离。","DamageSource.genericKill()","session.boss.discard();"
-    };
-
-    private static boolean fighting,released,shatter,windowed,dodge,busy;
-    private static float bossHp=1,shield=SHIELD_MAX,hurtFlash,shakePx;
-    private static long tick,weakFrom=-1,dodgeFrom=-1,dodgeUntil=-1,keyFrom=-1,keyUntil=-1,nextQi,nextWeak,nextDodge,nextDomain,lastClickAt;
-    private static int weakPart;
-    private static final List<Qi> QIS=new ArrayList<>();
-    private static final List<Integer> KEYS=new ArrayList<>();
-    private static int keysDone;
-    private static float cursorX,cursorY,lastX,lastY,shakeAmount;
-    private static long jitterUntil;private static boolean baseSaved;private static int baseX,baseY;
-    private static final Random RNG=new Random();
-    private static float bossScreenX=-1,bossScreenY=-1;
-    private static final List<float[]> RAIN=new ArrayList<>();
-    private record Qi(float x,float y,long born,float speed){}
-
-    public static boolean fighting(){return fighting;}
-    public static boolean shatter(){return shatter;}
-
-    public static void start(){
-        fighting=true;shatter=false;windowed=false;bossHp=1;shield=SHIELD_MAX;hurtFlash=0;
-        tick=0;ScreenCracks.clear();
-        QIS.clear();KEYS.clear();keysDone=0;
-        nextQi=60;nextWeak=80;nextDodge=260;nextDomain=520;
-        var mc=Minecraft.getInstance();
-        cursorX=lastX=0.5f;cursorY=lastY=0.5f;
-        if(mc.mouseHandler.isMouseGrabbed()){mc.mouseHandler.releaseMouse();released=true;}
-        RAIN.clear();
+        "0x00000000","BOUNDARY_NULL","INVALID_HANDLE","CONNECTION_LOST",
+        "0xFFFFFFFF","PLAYER_NOT_FOUND","ACCESS_VIOLATION"};
+    public static boolean fighting(){return state!=null&&state.phase()==1;}
+    public static boolean shatter(){return state!=null&&state.phase()==2;}
+    public static ObserverPackets.State state(){return state;}
+    public static ObserverEntity boss(){var mc=Minecraft.getInstance();return state!=null&&mc.level!=null&&mc.level.getEntity(state.boss()) instanceof ObserverEntity b?b:null;}
+    public static void receive(ObserverPackets.State next){
+        var old=state;boolean fresh=old==null||!old.session().equals(next.session());
+        if(fresh){otherCursors=java.util.List.of();ObserverClient.begin();ObserverDialog.clear();ObserverWindow.begin();screen=new BattleScreen();exitRequested=false;closeOnVictory=false;lastWeak=-1;}
+        state=next;stale=0;
+        var mc=Minecraft.getInstance();if(mc.level!=null&&mc.player!=null&&mc.screen!=screen)mc.setScreen(screen);
+        if(next.hits()>5&&(old==null||old.hits()<=5)){ObserverWindow.windowed();ObserverDialog.say("边界错误","虎杖：窗框也不是你的避难所。");}
+        if(next.staggerLeft()>0&&(old==null||old.staggerLeft()==0))ObserverWindow.impact();
+        if(next.phase()==1&&(old==null||!old.move().equals(next.move())))ObserverWindow.technique(next.move());
+        if(next.phase()==2&&(old==null||old.phase()!=2)){ObserverWindow.restore();ObserverDialog.clear();}
+        if(next.phase()==3&&(old==null||old.phase()!=3)){ObserverWindow.restore();ObserverDialog.say("护盾耗尽","你输了。这次先退回竞技场，下次再来。");}
+        switch(next.line()){
+            case 1 -> {ScreenCracks.trigger(next.age());ObserverDialog.say("屏幕外的你","宿傩：这一次，疼的是屏幕后面的你。护盾 "+next.shield()+" / 15");}
+            case 2 -> ObserverDialog.say("世界外打击","宿傩：你竟然能从外面……伤到我？");
+            case 3 -> {ObserverDialog.say("世界外打击","宿傩：这具身体……竟然不再服从我！");ObserverDialog.say("虎杖受击","虎杖：别停下来！这道边界正在松动！");}
+            case 4 -> ObserverDialog.say("世界斩落空","宿傩：连窗口的位置，也能改变吗？");
+            case 5 -> ObserverDialog.say("领域中断","宿傩：你把我的规则……打断了。");
+            case 6 -> ObserverDialog.say("体术落空","宿傩：反应不错……下次可没有这么幸运。");
+            default -> {}
+        }
     }
-
     public static void end(){
-        fighting=false;shatter=false;QIS.clear();KEYS.clear();RAIN.clear();
-        if(released){Minecraft.getInstance().mouseHandler.grabMouse();released=false;}
+        otherCursors=java.util.List.of();state=null;windowYuji=null;slashAt=-1000;weakX=weakY=-1000;lastWeak=-1;stale=0;exitRequested=false;closeOnVictory=false;
+        ObserverWindow.restore();ObserverDialog.clear();
+        var mc=Minecraft.getInstance();if(mc.screen==screen)mc.setScreen(null);screen=null;
     }
-
-    /** 崩端：先落桌面日志与假崩溃报告，再硬退出（这就是"你无法逃离"）。 */
-    public static void terminate(){
-        var mc=Minecraft.getInstance();
-        try{
-            var home=System.getProperty("user.home");
-            java.nio.file.Files.writeString(java.nio.file.Path.of(home,"Desktop","你无法逃离.txt"),"你无法逃离。\n\nPlayer_Not_Found\n");
-            var dir=java.nio.file.Path.of(home,"Desktop");
-            java.nio.file.Files.writeString(dir.resolve("crash-Player_Not_Found.txt"),
-                "---- Minecraft Crash Report ----\n// 你无法逃离。\n\nTime: "+new java.util.Date()+"\nDescription: Player_Not_Found\n\n"
-                +"java.lang.IllegalStateException: Player_Not_Found\n\tat cn.blockforge.generated.nnnnr1201forge2.ObserverFight.terminate(ObserverFight.java)\n"
-                +"\tCaused by: the observer is watching you\n");
-        }catch(Exception ignored){}
-        Runtime.getRuntime().halt(1);
-    }
-
+    public static void input(int op,int value,float x,float y){if(state!=null)Network.CHANNEL.sendToServer(new ObserverPackets.Input(state.session(),op,value,x,y));}
+    private static void send(int op,int value){input(op,value,cursorX,cursorY);}
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent e){
-        if(e.phase!=TickEvent.Phase.END)return;
-        if(!fighting)return;
-        tick++;
-        var mc=Minecraft.getInstance();
-        if(mc.player==null||mc.level==null){end();return;}
-        hurtFlash=Math.max(0,hurtFlash-0.05f);
-        if(jitterUntil>0){
-            var wh=mc.getWindow().getWindow();
-            if(tick<jitterUntil)GLFW.glfwSetWindowPos(wh,baseX+RNG.nextInt(21)-10,baseY+RNG.nextInt(21)-10);
-            else{GLFW.glfwSetWindowPos(wh,baseX,baseY);jitterUntil=0;baseSaved=false;}
-        }
-        if(mc.mouseHandler.isMouseGrabbed()){mc.mouseHandler.releaseMouse();released=true;}
-        // 光标（窗口逻辑坐标 → 0..1）
-        double sw=Math.max(1,mc.getWindow().getScreenWidth()),sh=Math.max(1,mc.getWindow().getScreenHeight());
-        float nx=(float)(mc.mouseHandler.xpos()/sw),ny=(float)(mc.mouseHandler.ypos()/sh);
-        shakeAmount+=Math.abs(nx-cursorX)+Math.abs(ny-cursorY);
-        cursorX=Math.max(0.02f,Math.min(0.98f,nx));cursorY=Math.max(0.02f,Math.min(0.98f,ny));
-        if(shatter)return;
-        // 剑气球：生命周期 5 秒，追着光标咬
-        if(tick>=nextQi&&QIS.size()<3){
-            nextQi=tick+120;
-            float side=RNG.nextFloat();
-            QIS.add(new Qi(side<0.5f?0f:1f,RNG.nextFloat(),tick,0.0055f+RNG.nextFloat()*0.002f));
-        }
-        for(int i=QIS.size()-1;i>=0;i--){
-            Qi q=QIS.get(i);
-            if(tick-q.born>QI_LIFE){QIS.remove(i);continue;}
-            float dx=cursorX-q.x,dy=cursorY-q.y,dist=(float)Math.sqrt(dx*dx+dy*dy);
-            if(dist<0.045f){QIS.remove(i);hurt(1,"剑气擦过");if(!fighting)return;continue;}
-            QIS.set(i,new Qi(q.x+dx*Math.min(1,q.speed),q.y+dy*Math.min(1,q.speed),q.born,q.speed));
-        }
-        // 弱点：隔一段时间身上亮红光
-        if(tick>=nextWeak&&weakFrom<0){weakFrom=tick;weakPart=RNG.nextInt(3);nextWeak=tick+90;}
-        if(weakFrom>=0&&tick-weakFrom>WEAK_LIFE)weakFrom=-1;
-        // 躲闪 QTE：世界斩
-        if(tick>=nextDodge&&dodgeFrom<0){dodgeFrom=tick;dodgeUntil=tick+70;shakeAmount=0;nextDodge=tick+320;}
-        if(dodgeFrom>=0&&tick>dodgeUntil){
-            boolean ok=shakeAmount>1.6f;
-            dodgeFrom=-1;
-            if(!ok)hurt(2,"没躲开世界斩");
-            else burstShake();
-        }
-        // 领域 QTE：黑屏 + 4 个键
-        if(tick>=nextDomain&&keyFrom<0){
-            keyFrom=tick;keyUntil=tick+120;KEYS.clear();keysDone=0;
-            while(KEYS.size()<4){int k=GLFW.GLFW_KEY_A+RNG.nextInt(26);if(!KEYS.contains(k))KEYS.add(k);}
-            nextDomain=tick+520;
-        }
-        if(keyFrom>=0&&tick>keyUntil){
-            keyFrom=-1;
-            hurt(3,"领域展开完成");
-        }
-        if(bossHp<=0.5f&&!windowed)forceWindowed();
-        if(bossHp<=0f&&!shatter)beginShatter();
+        if(e.phase!=TickEvent.Phase.END||state==null)return;
+        var mc=Minecraft.getInstance();if(mc.player==null||mc.level==null){ObserverClient.end();return;}
+        ObserverDialog.tick();ObserverWindow.tick();
+        if(++stale>100){ObserverWindow.restore();return;}
+        var desktop=ObserverWindow.desktopAllowed()?ObserverDesktop.sample():null;
+        boolean outside=desktop!=null&&desktop.focused();send(ObserverBattleRules.DESKTOP,outside?1:0);
+        if(outside){cursorX=desktop.cursorX();cursorY=desktop.cursorY();}
+        send(ObserverBattleRules.CURSOR,0);ObserverDesktop.tick(state);
     }
-
-    private static void hurt(int amount,String why){
-        if(shatter)return;
-        shield-=amount;hurtFlash=1;shakePx=12;Client.shake(10);shakeWindow(24);
-        if(shield<=0){shield=0;terminate();return;}
-    }
-    private static void burstShake(){shakePx=8;Client.shake(6);shakeWindow(14);}
-    private static void shakeWindow(int ticks){
-        var wh=Minecraft.getInstance().getWindow().getWindow();
-        if(!baseSaved){int[] x=new int[1],y=new int[1];GLFW.glfwGetWindowPos(wh,x,y);baseX=x[0];baseY=y[0];baseSaved=true;}
-        jitterUntil=Math.max(jitterUntil,tick+ticks);
-    }
-
-    /** 点中红光：世界外打击。 */
-    private static boolean weakActive(){return weakFrom>=0&&tick-weakFrom<=WEAK_LIFE;}
-    private static boolean hitWeak(float gx,float gy){
-        if(!weakActive()||bossScreenX<0)return false;
-        double dx=gx-bossScreenX,dy=gy-bossScreenY;
-        if(dx*dx+dy*dy>48*48)return false;
-        bossHp=Math.max(0,bossHp-WEAK_STEP);
-        weakFrom=-1;nextWeak=tick+60;
-        shakePx=10;Client.shake(8);shakeWindow(20);
-        ScreenCracks.trigger((long)(1000+bossHp*1000));
-        if(bossHp<=0f)beginShatter();
-        return true;
-    }
-
-    /** 半血强制窗口化：直接走 GLFW，800x600。 */
-    private static void forceWindowed(){
-        windowed=true;
-        try{
-            long h=Minecraft.getInstance().getWindow().getWindow();
-            GLFW.glfwSetWindowMonitor(h,0L,120,120,800,600,GLFW.GLFW_DONT_CARE);
-            GLFW.glfwSetWindowSize(h,800,600);
-            GLFW.glfwSetWindowPos(h,120,120);
-            GLFW.glfwShowWindow(h);
-        }catch(Throwable ignored){}
-        shakePx=16;Client.shake(18);
-    }
-
-    private static void beginShatter(){
-        if(shatter)return;
-        shatter=true;bossHp=0;
-        QIS.clear();KEYS.clear();
-        Client.shake(24);
-    }
-
-    // ---- 输入 ----
-    @SubscribeEvent public static void mouse(InputEvent.MouseButton.Pre e){
-        if(!fighting||shatter)return;
-        if(e.getButton()!=GLFW.GLFW_MOUSE_BUTTON_LEFT||e.getAction()!=GLFW.GLFW_PRESS)return;
-        long now=System.currentTimeMillis();
-        if(now-lastClickAt<120)return;
-        lastClickAt=now;
-        var mc=Minecraft.getInstance();
-        double sw=Math.max(1,mc.getWindow().getScreenWidth()),sh=Math.max(1,mc.getWindow().getScreenHeight());
-        float gx=(float)(mc.mouseHandler.xpos()/sw*mc.getWindow().getGuiScaledWidth());
-        float gy=(float)(mc.mouseHandler.ypos()/sh*mc.getWindow().getGuiScaledHeight());
-        if(keyFrom>=0){
-            for(int i=0;i<KEYS.size();i++){
-                float kx=keyX(i),ky=keyY();
-                if(Math.abs(gx-kx)<26&&Math.abs(gy-ky)<26){keyDone(i);break;}
-            }
-            return;
-        }
-        hitWeak(gx,gy);
-    }
-    @SubscribeEvent public static void key(InputEvent.Key e){
-        if(!fighting||shatter)return;
-        if(e.getAction()!=GLFW.GLFW_PRESS)return;
-        if(keyFrom>=0)for(int i=0;i<KEYS.size();i++)if(KEYS.get(i)==e.getKey()){keyDone(i);return;}
-        if(e.getKey()==GLFW.GLFW_KEY_ESCAPE)return;
-    }
-    private static void keyDone(int index){
-        if(keyFrom<0)return;
-        keysDone++;
-        if(keysDone>=4){keyFrom=-1;burstShake();}
-    }
-
-    // ---- 绘制 ----
+    /** 使用当前世界姿态矩阵投影红圈，不能把上一帧的全局 GUI 矩阵当作世界矩阵。 */
     @SubscribeEvent public static void project(RenderLevelStageEvent e){
-        if(!fighting||e.getStage()!=RenderLevelStageEvent.Stage.AFTER_PARTICLES)return;
-        var mc=Minecraft.getInstance();if(mc.level==null)return;
-        var boss=mc.level.getEntitiesOfClass(ObserverEntity.class,new net.minecraft.world.phys.AABB(mc.player.blockPosition()).inflate(48)).stream().findFirst().orElse(null);
-        if(boss==null){bossScreenX=-1;return;}
-        Vec3 at=boss.position().add(0,1.15,0);
-        Vec3 camPos=e.getCamera().getPosition();
-        Vec3 rel=at.subtract(camPos);
-        var mvp=new Matrix4f(e.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrix());
-        var v=new org.joml.Vector4f((float)rel.x,(float)rel.y,(float)rel.z,1f).mul(mvp);
-        if(v.w<=0.01f){bossScreenX=-1;return;}
-        float ndcX=v.x/v.w,ndcY=v.y/v.w;
-        bossScreenX=(ndcX*0.5f+0.5f)*mc.getWindow().getGuiScaledWidth();
-        bossScreenY=(1-(ndcY*0.5f+0.5f))*mc.getWindow().getGuiScaledHeight();
+        if(state==null||e.getStage()!=RenderLevelStageEvent.Stage.AFTER_PARTICLES)return;
+        var boss=boss();if(boss==null){weakX=-1000;return;}
+        double height=switch(state.weakPart()){case 0->1.55;case 1->1.0;default->.48;};
+        Vec3 point=boss.getPosition(e.getPartialTick()).add(0,height,0).subtract(e.getCamera().getPosition());
+        Vector4f v=new Vector4f((float)point.x,(float)point.y,(float)point.z,1);
+        v.mul(e.getPoseStack().last().pose()).mul(e.getProjectionMatrix());
+        if(v.w<=.01f){weakX=-1000;return;}
+        var w=Minecraft.getInstance().getWindow();weakX=(v.x/v.w*.5f+.5f)*w.getGuiScaledWidth();weakY=(.5f-v.y/v.w*.5f)*w.getGuiScaledHeight();
+        radius=Math.max(8,Math.min(22,w.getGuiScaledHeight()/v.w*.18f));
     }
-
-    @SubscribeEvent public static void hud(RenderGuiEvent.Post e){
-        if(!fighting)return;
-        var mc=Minecraft.getInstance();var g=e.getGuiGraphics();
-        int w=mc.getWindow().getGuiScaledWidth(),h=mc.getWindow().getGuiScaledHeight();
-        if(shatter){drawShatter(g,w,h);return;}
-        drawBars(g,w,h);
-        drawWeak(g);
-        drawQi(g,w,h);
-        drawQte(g,w,h);
-        if(hurtFlash>0)g.fill(0,0,w,h,((int)(110*hurtFlash)<<24)|0xC00020);
-        if(bossHp<=0.5f)drawCodeRain(g,w,h);
-    }
-
-    private static void drawBars(GuiGraphics g,int w,int h){
-        int barW=Math.min(360,w-80);
-        g.fill(40,14,40+barW,26,0xCC120A0E);
-        g.fill(42,16,42+(int)((barW-4)*bossHp),24,0xFFC21C2E);
-        g.fill(40,14,40+barW,14+1,0xFF5A0A14);
-        g.drawString(Minecraft.getInstance().font,"观测者  "+Math.round(bossHp*100)+"%",44,17,0xFFFFE6E9);
-        for(int i=0;i<SHIELD_MAX;i++){
-            int x=40+i*18;
-            g.fill(x,30,x+14,36,i<shield?0xFF44B7FF:0x331A2A33);
+    private static void render(GuiGraphics g,int w,int h){
+        if(state==null)return;var mc=Minecraft.getInstance();int age=state.age();
+        if(age<30){
+            int fall=age*age/12;
+            for(int i=0;i<12;i++){int x=i*w/12;g.fill(x,h/2+fall+(i%3)*8,x+w/12-2,h+fall,0xCC23232B);}
         }
-        g.drawString(Minecraft.getInstance().font,"护盾",44,38,0xFF9FD8FF);
-    }
-    private static void drawWeak(GuiGraphics g){
-        if(!weakActive()||bossScreenX<0)return;
-        var mc=Minecraft.getInstance();
-        if(mc.level==null)return;
-        int cx=(int)bossScreenX,cy=(int)bossScreenY;
-        float pulse=(float)(0.5+0.5*Math.sin(tick*0.45));
-        int a=(int)(90+110*pulse);
-        for(int i=0;i<3;i++){int r=14+i*7;int c=((int)(a*(1-i*0.25))<<24)|0xFF2036;
-            g.fill(cx-r,cy-2,cx+r,cy+2,c);g.fill(cx-2,cy-r,cx+2,cy+r,c);}
-    }
-    private static void drawQi(GuiGraphics g,int w,int h){
-        for(Qi q:QIS){
-            int cx=(int)(q.x*w),cy=(int)(q.y*h);
-            float life=1-(tick-q.born)/(float)QI_LIFE;
-            int a=(int)(230*Math.max(0.15f,life));
-            for(int i=0;i<5;i++){
-                int len=10+i*6;int c=((int)(a*(1-i*0.18))<<24)|0xFF1E28;
-                g.fill(cx-len,cy-1+i,cx+len,cy+1+i,c);
+        if(ScreenCracks.visible()&&state.phase()==1){g.flush();ScreenCracks.render(w,h);}
+        if(age>=160&&age<180)g.fill(0,0,w,h,0xFF000000);
+        if(state.phase()==2){shattered(g,w,h);return;}
+        if(state.phase()==3){g.fill(0,0,w,h,0xEE000000);ObserverDialog.render(g,w,h);return;}
+        if(state.phase()==1){
+            if(state.hits()>5)code(g,w,h,age);
+            bars(g,w);
+            if(age-slashAt>=0&&age-slashAt<14&&weakX>0){
+                float t=(age-slashAt)/14f;int cx=(int)(weakX*(1-t)+w*.5f*t),cy=(int)(weakY*(1-t)+h*.5f*t),len=(int)(10+t*w*.5f);
+                for(int i=-len;i<=len;i++){int thick=Math.max(1,(int)((1-Math.abs(i)/(float)len)*(3+t*9)));g.fill(cx+i,cy+i/4-thick-1,cx+i+1,cy+i/4+thick+2,0xFFEAEAEA);g.fill(cx+i,cy+i/4-thick,cx+i+1,cy+i/4+thick,0xFF1B0A12);}
             }
-            g.fill(cx-3,cy-3,cx+3,cy+3,((int)a<<24)|0xFFD9E0);
-        }
-    }
-    private static void drawQte(GuiGraphics g,int w,int h){
-        var mc=Minecraft.getInstance();
-        if(dodgeFrom>=0){
-            String text="【猛甩鼠标】";
-            int tw=mc.font.width(text);
-            g.fill(w/2-tw/2-14,h/2-70,w/2+tw/2+14,h/2-46,0xCC000000);
-            g.drawString(mc.font,text,w/2-tw/2,h/2-64,0xFFFFD24A);
-            g.fill(w/2-120,h/2-40,w/2+120,h/2-36,0x66FFD24A);
-            float progress=Math.min(1,shakeAmount/1.6f);
-            g.fill(w/2-120,h/2-40,w/2-120+(int)(240*progress),h/2-36,0xFFFFD24A);
-        }
-        if(keyFrom>=0){
-            g.fill(0,0,w,h,0xB0000000);
-            String tip="打断领域展开";
-            g.drawString(mc.font,tip,w/2-mc.font.width(tip)/2,h/2-90,0xFFFF5566);
-            for(int i=0;i<KEYS.size();i++){
-                int x=(int)keyX(i),y=(int)keyY();
-                boolean done=i<keysDone;
-                g.fill(x-22,y-22,x+22,y+22,done?0xFF1E7A2E:0xFF1A1A1E);
-                g.fill(x-22,y-22,x+22,y-20,done?0xFF4BE06A:0xFFE0364A);
-                String k=GLFW.glfwGetKeyName(KEYS.get(i),0);
-                if(k==null)k="?";
-                g.drawString(mc.font,k.toUpperCase(Locale.ROOT),x-mc.font.width(k.toUpperCase(Locale.ROOT))/2,y-8,0xFFFFFFFF);
+            if(state.weakLeft()>0&&weakX>0&&state.attackLeft()==0){
+                int cx=(int)weakX,cy=(int)weakY,r=(int)radius;
+                for(int i=0;i<32;i++){double a=i*Math.PI/16;int x=cx+(int)(Math.cos(a)*r),y=cy+(int)(Math.sin(a)*r);g.fill(x-1,y-1,x+2,y+2,0xFFFF1744);}
+                g.fill(cx-3,cy-3,cx+3,cy+3,0xFFFFCED6);
             }
+            if(!ObserverDesktop.active())for(var blade:state.blades()){
+                if(blade.style()==11){double n=Math.max(.00001,Math.hypot(blade.vx(),blade.vy()));for(int i=0;i<=80;i++){double f=i/80.0;int x=(int)((blade.x()-blade.vx()/n*.38*f)*w),y=(int)((blade.y()-blade.vy()/n*.38*f)*h);g.fill(x-3,y-3,x+4,y+4,0xBB9E001C);g.fill(x-1,y-1,x+2,y+2,0xFFFF6478);}}
+                else ObserverGlyph.draw(g,(int)(blade.x()*w),(int)(blade.y()*h),blade.style(),age);
+            }
+            if(state.attackLeft()>0){
+                if(state.attack()==ObserverBattleRules.MELEE){
+                    int cx=(int)(state.meleeX()*w),cy=(int)(state.meleeY()*h);
+                    int rx=(int)(w*ObserverBattleRules.MELEE_RADIUS),ry=(int)(h*ObserverBattleRules.MELEE_RADIUS);
+                    for(int i=0;i<48;i++){double a=i*Math.PI/24;int x=cx+(int)(Math.cos(a)*rx),y=cy+(int)(Math.sin(a)*ry);g.fill(x-1,y-1,x+2,y+2,0xFFFF1838);}
+                    var b=boss();if(b!=null){drawingMelee=true;int old=b.action();b.action(5);
+                        try{ObserverPortrait.draw(g,b,age,true);if(!ObserverDesktop.active()){int x=Math.max(30,Math.min(w-30,cx+(cx>w/2?-35:35)));int y=Math.max(80,Math.min(h-15,cy+40));GuiEntityPreview.render(g,x,y,40,cx-x,0,b);}}
+                        finally{b.action(old);drawingMelee=false;}
+                    }
+                    int bw=Math.min(160,w-24);g.fill(w/2-bw/2,h-31,w/2+bw/2,h-26,0xFF442030);
+                    g.fill(w/2-bw/2,h-31,w/2-bw/2+bw*state.attackLeft()/ObserverBattleRules.MELEE_REACTION,h-26,0xFFFF2345);
+                }else if(state.attack()==ObserverBattleRules.DOMAIN){
+                    g.fill(0,0,w,h,0xF0000000);bars(g,w);
+                    int count=state.keys().length,step=Math.min(34,Math.max(12,(w-20)/count));
+                    for(int i=0;i<count;i++){int x=w/2+(2*i-count+1)*step/2;g.fill(x-step/2+1,h/2-12,x+step/2-1,h/2+22,i<state.keysDone()?0xFF286A42:0xFF34232C);g.drawCenteredString(mc.font,Character.toString((char)(state.keys()[i]+32)),x,h/2+1,0xFFFFFFFF);}
+                }else if(state.attack()==ObserverBattleRules.SUPPORT){
+                    if(weakX>0)for(int i=0;i<32;i++){double a=i*Math.PI/16;int x=(int)(weakX+Math.cos(a)*(20+state.attackLeft())),y=(int)(weakY+Math.sin(a)*14);g.fill(x,y,x+3,y+3,0xFF57F5C5);}
+                }else{
+                    g.fill(12,h-30,w-12,h-25,0xFF442630);g.fill(12,h-30,12+(int)((w-24)*state.dodge()),h-25,0xFFFF3355);
+                }
+                g.drawCenteredString(mc.font,String.format(java.util.Locale.ROOT,"%.2f 秒",state.attackLeft()/20f),w/2,h/2+34,0xFFFF8899);
+            }
+            if(state.staggerLeft()>0){g.fill(0,0,w,19,0xFF182B44);g.drawString(mc.font,"Minecraft",5,5,0xFFFFFFFF);}
         }
+        drawCursors(g,w,h);
+        ObserverDialog.render(g,w,h);
     }
-    private static float keyX(int i){var mc=Minecraft.getInstance();return mc.getWindow().getGuiScaledWidth()/2f+(i-1.5f)*70f;}
-    private static float keyY(){return Minecraft.getInstance().getWindow().getGuiScaledHeight()/2f;}
-    private static void drawCodeRain(GuiGraphics g,int w,int h){
+    private static void bars(GuiGraphics g,int w){
+        var f=Minecraft.getInstance().font;int x=12,bw=w-24;
+        g.fill(x,8,x+bw,20,0xEE241924);g.fill(x+1,9,x+1+(bw-2)*(100-state.hits()*5)/100,19,0xFFD72245);
+        g.drawCenteredString(f,"高位  "+(100-state.hits()*5)+"%",w/2,10,0xFFFFFFFF);
+        for(int i=0;i<15;i++){int a=x+i*bw/15;g.fill(a,25,a+bw/15-2,31,i<state.shield()?0xFF23A9ED:0xFF6A6975);}
+        g.drawString(f,"屏幕外护盾 "+state.shield()+" / 15",x,35,0xFF26374B,false);
+        g.drawString(f,state.move(),x,47,0xFF82203D,false);
+    }
+    private static void code(GuiGraphics g,int w,int h,int age){
+        // 窗框仍保留故障纹理；角色与弹幕交给独立桌面窗口。
+        g.fill(0,0,6,h,0xFF152330);g.fill(w-6,0,w,h,0xFF152330);
+        g.fill(0,0,w,5,0xFF152330);g.fill(0,h-20,w,h-16,0xFF152330);
+        for(int i=0;i<14;i++){int y=(age*2+i*41)%Math.max(1,h);String text=CODE[i%CODE.length];int x=i%2==0?2:w-Minecraft.getInstance().font.width(text)-2;g.drawString(Minecraft.getInstance().font,text,x,y,0x883ACF69,false);}
         var mc=Minecraft.getInstance();
-        if(RAIN.isEmpty())for(int i=0;i<26;i++)RAIN.add(new float[]{RNG.nextFloat(),RNG.nextFloat(),0.4f+RNG.nextFloat()*1.6f,RNG.nextFloat()});
-        int green=0xFF3BFF6E;
-        for(float[] r:RAIN){
-            r[1]+=0.0028f*r[2];
-            if(r[1]>1.05f){r[1]=-0.05f;r[0]=RNG.nextFloat();}
-            String code=CODE[(int)(r[3]*CODE.length)%CODE.length];
-            int x=(int)(r[0]*w),y=(int)(r[1]*h);
-            if(r[0]<0.30f)x=(int)(r[0]*w*0.6);
-            g.drawString(mc.font,code,x,y,green);
+        if(mc.level!=null){
+            if(windowYuji==null||windowYuji.level()!=mc.level)windowYuji=new WindowYuji(mc.level);
+            windowYuji.tickCount=age;
+            ObserverPortrait.draw(g,windowYuji,age,false);
+            if(!ObserverDesktop.active())GuiEntityPreview.render(g,w-35,88,32,12,0,windowYuji);
         }
+        if(state.staggerLeft()>10)ObserverDialog.frame(g,6,60,Math.min(210,w-12),54,"Java Runtime Error","BoundaryAccessException: 高位正在越界");
     }
-    private static void drawShatter(GuiGraphics g,int w,int h){
-        g.fill(0,0,w,h,0xFF000000);
-        var mc=Minecraft.getInstance();
-        int y=h/2-40;
-        g.drawString(mc.font,"Connection Lost: Player_Not_Found",w/2-mc.font.width("Connection Lost: Player_Not_Found")/2,y,0xFFFF2A3C);
-        g.drawString(mc.font,"世界拒绝继续运行。",w/2-mc.font.width("世界拒绝继续运行。")/2,y+18,0xFFB0121F);
-        g.drawString(mc.font,"输入 /sukuna reset 收回控制权，或直接关掉游戏。",w/2-mc.font.width("输入 /sukuna reset 收回控制权，或直接关掉游戏。")/2,y+40,0xFF7A0A12);
+    private static void shattered(GuiGraphics g,int w,int h){
+        g.fill(0,0,w,h,0xFF000000);var f=Minecraft.getInstance().font;
+        for(int i=0;i<4;i++)g.drawCenteredString(f,"Connection Lost: Player_Not_Found",w/2,Math.max(8,h/2-65)+i*14,i==3?0xFFFF3349:0xFF841F2B);
+        g.drawCenteredString(f,screen==null?"":screen.command+"_",w/2,h/2+47,0xFFFFFFFF);
+    }
+    /** 仅用于 GUI 画面、不加入世界的虎杖；复用已有模型皮肤，不产生 AI 与存档实体。 */
+    private static final class WindowYuji extends YujiEntity {
+        WindowYuji(net.minecraft.world.level.Level level){super(SoulContent.YUJI.get(),level);}
+        @Override public int action(){return state!=null&&(state.staggerLeft()>0||state.age()%160>=30&&state.age()%160<44)?4:1;}
+        @Override public int actionAge(){return state==null?0:state.age()%20;}
+    }
+    private static final class BattleScreen extends Screen {
+        private String command="";
+        private final java.util.Set<Integer> heldKeys=new java.util.HashSet<>();
+        BattleScreen(){super(Component.literal("高位"));}
+        @Override public boolean isPauseScreen(){return false;}
+        @Override public boolean shouldCloseOnEsc(){return false;}
+        @Override public void render(GuiGraphics g,int mx,int my,float partial){
+            cursorX=Math.max(0,Math.min(1,mx/(float)Math.max(1,width)));cursorY=Math.max(0,Math.min(1,my/(float)Math.max(1,height)));
+            ObserverFight.render(g,width,height);
+        }
+        @Override public boolean mouseClicked(double x,double y,int button){
+            if(state==null||state.phase()!=1)return true;
+            if(button==0&&state.weakLeft()>0&&state.staggerLeft()==0&&state.attackLeft()==0&&lastWeak!=state.weakId()
+                &&Math.hypot(x-weakX,y-weakY)<=radius+6){lastWeak=state.weakId();send(ObserverBattleRules.WEAK,state.weakId());}
+            return true;
+        }
+        @Override public boolean mouseDragged(double x,double y,int button,double dx,double dy){
+            if(button==1&&state!=null){ObserverWindow.drag(dx,dy);if(state.attack()==1&&state.attackLeft()>0)ObserverClient.drag(dx,dy);}
+            return true;
+        }
+        @Override public boolean keyPressed(int key,int scan,int mods){
+            if(key==GLFW.GLFW_KEY_F7){ObserverNativeDialog.toggle();return true;}
+            if(key==GLFW.GLFW_KEY_F8){ObserverWindow.disable();return true;}
+            if(key==GLFW.GLFW_KEY_ESCAPE){
+                if(!exitRequested){exitRequested=true;closeOnVictory=shatter();send(shatter()?ObserverBattleRules.RESET:ObserverBattleRules.ABORT,0);ObserverWindow.restore();}
+                if(stale>200)ObserverClient.end();return true;
+            }
+            if(shatter()){
+                if(key==GLFW.GLFW_KEY_BACKSPACE&&!command.isEmpty())command=command.substring(0,command.length()-1);
+                else if(key==GLFW.GLFW_KEY_ENTER&&command.trim().equals("/sukuna reset"))send(ObserverBattleRules.RESET,0);
+            }else if(state!=null&&state.attack()==2&&state.attackLeft()>0&&heldKeys.add(key))send(ObserverBattleRules.KEY,key);
+            return true;
+        }
+        @Override public boolean keyReleased(int key,int scan,int mods){heldKeys.remove(key);return true;}
+        @Override public void tick(){if(!Minecraft.getInstance().isWindowActive())heldKeys.clear();}
+        @Override public boolean charTyped(char c,int mods){if(shatter()&&command.length()<40&&!Character.isISOControl(c))command+=c;return true;}
+        @Override public void onClose(){send(shatter()?ObserverBattleRules.RESET:ObserverBattleRules.ABORT,0);ObserverWindow.restore();}
     }
     private ObserverFight(){}
 }

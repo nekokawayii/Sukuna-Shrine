@@ -111,7 +111,7 @@ public final class PlayerAnimClient {
     private static final class Layer extends ModifierLayer<KeyframeAnimationPlayer> {
         private KeyframeAnimation data;
         void play(KeyframeAnimation data,double age,boolean loop){
-            if(this.data!=data){this.data=data;setAnimation(new KeyframeAnimationPlayer(data));}
+            if(this.data!=data||getAnimation()==null||!getAnimation().isActive()||age+1<getAnimation().getCurrentTick()){this.data=data;setAnimation(new KeyframeAnimationPlayer(data,(int)Math.max(0,age)));}
             KeyframeAnimationPlayer player=getAnimation();
             if(player==null)return;
             double end=Math.max(1,loop?data.endTick:data.stopTick);

@@ -15,7 +15,8 @@ public final class SlashForms {
     private static final class Blade {
         final ServerPlayer owner;final ServerLevel level;final List<Line> lines;final Vec3 dir;final double fraction;
         final long due;final boolean accelerating,world;final Set<UUID> hit=new HashSet<>();int age;
-        Blade(ServerPlayer p,List<Line> lines,Vec3 dir,double fraction,long due,boolean accelerating,boolean world){owner=p;level=p.serverLevel();this.lines=lines;this.dir=dir;this.fraction=fraction;this.due=due;this.accelerating=accelerating;this.world=world;}
+        final long visualId=SlashTerrain.id();List<Line> fragments;
+        Blade(ServerPlayer p,List<Line> lines,Vec3 dir,double fraction,long due,boolean accelerating,boolean world){owner=p;level=p.serverLevel();this.lines=lines;this.fragments=lines;this.dir=dir;this.fraction=fraction;this.due=due;this.accelerating=accelerating;this.world=world;}
     }
     private static final List<Blade> blades=new ArrayList<>();
     private record Pending(ServerPlayer owner,ServerLevel level,Line line,Vec3 dir,long due,boolean moving){}
@@ -80,25 +81,31 @@ public final class SlashForms {
     }
     private static final class Ring {
         final ServerPlayer owner;final ServerLevel level;final Vec3 center;final Set<UUID> hit=new HashSet<>();int age;
-        Ring(ServerPlayer p,Vec3 center){owner=p;level=p.serverLevel();this.center=center;}
+        final long visualId=SlashTerrain.id();List<Line> fragments=new ArrayList<>();
+        Ring(ServerPlayer p,Vec3 center){owner=p;level=p.serverLevel();this.center=center;for(int i=0;i<DismantleMotionRules.RING_SEGMENTS;i++)fragments.add(ringLine(center,DismantleMotionRules.ringRadius(0),i));}
     }
     private static final List<Ring> rings=new ArrayList<>();
     public static void motionRing(ServerPlayer p,Vec3 center){
         if(rings.size()>=128)return;rings.add(new Ring(p,center));
-        Network.send(p.serverLevel(),new Network.Effect(DismantleMotionRules.RING_FX,p.getId(),center,Vec3.ZERO,1,DismantleMotionRules.RING_LIFE,0));
+        // 环斩同样由服务器逐段同步，不能再绘制一整圈穿墙的客户端预测。
     }
     private static Line ringLine(Vec3 center,double radius,int index){double a=index*Math.PI*2/DismantleMotionRules.RING_SEGMENTS,z=(index+1)*Math.PI*2/DismantleMotionRules.RING_SEGMENTS;return new Line(center.add(Math.cos(a)*radius,0,Math.sin(a)*radius),center.add(Math.cos(z)*radius,0,Math.sin(z)*radius));}
     private static void tickRings(){
         for(Ring r:List.copyOf(rings)){
             if(!valid(r.owner,r.level)||DomainClash.active(r.owner)||r.age>=DismantleMotionRules.RING_LIFE){rings.remove(r);continue;}
-            double from=DismantleMotionRules.ringRadius(r.age),to=DismantleMotionRules.ringRadius(r.age+1);
-            var targets=r.level.getEntitiesOfClass(LivingEntity.class,new AABB(r.center.x-to-1,r.center.y-1,r.center.z-to-1,r.center.x+to+1,r.center.y+1,r.center.z+to+1),t->CombatSettings.canHit(r.owner,t));
-            for(int step=0;step<=9;step++)for(int i=0;i<DismantleMotionRules.RING_SEGMENTS;i++){
-                Line line=ringLine(r.center,from+(to-from)*step/9.0,i);
-                for(LivingEntity t:targets)if(!r.hit.contains(t.getUUID())&&intersects(line,Vec3.ZERO,Vec3.ZERO,t,false)){r.hit.add(t.getUUID());hit(r.owner,t,1);}
-                SkillDestruction.immediate(r.owner,line.a,line.b,0.45);
+            List<Line> alive=new ArrayList<>();List<SlashTerrain.Sweep> frame=new ArrayList<>();
+            for(Line line:r.fragments){
+                double ratio=DismantleMotionRules.ringRadius(r.age+1)/DismantleMotionRules.ringRadius(r.age);
+                Vec3 nextA=r.center.add(line.a.subtract(r.center).scale(ratio)),nextB=r.center.add(line.b.subtract(r.center).scale(ratio));
+                Vec3 step=nextA.lerp(nextB,.5).subtract(line.a.lerp(line.b,.5));
+                // 用本刻末端宽度做保守扫掠，保留圆环扩张而不让新长出的边缘绕过墙。
+                var result=SlashTerrain.advance(r.owner,List.of(new Line(nextA.subtract(step),nextB.subtract(step))),step);
+                alive.addAll(result.remaining());frame.addAll(result.swept());
+                for(var sweep:result.swept())for(LivingEntity t:r.level.getEntitiesOfClass(LivingEntity.class,new AABB(sweep.a(),sweep.b()).expandTowards(sweep.step()).inflate(.01),t->!r.hit.contains(t.getUUID())&&CombatSettings.canHit(r.owner,t)))
+                    if(SlashTerrain.hits(sweep,t)){r.hit.add(t.getUUID());hit(r.owner,t,1);}
             }
-            r.age++;
+            SlashTerrain.send(r.owner,r.visualId,frame,r.center);r.fragments=alive;r.age++;
+            if(alive.isEmpty())rings.remove(r);
         }
     }
     public static void world(ServerPlayer p){
@@ -118,7 +125,7 @@ public final class SlashForms {
     static long pack(Vec3 d){int yaw=(int)Math.round(Math.toDegrees(Math.atan2(d.z,d.x))*100)+18000,pitch=(int)Math.round(Math.asin(d.y)*18000/Math.PI)+9000;return ((long)yaw<<16)|(pitch&65535);}
     public static void exactHit(ServerPlayer p,LivingEntity t,double fraction){
         if(!CombatSettings.canHit(p,t)||DomainClash.active(p)||DomainClash.active(t))return;
-        t.invulnerableTime=0;AttackTypes.mark(AttackTypes.pending()!=null?AttackTypes.pending():AttackTypes.SHAPE_BRANCH);CombatSettings.hurt(p,t,p.damageSources().sonicBoom(p),(float)(NetBranches.dismantleDamage(p,t)*fraction));
+        t.invulnerableTime=0;AttackTypes.mark(AttackTypes.SHAPE_BRANCH);CombatSettings.hurt(p,t,p.damageSources().sonicBoom(p),(float)(NetBranches.dismantleDamage(p,t)*fraction));
     }
     public static void hit(ServerPlayer p,LivingEntity t,double fraction){
         if(!CombatSettings.canHit(p,t)||DomainClash.active(p)||DomainClash.active(t))return;
@@ -130,7 +137,7 @@ public final class SlashForms {
         Vec3 a=line.a.add(motion),b=line.b.add(motion);AABB box=t.getBoundingBox().inflate(infinite?WorldSlashRules.HALF_WIDTH:0.35);
         if(infinite){Vec3 c=a.lerp(b,0.5),axis=b.subtract(a).normalize();double reach=t.getBoundingBox().getCenter().distanceTo(c)+t.getBbHeight()+t.getBbWidth()+4;a=c.subtract(axis.scale(reach));b=c.add(axis.scale(reach));}
         // 每0.4格扫描移动面，65格/秒也不会漏掉细小目标。
-        int n=Math.max(1,(int)Math.ceil(step.length()/0.4));for(int i=0;i<=n;i++){Vec3 move=step.scale(i/(double)n),from=a.add(move),to=b.add(move);if(box.contains(from)||box.contains(to)||box.clip(from,to).isPresent())return true;}return false;
+        int n=Math.max(1,(int)Math.ceil(step.length()/0.4));for(int i=0;i<=n;i++){Vec3 move=step.scale(i/(double)n),from=a.add(move),to=b.add(move);if(box.contains(from)||box.contains(to)||box.clip(from,to).isPresent()){SlashImpact.plane(t,line.b.subtract(line.a),step.lengthSqr()>1e-8?step:new Vec3(0,0,1));return true;}}return false;
     }
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event){
         if(event.phase!=TickEvent.Phase.END)return;
@@ -141,17 +148,38 @@ public final class SlashForms {
         }
         for(Blade b:List.copyOf(blades)){
             if(!valid(b.owner,b.level)||DomainClash.active(b.owner)||b.age>=(b.world?SlashFormRules.WORLD_LIFE:100)){blades.remove(b);continue;}
-            if(b.level.getGameTime()<b.due)continue;if(b.age==0)effect(b);
+            if(b.level.getGameTime()<b.due)continue;
+            if(!b.world){tickFinite(b);continue;}
+            if(b.age==0)effect(b);
             Vec3 motion=b.dir.scale(SlashFormRules.travel(b.age,b.accelerating)),step=b.dir.scale(SlashFormRules.travel(b.age+1,b.accelerating)-SlashFormRules.travel(b.age,b.accelerating));
             boolean merged=false;for(Line l:b.lines){for(int sample=0;sample<=8;sample++){Vec3 offset=motion.add(step.scale(sample/8.0));if(CombatExpansion.collideSlash(b.owner,l.a.add(offset),l.b.add(offset),b.dir)){merged=true;break;}}if(merged)break;}
             if(merged){for(Line l:b.lines)Network.send(b.level,new Network.Effect(CombatExpansionRules.FX_BLADE_STOP,b.owner.getId(),l.a,l.b.subtract(l.a),1,1,pack(b.dir)));blades.remove(b);continue;}
             List<LivingEntity> targets=new ArrayList<>();if(b.world){for(var e:b.level.getAllEntities())if(e instanceof LivingEntity t&&CombatSettings.canHit(b.owner,t))targets.add(t);}else{
                 AABB bounds=new AABB(b.lines.get(0).a,b.lines.get(0).b);for(Line l:b.lines)bounds=bounds.minmax(new AABB(l.a,l.b));targets=b.level.getEntitiesOfClass(LivingEntity.class,bounds.move(motion).expandTowards(step).inflate(1),t->CombatSettings.canHit(b.owner,t));
             }
-            for(LivingEntity t:targets){if(DomainClash.active(t)||b.hit.contains(t.getUUID()))continue;for(Line l:b.lines)if(intersects(l,motion,step,t,b.world)){b.hit.add(t.getUUID());if(b.world){t.invulnerableTime=0;float amount=WorldSlashRules.damage(t.getMaxHealth(),NetBranches.dismantleDamage(b.owner,t));t.getPersistentData().putBoolean("SukunaWorldSlashHit",true);try{CombatSettings.hurt(b.owner,t,b.level.damageSources().sonicBoom(b.owner),amount);}finally{t.getPersistentData().remove("SukunaWorldSlashHit");}}else hit(b.owner,t,b.fraction);break;}}
+            for(LivingEntity t:targets){if(DomainClash.active(t)||b.hit.contains(t.getUUID()))continue;for(Line l:b.lines)if(intersects(l,motion,step,t,b.world)){b.hit.add(t.getUUID());if(b.world){t.invulnerableTime=0;float amount=WorldSlashRules.damage((float)(t.getMaxHealth()*Authority.damageScale(b.owner)),NetBranches.dismantleDamage(b.owner,t));t.getPersistentData().putBoolean("SukunaWorldSlashHit",true);try{AttackTypes.mark(AttackTypes.WORLD_SLASH);CombatSettings.hurt(b.owner,t,b.level.damageSources().sonicBoom(b.owner),amount);}finally{t.getPersistentData().remove("SukunaWorldSlashHit");}}else hit(b.owner,t,b.fraction);break;}}
             for(Line l:b.lines){Vec3 a=l.a.add(motion),z=l.b.add(motion);int n=(int)Math.ceil(step.length()/0.65);for(int i=0;i<=n;i++){Vec3 offset=step.scale(i/(double)Math.max(1,n));if(b.world)SkillDestruction.infinite(b.owner,a.add(offset).lerp(z.add(offset),0.5),z.subtract(a).normalize(),WorldSlashRules.HALF_WIDTH);else SkillDestruction.immediate(b.owner,a.add(offset),z.add(offset),0.45);}}
             b.age++;
         }
+    }
+    private static void tickFinite(Blade b){
+        if(b.age==0)b.fragments=SlashTerrain.launch(b.owner,b.fragments,b.dir);
+        if(b.fragments.isEmpty()){blades.remove(b);return;}
+        Vec3 step=b.dir.scale(SlashFormRules.travel(b.age+1,b.accelerating)-SlashFormRules.travel(b.age,b.accelerating));
+        var result=SlashTerrain.advance(b.owner,b.fragments,step);
+        List<SlashTerrain.Sweep> flight=new ArrayList<>();
+        for(var sweep:result.swept()){
+            boolean merged=false;
+            for(int i=0;i<=8;i++){Vec3 at=sweep.step().scale(i/8.0);if(CombatExpansion.collideSlash(b.owner,sweep.a().add(at),sweep.b().add(at),b.dir)){merged=true;break;}}
+            if(merged){SlashTerrain.send(b.owner,b.visualId,List.of(),sweep.a());blades.remove(b);return;}
+            flight.add(sweep);
+            AABB bounds=new AABB(sweep.a(),sweep.b()).expandTowards(sweep.step()).inflate(.01);
+            for(LivingEntity target:b.level.getEntitiesOfClass(LivingEntity.class,bounds,t->CombatSettings.canHit(b.owner,t)&&!b.hit.contains(t.getUUID())))
+                if(!DomainClash.active(target)&&SlashTerrain.hits(sweep,target)){b.hit.add(target.getUUID());hit(b.owner,target,b.fraction);}
+        }
+        SlashTerrain.send(b.owner,b.visualId,flight,b.fragments.get(0).a());
+        b.fragments=result.remaining();b.age++;
+        if(b.fragments.isEmpty())blades.remove(b);
     }
     public static void cancel(ServerPlayer p){rings.removeIf(r->r.owner==p);blades.removeIf(b->b.owner==p);pending.removeIf(s->s.owner==p);FreehandDrawing.cancel(p);}
     @SubscribeEvent public static void logout(PlayerEvent.PlayerLoggedOutEvent e){if(e.getEntity() instanceof ServerPlayer p)cancel(p);}

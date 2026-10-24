@@ -30,16 +30,17 @@ public final class AttackTypes {
     // ---- 魔法细分：苍 / 赫 / 茈 各自一条适应进度 ----
     public static final String MAGIC_BLUE="magic_blue",MAGIC_RED="magic_red",MAGIC_PURPLE="magic_purple",
         MAGIC_FURNACE="magic_furnace",MAGIC_SOUL="magic_soul",MAGIC_TELEPORT="magic_teleport";
-    /** 细分类型（摆在基础类型之后的独立占位）：斩击 6 + 魔法 6。 */
+    public static final String BLOOD="blood",TEN_SHADOWS="ten_shadows";
+    /** 新类型追加在末尾，保留旧存档24个槽位的顺序。 */
     public static final String[] EXTRA={DISMANTLE,CLEAVE,NET_BRANCH,SHAPE_BRANCH,WORLD_SLASH,FINALE,
-        MAGIC_BLUE,MAGIC_RED,MAGIC_PURPLE,MAGIC_FURNACE,MAGIC_SOUL,MAGIC_TELEPORT};
+        MAGIC_BLUE,MAGIC_RED,MAGIC_PURPLE,MAGIC_FURNACE,MAGIC_SOUL,MAGIC_TELEPORT,BLOOD,TEN_SHADOWS};
     public static final String[] EXTRA_NAMES={"解","捌","解·网分支","解·形状分支","世界斩","终式",
-        "苍","赫","茈","灶火","灵魂术式","瞬移"};
+        "苍","赫","茈","灶火","灵魂术式","瞬移","血液","十影"};
     public static final int[] EXTRA_COLORS={0xFFFFFF,0xFFE8E8,0xE8D8FF,0xB8E8FF,0xFFF0A0,0xFFD24A,
-        0x4AA8FF,0xFF4A2A,0xC08CFF,0xFF7A20,0x9B6BFF,0x9FE8FF};
+        0x4AA8FF,0xFF4A2A,0xC08CFF,0xFF7A20,0x9B6BFF,0x9FE8FF,0xDD123F,0x5D526D};
     /** 细分占位 → 所属基础类型（适应进度按细分算，免疫按基础类型算）。 */
     public static final String[] EXTRA_FAMILY={SLASH,SLASH,SLASH,SLASH,SLASH,SLASH,
-        MAGIC,MAGIC,MAGIC,MAGIC,MAGIC,MAGIC};
+        MAGIC,MAGIC,MAGIC,MAGIC,MAGIC,MAGIC,BLOOD,TEN_SHADOWS};
     /** 全部适应占位：基础 12 + 细分 12 = 24。 */
     public static final String[] ALL;
     public static final String[] NAMES;
@@ -86,6 +87,7 @@ public final class AttackTypes {
     public static String pending(){return pending;}
     /** 技能号 → 适应细分：给 {@code TechniqueInput.castRaw} 兜底用（各技能内部更精确的 prepare 优先）。 */
     public static String pendingFor(int skill){
+        if(BloodRules.skill(skill))return BLOOD;
         if(skill>=34)return switch(skill-34){
             case 0,8->MAGIC_BLUE;      // 苍 / 苍·最大功率
             case 1,2->MAGIC_RED;       // 赫 / 赫·最大功率
@@ -136,6 +138,8 @@ public final class AttackTypes {
     /** 只看 DamageSource 的归类（原版/其他模组的伤害都走这里）。 */
     public static String bySource(DamageSource source){
         if(source==null)return UNARMED;
+        if(source.is(DeathStar.DAMAGE)||source.is(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,new net.minecraft.resources.ResourceLocation("sukuna","blood")))||source.is(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,new net.minecraft.resources.ResourceLocation("sukuna","blood_true"))))return BLOOD;
+        if(source.getEntity() instanceof ShadowEntity||source.getDirectEntity() instanceof ShadowEntity||source.getEntity() instanceof MahoragaEntity||source.getDirectEntity() instanceof MahoragaEntity)return TEN_SHADOWS;
         if(source.is(DamageTypeTags.IS_EXPLOSION))return EXPLOSION;
         if(source.is(DamageTypeTags.IS_LIGHTNING))return LIGHTNING;
         if(source.is(DamageTypeTags.IS_FIRE))return FIRE;

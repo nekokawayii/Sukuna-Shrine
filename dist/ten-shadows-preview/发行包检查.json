@@ -1,0 +1,8 @@
+{
+  "jar": "build/libs/sukuna-forge-1.20.1-1.6.0-r288-high-2-r129-auto-share.jar",
+  "bytes": 10769915,
+  "sha256": "93c2b6af7788100666db0c89ce11a4b76ddba821d326b186152f1e1d1d917327",
+  "checks": 42,
+  "models": 11,
+  "result": "发行包一致性检查通过；不代替游戏实测"
+}

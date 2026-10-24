@@ -18,9 +18,9 @@ public final class GojoFx {
     private static final Map<String,Long> throttled=new HashMap<>();
     /** 记录发射器真正的创建时刻：Photon 的 lifetime 到期后不会自己续命。 */
     private static long time;
-    public static void clear(){for(Entry e:active.values())PhotonFx.stop(e.handle());active.clear();throttled.clear();time=0;GojoVoidClient.close();GojoBlastClient.clear();GojoBeamClient.clear();GojoTrailClient.clear();GojoGravityClient.clear();}
+    public static void clear(){for(Entry e:active.values())PhotonFx.stop(e.handle());active.clear();throttled.clear();time=0;GojoVoidClient.close();GojoBlastClient.clear();GojoBeamClient.clear();GojoTrailClient.clear();GojoOpticsClient.clear();}
     public static void tick(){
-        time++;GojoVoidClient.tick();GojoBlastClient.tick();GojoBeamClient.tick();GojoTrailClient.tick();GojoGravityClient.tick();
+        time++;GojoVoidClient.tick();GojoBlastClient.tick();GojoBeamClient.tick();GojoTrailClient.tick();GojoOpticsClient.tick();
         active.values().removeIf(e->{
             if(e.sticky()&&time<e.end())return false;
             if(time>=e.end()){PhotonFx.stop(e.handle());return true;}
@@ -59,12 +59,14 @@ public final class GojoFx {
     }
     public static void receive(Network.Effect e){
         Vec3 at=e.position();String owner=String.valueOf(e.owner());
+        GojoOpticsClient.receive(e);
+        // 终止消息不依赖粒子前置是否存在。
+        if(e.kind()==BLUE_END){GojoTrailClient.drop(orbKey(e));}
         // 宇宙大爆炸走模组自己的顶点通路（GojoBlastClient），**不依赖 Photon**：
         // 必须在 ready() 门槛之前处理，否则没装 Photon 的客户端就只剩一声响。
         if(e.kind()==BIG_BANG){
             GojoBlastClient.bigBang(at,Math.max(1,e.size()));
             GojoTrailClient.drop(orbKey(e));
-            GojoGravityClient.drop(orbKey(e));
             if(!PhotonFx.ready())return;
             // 星尘 + 一圈冲击波：给自绘的大爆炸再叠一层粒子（银河贴图自带星野感）
             spark(at,Math.max(3,e.size())*0.85,1.1,0xC0C08CFF,0xFF3E1C63,GALAXY,true,3,8,34,1.4);
@@ -74,7 +76,6 @@ public final class GojoFx {
         // 拖尾同样是自绘的：先把这一包的坐标记进缎带，再决定要不要叠粒子。
         long orb=orbKey(e);
         if(e.kind()==BLUE||e.kind()==PURPLE)GojoTrailClient.feed(e.kind()==BLUE?GojoTrailClient.BLUE:GojoTrailClient.PURPLE,orb,at);
-        if(e.kind()==BLUE)GojoGravityClient.track(orb,at,Math.max(0.8,e.size()));
         if(!PhotonFx.ready())return;
         switch(e.kind()){
             case BLOCK->{if(throttle("block/"+owner,5))keep("block/"+owner,PhotonFx.shockwave(at,0x66BFE4FF,1.6,10),10,false);}
@@ -91,7 +92,7 @@ public final class GojoFx {
                 GojoBeamClient.spawn(at,e.direction(),Math.max(0.14,e.size()),Math.max(3,e.life()));
             }
             case BLUE,BLUE_END->{
-                if(e.kind()==BLUE_END){GojoTrailClient.drop(orb);GojoGravityClient.drop(orb);GojoBlastClient.spawn(at,Math.max(0,e.size()),0x5AA8FF);return;}
+                if(e.kind()==BLUE_END){GojoTrailClient.drop(orb);GojoBlastClient.spawn(at,Math.max(0,e.size()),0x5AA8FF);return;}
                 spark(at,Math.max(0.8,e.size()),Math.max(0.8,e.size())*0.62,0xB43A8CFF,0xFF12304F,GLOW,true,2,5,22,4.5);
                 if(time%2==0)spark(at,Math.max(1.4,e.size())*1.8,1.1,0x66FFFFFF,0,GLOW,true,2,6,8,2.2);
             }

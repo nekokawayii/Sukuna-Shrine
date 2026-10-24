@@ -8,7 +8,7 @@ public final class TechniqueInputClient {
     private static TechniqueInput.Input packet(int skill,int phase){
         var mc=Minecraft.getInstance();
         boolean up=mc.options.keyUp.isDown(),downKey=mc.options.keyDown.isDown(),jump=mc.options.keyJump.isDown(),crouch=mc.options.keyShift.isDown();
-        boolean sprint=mc.player!=null&&mc.player.isSprinting(),ground=mc.player!=null&&mc.player.onGround();
+        boolean sprint=mc.player!=null&&(mc.player.isSprinting()||mc.options.keySprint.isDown()),ground=mc.player!=null&&mc.player.onGround();
         double vy=mc.player==null?0:mc.player.getDeltaMovement().y;
         // 动作意图按《使用说明》四(三)(四)当场算好：后退+跳=后翻、蹲下+前进=飞踢、蹲下不动=跪地、
         // 疾跑前进=滑铲、疾跑起跳=冲拳；0 表示"这不是动作，走普通解"。
@@ -18,24 +18,29 @@ public final class TechniqueInputClient {
     private static void send(int skill,int phase){Network.CHANNEL.sendToServer(packet(skill,phase));}
     public static void cancel(){if((heldSkill>=0||worldLease>0)&&Minecraft.getInstance().player!=null)send(heldSkill>=0?heldSkill:SlashFormRules.WORLD,3);heldSkill=-1;previous=false;ticks=0;worldLease=0;}
     public static void clear(){heldSkill=-1;previous=false;ticks=worldLease=0;}
-    public static void tick(){
+    public static void tick(){update(true);}
+    /** 输入事件只处理按下/松开边沿，不推进蓄力心跳计时。 */
+    public static void inputChanged(){update(false);}
+    private static void update(boolean gameTick){
+        if(ObserverClient.active()){clear();return;}
         var mc=Minecraft.getInstance();boolean down=ClientInput.held(Client.CAST);
         boolean valid=mc.player!=null&&mc.player.isAlive()&&mc.screen==null&&mc.isWindowActive()&&mc.mouseHandler.isMouseGrabbed()&&Client.progress.unlocked();
         // 手持神武解：释放键改为"充能"，与轮盘选择无关（先处理，避免被 selected 校验打断）
         boolean tool=mc.player!=null&&(mc.player.getMainHandItem().is(VoidContent.SHINBUKE.get())||mc.player.getOffhandItem().is(VoidContent.SHINBUKE.get()));
         if(tool){
+            if(!valid){if(previous)send(Shinbuke.CHARGE_ID,3);previous=false;ticks=0;return;}
             if(heldSkill>=0){send(heldSkill,3);heldSkill=-1;}
             if(down&&!previous)send(Shinbuke.CHARGE_ID,0);
             else if(!down&&previous)send(Shinbuke.CHARGE_ID,2);
-            else if(down&&++ticks%10==0)send(Shinbuke.CHARGE_ID,1);
+            else if(gameTick&&down&&++ticks%10==0)send(Shinbuke.CHARGE_ID,1);
             previous=down;
             return;
         }
         if(!valid||heldSkill>=0&&heldSkill!=Client.selected||worldLease>0&&Client.selected!=SlashFormRules.WORLD){cancel();previous=down;return;}
-        if(worldLease>0){worldLease--;if(worldLease%10==0)send(SlashFormRules.WORLD,1);}
+        if(gameTick&&worldLease>0){worldLease--;if(worldLease%10==0)send(SlashFormRules.WORLD,1);}
         // 动作中的输入不能再次启动技能，但仍必须送达松手与取消。
-        if(heldSkill>=0){if(!down){send(heldSkill,2);heldSkill=-1;}else if(++ticks%10==0)send(heldSkill,1);}
-        if(down&&!previous&&heldSkill<0&&!FinaleClient.local()&&!DomainClashClient.active()&&!NetBranchVisuals.locked()&&!DismantleMotionClient.locked()&&Client.selected!=SlashFormRules.FREEHAND){
+        if(heldSkill>=0){if(!down){send(heldSkill,2);heldSkill=-1;}else if(gameTick&&++ticks%10==0)send(heldSkill,1);}
+        if(down&&!previous&&heldSkill<0&&!FinaleClient.local()&&!DomainClashClient.active()&&!NetBranchVisuals.locked()&&!DismantleMotionClient.locked()&&(Client.selected!=SlashFormRules.FREEHAND||AuthorityClient.enabled()&&mc.player!=null&&(Authority.medium(mc.player.getMainHandItem())>=0||Authority.medium(mc.player.getOffhandItem())>=0))){
             heldSkill=Client.selected;ticks=0;
             if(heldSkill==SlashFormRules.WORLD)worldLease=320;
             // 无量空处（输入侧技能号 = 34+轮盘格，无量空处 = 格 6 → 40）的释放键：客户端确实发出去了才落盘 ——

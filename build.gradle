@@ -1,5 +1,5 @@
 plugins { id 'java'; id 'net.minecraftforge.gradle' version '[6.0,6.2)' }
-version = '1.6.0-r288'
+version = '1.6.0-r288-high-2-r139'
 group = 'cn.blockforge.generated.nnnnr1201forge2'
 base { archivesName = 'sukuna-forge-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -77,3 +77,208 @@ def copyToMods = tasks.register('copyToMods', Copy) {
     doLast { logger.lifecycle("已同步发行 jar 到测试整合包 ${modsDir}（变体 ${modsVariant}）") }
 }
 tasks.named('assemble') { finalizedBy copyToMods }
+
+// 动作补绘、时间轴与光学投影回归；正式构建必须先通过。
+def visualSafetyClasses = layout.buildDirectory.dir('visual-safety-check')
+tasks.register('compileVisualSafetyCheck', JavaCompile) {
+    source = files('tools/CheckVisualSafety.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/MotionSafety.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/GojoOpticsRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/DismantlePose.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/DismantleMotionRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/SlashFormRules.java')
+    classpath = sourceSets.main.compileClasspath
+    destinationDirectory = visualSafetyClasses
+}
+tasks.register('checkVisualSafety', JavaExec) {
+    dependsOn 'compileVisualSafetyCheck'
+    classpath = files(visualSafetyClasses) + sourceSets.main.compileClasspath
+    mainClass = 'CheckVisualSafety'
+    workingDir = projectDir
+}
+def deathStarClasses = layout.buildDirectory.dir('death-star-check')
+tasks.register('compileDeathStarCheck', JavaCompile) {
+    source = files('tools/CheckDeathStar.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/DeathStarRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/BloodRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/CombatRelationRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/GojoOpticsRules.java')
+    classpath = sourceSets.main.compileClasspath
+    destinationDirectory = deathStarClasses
+}
+tasks.register('checkDeathStar', JavaExec) {
+    dependsOn 'compileDeathStarCheck'
+    classpath = files(deathStarClasses) + sourceSets.main.compileClasspath
+    mainClass = 'CheckDeathStar'
+    workingDir = projectDir
+}
+tasks.named('check') { dependsOn 'checkDeathStar' }
+tasks.named('jar') { dependsOn 'checkDeathStar' }
+def bloodClasses = layout.buildDirectory.dir('blood-combat-check')
+tasks.register('compileBloodCombatCheck', JavaCompile) {
+    source = files('tools/CheckBloodCombat.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/BloodRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/CombatRelationRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/AdaptationRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/MahoragaRitualRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/WallpaperProjection.java')
+    classpath = files()
+    destinationDirectory = bloodClasses
+}
+tasks.register('checkBloodCombat', JavaExec) {
+    dependsOn 'compileBloodCombatCheck'
+    classpath = files(bloodClasses)
+    mainClass = 'CheckBloodCombat'
+    workingDir = projectDir
+}
+tasks.named('check') { dependsOn 'checkBloodCombat' }
+tasks.named('jar') { dependsOn 'checkBloodCombat' }
+tasks.named('check') { dependsOn 'checkVisualSafety' }
+tasks.named('jar') { dependsOn 'checkVisualSafety' }
+
+// 将无游戏环境的战斗逻辑回归纳入正式构建，失败时不交付 jar。
+def highBattleClasses = layout.buildDirectory.dir('high-battle-check')
+tasks.register('compileHighBattleCheck', JavaCompile) {
+    source = files('tools/CheckHighBattle.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/ObserverBattleRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/ObserverPartyRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/AuthorityRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/AuthorityRewardRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/EnergyRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/DismantlePose.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/DismantleMotionRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/SlashFormRules.java')
+    classpath = files()
+    destinationDirectory = highBattleClasses
+}
+tasks.register('checkHighBattle', JavaExec) {
+    dependsOn 'compileHighBattleCheck'
+    classpath = files(highBattleClasses)
+    mainClass = 'CheckHighBattle'
+}
+tasks.named('check') { dependsOn 'checkHighBattle', 'checkSlashTerrain', 'checkAuthorityMultiplayer', 'checkRendererRepair', 'checkClientWiring', 'checkMeleeMotion', 'checkTenShadows' }
+// 即便只请求发行 jar，也必须先跑逻辑回归，不能把“能编译”当作测试通过。
+tasks.named('jar') { dependsOn 'checkHighBattle', 'checkSlashTerrain', 'checkAuthorityMultiplayer', 'checkRendererRepair', 'checkMeleeMotion', 'checkTenShadows' }
+autoShareJar.configure { finalizedBy 'checkClientWiring' }
+
+def prisonClasses = layout.buildDirectory.dir('prison-realm-check')
+tasks.register('compilePrisonRealmCheck', JavaCompile) {
+    source = files('tools/CheckPrisonRealm.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/PrisonRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/PrisonStore.java')
+    classpath = sourceSets.main.compileClasspath
+    destinationDirectory = prisonClasses
+}
+tasks.register('checkPrisonRealm', JavaExec) {
+    dependsOn 'compilePrisonRealmCheck'
+    classpath = files(prisonClasses) + sourceSets.main.compileClasspath
+    mainClass = 'cn.blockforge.generated.nnnnr1201forge2.CheckPrisonRealm'
+    workingDir = projectDir
+}
+tasks.named('check') { dependsOn 'checkPrisonRealm' }
+tasks.named('jar') { dependsOn 'checkPrisonRealm' }
+
+def shadowClasses = layout.buildDirectory.dir('ten-shadows-check')
+tasks.register('compileTenShadowsCheck', JavaCompile) {
+    source = files('tools/CheckTenShadows.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/TenShadowRules.java')
+    classpath = sourceSets.main.compileClasspath
+    destinationDirectory = shadowClasses
+}
+tasks.register('checkTenShadows', JavaExec) {
+    dependsOn 'compileTenShadowsCheck'
+    classpath = files(shadowClasses) + sourceSets.main.compileClasspath
+    mainClass = 'CheckTenShadows'
+    workingDir = projectDir
+}
+
+def motionClasses = layout.buildDirectory.dir('melee-motion-check')
+tasks.register('compileMeleeMotionCheck', JavaCompile) {
+    source = files('tools/CheckMeleeMotion.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/HeldInput.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/MeleeComboRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/MeleeViewRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/DismantlePose.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/DismantleMotionRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/SlashFormRules.java')
+    classpath = files()
+    destinationDirectory = motionClasses
+}
+tasks.register('checkMeleeMotion', JavaExec) {
+    dependsOn 'compileMeleeMotionCheck'
+    classpath = files(motionClasses)
+    mainClass = 'CheckMeleeMotion'
+}
+
+def authorityClasses = layout.buildDirectory.dir('authority-multiplayer-check')
+tasks.register('compileAuthorityMultiplayerCheck', JavaCompile) {
+    source = files('tools/CheckAuthorityMultiplayer.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/AuthorityRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/BeyondProgressRules.java')
+    classpath = files()
+    destinationDirectory = authorityClasses
+}
+tasks.register('checkAuthorityMultiplayer', JavaExec) {
+    dependsOn 'compileAuthorityMultiplayerCheck'
+    classpath = files(authorityClasses)
+    mainClass = 'CheckAuthorityMultiplayer'
+}
+
+def terrainClasses = layout.buildDirectory.dir('slash-terrain-check')
+tasks.register('compileSlashTerrainCheck', JavaCompile) {
+    source = files('tools/CheckSlashTerrain.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/SlashSweepRules.java')
+    classpath = files()
+    destinationDirectory = terrainClasses
+}
+tasks.register('checkSlashTerrain', JavaExec) {
+    dependsOn 'compileSlashTerrainCheck'
+    classpath = files(terrainClasses)
+    mainClass = 'CheckSlashTerrain'
+}
+
+// 渲染修复规则和正式发行 jar 的接线都检查；不把无窗口测试当作游戏画面实测。
+def rendererClasses = layout.buildDirectory.dir('renderer-repair-check')
+tasks.register('compileRendererRepairCheck', JavaCompile) {
+    source = files('tools/CheckRendererRepair.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/RendererRepair.java')
+    classpath = files()
+    destinationDirectory = rendererClasses
+}
+tasks.register('checkRendererRepair', JavaExec) {
+    dependsOn 'compileRendererRepairCheck'
+    classpath = files(rendererClasses)
+    mainClass = 'CheckRendererRepair'
+}
+def wiringClasses = layout.buildDirectory.dir('client-wiring-check')
+tasks.register('compileClientWiringCheck', JavaCompile) {
+    source = files('tools/CheckClientWiring.java')
+    classpath = sourceSets.main.compileClasspath
+    destinationDirectory = wiringClasses
+}
+tasks.register('checkClientWiring', JavaExec) {
+    dependsOn 'compileClientWiringCheck', 'reobfJar', autoShareJar
+    classpath = files(wiringClasses) + sourceSets.main.compileClasspath
+    mainClass = 'CheckClientWiring'
+    doFirst {
+        setArgs([tasks.named('jar').get().archiveFile.get().asFile.absolutePath,
+                 autoShareJar.get().archiveFile.get().asFile.absolutePath])
+    }
+}
+
+// 无游戏回归（tools/Check*.java）的源文件在当前工作树里缺失：源文件不在时编译任务会“静默产出一个空目录”，
+// 随后 JavaExec 因“找不到主类”直接让 jar/build 失败。这里统一加一道闸：
+//   · 源文件缺失 → 跳过该回归任务，并在构建日志里显式打出“本轮没有跑回归断言”，绝不静默当作通过；
+//   · 源文件补回 → 任务自动恢复执行，无需改回 build.gradle。
+def checkToolExists = { String taskName ->
+    file("tools/Check${taskName.substring('check'.length())}.java").exists()
+}
+tasks.withType(JavaExec).matching { it.name.startsWith('check') && it.name != 'check' }.configureEach {
+    onlyIf { t ->
+        boolean ok = checkToolExists(t.name)
+        if (!ok) {
+            logger.lifecycle("!!! 跳过 ${t.name}：tools/Check${t.name.substring('check'.length())}.java 不存在 —— 本轮 jar 没有对应回归断言保护")
+        }
+        ok
+    }
+}

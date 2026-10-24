@@ -18,25 +18,26 @@ import net.minecraftforge.eventbus.api.*;
 import net.minecraftforge.fml.common.Mod;
 
 /** 复用已有玩家骨架、皮肤和盔甲；神武解只是渲染层的铁剑，不改玩家背包。 */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
 public final class FinalePoseClient {
     private static FinaleRenderer normal,slim;private static boolean rendering;
-    @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)
     public static final class Registration {
         @SubscribeEvent public static void layers(EntityRenderersEvent.AddLayers e){normal=new FinaleRenderer(e.getContext(),false);slim=new FinaleRenderer(e.getContext(),true);}
     }
-    @SubscribeEvent(priority=EventPriority.HIGHEST) public static void render(RenderPlayerEvent.Pre e){
-        if(rendering||!FinaleClient.active(e.getEntity().getId())||!(e.getEntity() instanceof AbstractClientPlayer player)||MotionRenderCompat.externalPlayerModels())return;
-        PlayerRenderer renderer="slim".equals(player.getModelName())?slim:normal;if(renderer==null)return;e.setCanceled(true);rendering=true;
-        try{renderer.render(player,player.getYRot(),e.getPartialTick(),e.getPoseStack(),e.getMultiBufferSource(),e.getPackedLight());}finally{rendering=false;}
+    @SubscribeEvent(priority=EventPriority.HIGHEST,receiveCanceled=true) public static void render(RenderPlayerEvent.Pre e){
+        if(rendering||!FinaleClient.active(e.getEntity().getId())||!(e.getEntity() instanceof AbstractClientPlayer player)||player.isInvisible())return;
+        FinaleRenderer renderer="slim".equals(player.getModelName())?slim:normal;if(renderer==null)return;e.setCanceled(true);rendering=true;
+        e.getPoseStack().pushPose();
+        try{renderer.render(player,player.getYRot(),e.getPartialTick(),e.getPoseStack(),e.getMultiBufferSource(),e.getPackedLight());}finally{e.getPoseStack().popPose();rendering=false;}
     }
-    private static final class FinaleRenderer extends PlayerRenderer {
+    private static final class FinaleRenderer extends net.minecraft.client.renderer.entity.LivingEntityRenderer<AbstractClientPlayer,PlayerModel<AbstractClientPlayer>> {
         FinaleRenderer(EntityRendererProvider.Context context,boolean slim){
-            super(context,slim);model=new AnimatedPlayer(slim);
-            layers.removeIf(layer->layer instanceof net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer||layer instanceof net.minecraft.client.renderer.entity.layers.ItemInHandLayer);
+            super(context,new AnimatedPlayer(slim),.5f);
+            addLayer(new net.minecraft.client.renderer.entity.layers.ItemInHandLayer<>(this,context.getItemInHandRenderer()));
+            addLayer(new net.minecraft.client.renderer.entity.layers.CapeLayer(this));
             addLayer(new net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer<>(this,MotionPlayerGeometry.armor(.5f),MotionPlayerGeometry.armor(1),context.getModelManager()));
             addLayer(new Weapon(this,context.getItemInHandRenderer()));
         }
+        @Override public net.minecraft.resources.ResourceLocation getTextureLocation(AbstractClientPlayer p){return TenShadowsClient.skin(p);}
         @Override public Vec3 getRenderOffset(AbstractClientPlayer p,float partial){return Vec3.ZERO;}
     }
     private static final class AnimatedPlayer extends PlayerModel<AbstractClientPlayer> {
@@ -63,7 +64,7 @@ public final class FinalePoseClient {
     }
     private static final class Weapon extends RenderLayer<AbstractClientPlayer,PlayerModel<AbstractClientPlayer>> {
         private final ItemInHandRenderer items;private final ItemStack sword=new ItemStack(Items.IRON_SWORD);
-        Weapon(PlayerRenderer parent,ItemInHandRenderer items){super(parent);this.items=items;}
+        Weapon(FinaleRenderer parent,ItemInHandRenderer items){super(parent);this.items=items;}
         @Override public void render(PoseStack ps,MultiBufferSource source,int light,AbstractClientPlayer p,float limb,float amount,float partial,float age,float yaw,float pitch){
             float t=FinaleClient.age(p.getId());if(t<FinaleRules.TRIGGERS[1]||t>=FinaleRules.STARTS[2]||FinaleClient.variant(p.getId())!=7)return;
             ps.pushPose();getParentModel().translateToHand(HumanoidArm.RIGHT,ps);ps.mulPose(Axis.XP.rotationDegrees(-90));ps.mulPose(Axis.YP.rotationDegrees(180));ps.translate(-.0625,.125,-.625);

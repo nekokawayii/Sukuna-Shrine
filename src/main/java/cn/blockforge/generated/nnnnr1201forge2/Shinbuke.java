@@ -111,7 +111,7 @@ public final class Shinbuke {
             e.invulnerableTime=0;
             AttackTypes.mark(AttackTypes.LIGHTNING);
             CombatSettings.hurt(p,e,level.damageSources().indirectMagic(p,p),BalanceRules.damage(STRIKE_DAMAGE*damageFactor(charge)));
-            e.setSecondsOnFire(2);
+            Skills.burn(p,e,2);
             Vec3 push=e.position().subtract(center).multiply(1,0,1);
             if(push.lengthSqr()>1e-4){push=push.normalize();e.push(push.x*1.2,0.35,push.z*1.2);e.hurtMarked=true;}
         }

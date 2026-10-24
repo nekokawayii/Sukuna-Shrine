@@ -45,6 +45,7 @@ public final class SoulJourney {
         level.getChunk(0,0);p.teleportTo(level,0.5,65,-30.5,0,0);p.getPersistentData().putLong("SukunaGateCooldown",level.getGameTime()+100);Skills.closeDomain(p);Skills.cancelCharge(p);
         var area=new AABB(-32,60,-48,32,90,48);if(!evolved(p)&&level.getEntitiesOfClass(YujiEntity.class,area,e->e.isAlive()&&!e.decoy()&&!e.familyMember()).isEmpty()){YujiEntity boss=SoulContent.YUJI.get().create(level);if(boss!=null){boss.moveTo(0.5,64,0.5,180,0);boss.challenger=p.getUUID();boss.setTarget(p);level.addFreshEntity(boss);}}
         p.sendSystemMessage(Component.literal("灵魂通道 · 北端返回现世，南端通往 Y=1000 真人区域；穿过肉墙后可前往 Y=1300 露天岩手。"));
+        if(!TenShadows.incarnated(p))p.sendSystemMessage(Component.literal("十影受肉已改为高专挑战：在主世界高专遗迹箱子里找到伏黑惠灵魂，合成降灵·伏黑惠后对村民使用。旧侧室不再提供肉身。"));
     }
     private static void ensurePhotoChest(ServerPlayer p){
         ServerLevel level=p.serverLevel();SoulWorldState state=SoulWorldState.get(level);if(state.photoChestRepaired())return;
@@ -105,7 +106,7 @@ public final class SoulJourney {
     @SubscribeEvent public static void noCorridorMobs(EntityJoinLevelEvent e){
         if(e.getLevel().dimension()!=CORRIDOR||!(e.getEntity() instanceof Monster))return;
         double y=e.getEntity().getY();
-        if(e.getEntity() instanceof GuardianEntity)return;
+        if(e.getEntity() instanceof GuardianEntity||e.getEntity() instanceof ObserverEntity||e.getEntity() instanceof MahoragaEntity)return;
         if(e.getEntity() instanceof YujiEntity yuji&&yuji.familyMember())return;
         if(y>=SoulCorridorGenerator.IWATE_FLOOR){e.setCanceled(true);return;}
         if(e.getEntity() instanceof YujiEntity||e.getEntity() instanceof BrokenMahitoEntity||e.getEntity() instanceof MahitoLimbEntity)return;e.setCanceled(true);
@@ -133,6 +134,6 @@ public final class SoulJourney {
     }
     @SubscribeEvent public static void commands(RegisterCommandsEvent e){
         e.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("rebuild").requires(s->s.hasPermission(2)).then(Commands.argument("dimension",ResourceLocationArgument.id()).executes(c->rebuild(c.getSource(),ResourceLocationArgument.getId(c,"dimension"))))));
-        e.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("soul").then(Commands.literal("ruins").requires(s->s.hasPermission(2)).executes(c->RuinAtmosphere.build(c.getSource().getPlayerOrException())?1:0)).then(Commands.literal("leave").executes(c->{leave(c.getSource().getPlayerOrException());return 1;})).then(Commands.literal("status").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();p.sendSystemMessage(Component.literal("咒胎受肉："+SoulCombat.layers(p)+"/9；灵魂进食："+Curse.data(p).getInt("SoulFeasts")+"/300；"+Journey.guide(p)));return 1;})).then(Commands.literal("prepare_test").requires(s->s.hasPermission(2)).executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();var d=Curse.data(p);d.putBoolean("Memory",true);d.putInt("Fingers",20);d.putBoolean("Awakened",true);d.putBoolean("BuddhaDefeated",true);d.putBoolean("Nine",true);d.putInt("ResidueUpgrades",Math.max(34,d.getInt("ResidueUpgrades")));d.putInt("SoulLayers",9);Curse.apply(p);Curse.add(p,Curse.maximum(p));Curse.sync(p);p.sendSystemMessage(Component.literal("测试成长已准备。"));return 1;}))));
+        e.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("soul").then(Commands.literal("ruins").requires(s->s.hasPermission(2)).executes(c->RuinAtmosphere.build(c.getSource().getPlayerOrException())?1:0)).then(Commands.literal("leave").executes(c->{leave(c.getSource().getPlayerOrException());return 1;})).then(Commands.literal("room").executes(c->{TenShadows.revealRoom(c.getSource().getPlayerOrException());return 1;})).then(Commands.literal("status").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();p.sendSystemMessage(Component.literal("咒胎受肉："+SoulCombat.layers(p)+"/9；灵魂进食："+Curse.data(p).getInt("SoulFeasts")+"/300；"+Journey.guide(p)));return 1;})).then(Commands.literal("prepare_test").requires(s->s.hasPermission(2)).executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();var d=Curse.data(p);d.putBoolean("Memory",true);d.putInt("Fingers",20);d.putBoolean("Awakened",true);d.putBoolean("BuddhaDefeated",true);d.putBoolean("Nine",true);d.putInt("ResidueUpgrades",Math.max(34,d.getInt("ResidueUpgrades")));d.putInt("SoulLayers",9);Curse.apply(p);Curse.add(p,Curse.maximum(p));Curse.sync(p);p.sendSystemMessage(Component.literal("测试成长已准备。"));return 1;}))));
     }
 }

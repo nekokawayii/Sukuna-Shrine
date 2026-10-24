@@ -7,6 +7,9 @@ import net.minecraft.world.level.saveddata.SavedData;
 /** 灵魂通道通关记录；真人通关后不再自动补刷，旧版再战时间仅保留读写兼容。 */
 public final class SoulWorldState extends SavedData {
     private boolean mahitoSpawned,mahitoDefeated,yujiSummoned,photoChestRepaired;
+    private boolean megumiRoom;
+    public boolean megumiRoom(){return megumiRoom;}
+    public void markMegumiRoom(){megumiRoom=true;setDirty();}
     private long mahitoRespawnAt;
     public long mahitoRespawnAt(){return mahitoRespawnAt;}
     private CompoundTag condensedMaidOwners=new CompoundTag();
@@ -23,7 +26,7 @@ public final class SoulWorldState extends SavedData {
         state.mahitoDefeated=tag.getBoolean("MahitoDefeated");
         state.mahitoRespawnAt=tag.getLong("MahitoRespawnAt");
         state.yujiSummoned=tag.getBoolean("YujiSummoned");state.guardianSummoned=tag.getBoolean("GuardianSummoned");state.photoChestRepaired=tag.getBoolean("PhotoChestRepaired");
-        state.beyondDone=tag.getBoolean("BeyondDone");
+        state.beyondDone=tag.getBoolean("BeyondDone");state.megumiRoom=tag.getBoolean("MegumiRoom");
         return state;
     }
     public boolean mahitoSpawned(){return mahitoSpawned;}
@@ -50,7 +53,7 @@ public final class SoulWorldState extends SavedData {
         tag.putBoolean("MahitoDefeated",mahitoDefeated);
         tag.putLong("MahitoRespawnAt",mahitoRespawnAt);
         tag.putBoolean("YujiSummoned",yujiSummoned);tag.putBoolean("GuardianSummoned",guardianSummoned);tag.putBoolean("PhotoChestRepaired",photoChestRepaired);
-        tag.putBoolean("BeyondDone",beyondDone);
+        tag.putBoolean("BeyondDone",beyondDone);tag.putBoolean("MegumiRoom",megumiRoom);
         return tag;
     }
 }

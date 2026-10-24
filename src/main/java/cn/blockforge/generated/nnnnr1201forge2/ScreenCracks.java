@@ -28,6 +28,7 @@ public final class ScreenCracks {
         var mc=Minecraft.getInstance();
         ResourceLocation desktop=null;
         if(mc.player!=null&&WallpaperClient.hasImage(mc.player.getUUID()))desktop=WallpaperClient.texture(mc.player.getUUID());
+        RenderSystem.backupProjectionMatrix();
         RenderSystem.setProjectionMatrix(new Matrix4f().setOrtho(0f,width,height,0f,1000f,21000f),VertexSorting.ORTHOGRAPHIC_Z);
         PoseStack mv=RenderSystem.getModelViewStack();
         mv.pushPose();mv.setIdentity();mv.translate(0f,0f,-2000f);RenderSystem.applyModelViewMatrix();
@@ -49,7 +50,7 @@ public final class ScreenCracks {
         for(Hit hit:hits)cracks(b,ps,hit,width,height);
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
         BufferUploader.drawWithShader(b.end());
-        mv.popPose();RenderSystem.applyModelViewMatrix();
+        mv.popPose();RenderSystem.applyModelViewMatrix();RenderSystem.restoreProjectionMatrix();
         RenderSystem.enableCull();RenderSystem.depthMask(true);RenderSystem.disableBlend();
     }
 

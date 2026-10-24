@@ -1,133 +1,88 @@
 package cn.blockforge.generated.nnnnr1201forge2;
 
-import java.util.*;
+import java.util.List;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
-import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.platform.GlStateManager;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import org.lwjgl.opengl.GL30;
 
-/** 苍 的**引力视界**：黑洞同款三件套。
- *
- *  <p>① 绝对黑的视界盘（Photon 的叠加混合画不出纯黑，所以这一块和领域那口大黑洞一样走自己的顶点通路）；
- *  ②贴着视界的光子环（硬白边 + 外侧淡蓝）；③外面两圈反向旋转、被压扁的吸积弧，再加几根被拽弯的丝线。
- *  画法与 {@link GojoVoidClient} 的 {@code hole()} 同源，只是锚在蓝色光球上、按光球尺寸缩放。</p>
- *
- *  <p>服务端每刻发一发 {@link GojoFx#BLUE} 包（{@code seed} = 弹体 id），这里按 id 追踪位置；
- *  {@code BLUE_END} 或宇宙大爆炸时丢掉。没装 Photon 的客户端也照样有这层视界。</p> */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+/** 独立世界空间亮核和光子环；不依赖粒子模组、屏幕深度或后期着色器成功。 */
 public final class GojoGravityClient {
-    private static final class Horizon{Vec3 pos;double size;long last;double phase;}
-    private static final Map<Long,Horizon> horizons=new HashMap<>();
-    private static long time;
-    /** 最后一发包之后再留几刻：苍收起的瞬间视界不会当场消失，留一点余辉。 */
-    private static final int KEEP=3;
-    /** 弹体这一帧在哪（苍每秒都发，位置基本不动也没关系，只更新不新增）。 */
-    public static void track(long seed,Vec3 pos,double size){
-        if(pos==null)return;
-        Horizon h=horizons.get(seed);
-        if(h==null){h=new Horizon();h.phase=(seed%97)*0.37;horizons.put(seed,h);}
-        h.pos=pos;h.size=Math.max(0.8,size);h.last=time;
-    }
-    public static void drop(long seed){horizons.remove(seed);}
-    public static void clear(){horizons.clear();time=0;}
-    public static void tick(){time++;horizons.values().removeIf(h->time-h.last>KEEP);}
-    @SubscribeEvent public static void render(RenderLevelStageEvent e){
-        if(horizons.isEmpty()||e.getStage()!=RenderLevelStageEvent.Stage.AFTER_PARTICLES)return;
-        var mc=Minecraft.getInstance();if(mc.level==null)return;
-        PoseStack ps=e.getPoseStack();Vec3 cam=e.getCamera().getPosition();
-        ps.pushPose();ps.translate(-cam.x,-cam.y,-cam.z);
-        RenderSystem.enableDepthTest();RenderSystem.depthMask(false);RenderSystem.disableCull();
-        RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        RenderSystem.setShaderColor(1,1,1,1);
-        BufferBuilder b=Tesselator.getInstance().getBuilder();
-        b.begin(VertexFormat.Mode.QUADS,DefaultVertexFormat.POSITION_COLOR);
-        for(Horizon h:horizons.values())horizon(b,ps,h,cam,e.getPartialTick());
-        BufferUploader.drawWithShader(b.end());
-        RenderSystem.depthMask(true);RenderSystem.enableCull();RenderSystem.disableBlend();
-        ps.popPose();
-    }
-    private static void horizon(BufferBuilder b,PoseStack ps,Horizon h,Vec3 cam,float partial){
-        Vec3 at=h.pos;if(at==null)return;
-        double s=h.size;
-        Vec3 n=cam.subtract(at);if(n.lengthSqr()<1e-6)return;n=n.normalize();
-        Vec3 sv=n.cross(new Vec3(0,1,0));if(sv.lengthSqr()<1e-6)sv=new Vec3(1,0,0);sv=sv.normalize();
-        Vec3 uv=n.cross(sv).normalize();
-        double spin=(time+partial)*0.045+h.phase;
-        double rH=s*0.92;                        // 视界半径：比光球本体略小一圈
-        // ① 视界：纯黑盘面。相机钻进视界内侧时就不画了，免得整屏糊黑
-        if(cam.distanceTo(at)>rH*0.85)disc(b,ps,at,sv,uv,rH*0.92,0x2EA8D8FF,40);   // 引力透镜：中间只留极淡的冷蓝雾，不再是实心黑盘
-        // ② 光子环：贴着视界的硬白边 + 外侧淡蓝过渡
-        band(b,ps,at,sv,uv,rH*1.00,rH*1.10,0xFFF4FFFF,40);
-        band(b,ps,at,sv,uv,rH*1.10,rH*1.26,0x99CFE4FF,40);
-        // ③ 引力透镜晕：更外一圈低亮度、会呼吸的环
-        double breathe=1+0.04*Math.sin((time+partial)*0.11+h.phase);
-        band(b,ps,at,sv,uv,rH*1.55*breathe,rH*1.63*breathe,0x46A8D8FF,36);
-        // ④ 吸积盘：两圈被压扁、反向旋转的弧（和领域黑洞同款）
-        accretion(b,ps,at,sv,uv,rH*1.34,rH*1.44,1.0,spin*2.3,0xCCFFFFFF);
-        accretion(b,ps,at,sv,uv,rH*1.70,rH*1.77,-0.7,spin*2.3+1.1,0x66CFE4FF);
-        // ⑤ 被拽弯的丝线：从光子环外缘拧出去的细弧，表达"空间在这里被拽了个弯"
-        warp(b,ps,at,sv,uv,n,rH*1.15,rH*2.05,spin*1.6,8,0x55B8E0FF);
-    }
-    /** 纯色圆盘（按 billboard 三角扇铺满）。 */
-    private static void disc(BufferBuilder b,PoseStack ps,Vec3 c,Vec3 sv,Vec3 uv,double r,int color,int segments){
-        for(int i=0;i<segments;i++){
-            double a=i*Math.PI*2/segments,z=(i+1)*Math.PI*2/segments;
-            Vec3 p=c.add(sv.scale(Math.cos(a)*r)).add(uv.scale(Math.sin(a)*r));
-            Vec3 q=c.add(sv.scale(Math.cos(z)*r)).add(uv.scale(Math.sin(z)*r));
-            quad(b,ps,c,p,q,c,color);
+    public record Orb(Vec3 position,float size,int color,boolean lens){}
+    static void render(RenderLevelStageEvent e,List<Orb> orbs,double time){
+        if(orbs.isEmpty())return;
+        PoseStack ps=e.getPoseStack();Vec3 camera=e.getCamera().getPosition();
+        boolean depth=GL30.glIsEnabled(GL30.GL_DEPTH_TEST),blend=GL30.glIsEnabled(GL30.GL_BLEND),cull=GL30.glIsEnabled(GL30.GL_CULL_FACE);
+        boolean mask=GL30.glGetBoolean(GL30.GL_DEPTH_WRITEMASK);
+        int srcRgb=GL30.glGetInteger(GL30.GL_BLEND_SRC_RGB),dstRgb=GL30.glGetInteger(GL30.GL_BLEND_DST_RGB);
+        int srcAlpha=GL30.glGetInteger(GL30.GL_BLEND_SRC_ALPHA),dstAlpha=GL30.glGetInteger(GL30.GL_BLEND_DST_ALPHA);
+        var shader=RenderSystem.getShader();float[] color=RenderSystem.getShaderColor().clone();
+        ps.pushPose();try{
+            ps.translate(-camera.x,-camera.y,-camera.z);
+            RenderSystem.enableDepthTest();RenderSystem.depthMask(false);RenderSystem.disableCull();RenderSystem.enableBlend();
+            RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,GlStateManager.DestFactor.ONE,GlStateManager.SourceFactor.ONE,GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+            RenderSystem.setShader(GameRenderer::getPositionColorShader);RenderSystem.setShaderColor(1,1,1,1);
+            BufferBuilder b=Tesselator.getInstance().getBuilder();b.begin(VertexFormat.Mode.QUADS,DefaultVertexFormat.POSITION_COLOR);
+            for(Orb orb:orbs)orb(b,ps,orb,camera,time);
+            BufferUploader.drawWithShader(b.end());
+        }finally{
+            ps.popPose();RenderSystem.depthMask(mask);if(depth)RenderSystem.enableDepthTest();else RenderSystem.disableDepthTest();
+            if(cull)RenderSystem.enableCull();else RenderSystem.disableCull();
+            RenderSystem.blendFuncSeparate(srcRgb,dstRgb,srcAlpha,dstAlpha);if(blend)RenderSystem.enableBlend();else RenderSystem.disableBlend();
+            RenderSystem.setShader(()->shader);RenderSystem.setShaderColor(color[0],color[1],color[2],color[3]);
         }
     }
-    private static void band(BufferBuilder b,PoseStack ps,Vec3 c,Vec3 sv,Vec3 uv,double r0,double r1,int color,int segments){
-        if(r1<=r0)return;
-        for(int i=0;i<segments;i++){
-            double a=i*Math.PI*2/segments,z=(i+1)*Math.PI*2/segments;
-            Vec3 p0=c.add(sv.scale(Math.cos(a)*r0)).add(uv.scale(Math.sin(a)*r0));
-            Vec3 p1=c.add(sv.scale(Math.cos(z)*r0)).add(uv.scale(Math.sin(z)*r0));
-            Vec3 q1=c.add(sv.scale(Math.cos(z)*r1)).add(uv.scale(Math.sin(z)*r1));
-            Vec3 q0=c.add(sv.scale(Math.cos(a)*r1)).add(uv.scale(Math.sin(a)*r1));
-            quad(b,ps,p0,p1,q1,q0,color);
+    private static void orb(BufferBuilder b,PoseStack ps,Orb orb,Vec3 camera,double time){
+        Vec3 at=orb.position(),n=camera.subtract(at);double distance=n.length();if(distance<.08)return;n=n.normalize();
+        Vec3 side=n.cross(new Vec3(0,1,0));if(side.lengthSqr()<1e-6)side=new Vec3(1,0,0);else side=side.normalize();
+        Vec3 up=n.cross(side).normalize();double size=orb.size(),radius=size*GojoOpticsRules.LENS_SCALE;
+        // 镜头进入球内时淡出，避免在近脸蓄力时铺满整个屏幕。
+        float fade=(float)Math.min(1,Math.max(0,(distance-size*.25)/Math.max(.2,size*.7)));
+        if(fade<=0)return;
+        int tint=orb.color(),pale=mix(tint,0xFFFFFF,.72f);
+        for(int i=0;i<12;i++){
+            double r0=size*i/7.0,r1=size*(i+1)/7.0;
+            float alpha=(float)(Math.exp(-Math.pow((i+.5)/7.0,2)*2.3)*.24*fade);
+            band(b,ps,at,side,up,r0,r1,tint,alpha,64);
+        }
+        band(b,ps,at,side,up,0,size*.26,pale,.8f*fade,48);
+        if(!orb.lens())return;
+        // 透镜环放在粒子球外，避免亮核把细环盖住；不拿光环冒充背景折射。
+        double pulse=1+.025*Math.sin(time*.12);
+        band(b,ps,at,side,up,radius*.97*pulse,radius*1.025*pulse,0xF5F4FF,.90f*fade,96);
+        band(b,ps,at,side,up,radius*1.025*pulse,radius*1.12*pulse,tint,.40f*fade,96);
+        band(b,ps,at,side,up,radius*1.12*pulse,radius*1.3*pulse,tint,.12f*fade,96);
+        for(int turn=0;turn<2;turn++){
+            double phase=time*(turn==0?.055:-.04)+turn*2.1,r=radius*(turn==0?1.32:1.6);
+            for(int j=0;j<48;j++){
+                double a=phase+j*Math.PI/32,z=phase+(j+1)*Math.PI/32;
+                Vec3 p=at.add(side.scale(Math.cos(a)*r)).add(up.scale(Math.sin(a)*r*.42));
+                Vec3 q=at.add(side.scale(Math.cos(z)*r)).add(up.scale(Math.sin(z)*r*.42));
+                Vec3 width=up.scale(size*.025);
+                quad(b,ps,p.subtract(width),q.subtract(width),q.add(width),p.add(width),pale,(float)(.45*Math.sin((j+.5)/48*Math.PI))*fade);
+            }
         }
     }
-    /** 压扁的旋转弧：uv 方向乘 0.35 就是"斜着看的盘"，speed 为负即反向。 */
-    private static void accretion(BufferBuilder b,PoseStack ps,Vec3 c,Vec3 sv,Vec3 uv,double r0,double r1,double speed,double phase,int color){
-        int segments=48;
-        for(int i=0;i<segments;i++){
-            double a=phase+i*Math.PI*2/segments*speed,z=phase+(i+1)*Math.PI*2/segments*speed;
-            Vec3 p0=c.add(sv.scale(Math.cos(a)*r0)).add(uv.scale(Math.sin(a)*r0*0.35));
-            Vec3 p1=c.add(sv.scale(Math.cos(z)*r0)).add(uv.scale(Math.sin(z)*r0*0.35));
-            Vec3 q1=c.add(sv.scale(Math.cos(z)*r1)).add(uv.scale(Math.sin(z)*r1*0.35));
-            Vec3 q0=c.add(sv.scale(Math.cos(a)*r1)).add(uv.scale(Math.sin(a)*r1*0.35));
-            quad(b,ps,p0,p1,q1,q0,color);
+    private static int mix(int a,int b,float t){
+        int r=(int)(((a>>16)&255)*(1-t)+((b>>16)&255)*t),g=(int)(((a>>8)&255)*(1-t)+((b>>8)&255)*t),v=(int)((a&255)*(1-t)+(b&255)*t);
+        return r<<16|g<<8|v;
+    }
+    private static void band(BufferBuilder b,PoseStack ps,Vec3 at,Vec3 side,Vec3 up,double inner,double outer,int color,float alpha,int count){
+        for(int i=0;i<count;i++){
+            double a=i*Math.PI*2/count,z=(i+1)*Math.PI*2/count;
+            Vec3 p=side.scale(Math.cos(a)).add(up.scale(Math.sin(a))),q=side.scale(Math.cos(z)).add(up.scale(Math.sin(z)));
+            quad(b,ps,at.add(p.scale(inner)),at.add(q.scale(inner)),at.add(q.scale(outer)),at.add(p.scale(outer)),color,alpha);
         }
     }
-    /** 从内圈拧到外圈的细丝：每根是一段带俯仰的短弧，宽度向外收细。 */
-    private static void warp(BufferBuilder b,PoseStack ps,Vec3 c,Vec3 sv,Vec3 uv,Vec3 nrm,double r0,double r1,double spin,int count,int color){
-        for(int j=0;j<count;j++){
-            double a0=spin+j*Math.PI*2/count;
-            double a1=a0+0.62;
-            Vec3 d0=sv.scale(Math.cos(a0)).add(uv.scale(Math.sin(a0)));
-            Vec3 d1=sv.scale(Math.cos(a1)).add(uv.scale(Math.sin(a1)));
-            Vec3 p0=c.add(d0.scale(r0)),p1=c.add(d1.scale(r1));
-            Vec3 perp=nrm.cross(d0);
-            if(perp.lengthSqr()<1e-6)continue;
-            perp=perp.normalize();
-            double w0=r0*0.05,w1=w0*0.35;
-            quad(b,ps,p0.add(perp.scale(w0)),p0.subtract(perp.scale(w0)),p1.subtract(perp.scale(w1)),p1.add(perp.scale(w1)),color);
-        }
-    }
-    private static void quad(BufferBuilder b,PoseStack ps,Vec3 a,Vec3 c,Vec3 d,Vec3 e,int color){
-        int red=(color>>16)&255,green=(color>>8)&255,blue=color&255,alpha=(color>>>24)&255;
-        var pose=ps.last().pose();
-        b.vertex(pose,(float)a.x,(float)a.y,(float)a.z).color(red,green,blue,alpha).endVertex();
-        b.vertex(pose,(float)c.x,(float)c.y,(float)c.z).color(red,green,blue,alpha).endVertex();
-        b.vertex(pose,(float)d.x,(float)d.y,(float)d.z).color(red,green,blue,alpha).endVertex();
-        b.vertex(pose,(float)e.x,(float)e.y,(float)e.z).color(red,green,blue,alpha).endVertex();
+    private static void quad(BufferBuilder b,PoseStack ps,Vec3 a,Vec3 c,Vec3 d,Vec3 e,int color,float alpha){
+        var matrix=ps.last().pose();int r=color>>16&255,g=color>>8&255,v=color&255,opacity=Math.max(0,Math.min(255,(int)(alpha*255)));
+        b.vertex(matrix,(float)a.x,(float)a.y,(float)a.z).color(r,g,v,opacity).endVertex();
+        b.vertex(matrix,(float)c.x,(float)c.y,(float)c.z).color(r,g,v,opacity).endVertex();
+        b.vertex(matrix,(float)d.x,(float)d.y,(float)d.z).color(r,g,v,opacity).endVertex();
+        b.vertex(matrix,(float)e.x,(float)e.y,(float)e.z).color(r,g,v,opacity).endVertex();
     }
     private GojoGravityClient(){}
 }

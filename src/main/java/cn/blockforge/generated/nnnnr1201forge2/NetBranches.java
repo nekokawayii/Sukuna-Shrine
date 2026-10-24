@@ -15,6 +15,26 @@ import net.minecraftforge.eventbus.api.*;
 public final class NetBranches {
     private static final Map<UUID,Cross> crosses=new HashMap<>();
     private static final List<Qi> projectiles=new ArrayList<>();
+    private static final List<CrossFlight> crossFlights=new ArrayList<>();
+    private static final class CrossFlight {
+        final ServerPlayer owner;final ServerLevel level;final Vec3 travel;final long id=SlashTerrain.id();final Set<UUID> hit=new HashSet<>();
+        List<SlashForms.Line> lines;int age;
+        CrossFlight(ServerPlayer p,Vec3 from,Vec3 to,Vec3 axis){owner=p;level=p.serverLevel();travel=to.subtract(from);lines=SlashTerrain.launch(p,List.of(new SlashForms.Line(from.subtract(axis.scale(1.5)),from.add(axis.scale(1.5)))),travel.normalize());}
+    }
+    private static void launchCross(ServerPlayer p,Vec3 from,Vec3 to){
+        Vec3 forward=to.subtract(from).normalize(),side=side(forward),up=forward.cross(side).normalize();
+        for(int sign:new int[]{-1,1})if(crossFlights.size()<4096)crossFlights.add(new CrossFlight(p,from,to,side.add(up.scale(sign)).normalize()));
+    }
+    private static void tickCrossFlights(){
+        for(CrossFlight f:List.copyOf(crossFlights)){
+            if(!valid(f.owner,f.level)||++f.age>NetBranchRules.CROSS_VISUAL_TICKS){crossFlights.remove(f);continue;}
+            Vec3 step=f.travel.scale(NetBranchRules.crossTravel(f.age)-NetBranchRules.crossTravel(f.age-1));
+            var result=SlashTerrain.advance(f.owner,f.lines,step);
+            for(var sweep:result.swept())for(LivingEntity t:f.level.getEntitiesOfClass(LivingEntity.class,new AABB(sweep.a(),sweep.b()).expandTowards(sweep.step()).inflate(.01),t->!f.hit.contains(t.getUUID())&&CombatSettings.canHit(f.owner,t)))
+                if(SlashTerrain.hits(sweep,t)){f.hit.add(t.getUUID());hit(f.owner,t,NetBranchRules.CROSS_FRACTION);}
+            SlashTerrain.send(f.owner,f.id,result.swept(),f.lines.isEmpty()?f.owner.position():f.lines.get(0).a());f.lines=result.remaining();if(f.lines.isEmpty())crossFlights.remove(f);
+        }
+    }
     private record AirCross(ServerPlayer p,ServerLevel level,Vec3 center,long born){}
     private static final List<AirCross> airCrosses=new ArrayList<>();
     private static long nextId;
@@ -31,7 +51,13 @@ public final class NetBranches {
     private static final class Qi {
         final ServerPlayer owner;final ServerLevel level;final Vec3 direction,side;final long id;
         final Set<UUID> hit=new HashSet<>();Vec3 position;int age;
-        Qi(ServerPlayer p){owner=p;level=p.serverLevel();position=p.getEyePosition();direction=p.getLookAngle().normalize();side=side(direction);id=++nextId;}
+        final long visualId=SlashTerrain.id();List<SlashForms.Line> fragments=new ArrayList<>();
+        Qi(ServerPlayer p){
+            owner=p;level=p.serverLevel();position=p.getEyePosition();direction=p.getLookAngle().normalize();side=side(direction);id=++nextId;
+            Vec3 previous=null;
+            for(int i=0;i<=32;i++){double angle=-Math.PI/2+Math.PI*i/32;Vec3 point=position.add(side.scale(NetBranchRules.qiSide(angle))).add(direction.cross(side).scale(NetBranchRules.qiBend(angle)));
+                if(previous!=null)fragments.add(new SlashForms.Line(previous,point));previous=point;}
+        }
     }
     static Vec3 side(Vec3 direction){Vec3 side=new Vec3(-direction.z,0,direction.x).normalize();return side.lengthSqr()<0.01?new Vec3(1,0,0):side;}
     private static String cooldownKey(int skill){return skill==NetBranchRules.CROSS_SKILL?"NetCrossCooldown":"NetQiCooldown";}
@@ -57,7 +83,7 @@ public final class NetBranches {
         SkillSounds.cast(p,0);
         if(target!=null){Cross c=new Cross(p,target);crosses.put(target.getUUID(),c);target.stopRiding();target.stopUsingItem();ServerPlayer victim=target instanceof ServerPlayer sp?sp:MaidBridge.caster(target);if(victim!=null)Skills.cancelCharge(victim);hold(c);holdEffect(c,NetBranchRules.CROSS_TICKS);}
         else if(skill==NetBranchRules.CROSS_SKILL){if(airCrosses.size()<128)airCrosses.add(new AirCross(p,p.serverLevel(),Skills.aimPoint(p,24),p.level().getGameTime()));}
-        else {Qi qi=new Qi(p);projectiles.add(qi);qiEffect(qi);}
+        else {Qi qi=new Qi(p);projectiles.add(qi);}
     }
     private static void holdEffect(Cross c,int life){Network.send(c.level,new Network.Effect(NetBranchRules.FX_HOLD,c.target.getId(),c.anchor,Vec3.ZERO,1,life,c.id));}
     private static void hold(Cross c){
@@ -73,7 +99,7 @@ public final class NetBranches {
         if(!completed)stop(c.owner,c.level,c.anchor,c.id);
     }
     private static void stop(ServerPlayer p,ServerLevel level,Vec3 at,long id){Network.send(level,new Network.Effect(NetBranchRules.FX_STOP,p.getId(),at,Vec3.ZERO,0,0,id));}
-    public static void cancel(ServerPlayer p){airCrosses.removeIf(c->c.p==p);for(Cross c:List.copyOf(crosses.values()))if(c.owner==p||c.target.getUUID().equals(p.getUUID())){crosses.remove(c.target.getUUID(),c);release(c);}for(Qi qi:List.copyOf(projectiles))if(qi.owner==p){projectiles.remove(qi);stop(p,qi.level,qi.position,qi.id);}}
+    public static void cancel(ServerPlayer p){crossFlights.removeIf(f->f.owner==p);airCrosses.removeIf(c->c.p==p);for(Cross c:List.copyOf(crosses.values()))if(c.owner==p||c.target.getUUID().equals(p.getUUID())){crosses.remove(c.target.getUUID(),c);release(c);}for(Qi qi:List.copyOf(projectiles))if(qi.owner==p){projectiles.remove(qi);stop(p,qi.level,qi.position,qi.id);}}
     public static void protect(ServerPlayer p,UUID target){Cross c=crosses.get(target);if(c!=null&&c.owner==p){crosses.remove(target,c);release(c);}}
     /** 先算完整一道解（含成长、倍率和女仆系数），再由命中处乘本轮统一40%，十字的每道为一道解，强化剑气为3倍。 */
     static float dismantleDamage(ServerPlayer p,LivingEntity target){
@@ -86,7 +112,7 @@ public final class NetBranches {
     private static void hit(ServerPlayer p,LivingEntity target,double fraction){
         if(!valid(p,p.serverLevel())||DomainClash.active(p)||DomainClash.active(target)||!CombatSettings.canHit(p,target))return;
         float amount=(float)(dismantleDamage(p,target)*fraction);target.invulnerableTime=0;
-        AttackTypes.mark(AttackTypes.pending()!=null?AttackTypes.pending():AttackTypes.NET_BRANCH);CombatSettings.hurt(p,target,p.serverLevel().damageSources().sonicBoom(p),amount);
+        AttackTypes.mark(AttackTypes.NET_BRANCH);CombatSettings.hurt(p,target,p.serverLevel().damageSources().sonicBoom(p),amount);
     }
     private static void qiEffect(Qi q){Network.send(q.level,new Network.Effect(NetBranchRules.FX_QI,q.owner.getId(),q.position,q.direction,(float)NetBranchRules.QI_RADIUS,Math.min(10,NetBranchRules.QI_LIFE-q.age),q.id));}
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event){
@@ -94,8 +120,7 @@ public final class NetBranches {
         for(AirCross c:List.copyOf(airCrosses)){
             int age=(int)(c.level.getGameTime()-c.born);if(!valid(c.p,c.level)||DomainClash.active(c.p)||age>NetBranchRules.CROSS_TICKS){airCrosses.remove(c);continue;}
             for(int wave=0;wave<NetBranchRules.WAVES;wave++){
-                if(age==NetBranchRules.launch(wave))for(int corner=0;corner<8;corner++){int opposite=NetBranchRules.oppositeCorner(corner);Vec3 from=c.center.add(NetBranchRules.cornerX(corner),NetBranchRules.cornerY(corner),NetBranchRules.cornerZ(corner)),to=c.center.add(NetBranchRules.cornerX(opposite),NetBranchRules.cornerY(opposite),NetBranchRules.cornerZ(opposite));Network.send(c.level,new Network.Effect(NetBranchRules.FX_CROSS,c.p.getId(),from,to.subtract(from),3,NetBranchRules.CROSS_VISUAL_TICKS,++nextId));SkillDestruction.line(c.p,from,to,0.6);}
-                if(age==NetBranchRules.arrival(wave))for(LivingEntity t:Skills.targets(c.level,c.p,c.center,2))for(int cut=0;cut<16&&t.isAlive();cut++)hit(c.p,t,NetBranchRules.CROSS_FRACTION);
+                if(age==NetBranchRules.launch(wave))for(int corner=0;corner<8;corner++){int opposite=NetBranchRules.oppositeCorner(corner);Vec3 from=c.center.add(NetBranchRules.cornerX(corner),NetBranchRules.cornerY(corner),NetBranchRules.cornerZ(corner)),to=c.center.add(NetBranchRules.cornerX(opposite),NetBranchRules.cornerY(opposite),NetBranchRules.cornerZ(opposite));launchCross(c.p,from,to);}
             }
         }
         // 伤害回调可能撤销保护或结束女仆对战；使用快照，不在可重入集合的迭代器里结算。
@@ -110,42 +135,30 @@ public final class NetBranches {
                     int opposite=NetBranchRules.oppositeCorner(corner);
                     Vec3 from=center.add(NetBranchRules.cornerX(corner),NetBranchRules.cornerY(corner),NetBranchRules.cornerZ(corner));
                     Vec3 to=center.add(NetBranchRules.cornerX(opposite),NetBranchRules.cornerY(opposite),NetBranchRules.cornerZ(opposite));
-                    SkillDestruction.line(c.owner,from,to,0.6);
-                    Network.send(c.level,new Network.Effect(NetBranchRules.FX_CROSS,c.owner.getId(),from,to.subtract(from),3,NetBranchRules.CROSS_VISUAL_TICKS,c.id));
+                    launchCross(c.owner,from,to);
                 }
-                if(age==NetBranchRules.arrival(wave))for(int cut=0;cut<NetBranchRules.CORNERS*2&&crossValid(c)&&crosses.get(c.target.getUUID())==c;cut++)hit(c.owner,c.target,NetBranchRules.CROSS_FRACTION);
             }
             if(age>=NetBranchRules.CROSS_TICKS||!crossValid(c)){
                 boolean completed=age==NetBranchRules.CROSS_TICKS&&crossValid(c)&&crosses.get(c.target.getUUID())==c;
                 crosses.remove(c.target.getUUID(),c);release(c,completed);
             }
         }
+        tickCrossFlights();
         for(Qi q:List.copyOf(projectiles)){
             if(!projectiles.contains(q))continue;
             if(!valid(q.owner,q.level)||DomainClash.active(q.owner)||q.age>=NetBranchRules.QI_LIFE){projectiles.remove(q);stop(q.owner,q.level,q.position,q.id);continue;}
-            Vec3 next=q.position.add(q.direction.scale(NetBranchRules.QI_SPEED));
-            // **剑气不能穿墙**（用户 r279 要求；只有世界斩例外，而世界斩不走这条通道）：
-            // 这一格飞出去撞到方块，就在墙前停住、视觉收尾，不再往后穿透。
-            var wall=q.level.clip(new net.minecraft.world.level.ClipContext(q.position,next,
-                net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,q.owner));
-            if(wall.getType()==net.minecraft.world.phys.HitResult.Type.BLOCK){
-                projectiles.remove(q);stop(q.owner,q.level,wall.getLocation(),q.id);continue;
+            Vec3 step=q.direction.scale(NetBranchRules.QI_SPEED),next=q.position.add(step);
+            var result=SlashTerrain.advance(q.owner,q.fragments,step);
+            boolean merged=false;
+            for(var sweep:result.swept()){
+                for(int i=0;i<=8;i++){Vec3 move=sweep.step().scale(i/8.0);if(CombatExpansion.collideSlash(q.owner,sweep.a().add(move),sweep.b().add(move),q.direction)){merged=true;break;}}
+                if(merged)break;
+                for(LivingEntity target:q.level.getEntitiesOfClass(LivingEntity.class,new AABB(sweep.a(),sweep.b()).expandTowards(sweep.step()).inflate(.01),e->!q.hit.contains(e.getUUID())&&CombatSettings.canHit(q.owner,e)))
+                    if(!DomainClash.active(target)&&SlashTerrain.hits(sweep,target)){q.hit.add(target.getUUID());hit(q.owner,target,NetBranchRules.QI_FRACTION);}
             }
-            if(CombatExpansion.collideSlash(q.owner,q.position,next,q.direction)){projectiles.remove(q);stop(q.owner,q.level,q.position,q.id);continue;}
-            for(int step=0;step<=5;step++){Vec3 center=q.position.lerp(next,step/5.0);Vec3 previous=null;for(int i=0;i<=16;i++){double angle=-Math.PI/2+Math.PI*i/16;Vec3 point=center.add(q.side.scale(NetBranchRules.qiSide(angle))).add(q.direction.cross(q.side).scale(NetBranchRules.qiBend(angle)));if(previous!=null)SkillDestruction.immediate(q.owner,previous,point,0.5);previous=point;}}
-            for(LivingEntity target:q.level.getEntitiesOfClass(LivingEntity.class,new AABB(q.position,next).inflate(NetBranchRules.QI_RADIUS+0.5),e->!q.hit.contains(e.getUUID())&&CombatSettings.canHit(q.owner,e))){
-                if(DomainClash.active(target))continue;
-                boolean intersects=false;
-                // 整个月牙扫过的体积逐段检测；完全不做方块碰撞，所以穿墙且不限命中数量。
-                for(int i=0;i<=32&&!intersects;i++){
-                    double angle=-Math.PI/2+Math.PI*i/32;Vec3 offset=q.side.scale(NetBranchRules.qiSide(angle)).add(q.direction.cross(q.side).scale(NetBranchRules.qiBend(angle)));
-                    Vec3 from=q.position.add(offset),to=next.add(offset);AABB box=target.getBoundingBox().inflate(0.35);
-                    intersects=box.contains(from)||box.contains(to)||box.clip(from,to).isPresent();
-                }
-                if(intersects){q.hit.add(target.getUUID());hit(q.owner,target,NetBranchRules.QI_FRACTION);if(!projectiles.contains(q))break;}
-            }
-            q.position=next;q.age++;
-            if(q.age<NetBranchRules.QI_LIFE&&q.age%10==0)qiEffect(q);
+            SlashTerrain.send(q.owner,q.visualId,merged?List.of():result.swept(),q.position);
+            q.fragments=result.remaining();q.position=next;q.age++;
+            if(merged||q.fragments.isEmpty())projectiles.remove(q);
         }
     }
     @SubscribeEvent(priority=EventPriority.HIGHEST) public static void freeze(LivingEvent.LivingTickEvent event){LivingEntity t=event.getEntity();if(t.level().isClientSide||!locked(t))return;hold(crosses.get(t.getUUID()));if(!(t instanceof net.minecraft.world.entity.player.Player))event.setCanceled(true);}
@@ -156,6 +169,6 @@ public final class NetBranches {
     @SubscribeEvent(priority=EventPriority.HIGHEST) public static void teleport(net.minecraftforge.event.entity.EntityTeleportEvent event){if(event.isCancelable()&&event.getEntity() instanceof LivingEntity living&&locked(living))event.setCanceled(true);}
     @SubscribeEvent public static void logout(PlayerEvent.PlayerLoggedOutEvent event){if(event.getEntity() instanceof ServerPlayer p)cancel(p);}
     @SubscribeEvent public static void dimension(PlayerEvent.PlayerChangedDimensionEvent event){if(event.getEntity() instanceof ServerPlayer p)cancel(p);}
-    @SubscribeEvent public static void stop(ServerStoppedEvent event){crosses.clear();airCrosses.clear();projectiles.clear();nextId=0;}
+    @SubscribeEvent public static void stop(ServerStoppedEvent event){crosses.clear();airCrosses.clear();projectiles.clear();crossFlights.clear();nextId=0;}
     private NetBranches(){}
 }

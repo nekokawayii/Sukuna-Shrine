@@ -9,21 +9,18 @@ import net.minecraft.world.phys.Vec3;
 
 /** 调伏仪式的入口与查询：召唤、失败判定文案、法轮的进度播报。 */
 public final class MahoragaRitual {
-    /** 半径内已经有魔虚罗在活动时不再重复召唤。 */
-    private static final double EXISTING_RANGE=200;
+    /** 调服不收费，不限制重试次数或同时在场数量。 */
     public static boolean summon(ServerPlayer owner){
+        if(!TenShadows.incarnated(owner))return false;
         ServerLevel level=owner.serverLevel();
-        List<MahoragaEntity> existing=level.getEntitiesOfClass(MahoragaEntity.class,owner.getBoundingBox().inflate(EXISTING_RANGE),LivingEntity::isAlive);
-        if(!existing.isEmpty()){
-            owner.displayClientMessage(Component.literal("附近已经有魔虚罗在活动，先解决它再开新的仪式。"),true);
-            return false;
-        }
-        Vec3 at=owner.position();
+        Vec3 at=owner.position().add(owner.getLookAngle().multiply(1,0,1).normalize().scale(4));
         MahoragaEntity boss=VoidContent.MAHORAGA.get().create(level);
         if(boss==null)return false;
         boss.moveTo(at.x,at.y,at.z,owner.getYRot()+180,0);
-        level.addFreshEntity(boss);
+        if(!level.noCollision(boss)){boss.moveTo(owner.getX(),owner.getY(),owner.getZ(),owner.getYRot()+180,0);}
+        if(!level.noCollision(boss)||!level.addFreshEntity(boss)){owner.displayClientMessage(Component.literal("这里容不下魔虚罗，请到更开阔的地方召唤"),true);return false;}
         boss.beginRitual(owner);
+        ShadowSystem.fx(level,0,owner.position(),owner.position(),2,40);
         return true;
     }
     /** 法轮状态播报：玩家据此判断还剩几种攻击类型可用。 */

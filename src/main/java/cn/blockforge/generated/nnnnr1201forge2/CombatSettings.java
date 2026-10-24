@@ -30,15 +30,25 @@ public final class CombatSettings {
         return Double.isFinite(value)&&value>=0.001&&value<=10000?value:1;
     }
     /** 保留既有60%及御厨子额外削弱；女仆的基础伤害和成长整体再减半。 */
-    public static float casterDamage(Player p,double amount){return BalanceRules.damage(CasterDamageRules.scale(amount,MaidBridge.isCaster(p)));}
+    public static float casterDamage(Player p,double amount){ServerPlayer commander=Authority.damageOwner(p);return commander!=null?(float)(casterDamage(commander,amount)*Authority.damageScale(p)):BalanceRules.damage(CasterDamageRules.scale(amount,MaidBridge.isCaster(p)));}
     public static double unscaledSpellMultiplier(Player p){return 0.6*multiplier(p)*Curse.damageFactor(p)*Curse.residueFactor(p);}
-    public static double baseSpellMultiplier(Player p){return BalanceRules.strength(unscaledSpellMultiplier(p)*CasterDamageRules.casterFactor(MaidBridge.isCaster(p)),BalanceRules.Category.DAMAGE);}
+    public static double baseSpellMultiplier(Player p){ServerPlayer commander=Authority.damageOwner(p);if(commander!=null)return baseSpellMultiplier(commander)*Authority.damageScale(p);return BalanceRules.strength(unscaledSpellMultiplier(p)*CasterDamageRules.casterFactor(MaidBridge.isCaster(p)),BalanceRules.Category.DAMAGE);}
     public static double spellMultiplier(Player p){return baseSpellMultiplier(p);}
-    public static float spellDamage(Player p,double base){return BalanceRules.damage(CasterDamageRules.spell(base,multiplier(p),Curse.spellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),false,MaidBridge.isCaster(p)));}
-    public static float domainSpellDamage(Player p,double base){return BalanceRules.damage(CasterDamageRules.spell(base,multiplier(p),Curse.domainSpellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),true,MaidBridge.isCaster(p)));}
-    public static float fixedSpellDamage(Player p,double base,boolean domain){return BalanceRules.damage(CasterDamageRules.fixed(base,domain?Curse.domainSpellBonus(p):Curse.spellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),MaidBridge.isCaster(p)));}
+    public static float spellDamage(Player p,double base){ServerPlayer commander=Authority.damageOwner(p);if(commander!=null)return (float)(spellDamage(commander,base)*Authority.damageScale(p));return BalanceRules.damage(CasterDamageRules.spell(base,multiplier(p),Curse.spellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),false,MaidBridge.isCaster(p)));}
+    public static float domainSpellDamage(Player p,double base){ServerPlayer commander=Authority.damageOwner(p);if(commander!=null)return (float)(domainSpellDamage(commander,base)*Authority.damageScale(p));return BalanceRules.damage(CasterDamageRules.spell(base,multiplier(p),Curse.domainSpellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),true,MaidBridge.isCaster(p)));}
+    public static float fixedSpellDamage(Player p,double base,boolean domain){ServerPlayer commander=Authority.damageOwner(p);if(commander!=null)return (float)(fixedSpellDamage(commander,base,domain)*Authority.damageScale(p));return BalanceRules.damage(CasterDamageRules.fixed(base,domain?Curse.domainSpellBonus(p):Curse.spellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),MaidBridge.isCaster(p)));}
     public static boolean canHit(ServerPlayer owner,LivingEntity target){
-        if(target==owner||!target.isAlive()||target.isSpectator()||EternalLove.protects(owner,target))return false;
+        if(owner==null||target==null||target==owner||target.level()!=owner.level()||!target.isAlive()||target.isSpectator()||EternalLove.protects(owner,target))return false;
+        // 先保护友方玩家的召唤物/宠物；敌友归属按主人判断，不能绕过 O 菜单。
+        UUID targetOwner=CombatSafety.ownerId(target);
+        if(targetOwner!=null&&!(target instanceof Player)&&!(target instanceof net.minecraft.world.entity.TamableAnimal tame&&EternalLove.duel(tame))){
+            if(targetOwner.equals(owner.getUUID()))return false;
+            if(relation(owner,targetOwner)==ALLY)return false;
+            ServerPlayer playerOwner=owner.server.getPlayerList().getPlayer(targetOwner);
+            if(playerOwner!=null&&!canHit(owner,playerOwner))return false;
+        }
+        if(Legion.allied(owner,target)||Authority.echo(target))return false;
+        if(ShadowSystem.friendly(owner,target))return false;
         if(MahoragaAdaptStore.friendlyTo(owner,target))return false; // 友方魔虚罗：绝对友方，术式不伤它
         if(owner instanceof MaidBridge.Actor actor)return MaidBridge.canHit(actor,target);
         if(target instanceof net.minecraft.world.entity.TamableAnimal maid&&EternalLove.duel(maid)&&owner.getUUID().equals(maid.getOwnerUUID()))return true;
@@ -47,29 +57,35 @@ public final class CombatSettings {
         int mode=relation(owner,target.getUUID());
         if(mode==ALLY)return false;
         if(target instanceof Player player){
-            if(player.isCreative()||!owner.server.isPvpAllowed())return false;
             // 主动标敌可以覆盖队伍关系，但不能覆盖服务器禁用PvP。
-            return mode==ENEMY;
+            return CombatRelationRules.player(mode,player.isCreative(),player.isSpectator(),owner.server.isPvpAllowed());
         }
-        return mode==ENEMY||!target.isAlliedTo(owner);
+        return CombatRelationRules.creature(mode,target.isAlliedTo(owner));
     }
     private static final Map<net.minecraft.world.damagesource.DamageSource,ServerPlayer> spellOwners=new IdentityHashMap<>();
-    public static ServerPlayer caster(net.minecraft.world.damagesource.DamageSource source){if(source.getEntity() instanceof ServerPlayer p)return p;ServerPlayer mapped=spellOwners.get(source);return mapped!=null?mapped:MaidBridge.caster(source.getEntity());}
+    public static ServerPlayer caster(net.minecraft.world.damagesource.DamageSource source){ServerPlayer mapped=spellOwners.get(source);if(mapped!=null)return mapped;ServerPlayer owner=CombatSafety.owner(source.getEntity());return owner!=null?owner:CombatSafety.owner(source.getDirectEntity());}
+    public static boolean scripted(net.minecraft.world.damagesource.DamageSource source){return spellOwners.containsKey(source)||source.getEntity() instanceof MaidBridge.Actor;}
     public static boolean hurt(ServerPlayer owner,LivingEntity target,net.minecraft.world.damagesource.DamageSource source,float amount){
-        if(!canHit(owner,target)||SixfoldFinale.controlled(owner)||!SixfoldFinale.active(owner)&&(Uraume.locked(owner)||NetBranches.locked(owner)))return false;
+        if(!canHit(owner,target)||SixfoldFinale.controlled(owner)||!SixfoldFinale.active(owner)&&(Uraume.locked(owner)||NetBranches.locked(owner))){AttackTypes.consume();return false;}
         if(!(owner instanceof MaidBridge.Actor)&&target instanceof Player&&relation(owner,target.getUUID())==ENEMY){
             // 已通过服务端PvP许可；只对这一次术式绕过队伍禁伤，不修改队伍或服务器设置。
-            source=new net.minecraft.world.damagesource.DamageSource(source.typeHolder(),owner,null,owner.position());
-            spellOwners.put(source,owner);
+            source=new net.minecraft.world.damagesource.DamageSource(source.typeHolder(),source.getDirectEntity()!=null?source.getDirectEntity():owner,null,owner.position());
             target.setLastHurtByPlayer(owner);
         }
         if(owner instanceof MaidBridge.Actor actor){
             // 已由canHit授权的玩家命中不能再被驯养生物友伤或难度缩放吞掉；
             // 保留直接命中者和独立施术归属，不解除其他模组主动取消的伤害事件。
             var cause=target instanceof Player?null:actor.maid;
-            source=new net.minecraft.world.damagesource.DamageSource(source.typeHolder(),actor.maid,cause,actor.maid.position());spellOwners.put(source,owner);
+            source=new net.minecraft.world.damagesource.DamageSource(source.typeHolder(),actor.maid,cause,actor.maid.position());
         }
-        try{boolean accepted=target.hurt(source,amount);if(accepted&&amount>0&&!source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)&&!source.is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK))SkillDestruction.impact(owner,target.position(),1);return accepted;}finally{AttackTypes.consume();spellOwners.remove(source);}
+        // 所有来源都绑定施术者，包括 onFire、真伤与无主法术；finally 中恢复嵌套调用。
+        ServerPlayer previousOwner=spellOwners.put(source,owner);
+        float before=target.getHealth()+target.getAbsorptionAmount();String attackType=AttackTypes.peek();
+        try{boolean accepted=target.hurt(source,amount);if(accepted&&amount>0&&!source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)&&!source.is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK)){
+            int index=AttackTypes.index(attackType);boolean ordinarySlash=index>=0&&AttackTypes.SLASH.equals(AttackTypes.family(index))&&!AttackTypes.WORLD_SLASH.equals(attackType);
+            if(!ordinarySlash)SkillDestruction.impact(owner,target.position(),1);
+            SlashImpact.after(owner,target,attackType,before,true);
+        }return accepted;}finally{AttackTypes.consume();if(previousOwner==null)spellOwners.remove(source);else spellOwners.put(source,previousOwner);}
     }
     /** 同队禁伤会早于LivingDamageEvent返回，只为明确标敌的咒术近战补上入口。 */
     @SubscribeEvent(priority=net.minecraftforge.eventbus.api.EventPriority.LOWEST)
@@ -98,8 +114,12 @@ public final class CombatSettings {
         }
         Curse.data(owner).put("Relations",saved);
         if(mode!=ENEMY){
-            Skills.protectAlly(owner,id);
+            Skills.protectAlly(owner,id);BloodArts.protect(owner,id);
             if(target!=null)SoulCombat.clearOwnedEffects(owner,target);
+        }
+        // 立即清理正在攻击的式神；改标敌后也立即重新挑选，不要求玩家先打一下。
+        for(var entity:owner.serverLevel().getAllEntities())if(entity instanceof net.minecraft.world.entity.Mob summon&&CombatSafety.owner(entity)==owner&&(entity instanceof ShadowEntity||entity instanceof MahoragaEntity)){
+            summon.setTarget(CombatSafety.summonTarget(owner,summon,24));if(summon.getTarget()==null)summon.getNavigation().stop();
         }
         GuardianProgress.relationsChanged(owner);
         sync(owner,page);

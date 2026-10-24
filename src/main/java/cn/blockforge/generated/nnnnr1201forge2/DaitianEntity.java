@@ -28,7 +28,7 @@ public final class DaitianEntity extends Monster {
     private int castCount;
     private double growth(){return CursedGrowth.scale(getTarget());}
     public DaitianEntity(EntityType<? extends Monster> type,Level level){super(type,level);xpReward=25;setPersistenceRequired();
-        getAttribute(Attributes.MAX_HEALTH).setBaseValue(200);
+        getAttribute(Attributes.MAX_HEALTH).setBaseValue(500);
         getAttribute(Attributes.ATTACK_DAMAGE).addPermanentModifier(new AttributeModifier(UUID.fromString("75f17bd4-f6fe-4f5d-bf29-424c3c444832"),"咒胎攻击",0.2,AttributeModifier.Operation.MULTIPLY_TOTAL));setHealth(getMaxHealth());}
     @Override protected void defineSynchedData(){super.defineSynchedData();entityData.define(ACTION,0);}
     public int action(){return entityData.get(ACTION);}
@@ -54,5 +54,5 @@ public final class DaitianEntity extends Monster {
     @Override public void die(DamageSource s){super.die(s);bar.removeAllPlayers();}
     @Override public void remove(RemovalReason reason){super.remove(reason);bar.removeAllPlayers();}
     @Override public void addAdditionalSaveData(CompoundTag tag){super.addAdditionalSaveData(tag);tag.putInt("SkillCooldown",cooldown);}
-    @Override public void readAdditionalSaveData(CompoundTag tag){super.readAdditionalSaveData(tag);float ratio=getHealth()/getMaxHealth();getAttribute(Attributes.MAX_HEALTH).removeModifier(UUID.fromString("75f17bd4-f6fe-4f5d-bf29-424c3c444831"));getAttribute(Attributes.MAX_HEALTH).removeModifier(UUID.fromString("84113872-88e2-4b3d-82fc-010300000001"));getAttribute(Attributes.MAX_HEALTH).setBaseValue(BalanceRules.health(200));setHealth(getMaxHealth()*ratio);cooldown=Math.max(60,tag.getInt("SkillCooldown"));entityData.set(ACTION,0);}
+    @Override public void readAdditionalSaveData(CompoundTag tag){super.readAdditionalSaveData(tag);float ratio=getHealth()/getMaxHealth();getAttribute(Attributes.MAX_HEALTH).removeModifier(UUID.fromString("75f17bd4-f6fe-4f5d-bf29-424c3c444831"));getAttribute(Attributes.MAX_HEALTH).removeModifier(UUID.fromString("84113872-88e2-4b3d-82fc-010300000001"));getAttribute(Attributes.MAX_HEALTH).setBaseValue(BalanceRules.health(500));setHealth(getMaxHealth()*ratio);cooldown=Math.max(60,tag.getInt("SkillCooldown"));entityData.set(ACTION,0);}
 }

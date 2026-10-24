@@ -74,6 +74,12 @@ public final class Skills {
         Burn previous=burns.get(target);long until=target.level().getGameTime()+seconds*20L;
         if(previous==null||until>=previous.until)burns.put(target,new Burn(owner.getUUID(),until,CombatSettings.spellMultiplier(owner)));
     }
+    /** 有归属的短时燃烧；不会因灵魂进化自动升级成永久火。 */
+    public static void burn(ServerPlayer owner,LivingEntity target,int seconds){
+        if(!CombatSafety.canAffect(owner,target)||seconds<=0)return;
+        target.setSecondsOnFire(seconds);long until=target.level().getGameTime()+seconds*20L;Burn old=burns.get(target);
+        if(old==null||old.until<=until)burns.put(target,new Burn(owner.getUUID(),until,CombatSettings.spellMultiplier(owner)));
+    }
     public static void protectAlly(ServerPlayer owner,UUID target){
         CombatExpansion.protect(owner,target);VoidCombat.protect(owner,target);NetBranches.protect(owner,target);Uraume.protect(owner,target);
         joints.remove(owner.getUUID()+"/"+target);
@@ -109,6 +115,7 @@ public final class Skills {
         }
         if(burn==null||target.level().getGameTime()>burn.until){VoidCombat.ignitionDamage(event);return;}
         ServerPlayer owner=target.level() instanceof ServerLevel level?MaidBridge.find(level,burn.owner):null;
+        if(owner==null){event.setCanceled(true);return;} // 无法核验离线施术者的敌友名单，暂停归属火伤。
         if(owner!=null&&(DomainClash.active(owner)||domains.containsKey(owner.getUUID())&&clashing(domains.get(owner.getUUID()))&&inDomain(owner,target))){event.setCanceled(true);return;}
         if(EternalLove.protects(burn.owner,target)||owner!=null&&!canHit(owner,target)){event.setCanceled(true);target.clearFire();burns.remove(target);return;}
         event.setAmount(owner==null?(float)(event.getAmount()*burn.multiplier):CombatSettings.spellDamage(owner,event.getAmount())*(Curse.repaired(owner)?1.1f:1));
@@ -133,6 +140,7 @@ public final class Skills {
         ServerPlayer owner;ServerLevel level;Vec3 pos,dir,axis;float size,power;int age,life;boolean world,space;Set<UUID> hit=new HashSet<>();
         /** 每刻飞行格数：**这就是"斩击速度"**（剑气弹幕的飞行速度）。手持生成了才定型，中途换手不影响已经在飞的。 */
         double speed=SLASH_SPEED;
+        final long visualId=SlashTerrain.id();List<SlashForms.Line> fragments;
         /** 伤害系数（1 = 普通解）。简易领域的随机斩击用小于 1 的系数。 */
         float damageScale=1f;
         Slash(ServerPlayer p,Vec3 pos,Vec3 dir,Vec3 axis,float size){owner=p;level=p.serverLevel();this.pos=pos;this.dir=dir;this.axis=axis;this.size=size;power=(float)Curse.power(p);world=Curse.awakened(p);life=(int)(400*Curse.scale(p));speed=SLASH_SPEED*(Hiten.holding(p)?Hiten.SLASH_SLOW:1);}
@@ -184,6 +192,7 @@ public final class Skills {
     }
     /** 释放键（技能5）循环：①结印 ②再按=放下(伤害50%) ③**放下后再按一次=收起领域**。 */
     private static void domainPress(ServerPlayer p){
+        if(Authority.instant(p)&&domains.containsKey(p.getUUID())){closeDomain(p,true);return;}
         // 先判条件再清"放下"标记：另一条领域的放下标记不能被这条路径吃掉
         if(released.contains(p.getUUID())&&domains.containsKey(p.getUUID())){
             released.remove(p.getUUID());
@@ -216,6 +225,7 @@ public final class Skills {
         if(!Curse.spend(p,Curse.COST[5]))return;
         AttackTypes.prepare(AttackTypes.DISMANTLE);
         times[5]=now+(long)Math.ceil(COOLDOWN[5]*SoulCombat.cooldown(p)*(Curse.active(p,"Siphon")?1.3:1)*(Curse.tier(p)>=4?0.8:1));
+        if(Authority.instant(p)){openDomain(p);return;}
         seals.put(p.getUUID(),new Seal(p,SEAL_SHRINE));
         freeze(p);
         fx(p,67,p.position(),Vec3.ZERO,Journey.nine(p)?1:0,1,0);SkillSounds.cast(p,5);
@@ -254,11 +264,12 @@ public final class Skills {
         boolean verticalKill=SukunaBranches.domainVerticalKill(p);
         int radius=DomainOptions.radius(radiusPts);float damageMult=(float)DomainOptions.damage(damagePts),speedMult=(float)DomainOptions.speed(speedPts);
         MaidBridge.domainOpened(p);double yaw=Math.toRadians(p.getYRot());Vec3 behind=new Vec3(Math.sin(yaw)*12,0,-Math.cos(yaw)*12);
-        int duration=ShrineRules.domainTicks(MaidBridge.isCaster(p));Domain d=new Domain(p,p.serverLevel(),p.position(),behind,now,now+duration,radius,damageMult,speedMult,verticalKill);domains.put(p.getUUID(),d);
+        LivingEntity locked=Authority.instant(p)?aimTarget(p):null;Vec3 center=locked==null?p.position():locked.position();
+        int duration=ShrineRules.domainTicks(Authority.countedAsMaid(p));Domain d=new Domain(p,p.serverLevel(),center,behind,now,now+duration,radius,damageMult,speedMult,verticalKill);domains.put(p.getUUID(),d);
         if(VoidJourney.evolved(p))syncVoidShrine(d);
         fx(p,1,d.center,d.shrineOffset,(float)d.radius,duration,SoulJourney.evolved(p)?-now:now);
         fx(p,25,p.position(),Vec3.ZERO,CombatSettings.voidFloor(p)?1:0,10,0);
-        pose(p,SEAL_SHRINE,duration+400);
+        if(!Authority.instant(p))pose(p,SEAL_SHRINE,duration+400);
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.BEACON_ACTIVATE,SoundSource.PLAYERS,4,0.5f);
         p.displayClientMessage(Component.literal(VoidJourney.evolved(p)?"虚空御厨子 · "+(duration/20)+"秒 · 半径"+radius+"格 · 五裂共鸣 · 结束闭合爆发":"领域展开 · 半径"+radius+"格 · 每秒70咒力 · 再按释放键放下（伤害50%）"),true);
         DomainClash.opened(p,domainCenter(p),radius);
@@ -426,7 +437,7 @@ public final class Skills {
         Vec3 eye=p.getEyePosition(),dir=p.getLookAngle().normalize();
         LivingEntity direct=null,assisted=null;double directDistance=Double.MAX_VALUE,bestAngle=Double.MAX_VALUE,bestDistance=Double.MAX_VALUE;
         boolean assist=AimAssist.enabled(p);double angle=AimAssist.angle(p),range=AimAssist.range(p);
-        for(var entity:p.serverLevel().getAllEntities())if(entity instanceof LivingEntity e&&canHit(p,e)){
+        for(var entity:p.serverLevel().getAllEntities())if(entity instanceof LivingEntity e&&CombatSafety.canTarget(p,e)){
             Vec3 center=e.getBoundingBox().getCenter(),delta=center.subtract(eye);double distance=delta.length();
             if(delta.dot(dir)<=0&&!e.getBoundingBox().contains(eye))continue;
             Vec3 q=e.getBoundingBox().inflate(e.getPickRadius()+0.1).clip(eye,eye.add(dir.scale(distance+e.getBbHeight()+e.getBbWidth()+2))).orElse(null);
@@ -515,7 +526,7 @@ public final class Skills {
     public static void extendDomain(ServerPlayer p,int ticks){Domain d=domains.get(p.getUUID());if(d!=null)d.end+=ticks;}
     public static void clashVisual(ServerPlayer p,boolean show){Domain d=domains.get(p.getUUID());if(d==null)return;if(!show){fx(p,5,d.center,Vec3.ZERO,0,0,0);return;}if(VoidJourney.evolved(p))syncVoidShrine(d);fx(p,1,d.center,d.shrineOffset,(float)d.radius,(int)Math.max(1,d.end-d.level.getGameTime()),SoulJourney.evolved(p)?-d.start:d.start);syncVoidFloor(p);}
     private record Bow(ServerPlayer owner,ServerLevel level,long release,boolean purple){Bow(ServerPlayer p,ServerLevel l,long release){this(p,l,release,false);}}
-    public static void purpleBow(ServerPlayer p){int draw=Curse.tier(p)>=3?20:30;bows.add(new Bow(p,p.serverLevel(),p.level().getGameTime()+draw,true));fx(p,CombatExpansionRules.FX_PURPLE,p.getEyePosition(),p.getLookAngle(),2,draw,1);SkillSounds.cast(p,3);}
+    public static void purpleBow(ServerPlayer p){if(Authority.instant(p)){LivingEntity t=aimTarget(p);detonate(p,p.serverLevel(),t==null?aimPoint(p,96):t.getBoundingBox().getCenter(),6,true);return;}int draw=Curse.tier(p)>=3?20:30;bows.add(new Bow(p,p.serverLevel(),p.level().getGameTime()+draw,true));fx(p,CombatExpansionRules.FX_PURPLE,p.getEyePosition(),p.getLookAngle(),2,draw,1);SkillSounds.cast(p,3);}
     private static class Fire {ServerPlayer owner;ServerLevel level;Vec3 pos,dir;UUID target;int age;boolean purple;Fire(ServerPlayer p){owner=p;level=p.serverLevel();pos=p.getEyePosition();LivingEntity aimed=aimTarget(p);target=aimed==null?null:aimed.getUUID();dir=aimed==null?p.getLookAngle():aimed.getBoundingBox().getCenter().subtract(pos).normalize();}}
     private record Detonation(ServerPlayer owner,ServerLevel level,Vec3 pos,long time,float radius){}
     private static void fx(ServerPlayer p,int kind,Vec3 pos,Vec3 dir,float size,int life,long seed){Network.Effect effect=new Network.Effect(kind,p.getId(),pos,dir,size,life,seed).fromCaster(p);Network.send(p.serverLevel(),effect);if(size!=SlashReach.INFINITE&&(kind==96||kind==72)&&p.position().distanceToSqr(pos)>512*512)Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(()->p),effect);}
@@ -576,9 +587,11 @@ public final class Skills {
         if(!Curse.spend(p,Curse.COST[skill]))return;
         // 记下这一招的适应细分：解 / 捌 / 灵魂剥离（延迟命中的伤害靠它分类）
         AttackTypes.prepare(skill==2?AttackTypes.CLEAVE:skill==6?AttackTypes.MAGIC_SOUL:AttackTypes.DISMANTLE);
+        times[skill]=now+(long)Math.ceil(COOLDOWN[skill]*SoulCombat.cooldown(p)*(Curse.active(p,"Siphon")?1.3:1)*(tier>=4?0.8:1));
+        // 玩家明确选择剑气模式时必须仍能发射，不能被权限的瞬发入口抢走。
+        if(Authority.instant(p)&&!(skill==0&&SlashForms.qi(p))){instantCast(p,skill);return;}
         fx(p,67,p.position(),Vec3.ZERO,Journey.nine(p)?1:0,1,0);SkillSounds.cast(p,skill);
         if(skill!=3)fx(p,70,p.position(),p.getLookAngle(),skill,skill==5?30:12,skill);
-        times[skill]=now+(long)Math.ceil(COOLDOWN[skill]*SoulCombat.cooldown(p)*(Curse.active(p,"Siphon")?1.3:1)*(tier>=4?0.8:1));
         if(CombatExpansion.afterCast(p,skill))return;
         if(skill==0&&SlashForms.qi(p)){SlashForms.basic(p);return;}
         if(VoidJourney.evolved(p)&&skill!=5){if(skill==3)fx(p,70,p.position(),p.getLookAngle(),3,60,3);VoidCombat.cast(p,skill);return;}
@@ -602,6 +615,15 @@ public final class Skills {
             case 4 -> furnaces.add(new Furnace(p,p.serverLevel(),now+40));
         }
         if(skill!=0&&skill!=4)p.serverLevel().playSound(null,p.blockPosition(),skill==3?SoundEvents.BLAZE_SHOOT:SoundEvents.PLAYER_ATTACK_SWEEP,SoundSource.PLAYERS,1.5f,0.8f);
+    }
+    /** 权限被动：伤害和切痕直接落在目标身上，不排结印/弓箭/咏唱队列。 */
+    static void instantCast(ServerPlayer p,int skill){
+        LivingEntity target=aimTarget(p);Vec3 at=target==null?aimPoint(p,96):target.getBoundingBox().getCenter();
+        if(VoidJourney.evolved(p)){VoidCombat.instant(p,skill,target,at);return;}
+        if(skill==3||skill==4){detonate(p,p.serverLevel(),at,skill==4?16:6,false);return;}
+        if(target==null){fx(p,72,at,p.getLookAngle(),12,10,p.getRandom().nextInt(360));return;}
+        List<LivingEntity> victims=skill==1?targets(p.serverLevel(),p,at,12):List.of(target);
+        for(LivingEntity t:victims){float base=(float)((skill==2?(Curse.awakened(p)?YujiEntity.percent(t,t.getMaxHealth()*.1f)+20:4):Curse.awakened(p)?12:7)*Curse.power(p));scaledDamage(p.serverLevel(),p,t,base,Curse.awakened(p),true,SoulJourney.evolved(p),skill==2?SukunaBranches.cleaveFactor(p):SlashFormRules.DAMAGE);hitEffect(p.serverLevel(),p,t,7,Curse.awakened(p));}
     }
     static Vec3 aimPoint(ServerPlayer p,double range){
         Vec3 eye=p.getEyePosition(),end=eye.add(p.getLookAngle().scale(range));var block=p.serverLevel().clip(new ClipContext(eye,end,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,p));return block.getType()==HitResult.Type.MISS?end:block.getLocation();
@@ -635,7 +657,26 @@ public final class Skills {
             // r155 的表现通路：静止斩痕用 SlashFormRules.STILL(162)，长度同时写进 direction 与 size 两处。
             Vec3 unit=dir.lengthSqr()<1e-8?new Vec3(0,0,1):dir.normalize();
             Network.send(p.serverLevel(),new Network.Effect(SlashFormRules.STILL,p.getId(),pos,unit.scale(Math.max(0.5,size)),size,s.life,0));
-        }else fx(p,0,pos,dir,size,s.life,angleDegrees+(SoulJourney.evolved(p)?2000:Journey.nine(p)?1440:s.world?720:0));
+        }else s.fragments=List.of(new SlashForms.Line(pos.subtract(axis.scale(size/2)),pos.add(axis.scale(size/2))));
+    }
+    private static boolean tickFlyingSlash(Slash s){
+        if(s.age==1)s.fragments=SlashTerrain.launch(s.owner,s.fragments,s.dir);
+        if(s.fragments.isEmpty())return false;
+        Vec3 step=s.dir.scale(s.speed);var result=SlashTerrain.advance(s.owner,s.fragments,step);
+        Set<UUID> thisTick=new HashSet<>();
+        for(var sweep:result.swept()){
+            for(int i=0;i<=8;i++){Vec3 move=sweep.step().scale(i/8.0);if(CombatExpansion.collideSlash(s.owner,sweep.a().add(move),sweep.b().add(move),s.dir)){SlashTerrain.send(s.owner,s.visualId,List.of(),s.pos);return false;}}
+            for(LivingEntity target:s.level.getEntitiesOfClass(LivingEntity.class,new AABB(sweep.a(),sweep.b()).expandTowards(sweep.step()).inflate(.01),e->canHit(s.owner,e)))
+                if(!thisTick.contains(target.getUUID())&&(Journey.rotation(s.owner)||!s.hit.contains(target.getUUID()))&&SlashTerrain.hits(sweep,target)){
+                    thisTick.add(target.getUUID());s.hit.add(target.getUUID());
+                    float amount=(s.world?12:6)*s.power*s.damageScale;boolean soul=SoulJourney.evolved(s.owner);
+                    if(scaledDamage(s.level,s.owner,target,amount,s.world,true,soul,SlashFormRules.DAMAGE)){
+                        if(soul)hitEffectSoul(s.level,s.owner,target);else hitEffect(s.level,s.owner,target,7,s.world);
+                    }
+                }
+        }
+        SlashTerrain.send(s.owner,s.visualId,result.swept(),s.pos);s.fragments=result.remaining();s.pos=s.pos.add(step);
+        return !s.fragments.isEmpty();
     }
     private static void hitEffect(ServerLevel l,ServerPlayer caster,LivingEntity target,int kind,boolean red){Vec3 center=target.getBoundingBox().getCenter();float size=kind==10?Math.max(1.5f,Math.min(6,target.getBbHeight()*1.5f)):Math.max(4,target.getBbHeight()*3);Network.send(l,new Network.Effect(red?11:kind,target.getId(),center,center.subtract(target.position()),size,kind==10?6:10,target.getRandom().nextLong()).fromCaster(caster));}
     private static void hitEffectSoul(ServerLevel l,ServerPlayer caster,LivingEntity target){if(!target.isAlive())return;Vec3 center=target.getBoundingBox().getCenter();Network.send(l,new Network.Effect(93,target.getId(),center,Vec3.ZERO,Math.max(1,target.getBbHeight()),12,target.getRandom().nextLong()).fromCaster(caster));}
@@ -692,7 +733,7 @@ public final class Skills {
         }
         for(Iterator<Joint> it=joints.values().iterator();it.hasNext();){Joint j=it.next();if(!valid(j.owner,j.level)){it.remove();continue;}if(j.level.getGameTime()<j.due)continue;it.remove();var entity=j.level.getEntity(j.target);if(entity instanceof LivingEntity target&&canHit(j.owner,target)){damage(j.level,j.owner,target,j.power,true,false);fx(j.owner,59,target.getBoundingBox().getCenter(),Vec3.ZERO,4,20,target.getId());SkillSounds.play(j.owner,"fetus_joint");}}
         tickRifts();
-        for(Iterator<Slash> it=slashes.iterator();it.hasNext();){Slash s=it.next();if(++s.age>s.life||!valid(s.owner,s.level)){it.remove();continue;}Vec3 old=s.pos;s.pos=s.pos.add(s.dir.scale(s.speed));if(CombatExpansion.collideSlash(s.owner,s.pos.subtract(s.axis.scale(s.size/2)),s.pos.add(s.axis.scale(s.size/2)),s.dir)){it.remove();continue;}SkillDestruction.line(s.owner,s.pos.subtract(s.axis.scale(s.size/2)),s.pos.add(s.axis.scale(s.size/2)),0.6);AABB swept=new AABB(old,s.pos).inflate(s.size/2+1);
+        for(Iterator<Slash> it=slashes.iterator();it.hasNext();){Slash s=it.next();if(++s.age>s.life||!valid(s.owner,s.level)){it.remove();continue;}if(s.fragments!=null){if(!tickFlyingSlash(s))it.remove();continue;}Vec3 old=s.pos;s.pos=s.pos.add(s.dir.scale(s.speed));if(CombatExpansion.collideSlash(s.owner,s.pos.subtract(s.axis.scale(s.size/2)),s.pos.add(s.axis.scale(s.size/2)),s.dir)){it.remove();continue;}SkillDestruction.line(s.owner,s.pos.subtract(s.axis.scale(s.size/2)),s.pos.add(s.axis.scale(s.size/2)),0.6);AABB swept=new AABB(old,s.pos).inflate(s.size/2+1);
             for(LivingEntity e:targets(s.level,s.owner,s.pos,s.size/2+3)){if(!e.getBoundingBox().intersects(swept))continue;Vec3 q=e.getBoundingBox().getCenter().subtract(old.lerp(s.pos,0.5));double a=q.dot(s.axis),b=q.dot(s.dir);Vec3 normal=s.axis.cross(s.dir).normalize();double halfThickness=0.45;float amount=(s.space?(float)((YujiEntity.percent(e,e.getMaxHealth()*0.25f)+300)*Journey.bonus(s.owner)*(Curse.active(s.owner,"Disorder")?0.8:1)):(s.world?12:6)*s.power)*s.damageScale;boolean soul=SoulJourney.evolved(s.owner);if(Math.abs(a)<s.size/2+projection(e,s.axis)&&Math.abs(b)<1+projection(e,s.dir)&&Math.abs(q.dot(normal))<halfThickness+projection(e,normal)&&(Journey.rotation(s.owner)||s.hit.add(e.getUUID()))&&scaledDamage(s.level,s.owner,e,amount,s.world,true,soul,SlashFormRules.DAMAGE)){if(soul)hitEffectSoul(s.level,s.owner,e);else hitEffect(s.level,s.owner,e,7,s.world);}}
         }
         for(Iterator<Aura> it=auras.values().iterator();it.hasNext();){Aura a=it.next();long now=a.level.getGameTime(),age=now-a.start;ServerPlayer p=a.owner;

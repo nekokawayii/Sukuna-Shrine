@@ -101,7 +101,7 @@ public final class GojoCombat {
     private static String key(int skill){return "GojoCooldown"+skill;}
     public static boolean available(ServerPlayer p,int skill){
         if(skill<0||skill>=COUNT||!unlocked(p)||!p.isAlive()||p.isSpectator()||DomainClash.active(p))return false;
-        if(GuardianPlayerSkills.casting(p)||Skills.sustaining(p)&&skill!=7)return false;
+        if(GuardianPlayerSkills.casting(p)||!Authority.instant(p)&&Skills.sustaining(p)&&skill!=7)return false;
         if(Curse.active(p,key(skill)))return false;
         return Curse.canSpend(p,GojoPlayer.COST[skill]);
     }
@@ -399,7 +399,7 @@ public final class GojoCombat {
     /** 赫 爆炸：以爆心为中心，半径 {@link #RED_RADIUS} 内每个生物都吃一次伤害 + 沿径向击退。 */
     private static void redBurst(ServerPlayer p,Vec3 center,net.minecraft.server.level.ServerLevel level){
         var box=new net.minecraft.world.phys.AABB(center,center).inflate(RED_RADIUS);
-        for(LivingEntity victim:level.getEntitiesOfClass(LivingEntity.class,box,v->v!=p&&v.isAlive()&&CombatSettings.canHit(p,v))){
+        for(LivingEntity victim:level.getEntitiesOfClass(LivingEntity.class,box,v->CombatSafety.canTarget(p,v))){
             if(victim.distanceToSqr(center)>RED_RADIUS*RED_RADIUS)continue;      // 球形范围
             hit(p,victim,RED_AREA_DAMAGE,false,1f,AttackTypes.MAGIC_RED);        // 独立适应占位：赫
             Vec3 push=victim.position().subtract(center);
@@ -450,7 +450,7 @@ public final class GojoCombat {
             ServerLevel level=z.owner.serverLevel();
             if(z.owner.isAlive())for(LivingEntity v:Skills.targets(level,z.owner,z.center,z.radius)){
                 if(v.distanceToSqr(z.center)>z.radius*z.radius)continue;
-                v.setSecondsOnFire(2);
+                Skills.burn(z.owner,v,2);
                 hit(z.owner,v,MAX_POWER_DPS/20.0,false);
             }
             if(--z.ticks<=0)it.remove();

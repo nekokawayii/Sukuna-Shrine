@@ -19,9 +19,9 @@ public final class MahoragaRules {
     public static boolean isWheel(ItemStack stack){
         return stack!=null&&!stack.isEmpty()&&stack.is(VoidContent.MAHORAGA_WHEEL.get());
     }
-    /** 法轮戴在头上：只有这种情况才在头顶画法轮模型。 */
+    /** 法轮生效：实体头盔槽真的戴着，或受肉玩家选择了十影的「不完全显现」。 */
     public static boolean wheelOnHead(LivingEntity entity){
-        return entity!=null&&isWheel(entity.getItemBySlot(EquipmentSlot.HEAD));
+        return entity!=null&&(isWheel(entity.getItemBySlot(EquipmentSlot.HEAD))||entity instanceof ServerPlayer p&&TenShadows.partial(p));
     }
     /** 「开 · 炎弓 / 灶 · 粉尘爆炸 / 灶 · 开」这一系对魔虚罗的**特攻倍率**：20 倍（其余目标不受影响）。 */
     public static final float FURNACE_MULTIPLIER=20f;

@@ -41,6 +41,8 @@ public final class GeneratedMod {
         MinecraftForge.EVENT_BUS.register(BossControl.class);
         MinecraftForge.EVENT_BUS.register(IwateWaterRepair.class);
         SoulContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
+        ShadowContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
+        PrisonContent.init();
         MinecraftForge.EVENT_BUS.register(SoulJourney.class);
         MinecraftForge.EVENT_BUS.register(RuinAtmosphere.class);
         MinecraftForge.EVENT_BUS.register(SoulCombat.class);
@@ -49,21 +51,29 @@ public final class GeneratedMod {
         try{double cap=armor.getMaxValue();for(var field:net.minecraft.world.entity.ai.attributes.RangedAttribute.class.getDeclaredFields())if(field.getType()==double.class){field.setAccessible(true);if(field.getDouble(armor)==cap){field.setDouble(armor,1000000);break;}}}catch(ReflectiveOperationException ex){throw new IllegalStateException("无法启用净土守护者防御属性",ex);}
         ProgressionContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(Journey.class);
+        Authority.init();
         Content.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         SkillSounds.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         Network.init();
         Network.registerDrawing();
         MinecraftForge.EVENT_BUS.register(SlashForms.class);
         MinecraftForge.EVENT_BUS.register(DismantleMotion.class);
+        MinecraftForge.EVENT_BUS.register(MeleeCombo.class);
         MinecraftForge.EVENT_BUS.register(FreehandDrawing.class);
         MinecraftForge.EVENT_BUS.register(Skills.class);
         MinecraftForge.EVENT_BUS.register(NetBranches.class);
         MinecraftForge.EVENT_BUS.register(Curse.class);
         MinecraftForge.EVENT_BUS.register(CombatSettings.class);
+        MinecraftForge.EVENT_BUS.register(CombatSafety.class);
+        MinecraftForge.EVENT_BUS.register(BloodArts.class);
+        MinecraftForge.EVENT_BUS.register(BloodDomain.class);
+        MinecraftForge.EVENT_BUS.register(DeathStar.class);
         MinecraftForge.EVENT_BUS.register(GuardianCombat.class);
         MinecraftForge.EVENT_BUS.register(GuardianProgress.class);
         // 对战败北在本模组的伤害加成结算后判断，防止附加伤害穿过1血保护。
         MinecraftForge.EVENT_BUS.register(EternalLove.class);
         if(net.minecraftforge.fml.ModList.get().isLoaded("touhou_little_maid"))MinecraftForge.EVENT_BUS.register(MaidDuel.class);
+        // 专用服务器不加载任何客户端类；客户端关键事件改为从入口显式接入。
+        net.minecraftforge.fml.DistExecutor.safeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT,()->ClientBootstrap::install);
     }
 }

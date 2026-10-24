@@ -1,0 +1,1 @@
+{"parent":"builtin/entity","textures":{"particle":"sukuna:entity/sealing/prison_realm_0"},"display":{"gui":{"rotation":[20,0,0],"scale":[1.15,1.15,1.15]},"ground":{"scale":[0.6,0.6,0.6]},"thirdperson_righthand":{"rotation":[0,0,0],"scale":[0.65,0.65,0.65]},"firstperson_righthand":{"scale":[0.7,0.7,0.7]}}}

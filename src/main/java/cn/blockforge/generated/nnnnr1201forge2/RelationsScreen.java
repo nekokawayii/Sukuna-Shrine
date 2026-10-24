@@ -42,7 +42,7 @@ public final class RelationsScreen extends Screen {
     @Override public void render(GuiGraphics g,int mx,int my,float partial){
         g.fill(0,0,width,height,0xED100D18);int left=left(),w=panelWidth();
         g.drawCenteredString(font,title,width/2,10,0xFFFFD8E4);
-        g.drawCenteredString(font,"只控制你的术式对名单中玩家的效果",width/2,26,0xFFBBAAC8);
+        g.drawCenteredString(font,"控制你的技能和十影式神对玩家的索敌与伤害",width/2,26,0xFFBBAAC8);
         String info=state==null?"正在读取名单……":"术式伤害 ×"+state.multiplier()+"   第 "+(page+1)+" / "+state.pages()+" 页";
         g.drawCenteredString(font,info,width/2,42,0xFFFFCE7C);
         if(state!=null){

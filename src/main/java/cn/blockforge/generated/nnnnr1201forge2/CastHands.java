@@ -17,13 +17,13 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraft.world.InteractionHand;
 
 /** 复用玩家皮肤与原版手臂，施法时保留盔甲、名字和其他渲染层。 */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
 public final class CastHands {
     private record Pose(int kind,int skill,long start,int life){}
     private static final Map<Integer,Pose> poses=new HashMap<>();
     public static void clear(){poses.clear();}
     public static void receive(Network.Effect e){var l=Minecraft.getInstance().level;if(l!=null)poses.put(e.owner(),new Pose(e.kind(),(int)e.size(),l.getGameTime(),e.life()));}
-    private static Pose active(int id){if(FinaleClient.active(id)||MotionRenderCompat.externalPlayerModels()||DismantleMotionClient.active(id))return null;var mc=Minecraft.getInstance();Pose pose=poses.get(id);if(mc.level==null||pose==null)return null;if(mc.level.getGameTime()-pose.start>=pose.life){poses.remove(id);return null;}return pose;}
+    private static Pose active(int id){if(FinaleClient.active(id)||DismantleMotionClient.active(id)||DismantleMotionClient.simpleDomain(id)||MeleeComboClient.active(id))return null;var mc=Minecraft.getInstance();Pose pose=poses.get(id);if(mc.level==null||pose==null)return null;if(mc.level.getGameTime()-pose.start>=pose.life){poses.remove(id);return null;}return pose;}
+    public static boolean hasPose(int id){return active(id)!=null;}
     /** 领域结印姿态还在吗（御厨子 kind=70/size=5、无量空处 kind=71/size=7）：本地玩家据此锁住左键空挥/攻击。 */
     public static boolean sealing(){
         var mc=Minecraft.getInstance();
@@ -32,35 +32,37 @@ public final class CastHands {
         return pose.kind==70&&pose.skill==5||pose.kind==71&&pose.skill==7;
     }
     /** 结印期间不能攻击：连空挥一起取消（与动作锁同一套做法）。 */
-    @SubscribeEvent public static void interaction(InputEvent.InteractionKeyMappingTriggered e){if(sealing()){e.setCanceled(true);e.setSwingHand(false);}}
-    @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)
-    public static final class Registration {
-        @SubscribeEvent public static void layers(EntityRenderersEvent.AddLayers e){for(String skin:e.getSkins()){PlayerRenderer renderer=e.getSkin(skin);if(renderer!=null)renderer.addLayer(new Arms(renderer));}}
-    }
-    @SubscribeEvent public static void body(RenderPlayerEvent.Pre e){if(active(e.getEntity().getId())==null)return;var m=e.getRenderer().getModel();m.leftArm.skipDraw=m.rightArm.skipDraw=m.leftSleeve.skipDraw=m.rightSleeve.skipDraw=true;}
-    @SubscribeEvent public static void after(RenderPlayerEvent.Post e){var m=e.getRenderer().getModel();m.leftArm.skipDraw=m.rightArm.skipDraw=m.leftSleeve.skipDraw=m.rightSleeve.skipDraw=false;}
-    private static final class Arms extends RenderLayer<AbstractClientPlayer,PlayerModel<AbstractClientPlayer>> {
-        Arms(PlayerRenderer parent){super(parent);}
-        @Override public void render(PoseStack ps,MultiBufferSource source,int light,AbstractClientPlayer player,float limb,float amount,float partial,float age,float yaw,float pitch){
-            Pose pose=active(player.getId());if(pose==null)return;var m=getParentModel();float lx=m.leftArm.xRot,ly=m.leftArm.yRot,rx=m.rightArm.xRot,ry=m.rightArm.yRot;
-            if(pose.kind==2){m.leftArm.xRot=-1.55f;m.leftArm.yRot=0.25f;m.rightArm.xRot=-1.4f;m.rightArm.yRot=-0.8f;}
-            else if(pose.kind==71){m.rightArm.xRot=-2.7f;m.rightArm.yRot=-0.3f;}   // 无量空处：右臂竖直举在脸前（左手不动）
-            else if(pose.kind==70&&pose.skill==3){m.leftArm.xRot=-0.3f;m.leftArm.yRot=0.15f;m.rightArm.xRot=-2.4f;m.rightArm.yRot=-0.25f;}
-            else {m.leftArm.xRot=m.rightArm.xRot=-1.2f;m.leftArm.yRot=0.6f;m.rightArm.yRot=-0.6f;}
-            m.leftSleeve.copyFrom(m.leftArm);m.rightSleeve.copyFrom(m.rightArm);
-            var b=source.getBuffer(RenderType.entityCutoutNoCull(player.getSkinTextureLocation()));
-            for(var arm:List.of(m.leftArm,m.rightArm,m.leftSleeve,m.rightSleeve)){arm.skipDraw=false;arm.render(ps,b,light,OverlayTexture.NO_OVERLAY);}
-            m.leftArm.xRot=lx;m.leftArm.yRot=ly;m.rightArm.xRot=rx;m.rightArm.yRot=ry;m.leftSleeve.copyFrom(m.leftArm);m.rightSleeve.copyFrom(m.rightArm);
+    @SubscribeEvent public static void interaction(InputEvent.InteractionKeyMappingTriggered e){if(sealing()||DeathStarClient.charging()){e.setCanceled(true);e.setSwingHand(false);}}
+    /** 统一交给动作绘制链，不再隐藏原模型手臂后指望 Post 事件恢复。 */
+    public static boolean apply(PlayerModel<AbstractClientPlayer> m,int id){
+        Pose pose=active(id);if(pose==null)return false;
+        if(BloodRules.skill(pose.skill)){
+            double age=Minecraft.getInstance().level.getGameTime()-pose.start;float weight=(float)Math.sin(Math.min(1,age/Math.max(1,pose.life))*Math.PI);
+            switch(pose.skill){
+                case BloodRules.DEATH_STAR -> {float push=pose.life<=10?1:0;m.leftArm.xRot=m.rightArm.xRot=-1.25f-push*.35f;m.leftArm.yRot=.5f-push*.3f;m.rightArm.yRot=-.5f+push*.3f;}
+                case BloodRules.BIND -> {m.body.xRot=.35f;m.rightArm.xRot=-.7f;m.rightArm.yRot=-.2f;m.leftArm.xRot=-.25f;}
+                case BloodRules.RINGS,BloodRules.CANAL,BloodRules.BLADE -> {m.rightArm.xRot=-1.5f;m.rightArm.zRot=-.2f;m.leftArm.xRot=-.55f;}
+                case BloodRules.THORNS -> {m.rightArm.xRot=-.3f-weight*2;m.leftArm.xRot=-.4f;}
+                case BloodRules.MIST,BloodRules.WINGS,BloodRules.FLOW -> {m.leftArm.xRot=m.rightArm.xRot=-.7f;m.leftArm.zRot=-.95f;m.rightArm.zRot=.95f;}
+                default -> {m.leftArm.xRot=m.rightArm.xRot=-1.25f;m.leftArm.yRot=.65f;m.rightArm.yRot=-.65f;}
+            }
         }
+        else if(pose.kind==2){m.leftArm.xRot=-1.55f;m.leftArm.yRot=.25f;m.rightArm.xRot=-1.4f;m.rightArm.yRot=-.8f;}
+        else if(pose.kind==71){m.rightArm.xRot=-2.7f;m.rightArm.yRot=-.3f;}
+        else if(pose.kind==70&&pose.skill==3){m.leftArm.xRot=-.3f;m.leftArm.yRot=.15f;m.rightArm.xRot=-2.4f;m.rightArm.yRot=-.25f;}
+        else{m.leftArm.xRot=m.rightArm.xRot=-1.2f;m.leftArm.yRot=.6f;m.rightArm.yRot=-.6f;}
+        return true;
     }
     @SubscribeEvent public static void hand(RenderHandEvent e){
         var mc=Minecraft.getInstance();if(mc.player==null||mc.level==null)return;
         Pose pose=active(mc.player.getId());if(pose==null)return;
         float age=mc.level.getGameTime()-pose.start+e.getPartialTick();
         e.setCanceled(true);if(e.getHand()!=InteractionHand.MAIN_HAND)return;
-        var ps=e.getPoseStack();var renderer=(PlayerRenderer)mc.getEntityRenderDispatcher().getRenderer(mc.player);
+        var ps=e.getPoseStack();var base=mc.getEntityRenderDispatcher().getRenderer(mc.player);
+        if(!(base instanceof PlayerRenderer renderer)){Client.watchRenderers(mc);return;} // 渲染表被换掉时本帧不画手，绝不 NPE
         float draw=Math.min(1,age/Math.max(1,pose.life));
         for(int side:new int[]{-1,1}){
+            if(BloodRules.skill(pose.skill)&&(pose.skill==BloodRules.BIND||pose.skill==BloodRules.THORNS||pose.skill==BloodRules.CANAL)&&side<0)continue;
             if(pose.kind==71&&side<0)continue;   // 无量空处是单手印：只渲染右手
             ps.pushPose();
             if(pose.kind==71){
@@ -69,7 +71,12 @@ public final class CastHands {
                 ps.translate(0.375,-0.72,-0.55);
                 ps.mulPose(Axis.XP.rotationDegrees(-15));
             }else{
-                if(pose.kind==2){ps.translate(side<0?-0.42:0.32,-0.38,side<0?-0.95:-0.62+draw*0.28);ps.mulPose(Axis.YP.rotationDegrees(side<0?22:-30));ps.mulPose(Axis.ZP.rotationDegrees(side<0?-12:25));}
+                if(BloodRules.skill(pose.skill)){
+                    boolean spread=pose.skill==BloodRules.MIST||pose.skill==BloodRules.WINGS||pose.skill==BloodRules.FLOW;
+                    double reach=pose.skill==BloodRules.THORNS?-.35+Math.sin(draw*Math.PI)*.4:pose.skill==BloodRules.BIND?-.7:-.4;
+                    ps.translate(side*(spread?.55:.16),reach,pose.skill==BloodRules.DEATH_STAR&&pose.life<=10?-.72-.35*Math.sin(draw*Math.PI):-.72);ps.mulPose(Axis.YP.rotationDegrees(side*(spread?12:-28)));ps.mulPose(Axis.ZP.rotationDegrees(side*(spread?-35:28)));
+                }
+                else if(pose.kind==2){ps.translate(side<0?-0.42:0.32,-0.38,side<0?-0.95:-0.62+draw*0.28);ps.mulPose(Axis.YP.rotationDegrees(side<0?22:-30));ps.mulPose(Axis.ZP.rotationDegrees(side<0?-12:25));}
                 else if(pose.kind==70&&pose.skill==3){ps.translate(side>0?0.32:-0.42,side>0?-0.08:-0.55,side>0?-0.7:-0.52);ps.mulPose(Axis.YP.rotationDegrees(side*-12));ps.mulPose(Axis.ZP.rotationDegrees(side>0?-20:8));}
                 else {double sweep=pose.skill==5?0:Math.sin(draw*Math.PI)*0.18;ps.translate(side*(pose.skill==5?0.13:0.3)+sweep,-0.4,-0.72);ps.mulPose(Axis.YP.rotationDegrees(side*-24));ps.mulPose(Axis.ZP.rotationDegrees(side*(pose.skill==5?38:18)));}
                 ps.mulPose(Axis.XP.rotationDegrees(-75));

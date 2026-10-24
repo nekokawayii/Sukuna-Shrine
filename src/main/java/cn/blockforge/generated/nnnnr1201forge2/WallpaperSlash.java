@@ -23,15 +23,15 @@ public final class WallpaperSlash {
     private static int batchCuts;
     @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)
     public static final class Registration {
-        @SubscribeEvent public static void shaders(RegisterShadersEvent e)throws java.io.IOException{
-            e.registerShader(new ShaderInstance(e.getResourceProvider(),new ResourceLocation("sukuna","wallpaper_slash"),DefaultVertexFormat.POSITION_COLOR),s->shader=s);
+        @SubscribeEvent public static void shaders(RegisterShadersEvent e){
+            shader=null;try{e.registerShader(new ShaderInstance(e.getResourceProvider(),new ResourceLocation("sukuna","wallpaper_slash"),DefaultVertexFormat.POSITION_COLOR),s->shader=s);}catch(java.io.IOException|RuntimeException ex){com.mojang.logging.LogUtils.getLogger().warn("壁纸专用材质不可用，斩击保留原版贴图通道",ex);}
         }
     }
     public static void begin(){pending.clear();batchCuts=0;collecting=true;SlashAppearance.reset();}
     public static void end(PoseStack ps){try{flush(ps);}finally{pending.clear();batchCuts=0;collecting=false;SlashAppearance.reset();}}
     public static void core(BufferBuilder b,PoseStack ps,Vec3 p,Vec3 q,Vec3 r,Vec3 s,float alpha,UUID owner){
         if(!collecting||alpha<=0)return;
-        if(shader!=null&&owner!=null&&WallpaperClient.hasImage(owner))pending.add(new Cut(owner,p,q,r,s,Math.min(1,alpha)));
+        if(owner!=null&&WallpaperClient.hasImage(owner))pending.add(new Cut(owner,p,q,r,s,Math.min(1,alpha)));
         // 黑芯和包边也占绘图内存：关闭共享、下载中或低阶段同样按斩击数分批。
         if(++batchCuts>=BATCH_SIZE){
             BufferUploader.drawWithShader(b.end());flush(ps);batchCuts=0;
@@ -67,18 +67,33 @@ public final class WallpaperSlash {
         shader.safeGetUniform("DesktopRegion").set((window.x()-desktop.x())/desktop.width(),(window.y()-desktop.y())/desktop.height(),window.width()/desktop.width(),window.height()/desktop.height());
     }
     public static void flush(PoseStack ps){
-        if(pending.isEmpty()||shader==null){pending.clear();return;}var mc=Minecraft.getInstance();var window=WallpaperClient.window();var desktop=WallpaperClient.desktop();
-        shader.safeGetUniform("FrameSize").set((float)mc.getMainRenderTarget().width,(float)mc.getMainRenderTarget().height);
-        shader.safeGetUniform("DesktopRegion").set((window.x()-desktop.x())/desktop.width(),(window.y()-desktop.y())/desktop.height(),window.width()/desktop.width(),window.height()/desktop.height());
+        if(pending.isEmpty())return;
+        // 普通斩击、剑气和分段墙统一先裁切，再绘制屏幕多边形，仍受地形遮挡。
+        // 专用通道不受场景雾染黑，显式绑定图片；资源重载失败时保留原版贴图兜底。
+        var window=WallpaperClient.window();var desktop=WallpaperClient.desktop();
+        double ox=(window.x()-desktop.x())/desktop.width(),oy=(window.y()-desktop.y())/desktop.height(),sx=window.width()/desktop.width(),sy=window.height()/desktop.height();
+        org.joml.Matrix4f projection=new org.joml.Matrix4f(RenderSystem.getProjectionMatrix());var sorting=RenderSystem.getVertexSorting();
+        var modelView=RenderSystem.getModelViewStack();org.joml.Matrix4f transform=new org.joml.Matrix4f(projection).mul(RenderSystem.getModelViewMatrix()).mul(ps.last().pose());
+        int texture=RenderSystem.getShaderTexture(0);float[] color=RenderSystem.getShaderColor().clone();
         Map<UUID,List<Cut>> byOwner=new LinkedHashMap<>();for(Cut c:pending)byOwner.computeIfAbsent(c.owner,k->new ArrayList<>()).add(c);
-        for(var entry:byOwner.entrySet()){
-            ResourceLocation image=WallpaperClient.texture(entry.getKey());if(image==null)continue;
-            RenderSystem.setShader(()->shader);RenderSystem.setShaderTexture(0,image);
-            BufferBuilder b=Tesselator.getInstance().getBuilder();b.begin(VertexFormat.Mode.QUADS,DefaultVertexFormat.POSITION_COLOR);
-            for(Cut c:entry.getValue())Client.quad(b,ps,c.a,c.b,c.c,c.d,((int)(255*c.alpha)<<24)|0xFFFFFF);
-            BufferUploader.drawWithShader(b.end());
-        }
-        pending.clear();RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        modelView.pushPose();try{
+            modelView.setIdentity();RenderSystem.applyModelViewMatrix();RenderSystem.setProjectionMatrix(new org.joml.Matrix4f(),sorting);RenderSystem.setShaderColor(1,1,1,1);RenderSystem.enableBlend();RenderSystem.defaultBlendFunc();RenderSystem.disableCull();
+            for(var entry:byOwner.entrySet()){
+                ResourceLocation image=WallpaperClient.texture(entry.getKey());if(image==null)continue;
+                boolean dedicated=shader!=null;
+                RenderSystem.setShaderTexture(0,image);
+                if(dedicated){RenderSystem.setShader(()->shader);shader.setSampler("Sampler0",Minecraft.getInstance().getTextureManager().getTexture(image));desktopUniforms();}
+                else RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+                BufferBuilder b=Tesselator.getInstance().getBuilder();b.begin(VertexFormat.Mode.TRIANGLES,dedicated?DefaultVertexFormat.POSITION_COLOR:DefaultVertexFormat.POSITION_TEX_COLOR);
+                for(Cut c:entry.getValue()){
+                    var polygon=WallpaperProjection.clip(List.of(project(transform,c.a),project(transform,c.b),project(transform,c.c),project(transform,c.d)));
+                    for(int i=1;i+1<polygon.size();i++){screenVertex(b,polygon.get(0),c.alpha,ox,oy,sx,sy);screenVertex(b,polygon.get(i),c.alpha,ox,oy,sx,sy);screenVertex(b,polygon.get(i+1),c.alpha,ox,oy,sx,sy);}
+                }
+                BufferUploader.drawWithShader(b.end());
+            }
+        }finally{pending.clear();modelView.popPose();RenderSystem.applyModelViewMatrix();RenderSystem.setProjectionMatrix(projection,sorting);RenderSystem.setShaderTexture(0,texture);RenderSystem.setShaderColor(color[0],color[1],color[2],color[3]);RenderSystem.setShader(GameRenderer::getPositionColorShader);}
     }
+    private static WallpaperProjection.Point project(org.joml.Matrix4f matrix,Vec3 p){var v=new org.joml.Vector4f((float)p.x,(float)p.y,(float)p.z,1).mul(matrix);return new WallpaperProjection.Point(v.x,v.y,v.z,v.w);}
+    private static void screenVertex(BufferBuilder b,WallpaperProjection.Point p,float alpha,double ox,double oy,double sx,double sy){double x=p.x()/p.w(),y=p.y()/p.w(),z=p.z()/p.w();double[] uv=WallpaperProjection.uv(x,y,ox,oy,sx,sy);b.vertex(x,y,z-.000001);if(shader==null)b.uv((float)uv[0],(float)uv[1]);b.color(1f,1f,1f,alpha).endVertex();}
     private WallpaperSlash(){}
 }

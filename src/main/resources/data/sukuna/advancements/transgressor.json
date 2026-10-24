@@ -1,0 +1,11 @@
+{
+  "display": {
+    "icon": {"item": "sukuna:permission"},
+    "title": {"text": "越权者终将于大雨中落幕"},
+    "description": {"text": "你已吞下权限。"},
+    "background": "minecraft:textures/block/obsidian.png",
+    "frame": "challenge", "show_toast": true, "announce_to_chat": true, "hidden": true
+  },
+  "criteria": {"consumed_permission": {"trigger": "minecraft:impossible"}},
+  "requirements": [["consumed_permission"]]
+}

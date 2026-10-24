@@ -40,10 +40,18 @@ public final class BossControl extends SavedData {
         var a=boss.getAttribute(key);if(a==null)return;
         if(key==Attributes.ATTACK_DAMAGE){
             // 放在总倍率末端，戴天的力量药水加伤也只缩放一次。
-            a.setBaseValue(raw);var previous=a.getModifier(ATTACK_SCALE);double amount=BalanceRules.factor(BalanceRules.modpackMode(),BalanceRules.Category.BOSS_ATTACK)-1;
+            // r138：关闭模式按 OFF_ATTACK 查**绝对伤害**（五条悟 8 / 魔虚罗 8 / ...），用倍率修正回填到 raw 上。
+            a.setBaseValue(raw);double target=BalanceRules.bossAttack(raw);
+            var previous=a.getModifier(ATTACK_SCALE);double amount=raw<=0?0:target/raw-1;
             if(previous!=null&&previous.getAmount()==amount)return;
-            a.removeModifier(ATTACK_SCALE);if(amount!=0)a.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(ATTACK_SCALE,"整合包模式攻击缩放",amount,net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.MULTIPLY_TOTAL));
-        }else if(a.getBaseValue()!=BalanceRules.strength(raw,key==Attributes.ARMOR?BalanceRules.Category.BOSS_ARMOR:BalanceRules.Category.BOSS))a.setBaseValue(BalanceRules.strength(raw,key==Attributes.ARMOR?BalanceRules.Category.BOSS_ARMOR:BalanceRules.Category.BOSS));
+            a.removeModifier(ATTACK_SCALE);if(amount!=0)a.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(ATTACK_SCALE,"模式伤害/护甲缩放",amount,net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.MULTIPLY_TOTAL));
+        }else if(key==Attributes.ARMOR){
+            double expected=BalanceRules.bossArmor(raw);
+            if(a.getBaseValue()!=expected){a.removeModifiers();a.setBaseValue(expected);}
+        }else{
+            double expected=BalanceRules.strength(raw,BalanceRules.Category.BOSS);
+            if(a.getBaseValue()!=expected)a.setBaseValue(expected);
+        }
     }
     private static void stats(LivingEntity boss,boolean fill){
         if(!managed(boss)||excluded(boss)||boss instanceof GuardianEntity)return;
@@ -51,7 +59,7 @@ public final class BossControl extends SavedData {
         // 兼容r63强化母体：旧档只有480生命的属性，第一次加载时补上身份标记。
         if(mother&&boss.getAttribute(Attributes.MAX_HEALTH).getBaseValue()==480)boss.getPersistentData().putBoolean("SukunaRevealedMother",true);
         boolean enhanced=mother&&boss.getPersistentData().getBoolean("SukunaRevealedMother");
-        double health=boss instanceof GojoEntity?150000:boss instanceof MahoragaEntity?MahoragaEntity.HEALTH:boss instanceof YujiEntity?30000:boss instanceof BuddhaEntity?5000:boss instanceof DaitianEntity?200:boss instanceof BrokenMahitoEntity?20000:mother?(enhanced?480:160):12;
+        double health=boss instanceof GojoEntity?150000:boss instanceof MahoragaEntity?MahoragaEntity.HEALTH:boss instanceof YujiEntity?30000:boss instanceof BuddhaEntity?5000:boss instanceof DaitianEntity?500:boss instanceof BrokenMahitoEntity?20000:mother?(enhanced?480:160):12;
         String key=healthKey(boss);resize(boss,key==null?health:value(boss,key,health),fill);
         double attack=boss instanceof MahoragaEntity?30:boss instanceof DaitianEntity?5:boss instanceof BuddhaEntity?10:boss instanceof YujiEntity?5:boss instanceof BrokenMahitoEntity?40:mother?(enhanced?24:12):2;
         attribute(boss,Attributes.ATTACK_DAMAGE,attack);

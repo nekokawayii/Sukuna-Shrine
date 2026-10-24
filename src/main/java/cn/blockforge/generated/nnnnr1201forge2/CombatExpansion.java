@@ -19,6 +19,7 @@ public final class CombatExpansion {
     private static final class Projectile {
         final ServerPlayer p;final ServerLevel level;final Set<UUID> hit=new HashSet<>();final Map<UUID,BitSet> dragonHits=new HashMap<>();
         Vec3 pos,dir;UUID target;int kind,age,stationary=-1,rise;double width;
+        final long visualId=SlashTerrain.id();List<SlashForms.Line> fragments;
         Projectile(ServerPlayer p,Vec3 pos,Vec3 dir,int kind,double width){this.p=p;level=p.serverLevel();this.pos=pos;this.dir=dir.normalize();this.kind=kind;this.width=width;}
     }
     private record Scheduled(ServerPlayer p,ServerLevel level,long due,Vec3 from,Vec3 dir,UUID target,double width){}
@@ -42,7 +43,7 @@ public final class CombatExpansion {
     private static final Map<UUID,AutoCast> automatic=new HashMap<>();
     public static boolean automatic(ServerPlayer p){return automatic.containsKey(p.getUUID())||chanting(p);}
     public static boolean available(ServerPlayer p,int skill){return CombatExpansionRules.branch(skill)&&allowed(p)&&!automatic(p)&&!DismantleMotion.active(p)&&(skill!=CombatExpansionRules.DRAGON_STAR||Curse.awakened(p))&&(skill!=CombatExpansionRules.PURPLE_FURNACE||VoidJourney.evolved(p)&&!Curse.active(p,"PurpleFurnaceCooldown"))&&(skill!=CombatExpansionRules.CLEAVE_LINGER||Curse.fingers(p)>=5)&&Curse.canSpend(p,skill==CombatExpansionRules.DRAGON_STAR?2000+6*Curse.COST[0]:skill==CombatExpansionRules.PURPLE_FURNACE?Curse.COST[3]:Curse.COST[0]);}
-    public static void castAutomatic(ServerPlayer p,int skill){if(!available(p,skill))return;if(skill==CombatExpansionRules.PURPLE_FURNACE){purple(p);return;}automatic.put(p.getUUID(),new AutoCast(p,p.serverLevel(),skill,p.level().getGameTime()));TechniqueInput.receive(p,new TechniqueInput.Input(skill,0,false,false,false));}
+    public static void castAutomatic(ServerPlayer p,int skill){if(!available(p,skill))return;if(skill==CombatExpansionRules.DRAGON_STAR&&Authority.instant(p)){if(!Curse.spend(p,2000+6*Curse.COST[0]))return;LivingEntity t=Skills.aimTarget(p);Vec3 at=t==null?Skills.aimPoint(p,96):t.getBoundingBox().getCenter();Projectile b=new Projectile(p,at,p.getLookAngle(),DRAGON,4);if(t!=null)b.target=t.getUUID();add(b);Skills.closeDomain(p);Curse.enterBurnout(p,CombatExpansionRules.DRAGON_BURNOUT);return;}if(skill==CombatExpansionRules.PURPLE_FURNACE){purple(p);return;}automatic.put(p.getUUID(),new AutoCast(p,p.serverLevel(),skill,p.level().getGameTime()));TechniqueInput.receive(p,new TechniqueInput.Input(skill,0,false,false,false));}
     private static final List<Projectile> projectiles=new ArrayList<>();
     private static final List<Scheduled> scheduled=new ArrayList<>();
     private static final List<Burst> stars=new ArrayList<>();
@@ -67,6 +68,7 @@ public final class CombatExpansion {
     private static void line(ServerPlayer p,Vec3 a,Vec3 b,int life,long color){fx(p,CombatExpansionRules.FX_SLASH,a,b.subtract(a),1,life,color);}
     /** 调用处已验证解锁并扣费。基础解的姿态替换原输出，分支保留自身输出并追加姿态。 */
     public static boolean afterCast(ServerPlayer p,int skill){
+        if(Authority.instant(p))return false;
         if(!CombatExpansionRules.dismantle(skill)&&!CombatExpansionRules.cleave(skill))return false;
         LivingEntity body=MaidBridge.body(p);TechniqueInput.Input input=TechniqueInput.intent(p);
         boolean crouch=input.crouch()||body.isShiftKeyDown();
@@ -139,8 +141,12 @@ public final class CombatExpansion {
     public static boolean collideSlash(ServerPlayer source,Vec3 from,Vec3 to,Vec3 direction){
         for(Projectile b:List.copyOf(projectiles))if(b.kind==LINGER&&b.stationary>=0&&b.level==source.level()&&valid(b.p,b.level)){
             Vec3 axis=NetBranches.side(b.dir).scale(b.width/2);
-            if(SlashCollision.distanceSquared(point(b.pos.subtract(axis)),point(b.pos.add(axis)),point(from),point(to))>.64)continue;
-            b.kind=GIANT;b.stationary=-1;b.age=0;b.width=24;b.dir=direction.normalize();return true;
+            boolean touches=b.fragments==null?SlashCollision.distanceSquared(point(b.pos.subtract(axis)),point(b.pos.add(axis)),point(from),point(to))<=.64:b.fragments.stream().anyMatch(line->SlashCollision.distanceSquared(point(line.a()),point(line.b()),point(from),point(to))<=.64);
+            if(!touches)continue;
+            b.kind=GIANT;b.stationary=-1;b.age=0;b.width=24;b.dir=direction.normalize();
+            // 合并增强不让之前撞墙消失的缺口复活。
+            if(b.fragments!=null)b.fragments=b.fragments.stream().map(line->new SlashForms.Line(b.pos.add(line.a().subtract(b.pos).scale(2)),b.pos.add(line.b().subtract(b.pos).scale(2)))).toList();
+            return true;
         }return false;
     }
     private static void multiHit(ServerPlayer p,LivingEntity t,int count,double fraction){
@@ -152,49 +158,83 @@ public final class CombatExpansion {
         if(b.kind==LINGER&&b.stationary<0&&!TechniqueInput.holding(b.p,CombatExpansionRules.LINGER)&&!TechniqueInput.holding(b.p,CombatExpansionRules.CLEAVE_LINGER)){projectiles.remove(b);return;}
         if(b.kind==LINGER&&b.stationary>=0&&++b.stationary>CombatExpansionRules.LINGER_LIFE||b.kind!=LINGER&&b.age++>200||b.kind==LINGER&&b.stationary<0&&b.age++>1200){projectiles.remove(b);return;}
         if(b.kind==DRAGON&&b.rise>0){
-            b.pos=b.pos.add(0,.3,0);fx(b.p,CombatExpansionRules.FX_DRAGON,b.pos,new Vec3(0,1,0),1,3,b.age);
+            Vec3 before=b.pos;b.pos=b.pos.add(0,.3,0);dragonDamage(b.p,b.level,before,b.pos,new Vec3(0,1,0),b.age,b.dragonHits,.5);
             if(++b.rise>10){split(b);projectiles.remove(b);}return;
         }
         LivingEntity target=b.target!=null&&b.level.getEntity(b.target) instanceof LivingEntity t&&CombatSettings.canHit(b.p,t)&&!b.hit.contains(t.getUUID())?t:null;
         if((b.kind==HUNT&&b.target!=null||b.kind==METEOR||b.kind==DRAGON)&&target==null&&b.age%4==0){target=Skills.crosshairOrder(b.p,near(b.p,b.pos,b.kind==DRAGON?128:64)).stream().filter(t->!b.hit.contains(t.getUUID())).findFirst().orElse(null);b.target=target==null?null:target.getUUID();}
+        Vec3 oldDirection=b.dir;
         if(target!=null)b.dir=b.dir.lerp(target.getBoundingBox().getCenter().subtract(b.pos).normalize(),b.kind==DRAGON?.18:.3).normalize();
         if(b.kind==LINGER&&b.stationary<0)b.dir=b.p.getLookAngle().normalize();
         double speed=b.kind==LINGER?(b.stationary<0?.1:0):b.kind==DRAGON?1.6:b.kind==METEOR?1.8:3.25;
         Vec3 next=b.pos.add(b.dir.scale(speed));
-        if(b.kind!=LINGER&&b.kind!=DRAGON&&collideSlash(b.p,b.pos,next,b.dir)){projectiles.remove(b);return;}
-        if(b.kind==DRAGON){
-            fx(b.p,CombatExpansionRules.FX_DRAGON,next,b.dir,1,3,b.age);
-            dragonDamage(b.p,b.level,b.pos,next,b.dir,b.age,b.dragonHits,.5);b.hit.addAll(b.dragonHits.keySet());
-            if(b.age>=160||b.hit.size()>=10)b.rise=1;b.pos=next;return;
-        }
-        else {Vec3 axis=NetBranches.side(b.dir);line(b.p,next.subtract(axis.scale(b.width/2)),next.add(axis.scale(b.width/2)),3,b.kind==METEOR?2:b.kind==GIANT?1:0);}
-        double radius=b.kind==DRAGON?2:b.kind==METEOR?.65:b.width/2;
-        for(LivingEntity t:b.level.getEntitiesOfClass(LivingEntity.class,new AABB(b.pos,next).inflate(radius),t->CombatSettings.canHit(b.p,t)&&!DomainClash.active(t))){
-            if(b.hit.contains(t.getUUID()))continue;
-            Vec3 axis=NetBranches.side(b.dir);boolean hit=false;
-            for(int i=0;i<=8;i++){Vec3 c=b.pos.lerp(next,i/8.0);AABB box=t.getBoundingBox().inflate(b.kind==DRAGON?1.2:.35);if(box.contains(c)||box.clip(c.subtract(axis.scale(radius)),c.add(axis.scale(radius))).isPresent()){hit=true;break;}}
-            if(!hit)continue;b.hit.add(t.getUUID());multiHit(b.p,t,b.kind==LINGER?10:b.kind==GIANT?20:b.kind==DRAGON?3:1,b.kind==DRAGON||b.kind==METEOR?.5:1);
-            if(!projectiles.contains(b))return;
-            if(b.kind==LINGER||b.kind==METEOR||b.kind==HUNT&&b.target!=null){projectiles.remove(b);return;}
-            if(b.kind==DRAGON&&b.hit.size()>=10){b.rise=1;break;}
-        }
-        if(b.kind==DRAGON&&b.age>=160)b.rise=1;
-        if(b.kind==GIANT)SkillDestruction.line(b.p,b.pos,next,2);
-        b.pos=next;
+        if(b.kind!=DRAGON){tickFiniteProjectile(b,next,oldDirection);return;}
+        dragonDamage(b.p,b.level,b.pos,next,b.dir,b.age,b.dragonHits,.5);b.hit.addAll(b.dragonHits.keySet());
+        if(b.age>=160||b.hit.size()>=10)b.rise=1;b.pos=next;
     }
+    private static void tickFiniteProjectile(Projectile b,Vec3 next,Vec3 oldDirection){
+        if(b.fragments==null){Vec3 axis=NetBranches.side(b.dir).scale(b.width/2);b.fragments=SlashTerrain.launch(b.p,List.of(new SlashForms.Line(b.pos.subtract(axis),b.pos.add(axis))),b.dir);oldDirection=b.dir;}
+        // 追踪转向只旋转剩下的刀刃，不能重建完整长度；旋转中的每个小步也查墙。
+        Vec3 oldSide=NetBranches.side(oldDirection),newSide=NetBranches.side(b.dir);
+        if(oldSide.dot(newSide)<.999999){
+            List<SlashForms.Line> turned=new ArrayList<>();
+            for(var line:b.fragments){
+                double a=line.a().subtract(b.pos).dot(oldSide),z=line.b().subtract(b.pos).dot(oldSide);
+                int count=Math.max(1,(int)Math.ceil(Math.abs(z-a)/.25));
+                for(int i=0;i<count;i++){
+                    double lo=a+(z-a)*i/count,hi=a+(z-a)*(i+1)/count;
+                    var original=new SlashForms.Line(b.pos.add(oldSide.scale(lo)),b.pos.add(oldSide.scale(hi)));
+                    Vec3 rotation=newSide.subtract(oldSide).scale((lo+hi)*.5);
+                    var turn=SlashTerrain.advance(b.p,List.of(original),rotation);
+                    for(var survivor:turn.remaining()){
+                        double u=original.b().subtract(original.a()).dot(survivor.a().subtract(rotation).subtract(original.a()))/Math.max(1e-12,original.b().distanceToSqr(original.a()));
+                        double v=original.b().subtract(original.a()).dot(survivor.b().subtract(rotation).subtract(original.a()))/Math.max(1e-12,original.b().distanceToSqr(original.a()));
+                        turned.add(new SlashForms.Line(b.pos.add(newSide.scale(lo+(hi-lo)*u)),b.pos.add(newSide.scale(lo+(hi-lo)*v))));
+                    }
+                }
+            }
+            b.fragments=turned;
+        }
+        if(b.fragments.isEmpty()){SlashTerrain.send(b.p,b.visualId,List.of(),b.pos);projectiles.remove(b);return;}
+        var result=SlashTerrain.advance(b.p,b.fragments,next.subtract(b.pos));
+        boolean consumed=false;
+        for(var sweep:result.swept()){
+            if(b.kind!=LINGER)for(int i=0;i<=8;i++){Vec3 move=sweep.step().scale(i/8.0);if(collideSlash(b.p,sweep.a().add(move),sweep.b().add(move),b.dir)){SlashTerrain.send(b.p,b.visualId,List.of(),b.pos);projectiles.remove(b);return;}}
+            for(LivingEntity t:b.level.getEntitiesOfClass(LivingEntity.class,new AABB(sweep.a(),sweep.b()).expandTowards(sweep.step()).inflate(.01),t->CombatSettings.canHit(b.p,t)&&!DomainClash.active(t)&&!b.hit.contains(t.getUUID())))
+                if(SlashTerrain.hits(sweep,t)){
+                    b.hit.add(t.getUUID());multiHit(b.p,t,b.kind==LINGER?10:b.kind==GIANT?20:1,b.kind==METEOR?.5:1);
+                    if(!projectiles.contains(b))return;
+                    if(b.kind==LINGER||b.kind==METEOR||b.kind==HUNT&&b.target!=null){consumed=true;break;}
+                }
+            if(consumed)break;
+        }
+        SlashTerrain.send(b.p,b.visualId,result.swept(),b.pos);b.fragments=result.remaining();b.pos=next;
+        if(consumed||b.fragments.isEmpty())projectiles.remove(b);
+    }
+    private record DragonPart(int index,double lo,double hi){}
+    private static final class DragonFlight {final long id=SlashTerrain.id();List<DragonPart> parts=new ArrayList<>();List<DragonGeometry.Cut> previous;long last;}
+    private static final Map<Map<UUID,BitSet>,DragonFlight> dragonFlights=new IdentityHashMap<>();
     static void dragonDamage(ServerPlayer p,ServerLevel level,Vec3 previous,Vec3 next,Vec3 direction,int age,Map<UUID,BitSet> memory,double fraction){dragonDamage(p,level,previous,next,direction,age,memory,fraction,t->true);}
     static void dragonDamage(ServerPlayer p,ServerLevel level,Vec3 previous,Vec3 next,Vec3 direction,int age,Map<UUID,BitSet> memory,double fraction,java.util.function.Predicate<LivingEntity> eligible){
-        List<LivingEntity> targets=level.getEntitiesOfClass(LivingEntity.class,new AABB(previous,next).inflate(15),t->CombatSettings.canHit(p,t)&&!DomainClash.active(t)&&eligible.test(t));
-        int steps=Math.max(1,(int)Math.ceil(previous.distanceTo(next)/.4));
-        for(int sample=0;sample<=steps;sample++){
-            List<DragonGeometry.Cut> cuts=DragonGeometry.cuts(previous.lerp(next,sample/(double)steps),direction,age);
-            for(LivingEntity t:targets){BitSet seen=memory.computeIfAbsent(t.getUUID(),id->new BitSet(cuts.size()));
-                for(int i=0;i<cuts.size()&&t.isAlive();i++){if(seen.get(i))continue;DragonGeometry.Cut cut=cuts.get(i);AABB box=t.getBoundingBox().inflate(.3);
-                    if(box.contains(cut.a())||box.clip(cut.a(),cut.b()).isPresent()){seen.set(i);SlashForms.exactHit(p,t,fraction);}
-                }
-                if(seen.isEmpty())memory.remove(t.getUUID());
+        dragonFlights.values().removeIf(f->System.nanoTime()-f.last>5_000_000_000L);
+        DragonFlight flight=dragonFlights.computeIfAbsent(memory,k->new DragonFlight());flight.last=System.nanoTime();
+        List<DragonGeometry.Cut> current=DragonGeometry.cuts(next,direction,age);
+        if(flight.previous==null){flight.previous=DragonGeometry.cuts(previous,direction,age-1);for(int i=0;i<current.size();i++)for(int j=0;j<8;j++)flight.parts.add(new DragonPart(i,j/8.0,(j+1)/8.0));}
+        List<DragonPart> survivors=new ArrayList<>();List<SlashTerrain.Sweep> visible=new ArrayList<>();
+        for(DragonPart part:flight.parts){
+            var old=flight.previous.get(part.index);var cut=current.get(part.index);
+            Vec3 a=old.a().lerp(old.b(),part.lo),b=old.a().lerp(old.b(),part.hi),toA=cut.a().lerp(cut.b(),part.lo),toB=cut.a().lerp(cut.b(),part.hi);
+            Vec3 step=toA.add(toB).subtract(a).subtract(b).scale(.5);var result=SlashTerrain.advance(p,List.of(new SlashForms.Line(a,b)),step);visible.addAll(result.swept());
+            for(var sweep:result.swept())for(LivingEntity t:level.getEntitiesOfClass(LivingEntity.class,new AABB(sweep.a(),sweep.b()).expandTowards(sweep.step()).inflate(.01),t->CombatSettings.canHit(p,t)&&!DomainClash.active(t)&&eligible.test(t))){
+                BitSet seen=memory.computeIfAbsent(t.getUUID(),k->new BitSet());if(!seen.get(part.index)&&SlashTerrain.hits(sweep,t)){seen.set(part.index);SlashForms.exactHit(p,t,fraction);}
+            }
+            Vec3 edge=b.subtract(a);double length=Math.max(1e-12,edge.lengthSqr());
+            for(var line:result.remaining()){
+                double lo=Math.max(0,Math.min(1,line.a().subtract(step).subtract(a).dot(edge)/length)),hi=Math.max(0,Math.min(1,line.b().subtract(step).subtract(a).dot(edge)/length));
+                survivors.add(new DragonPart(part.index,part.lo+(part.hi-part.lo)*lo,part.lo+(part.hi-part.lo)*hi));
             }
         }
+        flight.parts=survivors;flight.previous=current;SlashTerrain.send(p,flight.id,visible,next);
     }
     static void starDamage(ServerPlayer p,Vec3 at,double fraction){for(LivingEntity t:Skills.targets(p.serverLevel(),p,at,3))for(DragonGeometry.Cut cut:DragonGeometry.star(at)){AABB box=t.getBoundingBox().inflate(.3);if(box.contains(cut.a())||box.clip(cut.a(),cut.b()).isPresent())SlashForms.exactHit(p,t,fraction);}}
     private static void split(Projectile b){
@@ -204,6 +244,7 @@ public final class CombatExpansion {
         if(!allowed(p)||!Curse.awakened(p)){CastFeedback.tell(p,"世界斩需要融合即身佛肉体，且术式可用");return;}
         if(chants.containsKey(p.getUUID())||CastFeedback.cooldown(p,"FormCooldown"+SlashFormRules.WORLD,"世界斩"))return;
         if(!Curse.canSpend(p,2000)){CastFeedback.unavailable(p,2000);return;}
+        if(Authority.instant(p)){if(Curse.spend(p,2000)){Curse.status(p,"FormCooldown"+SlashFormRules.WORLD,CombatExpansionRules.WORLD_COOLDOWN);SlashForms.world(p);}return;}
         chants.put(p.getUUID(),new Chant(p,false,input));
     }
     public static void dragonPress(ServerPlayer p){
@@ -320,6 +361,6 @@ public final class CombatExpansion {
     }
     @SubscribeEvent public static void logout(PlayerEvent.PlayerLoggedOutEvent e){if(e.getEntity() instanceof ServerPlayer p)cancel(p);}
     @SubscribeEvent public static void dimension(PlayerEvent.PlayerChangedDimensionEvent e){if(e.getEntity() instanceof ServerPlayer p)cancel(p);}
-    @SubscribeEvent public static void stop(ServerStoppedEvent e){for(Rain r:List.copyOf(rains.values()))releaseRain(r);projectiles.clear();cutSeries.clear();scheduled.clear();stars.clear();falls.clear();chants.clear();drawing.clear();streams.clear();automatic.clear();TechniqueInput.clear();}
+    @SubscribeEvent public static void stop(ServerStoppedEvent e){for(Rain r:List.copyOf(rains.values()))releaseRain(r);projectiles.clear();dragonFlights.clear();cutSeries.clear();scheduled.clear();stars.clear();falls.clear();chants.clear();drawing.clear();streams.clear();automatic.clear();TechniqueInput.clear();}
     private CombatExpansion(){}
 }

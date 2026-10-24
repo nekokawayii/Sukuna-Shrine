@@ -53,25 +53,25 @@ public final class DismantlePose {
     /** 取某个动作在"已过 age 刻"时的姿态。 */
     public static Pose sample(int kind,double age){
         if(kind==DismantleMotionRules.BACKFLIP)    // 后翻：蓄力 → 团身（翻转矩阵同时转）→ 展身 → 落地
-            return frames(age,new double[]{0,4,9,16,22,27,33,39,46},
+            return frames(age,new double[]{0,4,9,16,22,27,33,39,DismantleMotionRules.duration(kind)},
                 new Pose[]{STAND,DEEP,TUCK,TUCK,SPREAD,OPEN,KNEEL,LAND,STAND});
         if(kind==DismantleMotionRules.FLYING_KICK) // 飞踢：收势 → 踢直（覆盖 5~16 判定窗口）→ 收腿团身 → 落地
             return frames(age,new double[]{0,4,7,12,17,21,25,29,34,38,44,50},
                 new Pose[]{STAND,KICK_WIND,KICK,KICK,CROUCH,TUCK,TUCK,OPEN,KNEEL,LAND,STAND,STAND});
         if(kind==DismantleMotionRules.SLIDE)       // 滑铲：扑低 → 保持低姿滑行 → 起身
-            return frames(age,new double[]{0,4,10,18,24,30,36},
+            return frames(age,new double[]{0,4,10,18,24,28,DismantleMotionRules.duration(kind)},
                 new Pose[]{STAND,SLIDE_LOW,SLIDE_LOW,SLIDE_LOW,SLIDE_MID,OPEN,STAND});
         if(kind==DismantleMotionRules.AIR_PUNCH)   // 冲拳：收势 → 冲拳 → 保持 → 收
-            return frames(age,new double[]{0,4,9,14,20,26,32},
+            return frames(age,new double[]{0,4,9,14,20,24,DismantleMotionRules.duration(kind)},
                 new Pose[]{STAND,CROUCH,PUNCH,PUNCH,PUNCH,CROUCH,STAND});
         if(kind==DismantleMotionRules.KNEEL)       // 跪地：深蹲 → 单膝跪 → 展臂 → 起
-            return frames(age,new double[]{0,5,9,14,19,24},
+            return frames(age,new double[]{0,5,9,14,18,DismantleMotionRules.duration(kind)},
                 new Pose[]{STAND,DEEP,KNEEL,KNEEL,OPEN,STAND});
         if(kind==DismantleMotionRules.GROUND_SMASH)// 砸地：举双手 → 下砸 → 跪姿 → 起
-            return frames(age,new double[]{0,4,7,10,14,18,24},
+            return frames(age,new double[]{0,4,7,10,14,16,DismantleMotionRules.duration(kind)},
                 new Pose[]{STAND,RAISE,RAISE,SLAM,KNEEL,KNEEL,STAND});
         // 其余（旋转环斩等）：双臂平展，整体自转由姿态层矩阵完成
-        return frames(age,new double[]{0,4,10,20,26,32},
+        return frames(age,new double[]{0,4,10,20,26,DismantleMotionRules.duration(kind)},
             new Pose[]{STAND,CROUCH,TURN,TURN,OPEN,STAND});
     }
     private static Pose frames(double age,double[] times,Pose[] poses){for(int i=1;i<times.length;i++)if(age<=times[i])return poses[i-1].mix(poses[i],DismantleMotionRules.phase(age,times[i-1],times[i]));return poses[poses.length-1];}

@@ -66,6 +66,7 @@ public final class RuinAtmosphere {
         if(e.phase!=TickEvent.Phase.END||!(e.player instanceof ServerPlayer p)||p.tickCount%20!=0)return;
         BlockPos base=origin(p);if(base==null){p.getPersistentData().remove("InsideSoulRuin");return;}
         boolean enter=!p.getPersistentData().getBoolean("InsideSoulRuin");p.getPersistentData().putBoolean("InsideSoulRuin",true);
+        MegumiRuins.visit(p,base,enter);
         Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(()->p),new Network.Effect(97,p.getId(),Vec3.atLowerCornerOf(base),new Vec3(rotation(p),0,0),1,45,enter?1:0));
         if(enter)p.playNotifySound(SoundEvents.BELL_RESONATE,SoundSource.AMBIENT,0.7f,0.5f);
         if(p.tickCount%160==0){p.playNotifySound(SoundEvents.AMBIENT_SOUL_SAND_VALLEY_MOOD.value(),SoundSource.AMBIENT,0.35f,0.65f);p.playNotifySound(SoundEvents.EVOKER_PREPARE_SUMMON,SoundSource.AMBIENT,0.14f,0.5f);}

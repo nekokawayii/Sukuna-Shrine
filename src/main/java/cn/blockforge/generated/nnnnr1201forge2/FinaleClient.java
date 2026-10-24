@@ -19,7 +19,6 @@ import net.minecraftforge.eventbus.api.*;
 import net.minecraftforge.fml.common.Mod;
 
 /** 终式表现按服务端年龄续租；只移动本机镜头，不替换相机实体或修改全局按键。 */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
 public final class FinaleClient {
     private static final class State {
         Network.Effect e;long received;float age;boolean shattered;

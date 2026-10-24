@@ -1,0 +1,29 @@
+{
+  "vertex": "sukuna:gojo_optics",
+  "fragment": "sukuna:gojo_optics",
+  "attributes": ["Position"],
+  "samplers": [{"name":"Sampler0"},{"name":"Sampler1"},{"name":"Sampler2"}],
+  "uniforms": [
+    {"name":"InverseViewProjection","type":"matrix4x4","count":16,"values":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]},
+    {"name":"ViewProjection","type":"matrix4x4","count":16,"values":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]},
+    {"name":"FrameSize","type":"float","count":2,"values":[1920,1080]},
+    {"name":"LightCount","type":"int","count":1,"values":[0]},
+    {"name":"Intensity","type":"float","count":1,"values":[10]},
+    {"name":"Light0","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Light1","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Light2","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Light3","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Tint0","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Tint1","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Tint2","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Tint3","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Shadow0","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Shadow1","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Shadow2","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Shadow3","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Lens0","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Lens1","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Lens2","type":"float","count":4,"values":[0,0,0,0]},
+    {"name":"Lens3","type":"float","count":4,"values":[0,0,0,0]}
+  ]
+}

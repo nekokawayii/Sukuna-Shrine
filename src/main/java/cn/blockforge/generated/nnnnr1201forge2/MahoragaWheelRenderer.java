@@ -31,9 +31,9 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
 public final class MahoragaWheelRenderer {
     private static final BbModel WHEEL=new BbModel("mahoraga_wheel","mahoraga_wheel");
-    /** 平躺在头顶上方的高度：相对玩家碰撞箱顶（含潜行自动降低），0.28 格刚好压着头皮之上。 */
-    private static final double HEAD_LIFT=0.28;
-    private static final float SCALE=1.35f;
+    /** 不完全显现的法轮贴近头顶但不压进皮肤；模型居中后直径约 1.18 格。 */
+    private static final double HEAD_LIFT=0.20;
+    private static final float SCALE=1.12f;
     /** 自转速度（度/刻）与转动光环的半径范围。 */
     private static final float SELF_SPIN=0.9f;
     private static final float RING_INNER=1.10f,RING_OUTER=2.05f;
@@ -47,7 +47,7 @@ public final class MahoragaWheelRenderer {
         for(MahoragaWheelClient.Entry entry:MahoragaWheelClient.entries()){
             Entity owner=mc.level.getEntity(entry.owner);
             if(!(owner instanceof net.minecraft.world.entity.player.Player player)||!player.isAlive())continue;
-            if(!MahoragaRules.wheelOnHead(player))continue; // 没戴在头上：不画
+            if(!MahoragaRules.wheelOnHead(player)&&!TenShadowsClient.partial(player.getUUID()))continue; // 真实头盔或不完全显现
             if(camera.distanceToSqr(owner.position())>96*96)continue;
             Vec3 at=owner.position().add(0,owner.getBbHeight()+HEAD_LIFT+Math.sin(age*0.06f)*0.03,0);
             float[] tint=tint(entry.cells);
@@ -62,6 +62,7 @@ public final class MahoragaWheelRenderer {
             ps.mulPose(Axis.XP.rotationDegrees(-90));           // 盘面在 XY 平面 → 放平
             ps.mulPose(Axis.ZP.rotationDegrees(age*SELF_SPIN)); // 平躺后绕世界 Y 轴自转
             ps.scale(SCALE,SCALE,SCALE);
+            ps.translate(-0.5,-0.5,-0.5); // 上传模型坐标为 0..16，移到旋转中心避免偏在头的一侧
             RenderSystem.disableCull();RenderSystem.enableDepthTest();RenderSystem.depthMask(false);
             MultiBufferSource.BufferSource buffers=mc.renderBuffers().bufferSource();
             WHEEL.render(ps,buffers,15728880,"spin",entry.shown,tint[0],tint[1],tint[2],0.94f);
@@ -74,7 +75,6 @@ public final class MahoragaWheelRenderer {
                 // 兜底：再画一圈更大的亮环，保证"转了"这件事在任何视角都看得见
                 bigRing(ps,camera,at,entry.ringProgress(),tint,entry.flash);
             }
-            if(debug++%40==0)System.out.println("[SUKUNA-WHEEL] draw owner="+entry.owner+" cells="+entry.cells+" ring="+entry.ring+" shown="+entry.shown+" dist="+(int)Math.sqrt(camera.distanceToSqr(owner.position()))+" camY="+(int)camera.y+" atY="+(int)at.y);
         }
     }
     /** 一圈水平放置、由内向外扩散并渐隐的金色光环（POSITION_COLOR + 加色混合，纯自绘）。 */
@@ -150,6 +150,5 @@ public final class MahoragaWheelRenderer {
         if(cells>0)return new float[]{1f,0.78f,0.30f};
         return new float[]{0.82f,0.70f,0.36f};
     }
-    private static int debug;
     private MahoragaWheelRenderer(){}
 }

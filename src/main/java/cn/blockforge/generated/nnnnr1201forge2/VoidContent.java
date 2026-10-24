@@ -35,7 +35,7 @@ public final class VoidContent {
         @Override public InteractionResultHolder<ItemStack> use(Level l,Player p,InteractionHand h){
             ItemStack stack=p.getItemInHand(h);
             if(!l.isClientSide&&p instanceof ServerPlayer sp){
-                if(MahoragaRitual.summon(sp)){if(!sp.isCreative())stack.shrink(1);}
+                TenShadows.begin(sp);
             }
             return InteractionResultHolder.sidedSuccess(stack,l.isClientSide);
         }
@@ -50,7 +50,7 @@ public final class VoidContent {
             ItemStack stack=p.getItemInHand(h);
             if(!l.isClientSide&&p instanceof ServerPlayer sp&&sp.isShiftKeyDown()){
                 // 潜行右键（含对着空气）：召唤/叫回**同一只**友方魔虚罗，继承已有适应、血量回满
-                MahoragaAdaptStore.summonAlly(sp);
+                TenShadows.begin(sp);
                 return InteractionResultHolder.sidedSuccess(stack,l.isClientSide);
             }
             // 潜行右键：不戴上（哪怕头盔是空的），只做召唤

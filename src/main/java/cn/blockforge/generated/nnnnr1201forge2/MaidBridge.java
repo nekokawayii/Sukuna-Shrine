@@ -35,7 +35,7 @@ public final class MaidBridge {
     public static boolean recovering(Player p){return isCaster(p)&&Curse.data(p).getBoolean("MaidRecovering");}
     public static boolean domainReady(ServerPlayer p){return !isCaster(p)||!Curse.active(p,"MaidDomainCooldown");}
     public static void domainOpened(ServerPlayer p){if(isCaster(p))Curse.status(p,"MaidDomainCooldown",ShrineRules.MAID_DOMAIN_COOLDOWN_TICKS);}
-    public static ServerPlayer owner(Actor actor){return actor.maid instanceof TamableAnimal pet&&pet.getOwnerUUID()!=null?actor.server.getPlayerList().getPlayer(pet.getOwnerUUID()):null;}
+    public static ServerPlayer owner(Actor actor){ServerPlayer legion=Legion.owner(actor.maid);return legion!=null?legion:actor.maid instanceof TamableAnimal pet&&pet.getOwnerUUID()!=null?actor.server.getPlayerList().getPlayer(pet.getOwnerUUID()):null;}
     public static boolean hasMemory(Actor actor){return Curse.data(actor).getBoolean("Memory");}
     public static boolean consumeMemory(Actor actor){
         if(!BranchRules.acceptMemory(hasMemory(actor),Uraume.unlocked(actor),true,false))return false;
@@ -66,6 +66,7 @@ public final class MaidBridge {
         return false;
     }
     public static boolean canHit(Actor actor,LivingEntity target){
+        ServerPlayer commander=Authority.owner(actor);if(commander!=null)return target!=actor.maid&&target!=commander&&CombatSettings.canHit(commander,target);
         LivingEntity maid=actor.maid;if(target==null||target==maid||!target.isAlive()||target.isRemoved()||target.isSpectator()||target.level()!=maid.level()||EternalLove.settling(maid))return false;
         if(target instanceof GuardianEntity g&&g.peacefulResident())return false;
         if(EternalLove.protects(actor,target))return false;
@@ -85,12 +86,13 @@ public final class MaidBridge {
     }
     private static void modifier(LivingEntity maid,Attribute attribute,UUID id,double amount){var a=maid.getAttribute(attribute);if(a==null)return;var old=a.getModifier(id);if(old!=null&&Math.abs(old.getAmount()-amount)<0.00001)return;a.removeModifier(id);if(amount!=0)a.addTransientModifier(new AttributeModifier(id,"御厨子成长",amount,AttributeModifier.Operation.ADDITION));}
     public static void apply(Actor a){
+        if(Legion.member(a.maid)||Authority.echo(a.maid))return;
         modifier(a.maid,Attributes.MAX_HEALTH,HEALTH,Curse.healthBonus(a));modifier(a.maid,Attributes.ATTACK_DAMAGE,ATTACK,Curse.attackBonus(a));
         a.getAttribute(Attributes.MAX_HEALTH).setBaseValue(a.maid.getMaxHealth());
         if(a.maid.getAttribute(Attributes.ATTACK_DAMAGE)!=null)a.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(a.maid.getAttributeValue(Attributes.ATTACK_DAMAGE));
     }
     public static ServerPlayer progression(LivingEntity living){return living instanceof ServerPlayer p?p:isMaid(living)&&living.level() instanceof ServerLevel?actor(living):null;}
-    public static ServerPlayer find(ServerLevel level,UUID id){ServerPlayer player=level.getServer().getPlayerList().getPlayer(id);if(player!=null)return player;var entity=level.getEntity(id);return entity instanceof LivingEntity living&&isMaid(living)?actor(living):null;}
+    public static ServerPlayer find(ServerLevel level,UUID id){ServerPlayer player=level.getServer().getPlayerList().getPlayer(id);if(player!=null)return player;var entity=level.getEntity(id);return entity instanceof LivingEntity living&&(isMaid(living)||Legion.member(living)||Authority.echo(living))?actor(living):null;}
     public static final class Actor extends FakePlayer {
         public final LivingEntity maid;
         public LivingEntity aim;
@@ -98,10 +100,10 @@ public final class MaidBridge {
         public void syncPosition(){setPos(maid.getX(),maid.getY(),maid.getZ());setYRot(maid.getYRot());setXRot(maid.getXRot());tickCount=maid.tickCount;if(aim!=null){Vec3 d=aim.getEyePosition().subtract(maid.getEyePosition());setYRot((float)(Math.toDegrees(Math.atan2(d.z,d.x))-90));setXRot((float)-Math.toDegrees(Math.atan2(d.y,Math.sqrt(d.x*d.x+d.z*d.z))));}}
         @Override public CompoundTag getPersistentData(){return maid==null?super.getPersistentData():maid.getPersistentData();}
         @Override public float getAttackStrengthScale(float partial){return 1;}
-        @Override public float getStandingEyeHeight(Pose pose,EntityDimensions dimensions){return maid==null?super.getStandingEyeHeight(pose,dimensions):maid.getEyeHeight();}
+        @Override public float getStandingEyeHeight(Pose pose,EntityDimensions dimensions){return maid==null?super.getStandingEyeHeight(pose,dimensions):Authority.echo(maid)?1.62f:maid.getEyeHeight();}
         @Override public Iterable<ItemStack> getArmorSlots(){return maid==null?super.getArmorSlots():maid.getArmorSlots();}
         @Override public ItemStack getItemBySlot(EquipmentSlot slot){return maid==null?super.getItemBySlot(slot):maid.getItemBySlot(slot);}
-        @Override public boolean isAlive(){return maid==null?super.isAlive():!isRemoved()&&maid.isAlive()&&!maid.isRemoved();}
+        @Override public boolean isAlive(){if(maid==null)return super.isAlive();if(Legion.member(maid)||Authority.echo(maid)){ServerPlayer owner=Authority.owner(this);if(owner==null||!owner.isAlive()||owner.hasDisconnected()||owner.level()!=maid.level())return false;}return !isRemoved()&&maid.isAlive()&&!maid.isRemoved();}
         @Override public float getHealth(){return maid==null?super.getHealth():maid.getHealth();}
         @Override public void heal(float amount){if(maid!=null)maid.heal(amount);}
         @Override public void setHealth(float health){if(maid==null)super.setHealth(health);else maid.setHealth(health);}
@@ -110,12 +112,12 @@ public final class MaidBridge {
         @Override public boolean isInvulnerableTo(net.minecraft.world.damagesource.DamageSource source){return false;}
         @Override public boolean hurt(net.minecraft.world.damagesource.DamageSource source,float amount){return maid!=null&&maid.hurt(source,amount);}
         @Override public void teleportTo(double x,double y,double z){if(maid!=null)maid.teleportTo(x,y,z);setPos(x,y,z);}
-        void retire(){Skills.releaseCaster(this);GuardianPlayerSkills.cancel(this);setRemoved(RemovalReason.UNLOADED_TO_CHUNK);}
+        void retire(){AuthoritySkills.cancel(this);Skills.releaseCaster(this);GuardianPlayerSkills.cancel(this);setRemoved(RemovalReason.UNLOADED_TO_CHUNK);}
     }
     public static CompoundTag progress(LivingEntity maid){var root=maid.getPersistentData();if(!root.contains("SukunaProgress")){var tag=new CompoundTag();tag.putDouble("Energy",1000);root.put("SukunaProgress",tag);}return root.getCompound("SukunaProgress");}
     @SubscribeEvent(priority=EventPriority.HIGHEST) public static void tick(TickEvent.ServerTickEvent event){
         if(event.phase!=TickEvent.Phase.END)return;
-        for(Actor a:List.copyOf(ACTORS.values())){if(!a.isAlive()||a.maid.level()!=a.level()){a.retire();ACTORS.remove(a.getUUID(),a);continue;}a.syncPosition();syncOwnerFlags(a);if(Curse.data(a).getBoolean("Memory"))Journey.tickCaster(a);if(a.maid.tickCount%20==0){Curse.tickCaster(a);apply(a);VoidJourney.repairOldVictory(a);GuardianProgress.deliverMaid(a);}}
+        for(Actor a:List.copyOf(ACTORS.values())){if(!a.isAlive()||a.maid.level()!=a.level()){a.retire();ACTORS.remove(a.getUUID(),a);continue;}a.syncPosition();DeathStar.tickAnemia(a);AuthoritySkills.tickAutomatic(a);syncOwnerFlags(a);if(Curse.data(a).getBoolean("Memory")&&!Legion.member(a.maid)&&!Authority.echo(a.maid))Journey.tickCaster(a);if(a.maid.tickCount%20==0){Curse.tickCaster(a);apply(a);if(!Legion.member(a.maid)&&!Authority.echo(a.maid)){VoidJourney.repairOldVictory(a);GuardianProgress.deliverMaid(a);}}}
     }
     @SubscribeEvent(priority=EventPriority.HIGH) public static void damaged(LivingHurtEvent event){
         Actor a=caster(event.getEntity());if(a==null||event.getEntity()==a)return;

@@ -1,0 +1,1 @@
+{"parent":"builtin/entity","textures":{"particle":"sukuna:entity/sealing/jacobs_ladder_0"},"display":{"gui":{"rotation":[10,0,0],"scale":[1.2,1.2,1.2]},"ground":{"scale":[0.5,0.5,0.5]},"thirdperson_righthand":{"scale":[0.6,0.6,0.6]},"firstperson_righthand":{"scale":[0.7,0.7,0.7]}}}

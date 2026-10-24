@@ -159,7 +159,7 @@ public final class SixfoldFinale {
             Vec3 next=t.getBoundingBox().getCenter(),dir=next.subtract(s.dragon).normalize();if(dir.lengthSqr()<.01)dir=new Vec3(0,0,1);
             // 对路线分段采样，判定与渲染共用63道龙身斩击；每道为普通龙的50%，即解25%。
             int n=Math.max(1,(int)Math.ceil(s.dragon.distanceTo(next)/8));
-            for(int i=1;i<=n;i++){Vec3 from=s.dragon.lerp(next,(i-1)/(double)n),to=s.dragon.lerp(next,i/(double)n);CombatExpansion.dragonDamage(s.p,s.level,from,to,dir,s.age,s.dragonHits,.25,s.dragonRoute::contains);if(i%3==0||i==n)fx(s,CombatExpansionRules.FX_DRAGON,to,dir,1,5,s.age);}
+            for(int i=1;i<=n;i++){Vec3 from=s.dragon.lerp(next,(i-1)/(double)n),to=s.dragon.lerp(next,i/(double)n);CombatExpansion.dragonDamage(s.p,s.level,from,to,dir,s.age,s.dragonHits,.25,s.dragonRoute::contains);}
             s.dragon=next;
         }
         if(elapsed==14){for(int i=0;i<6;i++){double a=i*Math.PI/3;Vec3 at=s.dragon.add(Math.cos(a)*4,3,Math.sin(a)*4);fx(s,CombatExpansionRules.FX_STAR,at,Vec3.ZERO,1,10,i);CombatExpansion.starDamage(s.p,at,.25);}sound(s,SoundEvents.FIREWORK_ROCKET_BLAST,.65f,.65f);}
@@ -185,7 +185,7 @@ public final class SixfoldFinale {
     private static void worldTerrain(Cast s){
         int wave=s.age-FinaleRules.TRIGGERS[3];double radius=(wave+1)*15.0;
         for(LivingEntity t:arena(s))if(!s.worldHits.contains(t.getUUID())&&t.position().multiply(1,0,1).distanceToSqr(s.center.multiply(1,0,1))<=radius*radius){
-            s.worldHits.add(t.getUUID());t.invulnerableTime=0;float amount=WorldSlashRules.damage(t.getMaxHealth(),NetBranches.dismantleDamage(s.p,t));
+            s.worldHits.add(t.getUUID());t.invulnerableTime=0;float amount=WorldSlashRules.damage((float)(t.getMaxHealth()*Authority.damageScale(s.p)),NetBranches.dismantleDamage(s.p,t));
             AttackTypes.mark(AttackTypes.FINALE);CombatSettings.hurt(s.p,t,s.level.damageSources().sonicBoom(s.p),amount*.8f);
         }
         for(Entity entity:s.level.getEntities(s.body,new AABB(s.center,s.center).inflate(radius),e->e instanceof Projectile))if(entity.position().distanceToSqr(s.center)<=radius*radius)entity.discard();
@@ -205,7 +205,8 @@ public final class SixfoldFinale {
     }
     private static void scarFx(LivingEntity t){if(t.level() instanceof ServerLevel level){var tag=t.getPersistentData();Network.send(level,new Network.Effect(FinaleRules.FX_SCAR,t.getId(),t.position(),Vec3.ZERO,1,80,t.getUUID().getLeastSignificantBits()).wallpaper(tag.hasUUID(SCAR+"Wallpaper")?tag.getUUID(SCAR+"Wallpaper"):null,tag.getBoolean(SCAR+"Desktop")));}}
     private static void pay(ServerPlayer p){
-        Curse.data(p).putDouble("Energy",0);Curse.status(p,"FinaleNoRecovery",FinaleRules.REGEN_LOCK);Curse.status(p,"FinaleBurnout",FinaleRules.BURNOUT);Curse.status(p,"RecoveryDelay",FinaleRules.REGEN_LOCK);Curse.data(p).remove("FinalePending");Curse.data(p).remove("FinaleSavedGravity");Curse.enterBurnout(p,FinaleRules.BURNOUT);Curse.sync(p);
+        ServerPlayer pool=Authority.pool(p);if(pool!=null){Curse.status(pool,"FinaleNoRecovery",FinaleRules.REGEN_LOCK);Curse.status(pool,"RecoveryDelay",FinaleRules.REGEN_LOCK);}
+        Curse.add(p,-Curse.energy(p));Curse.status(p,"FinaleNoRecovery",FinaleRules.REGEN_LOCK);Curse.status(p,"FinaleBurnout",FinaleRules.BURNOUT);Curse.status(p,"RecoveryDelay",FinaleRules.REGEN_LOCK);Curse.data(p).remove("FinalePending");Curse.data(p).remove("FinaleSavedGravity");Curse.enterBurnout(p,FinaleRules.BURNOUT);Curse.sync(p);
     }
     private static void finish(Cast s,boolean chargeCost){
         if(!casts.remove(s.p.getUUID(),s))return;
@@ -269,8 +270,8 @@ public final class SixfoldFinale {
             if(age%40==0)scarFx(t);
             if(age>=200&&!gathering(t)){
                 ServerPlayer owner=tag.hasUUID(SCAR+"Owner")?level.getServer().getPlayerList().getPlayer(tag.getUUID(SCAR+"Owner")):null;
-                if(owner!=null&&!CombatSettings.canHit(owner,t)||t instanceof Player player&&(player.isCreative()||player.isSpectator()||!level.getServer().isPvpAllowed()))continue;
-                t.invulnerableTime=0;t.hurt(owner==null?level.damageSources().magic():level.damageSources().sonicBoom(owner),tag.getFloat(SCAR+"Damage"));
+                if(!CombatSafety.canAffect(owner,t))continue;
+                t.invulnerableTime=0;CombatSafety.hurt(owner,t,level.damageSources().sonicBoom(owner),tag.getFloat(SCAR+"Damage"));
             }
         }
     }

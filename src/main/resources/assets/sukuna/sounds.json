@@ -1,4 +1,5 @@
 {
+  "ten_shadows_chant":{"sounds":[{"name":"sukuna:ten_shadows_chant","stream":true}]},
   "dismantle":{"sounds":[{"name":"sukuna:dismantle"}]},
   "web":{"sounds":[{"name":"sukuna:web"}]},
   "cleave":{"sounds":[{"name":"sukuna:cleave"}]},

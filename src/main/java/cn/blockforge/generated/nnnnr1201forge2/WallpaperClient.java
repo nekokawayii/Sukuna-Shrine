@@ -33,6 +33,7 @@ public final class WallpaperClient {
     private static final ArrayDeque<WallpaperPackets.Upload> uploads=new ArrayDeque<>();
     private static String preference="default",mode="ask",imagePath="",fit="fill";
     private static boolean initialized,allowed,promptPending;
+    private static String imageStatus="尚未读取";
     private static long session,generation,tick,nextUploadTick,decodeFrame=-1;
     private static final Properties config=new Properties();
     private static Path configPath(){return net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get().resolve("sukuna-wallpaper.properties");}
@@ -73,16 +74,16 @@ public final class WallpaperClient {
         LogUtils.getLogger().info("[斩击壁纸] 本版默认={} 保存选项={} 本次模式={} 自动共享={} 配置={}",WallpaperPolicy.DEFAULT_MODE,preference,mode,auto,configPath());
     }
     private static void apply(boolean on){
-        promptPending=false;revoke();allowed=on;
+        promptPending=false;revoke();allowed=on;imageStatus=on?"正在读取静态壁纸":"未授权读取";
         if(!on){tell("壁纸分享已关闭：你的斩击内部保持纯黑（含虚空、传承阶段的全部斩击）。");return;}
         Network.CHANNEL.sendToServer(new WallpaperPackets.Consent(true));long expectedSession=session,expectedGeneration=generation;
         DesktopRect desktop=desktop();String path=imagePath,style=fit;
         tell("壁纸共享已开启：将分享给同服全部玩家，只读取静态壁纸、不截屏。可用 /sukuna_wallpaper off 关闭。");
         try{io.execute(()->{
-            byte[] bytes;try{bytes=WallpaperDesktop.read(path,style,(int)desktop.width,(int)desktop.height);}catch(Exception|LinkageError ex){Minecraft.getInstance().execute(()->{if(expectedSession==session&&expectedGeneration==generation&&allowed)tell("无法读取静态壁纸，暂时显示纯黑。可在配置中设置 wallpaperPath 后输入 /sukuna_wallpaper reload。");});return;}
+            byte[] bytes;try{bytes=WallpaperDesktop.read(path,style,(int)desktop.width,(int)desktop.height);}catch(Exception|LinkageError ex){Minecraft.getInstance().execute(()->{if(expectedSession==session&&expectedGeneration==generation&&allowed){imageStatus="静态壁纸读取失败";tell("无法读取静态壁纸，暂时显示纯黑。可在配置中设置 wallpaperPath 后输入 /sukuna_wallpaper reload。");}});return;}
             Minecraft.getInstance().execute(()->{
                 var mc=Minecraft.getInstance();if(!allowed||session!=expectedSession||generation!=expectedGeneration||mc.player==null||mc.getConnection()==null)return;
-                encoded.put(mc.player.getUUID(),bytes);releaseTexture(mc.player.getUUID());
+                encoded.put(mc.player.getUUID(),bytes);releaseTexture(mc.player.getUUID());imageStatus="图片已读取，等待绘制";
                 long token=java.util.concurrent.ThreadLocalRandom.current().nextLong();int count=(bytes.length+WallpaperRules.CHUNK-1)/WallpaperRules.CHUNK;
                 for(int i=0;i<count;i++)uploads.add(new WallpaperPackets.Upload(token,i,count,bytes.length,Arrays.copyOfRange(bytes,i*WallpaperRules.CHUNK,Math.min(bytes.length,(i+1)*WallpaperRules.CHUNK))));
                 tell("壁纸图片已读取，正在分片分享；其他玩家会在你的裂缝内看到这张壁纸。");
@@ -112,7 +113,7 @@ public final class WallpaperClient {
         if(mc.player!=null&&id.equals(mc.player.getUUID())&&!allowed){forget(id);return;}
         if(versions.size()>=256&&!versions.containsKey(id))return;
         if(packet.revision()<versions.getOrDefault(id,Long.MIN_VALUE))return;
-        if(packet.total()==0&&packet.count()==0&&packet.data().length==0){versions.put(id,packet.revision());forget(id);return;}
+        if(packet.total()==0&&packet.count()==0&&packet.data().length==0){versions.put(id,packet.revision());if(mc.player!=null&&id.equals(mc.player.getUUID())&&allowed){incoming.remove(id);return;}forget(id);return;}
         if(!WallpaperRules.validPart(packet.index(),packet.count(),packet.total(),packet.data().length))return;
         Incoming in=incoming.get(id);
         if(packet.index()==0){if(incoming.size()>=128||encoded.size()>=128&&!encoded.containsKey(id))return;in=new Incoming(packet);incoming.put(id,in);versions.put(id,packet.revision());}
@@ -132,10 +133,10 @@ public final class WallpaperClient {
             // 先淘汰旧纹理，再解码新图，避免暂时同时保留九张完整像素图。
             while(textures.size()>=8)releaseTexture(textures.keySet().iterator().next());
             ResourceLocation location=new ResourceLocation("sukuna","wallpaper/"+id);
-            WallpaperTexture.register(mc.getTextureManager(),location,bytes);textures.put(id,location);return location;
+            WallpaperTexture.register(mc.getTextureManager(),location,bytes);textures.put(id,location);if(mc.player!=null&&id.equals(mc.player.getUUID())){imageStatus="图片已上传，可绘制";tellBar("斩击壁纸：图片已就绪");}return location;
         }catch(IOException|RuntimeException ex){
             // 当前图片失败后不在每帧重试；重新授权或收到新图片时才恢复尝试。
-            encoded.remove(id);LogUtils.getLogger().warn("世界斩壁纸加载失败，已回退纯黑（玩家 {}）",id,ex);return null;
+            encoded.remove(id);if(mc.player!=null&&id.equals(mc.player.getUUID())){imageStatus="图片解码或上传失败";tell("壁纸图片未能显示，请用 /sukuna_wallpaper status 查看状态，或设置静态图片后 reload。");}LogUtils.getLogger().warn("世界斩壁纸加载失败，已回退纯黑（玩家 {}）",id,ex);return null;
         }
     }
     /** GLFW屏幕坐标使用窗口逻辑尺寸，不能把高DPI帧缓冲像素直接当桌面像素。 */
@@ -163,7 +164,7 @@ public final class WallpaperClient {
         root.then(Commands.literal("default").executes(c->{preference="default";save();revoke();load();if(mode.equals("on"))apply(true);else if(mode.equals("off"))apply(false);else promptPending=true;
             tell("已改为跟随本版默认："+(autoShareEdition()?"自动共享版 → 默认分享":"询问版 → 每次询问"));return 1;}));
         root.then(Commands.literal("reload").executes(c->{revoke();load();if(mode.equals("on"))apply(true);else if(mode.equals("off"))apply(false);else promptPending=true;return 1;}));
-        root.then(Commands.literal("status").executes(c->{tell("壁纸分享："+(allowed?"本次开启":"本次关闭")+"；保存选项："+preference+"；本版默认："+WallpaperPolicy.DEFAULT_MODE+"；配置：config/sukuna-wallpaper.properties");return 1;}));
+        root.then(Commands.literal("status").executes(c->{tell("壁纸分享："+(allowed?"本次开启":"本次关闭")+"；保存选项："+preference+"；本版默认："+WallpaperPolicy.DEFAULT_MODE+"；图片："+imageStatus+"；全部斩击壁纸阶段："+(WallpaperPolicy.allSlashes(Client.progress.voidShrine(),Client.progress.pureLandVictory())?"已解锁":"未解锁，仅世界斩")+"；配置：config/sukuna-wallpaper.properties");return 1;}));
         e.getDispatcher().register(root);
     }
     private WallpaperClient(){}

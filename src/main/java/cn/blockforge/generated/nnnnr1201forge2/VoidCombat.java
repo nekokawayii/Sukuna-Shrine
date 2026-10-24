@@ -59,13 +59,8 @@ public final class VoidCombat {
             if(p!=null&&p.isAlive()&&!p.isRemoved()&&p.level()==level&&wounds.size()<2048){Wound w=new Wound(p,target);for(int i=0;i<Math.min(VoidTechniqueRules.MAX_RIFTS,Math.max(1,flames.getInt(id)));i++)w.cuts.add((long)(i*360/Math.max(1,flames.getInt(id))));w.burning=true;w.manual=true;wounds.put(key,w);saveFire(w);visual(w);}
             else if(p!=null){damage(p,target,(float)(VoidTechniqueRules.FIRE_DAMAGE*VoidController.voidDamage(p))*MahoragaRules.bossDamage(target,MahoragaRules.FURNACE_MULTIPLIER),true);} // 离线女仆/玩家：虚空灶灼烧同样特攻
             else {
-                var casters=target.getPersistentData().getCompound("SukunaVoidFlameCastersR63");
-                // 旧档只存UUID，施术者未加载时无法区分女仆和玩家；先暂停，待其加载后重算，避免旧伤害继续生效。
-                if(!casters.contains(id))continue;
-                var saved=target.getPersistentData().getCompound("SukunaVoidFlameDamage");float value=saved.contains(id)?saved.getFloat(id):CasterDamageRules.scale(VoidTechniqueRules.FIRE_DAMAGE,casters.getBoolean(id));
-                double previous=saved.contains(id)?target.getPersistentData().getCompound("SukunaVoidFlameScaleR64").getDouble(id):1;
-                var source=level.damageSources().magic();fixedTarget=target;fixedSource=source;fixedAmount=BalanceRules.storedDamage(value,previous);
-                try{target.invulnerableTime=0;target.hurt(source,fixedAmount);}finally{fixedTarget=null;fixedSource=null;fixedAmount=0;}
+                // 主人不在线不能核验最新敌友关系；暂停而不是改成无主魔法继续烧。
+                continue;
             }
         }
         if(flames.isEmpty()){target.getPersistentData().remove("SukunaVoidFlames");target.getPersistentData().remove("SukunaVoidFlameDamage");target.getPersistentData().remove("SukunaVoidFlameCastersR63");target.getPersistentData().remove("SukunaVoidFlameScaleR64");}
@@ -107,6 +102,12 @@ public final class VoidCombat {
     }
     private static boolean inField(ServerPlayer p,LivingEntity e){return e.position().distanceToSqr(Skills.domainCenter(p))<=VoidTechniqueRules.FIELD_RADIUS*VoidTechniqueRules.FIELD_RADIUS;}
     private static LivingEntity contact(ServerPlayer p){LivingEntity t=Skills.aimTarget(p);return t!=null&&t.getBoundingBox().inflate(0.2).clip(p.getEyePosition(),p.getEyePosition().add(p.getLookAngle().scale(3))).isPresent()?t:null;}
+    static void instant(ServerPlayer p,int skill,LivingEntity target,Vec3 at){
+        if(skill<=2){if(skill==1){for(LivingEntity t:Skills.targets(p.serverLevel(),p,at,12))dismantle(p,t);}else if(target!=null){if(skill==2)cleave(p,target);else dismantle(p,target);}return;}
+        // 不再依赖先布裂隙；凭空在准星目标处引爆，并保留既有灶伤害计算。
+        if(target!=null){add(p,target,true);damage(p,target,VoidTechniqueRules.FIRE_DAMAGE*(float)VoidController.voidDamage(p)*MahoragaRules.bossDamage(target,MahoragaRules.FURNACE_MULTIPLIER),true);}
+        furnaceBlast(p,at);fx(p,116,at,new Vec3(0,1,0),6,24,0);
+    }
     public static void cast(ServerPlayer p,int skill){
         switch(skill){
             case 0 -> dismantle(p,Skills.aimTarget(p));
@@ -162,7 +163,7 @@ public final class VoidCombat {
             if(target.ignoreExplosion())continue;
             double distance=target.position().distanceTo(center);
             double visibility=net.minecraft.world.level.Explosion.getSeenPercent(center,target);
-            float amount=BalanceRules.damage(CasterDamageRules.furnaceBlast(distance,visibility,true)*MahoragaRules.bossDamage(target,MahoragaRules.FURNACE_MULTIPLIER));
+            float amount=Authority.damageOwner(p)!=null?(float)(BalanceRules.damage(CasterDamageRules.furnaceBlast(distance,visibility,false)*MahoragaRules.bossDamage(target,MahoragaRules.FURNACE_MULTIPLIER))*Authority.damageScale(p)):BalanceRules.damage(CasterDamageRules.furnaceBlast(distance,visibility,true)*MahoragaRules.bossDamage(target,MahoragaRules.FURNACE_MULTIPLIER));
             if(amount<=0)continue;
             AttackTypes.mark(AttackTypes.VOID);if(CombatSettings.hurt(p,target,level.damageSources().explosion(body,body),amount)){
                 double impact=(1-distance/5)*visibility;Vec3 push=target.getEyePosition().subtract(center).normalize().scale(impact);
@@ -175,14 +176,16 @@ public final class VoidCombat {
         LivingEntity target=event.getEntity();var tag=target.getPersistentData();
         if(!tag.hasUUID("SukunaVoidIgnitionOwner")||tag.getLong("SukunaVoidIgnitionUntil")<=target.level().getGameTime())return;
         UUID id=tag.getUUID("SukunaVoidIgnitionOwner");ServerPlayer owner=target.level() instanceof ServerLevel level?MaidBridge.find(level,id):null;
-        if(EternalLove.protects(id,target)||owner!=null&&!CombatSettings.canHit(owner,target)){event.setCanceled(true);target.clearFire();return;}
-        event.setAmount(BalanceRules.damage(CasterDamageRules.scale(event.getAmount(),owner==null?tag.getBoolean("SukunaVoidIgnitionMaid"):MaidBridge.isCaster(owner))));
+        if(owner==null){event.setCanceled(true);return;}
+        if(EternalLove.protects(id,target)||!CombatSafety.canAffect(owner,target)){event.setCanceled(true);target.clearFire();return;}
+        event.setAmount(owner!=null?CombatSettings.casterDamage(owner,event.getAmount()):BalanceRules.damage(CasterDamageRules.scale(event.getAmount(),tag.getBoolean("SukunaVoidIgnitionMaid"))));
     }
     public static void dismantle(ServerPlayer p,LivingEntity target){
         if(Skills.inDomain(p,p)&&target==null)target=Skills.closestToCrosshair(p,Skills.targets(p.serverLevel(),p,Skills.domainCenter(p),Skills.domainRadius(p)));
         Vec3 point=target==null?Skills.aimPoint(p,50):target.getBoundingBox().inflate(0.08).clip(p.getEyePosition(),target.getBoundingBox().getCenter()).orElse(target.getBoundingBox().getCenter());
         Vec3 direction=p.getLookAngle();long angle=p.getRandom().nextInt(360);long tint=angle+(VoidController.redCut(p)?720:0);
         Vec3 collisionAxis=NetBranches.side(direction).scale(Math.max(12,VoidController.slashLength(p))/2.0);if(CombatExpansion.collideSlash(p,point.subtract(collisionAxis),point.add(collisionAxis),direction))return;
+        if(Authority.instant(p)){fx(p,115,point,direction,SlashReach.INFINITE,12,tint);for(LivingEntity victim:SlashReach.targets(p,target,point,direction,angle)){add(p,victim,true,angle);Wound wound=wounds.get(new Key(p.getUUID(),victim.getUUID()));if(wound!=null)wound.manual=true;scaledDamage(p,victim,VoidTechniqueRules.DISMANTLE_DAMAGE*(float)VoidController.voidDamage(p),false,false,SlashFormRules.DAMAGE);}return;}
         fx(p,123,point,direction,SlashReach.INFINITE,6,tint);
         for(LivingEntity victim:SlashReach.targets(p,target,point,direction,angle))delayedDismantles.add(new DelayedDismantle(p,p.serverLevel(),victim.getUUID(),point,direction,0,p.level().getGameTime()+6,angle));
         delayedDismantles.add(new DelayedDismantle(p,p.serverLevel(),null,point,direction,SlashReach.INFINITE,p.level().getGameTime()+6,angle));

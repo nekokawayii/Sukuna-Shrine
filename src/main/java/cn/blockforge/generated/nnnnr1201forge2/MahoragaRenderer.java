@@ -21,6 +21,8 @@ import org.joml.Vector3f;
  *  每受击 6 次转 1 格、转满 4 格完全适应。</p> */
 public final class MahoragaRenderer<T extends MahoragaEntity> extends EntityRenderer<T> {
     private static final BbModel BODY=new BbModel("mahoraga","mahoraga");
+    private static final BbModel WHEEL=new BbModel("mahoraga_wheel","mahoraga_wheel");
+    private static final java.util.Map<MahoragaEntity,float[]> turns=new java.util.WeakHashMap<>();
     private static final ResourceLocation RING=new ResourceLocation("sukuna","textures/effect/ring.png");
     private static final ResourceLocation STREAK=new ResourceLocation("sukuna","textures/effect/streak.png");
     /** 模型高 3.69 格。 */
@@ -34,6 +36,11 @@ public final class MahoragaRenderer<T extends MahoragaEntity> extends EntityRend
         // 只画模型本体与自带动画：法轮与位移的特效由 Photon 负责，本体一律不挂光环（避免光污染）
         BODY.render(ps,buffers,light,animationOf(entity),secondsOf(entity,age),1,1,1,1);
         ps.popPose();
+        float state=entity.wheelCells()+Integer.bitCount(entity.ownMask());float[] turn=turns.computeIfAbsent(entity,k->new float[]{state,age,0});
+        if(turn[0]!=state){turn[0]=state;turn[1]=age;turn[2]+=90;}
+        float phase=Math.min(1,Math.max(0,(age-turn[1])/16)),angle=age*.45f+turn[2]-90*(1-phase)*(1-phase);
+        ps.pushPose();ps.translate(0,entity.getBbHeight()+.38,0);ps.mulPose(Axis.XP.rotationDegrees(-90));ps.mulPose(Axis.ZP.rotationDegrees(angle));ps.scale(1.5f,1.5f,1.5f);
+        WHEEL.render(ps,buffers,15728880,"spin",0,1,phase<1?.95f:.78f,phase<1?.65f:.3f,1);ps.popPose();
         super.render(entity,yaw,partial,ps,buffers,light);
     }
     /** 完全适应的类型数（免疫光环个数）。 */

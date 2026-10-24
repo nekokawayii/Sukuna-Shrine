@@ -361,6 +361,7 @@ public final class GojoEntity extends Monster {
     }
     // ------------------------------------------------------------ 无量空处
     public boolean clashDomainActive(){return domain>0;}
+    public Vec3 clashCenter(){return center;}
     public void extendDomain(int ticks){if(domain>0)domain+=ticks;}
     public void clashCloseDomain(){domain=0;fx(GojoFx.DOMAIN_CLOSE,center,Vec3.ZERO,1,4,0);}
     public static boolean mindLocked(LivingEntity e){return e.getPersistentData().getLong("GojoVoid")>e.level().getGameTime();}

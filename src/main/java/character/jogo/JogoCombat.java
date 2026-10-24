@@ -252,10 +252,25 @@ public final class JogoCombat {
         }
         DOMAINS.add(new Domain(p,center,p.getServer().getTickCount()+DOMAIN_LIFE,DOMAIN_RADIUS,captives));
         JogoTerrain.open(p,center,DOMAIN_RADIUS);
-        DomainClash.opened(p,center,DOMAIN_RADIUS);
+        // 只有身处五条悟「无量空处」范围里才能开领域进入对拼；其他情况不登记对拼。
+        if(insideVoidDomain(p))DomainClash.opened(p,center,DOMAIN_RADIUS);
         Network.send(p.serverLevel(),new Network.Effect(JogoFx.DOMAIN,p.getId(),center,Vec3.ZERO,(float)DOMAIN_RADIUS,DOMAIN_LIFE,0));
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.6f,0.45f);
         p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域展开 · 盖棺铁围山"));
+    }
+    /** 施术者是否正站在某个生效中的「无量空处」里（五条悟首领或玩家五条悟都算）。 */
+    public static boolean insideVoidDomain(ServerPlayer p) {
+        double r=GojoFx.DOMAIN_RADIUS;
+        for(var boss:p.serverLevel().getEntitiesOfClass(GojoEntity.class,
+                new net.minecraft.world.phys.AABB(p.position(),p.position()).inflate(200))){
+            Vec3 c=boss.clashCenter();
+            if(boss.clashDomainActive()&&c!=null&&p.position().distanceToSqr(c)<=r*r)return true;
+        }
+        for(ServerPlayer other:p.server.getPlayerList().getPlayers()){
+            if(other==p||other.level()!=p.level())continue;
+            if(GojoCombat.domainOpen(other)&&p.position().distanceToSqr(GojoCombat.domainCenter(other))<=r*r)return true;
+        }
+        return false;
     }
     public static boolean inDomain(ServerPlayer p) {
         for(Domain d:DOMAINS)if(d.owner()==p)return true;

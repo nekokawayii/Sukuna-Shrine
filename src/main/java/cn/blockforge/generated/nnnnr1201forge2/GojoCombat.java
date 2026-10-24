@@ -126,6 +126,7 @@ public final class GojoCombat {
     public static int cooldownSeconds(ServerPlayer p,int skill){return (int)(Math.max(0,Curse.data(p).getLong(key(skill))-p.level().getGameTime())+19)/20;}
     /** 无量空处是否正在展开（心跳期间保持 true）。 */
     public static boolean domainOpen(ServerPlayer p){State s=states.get(p.getUUID());return s!=null&&s.domainUntil>p.level().getGameTime();}
+    public static Vec3 domainCenter(ServerPlayer p){State s=states.get(p.getUUID());return s==null?Vec3.ZERO:s.center;}
     /** 无量空处此刻能不能展开：不能就**逐条说清原因**（不再静默失败）。返回 true = 可以继续 cast。 */
     private static boolean domainReady(ServerPlayer p){
         if(!GojoPlayer.unlocked(p)){CastFeedback.tell(p,"尚未睁开六眼：右键使用六眼即可，无需任何阶段");return false;}

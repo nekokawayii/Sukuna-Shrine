@@ -12,7 +12,7 @@ import java.util.Random;
 public final class JogoFxClient {
     private static final String GLOW="textures/effect/glow.png", STREAK="textures/effect/streak.png", RING="textures/effect/ring.png";
     private static final int FIRE=0xFFFF7A18, FIRE_BLOOM=0xFFFF3A00, LAVA=0xFFFFB024, EMBER=0xFFFFD08A, ASH=0xFF2A1A18;
-    public record Domain(Vec3 center,double radius,long end) {}
+    public record Domain(int ownerId,Vec3 center,double radius,long end) {}
     private static final List<Domain> DOMAINS=new ArrayList<>();
     public static List<Domain> domains(){return DOMAINS;}
     private static final Random RANDOM=new Random();
@@ -49,10 +49,9 @@ public final class JogoFxClient {
             case JogoFx.DOMAIN -> {
                 double radius=Math.max(6,e.size());
                 int life=Math.max(40,e.life());
-                // 只保留球壳本体的光晕；地面不再铺任何 PhotonFx（改用真实方块变化）
-                PhotonFx.domain(pos,Math.min(radius,60),life);
-                DOMAINS.add(new Domain(pos,radius,Minecraft.getInstance().level.getGameTime()+life));
+                DOMAINS.add(new Domain(e.owner(),pos,radius,Minecraft.getInstance().level.getGameTime()+life));
             }
+            case JogoFx.DOMAIN_END -> DOMAINS.removeIf(d->d.ownerId()==e.owner());
             default -> {}
         }
     }

@@ -27,11 +27,12 @@ public final class JogoCombat {
     private static final float SIEGE_HEALTH=.30f;  // 生命低于 30%
     private static final int SIEGE_ENEMIES=5, SIEGE_RADIUS=24;
     private static final int BUG_LIFE=400;     // 火砾虫 20 秒
+    private static final int PILLAR_LIFE=300;  // 火焰喷发岩浆柱 15 秒（用户指定）
     private static final double BUG_SPEED=0.55;
 
     private record Bug(ServerLevel level, UUID owner, Vec3 pos, Vec3 dir, int life) {}
     private record Meteor(ServerPlayer owner, Vec3 target, int delay) {}
-    private record Pillar(ServerLevel level, UUID owner, Vec3 pos, Vec3 dir, float damage, Set<UUID> hit) {}
+    private record Pillar(ServerLevel level, UUID owner, Vec3 pos, Vec3 dir, float damage, Set<UUID> hit, int ticks) {}
     private record Falling(ServerLevel level, FallingBlockEntity block, UUID owner, float damage) {}
     private static final List<Bug> BUGS=new ArrayList<>();
     private static final List<Meteor> METEORS=new ArrayList<>();
@@ -80,13 +81,23 @@ public final class JogoCombat {
         for(int i=0;i<count;i++){
             double angle=Math.toRadians(-22+44.0*(count==1?0.5:i/(double)(count-1)));
             Vec3 dir=look.scale(Math.cos(angle)).add(side.scale(Math.sin(angle))).normalize();
-            PILLARS.add(new Pillar(p.serverLevel(),p.getUUID(),start.add(dir.scale(0.6)),dir,damage,new HashSet<>()));
+            PILLARS.add(new Pillar(p.serverLevel(),p.getUUID(),start.add(dir.scale(0.6)),dir,damage,new HashSet<>(),0));
         }
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.FIRECHARGE_USE,SoundSource.PLAYERS,1.2f,0.8f);
     }
 
     // ---------------------------------------------------------------- 技能 4：领域展开·盖棺铁围山
+    /** 提前收起：解除规则、还原地形，并通知客户端移除球壳。 */
+    public static boolean closeDomain(ServerPlayer p) {
+        boolean removed=DOMAINS.removeIf(d->d.owner()==p);
+        if(removed){
+            JogoTerrain.restore(p);
+            Network.send(p.serverLevel(),new Network.Effect(JogoFx.DOMAIN_END,p.getId(),p.position(),Vec3.ZERO,0,0,0));
+        }
+        return removed;
+    }
     public static void castDomain(ServerPlayer p,CharacterSkill skill,int rank) {
+        if(closeDomain(p)){p.sendSystemMessage(net.minecraft.network.chat.Component.literal("盖棺铁围山 · 收"));return;}
         Vec3 center=p.position();
         DOMAINS.removeIf(d->d.owner()==p);
         var captives=new HashMap<UUID,Vec3>();
@@ -111,7 +122,11 @@ public final class JogoCombat {
         for(Iterator<Domain> it=DOMAINS.iterator();it.hasNext();){
             Domain d=it.next();ServerPlayer owner=d.owner();
             if(owner==null||!owner.isAlive()||owner.level()!=owner.serverLevel()||owner.serverLevel().getGameTime()<=0){it.remove();if(owner!=null)JogoTerrain.restore(owner);continue;}
-            if(owner.getServer().getTickCount()>=d.end()){JogoTerrain.restore(owner);it.remove();continue;}
+            if(owner.getServer().getTickCount()>=d.end()){
+                JogoTerrain.restore(owner);
+                Network.send(owner.serverLevel(),new Network.Effect(JogoFx.DOMAIN_END,owner.getId(),d.center(),Vec3.ZERO,0,0,0));
+                it.remove();continue;
+            }
             ServerLevel level=owner.serverLevel();
             // 封闭：闭合时被抓到的活物越界就拉回最近一次安全位置（碰撞箱留余量）
             double limit=d.radius()-DOMAIN_INSET;
@@ -144,7 +159,7 @@ public final class JogoCombat {
     // ---------------------------------------------------------------- 每刻推进：火砾虫 / 陨石 / 坠落物
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e) {
         if(e.phase!=TickEvent.Phase.END)return;
-        tickBugs();tickMeteors();tickFalling();tickPillars();tickDomains();
+        tickBugs();tickMeteors();tickFalling();tickPillars();tickDomains();JogoTerrain.tick();
     }
     private static void tickBugs() {
         for(Iterator<Bug> it=BUGS.iterator();it.hasNext();){
@@ -204,22 +219,28 @@ public final class JogoCombat {
             finally{AttackTypes.clear();}
         }
     }
+    /** 岩浆柱：前 8 刻飞出 12 格，之后在原地停留，**总生命周期 15 秒（300 刻）**，每 0.5 秒灼烧一次。 */
     private static void tickPillars() {
         for(Iterator<Pillar> it=PILLARS.iterator();it.hasNext();){
             Pillar pillar=it.next();
-            Vec3 next=pillar.pos().add(pillar.dir().scale(1.6));
+            int ticks=pillar.ticks()+1;
             ServerLevel level=pillar.level();
-            Network.send(level,new Network.Effect(JogoFx.PILLAR,0,next,pillar.dir(),1,6,0));
-            ServerPlayer caster=level.getServer().getPlayerList().getPlayer(pillar.owner());
-            if(caster!=null)for(var target:level.getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(pillar.pos(),next).inflate(1.5),
-                    t->CombatSettings.canHit(caster,t)&&pillar.hit().add(t.getUUID()))){
-                AttackTypes.mark(AttackTypes.MAGIC);
-                try{CombatSettings.hurt(caster,target,caster.damageSources().indirectMagic(caster,caster),pillar.damage());}
-                finally{AttackTypes.clear();}
-                target.setSecondsOnFire(3);
+            Vec3 next=ticks<=8?pillar.pos().add(pillar.dir().scale(1.6)):pillar.pos();
+            if(ticks%2==0)Network.send(level,new Network.Effect(JogoFx.PILLAR,0,next,pillar.dir(),1,6,0));
+            if(ticks%10==0){
+                pillar.hit().clear();   // 停留期允许重复灼烧
+                ServerPlayer caster=level.getServer().getPlayerList().getPlayer(pillar.owner());
+                if(caster!=null)for(var target:level.getEntitiesOfClass(LivingEntity.class,
+                        new net.minecraft.world.phys.AABB(next,next).inflate(1.8),
+                        t->CombatSettings.canHit(caster,t)&&pillar.hit().add(t.getUUID()))){
+                    AttackTypes.mark(AttackTypes.MAGIC);
+                    try{CombatSettings.hurt(caster,target,caster.damageSources().indirectMagic(caster,caster),pillar.damage());}
+                    finally{AttackTypes.clear();}
+                    target.setSecondsOnFire(3);
+                }
             }
-            PILLARS.set(PILLARS.indexOf(pillar),new Pillar(level,pillar.owner(),next,pillar.dir(),pillar.damage(),pillar.hit()));
-            if(!pillarFlies(next,pillar.dir(),level))it.remove();
+            if(ticks>=PILLAR_LIFE||(ticks<=8&&!pillarFlies(next,pillar.dir(),level))){it.remove();continue;}
+            PILLARS.set(PILLARS.indexOf(pillar),new Pillar(level,pillar.owner(),next,pillar.dir(),pillar.damage(),pillar.hit(),ticks));
         }
     }
     private static boolean pillarFlies(Vec3 at,Vec3 dir,ServerLevel level) {
@@ -229,6 +250,12 @@ public final class JogoCombat {
         Vec3 start=p.getEyePosition(),end=start.add(p.getLookAngle().scale(range));
         var hit=p.level().clip(new net.minecraft.world.level.ClipContext(start,end,net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,p));
         return hit.getType()==net.minecraft.world.phys.HitResult.Type.MISS?end:hit.getLocation();
+    }
+
+    /** 关服/退存档兜底：把没结束的领域地形还原，避免残留。 */
+    @SubscribeEvent public static void serverStopped(net.minecraftforge.event.server.ServerStoppedEvent e) {
+        for(ServerPlayer p:e.getServer().getPlayerList().getPlayers())JogoTerrain.restore(p);
+        DOMAINS.clear();BUGS.clear();METEORS.clear();FALLING.clear();PILLARS.clear();
     }
 
     // ---------------------------------------------------------------- 被动：免疫火焰与岩浆；第一章泡岩浆

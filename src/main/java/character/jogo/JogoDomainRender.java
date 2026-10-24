@@ -18,6 +18,12 @@ public final class JogoDomainRender {
         var domains=JogoFxClient.domains();
         if(shader==null||domains.isEmpty()||Minecraft.getInstance().level==null)return;
         Vec3 cam=e.getCamera().getPosition();
+        // 与 vanilla 一样：用事件给的 poseStack 自己做 -cam 平移，把变换烘进顶点。
+        // 之前手动在顶点里减 cam、又不经过 poseStack，会和这一帧的模型矩阵重复/缺失平移，表现就是球壳跟着玩家跑。
+        var pose=e.getPoseStack();
+        pose.pushPose();
+        pose.translate(-cam.x,-cam.y,-cam.z);
+        var matrix=pose.last().pose();
         float time=(Minecraft.getInstance().level.getGameTime()+e.getPartialTick())*0.05f;
         var buffer=Tesselator.getInstance().getBuilder();
         int previous0=RenderSystem.getShaderTexture(0),previous1=RenderSystem.getShaderTexture(1);
@@ -44,21 +50,22 @@ public final class JogoDomainRender {
                 for(int j=0;j<SEGMENTS;j++){
                     double a0=2*Math.PI*j/SEGMENTS,a1=2*Math.PI*(j+1)/SEGMENTS;
                     float u0=(float)j/SEGMENTS,u1=(float)(j+1)/SEGMENTS;
-                    vertex(buffer,cam,c.x+Math.cos(a0)*rr0,c.y+y0,c.z+Math.sin(a0)*rr0,u0,v0);
-                    vertex(buffer,cam,c.x+Math.cos(a1)*rr0,c.y+y0,c.z+Math.sin(a1)*rr0,u1,v0);
-                    vertex(buffer,cam,c.x+Math.cos(a1)*rr1,c.y+y1,c.z+Math.sin(a1)*rr1,u1,v1);
-                    vertex(buffer,cam,c.x+Math.cos(a0)*rr1,c.y+y1,c.z+Math.sin(a0)*rr1,u0,v1);
+                    vertex(buffer,matrix,c.x+Math.cos(a0)*rr0,c.y+y0,c.z+Math.sin(a0)*rr0,u0,v0);
+                    vertex(buffer,matrix,c.x+Math.cos(a1)*rr0,c.y+y0,c.z+Math.sin(a1)*rr0,u1,v0);
+                    vertex(buffer,matrix,c.x+Math.cos(a1)*rr1,c.y+y1,c.z+Math.sin(a1)*rr1,u1,v1);
+                    vertex(buffer,matrix,c.x+Math.cos(a0)*rr1,c.y+y1,c.z+Math.sin(a0)*rr1,u0,v1);
                 }
             }
         }
+        pose.popPose();
         BufferUploader.drawWithShader(buffer.end());
         RenderSystem.setShaderTexture(0,previous0);
         RenderSystem.setShaderTexture(1,previous1);
         RenderSystem.enableCull();
         RenderSystem.enableBlend();
     }
-    private static void vertex(com.mojang.blaze3d.vertex.BufferBuilder buffer,Vec3 cam,double x,double y,double z,float u,float v) {
-        buffer.vertex(x-cam.x,y-cam.y,z-cam.z).color(255,255,255,255).uv(u,v).endVertex();
+    private static void vertex(com.mojang.blaze3d.vertex.BufferBuilder buffer,org.joml.Matrix4f matrix,double x,double y,double z,float u,float v) {
+        buffer.vertex(matrix,(float)x,(float)y,(float)z).color(255,255,255,255).uv(u,v).endVertex();
     }
     private JogoDomainRender() {}
 }

@@ -314,7 +314,7 @@ public final class Client {
         if(!heat)FistAura.clear();
     }
     @SubscribeEvent public static void hud(RenderGuiEvent.Post e){
-        Minecraft mc=Minecraft.getInstance();if(mc.player==null||mc.options.hideGui||ObserverClient.active()||(mc.screen instanceof SkillWheel||mc.screen instanceof WallOptionsScreen||mc.screen instanceof DomainOptionsScreen||mc.screen instanceof RelationsScreen))return;
+        Minecraft mc=Minecraft.getInstance();if(mc.player==null||mc.options.hideGui||ObserverClient.active()||(mc.screen instanceof SkillWheel||mc.screen instanceof character.CharacterWheel||mc.screen instanceof character.CharacterSelectionScreen||mc.screen instanceof WallOptionsScreen||mc.screen instanceof DomainOptionsScreen||mc.screen instanceof RelationsScreen))return;
         int h=mc.getWindow().getGuiScaledHeight(),w=mc.getWindow().getGuiScaledWidth();var g=e.getGuiGraphics();if(character.CharacterClient.hud(g))return;FreehandClient.hud(g);
         if(!progress.unlocked()){
             boolean holding=mc.player.getMainHandItem().is(ProgressionContent.MEMORY.get())||mc.player.getOffhandItem().is(ProgressionContent.MEMORY.get());

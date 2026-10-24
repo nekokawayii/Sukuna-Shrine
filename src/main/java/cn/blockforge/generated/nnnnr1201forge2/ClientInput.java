@@ -28,7 +28,7 @@ public final class ClientInput {
         var mc=Minecraft.getInstance();
         if(mc.level==null||mc.player==null||!mc.player.isAlive()||!mc.isWindowActive())return false;
         if(mc.screen==null)return mc.mouseHandler.isMouseGrabbed();
-        return mapping==Client.WHEEL&&mc.screen instanceof SkillWheel||mapping==Client.CAST&&FreehandClient.canvasOpen();
+        return mapping==Client.WHEEL&&(mc.screen instanceof SkillWheel||mc.screen instanceof character.CharacterWheel)||mapping==Client.CAST&&FreehandClient.canvasOpen();
     }
     public static boolean held(KeyMapping mapping){
         HeldInput input=mapping==Client.WHEEL?wheel:cast;

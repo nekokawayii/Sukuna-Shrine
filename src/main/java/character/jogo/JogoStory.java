@@ -14,10 +14,14 @@ public final class JogoStory {
                 "自己收集 3 桶岩浆，并在岩浆里浸泡 30 秒","于长夜重返大地",
                 new CharacterReward(new Stats(400,8,2,4,2),50,200,
                     List.of(new Item("minecraft:magma_block",8), new Item("minecraft:blaze_powder",4)))),
-            new Chapter("jogo_siege","第二章·盖棺铁围山",2,
-                "残血（生命低于30%）、周围至少 5 名敌人、且处于燃烧状态，坚持 60 秒","盖棺铁围山",
+            new Chapter("jogo_nether","第二章·盖棺铁围山",2,
+                "在下界且生命低于 30%，坚持 60 秒","盖棺铁围山",
                 new CharacterReward(new Stats(600,12,2,6,2),80,300,
-                    List.of(new Item("minecraft:magma_cream",6), new Item("minecraft:blaze_rod",2))))
+                    List.of(new Item("minecraft:magma_cream",6), new Item("minecraft:blaze_rod",2)))),
+            new Chapter("jogo_gojo","第三章·灾厄火焰：五条悟",3,
+                "用漏壶击败五条悟，并至少完成一次领域对拼（无量空处 vs 盖棺铁围山），对拼后活过 3 分钟","灾厄火焰：五条悟",
+                new CharacterReward(new Stats(900,16,3,8,3),120,400,
+                    List.of(new Item("minecraft:nether_star",1), new Item("minecraft:blaze_rod",4))))
         );
     }
     private JogoStory() {}

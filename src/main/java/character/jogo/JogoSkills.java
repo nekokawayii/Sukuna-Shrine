@@ -6,7 +6,8 @@ import static character.CharacterSkill.Shape.*;
 
 /** 漏壶·灾厄火焰：三招都是自定义效果（见 {@link JogoCombat}），这里只声明参数与轮盘文字。 */
 public final class JogoSkills {
-    public static final int FIRE_BUG=1000, METEOR=1001, LAVA_BURST=1002, DOMAIN=1003;
+    public static final int FIRE_BUG=1000, METEOR=1001, LAVA_BURST=1002, DOMAIN=1003,
+            VOLCANO_BEAM=1004, MAGMA_TRAP=1005, ASH_VEIL=1006;
 
     public static List<CharacterSkill> all() {
         return List.of(
@@ -22,7 +23,16 @@ public final class JogoSkills {
                 0xFFFFB024,220,160,CONE,18,2,22,14,3,15,3,40,1),
             new CharacterSkill(DOMAIN,"领域展开·盖棺铁围山","盖棺铁围山",
                 "封闭式火山领域：暗红火山岩壁围住战场，地面岩浆翻滚，界内敌人被高温持续烘烤；漏壶在领域内技能冷却减半。完成第二章解锁。",
-                0xFFFF3A0A,800,6000,BURST,20,1,180,0,0,1,0,0,0)
+                0xFFFF3A0A,800,6000,BURST,20,1,180,0,0,1,0,0,0),
+            new CharacterSkill(VOLCANO_BEAM,"火山喷发","火山喷发",
+                "掌心喷出高压岩浆柱，直线贯穿前方 10 格，沿途方块化为焦岩。",
+                0xFFFF5A10,260,180,RAY,10,.6,35,20,3,1,1,0,0),
+            new CharacterSkill(MAGMA_TRAP,"岩浆陷阱","岩浆陷阱",
+                "双手砸地，前方地面隆起并刺出多道火山柱，把敌人击飞。",
+                0xFFFF7A18,300,220,CONE,10,2,30,16,3,6,2,0,0),
+            new CharacterSkill(ASH_VEIL,"火山灰隐身","火山灰",
+                "化作灰烬消散：短暂隐身并加速，下一次攻击必定暴击。",
+                0xFFB0A090,180,260,BURST,4,1,180,0,0,1,0,0,0)
         );
     }
     private JogoSkills() {}

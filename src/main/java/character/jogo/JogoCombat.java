@@ -13,6 +13,7 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
@@ -21,7 +22,11 @@ import java.util.*;
 
 /** 漏壶的三招实现、被动免疫与第一章「泡岩浆 30 秒」。全部在服务端结算，客户端只看粒子。 */
 public final class JogoCombat {
-    private static final String DONE="JogoLavaDone", PROGRESS="JogoLavaTicks", BUCKETS="JogoLavaBuckets", SIEGE="JogoSiegeTicks", SIEGE_DONE="JogoSiegeDone";
+    private static final String DONE="JogoLavaDone", PROGRESS="JogoLavaTicks", BUCKETS="JogoLavaBuckets",
+            SIEGE="JogoNetherTicks", SIEGE_DONE="JogoNetherDone",
+            CLASH_DONE="JogoClashDone", CLASH_AT="JogoClashAt", GOJO_KILL="JogoGojoKilled", GOJO_DONE="JogoGojoDone",
+            KEY_GIVEN="JogoVoidKeyGiven", ASH_CRIT="JogoAshCrit";
+    private static final int NETHER_TICKS=1200, GOJO_SURVIVE=3600;
     private static final int SOAK_TICKS=600;   // 30 秒
     private static final int SIEGE_TICKS=1200; // 盖棺铁围山：坚持 60 秒
     private static final float SIEGE_HEALTH=.30f;  // 生命低于 30%
@@ -48,7 +53,111 @@ public final class JogoCombat {
     public static int rank(ServerPlayer p) {
         var data=Curse.data(p);
         if(!data.getBoolean(DONE))return 0;
-        return data.getBoolean(SIEGE_DONE)?2:1;
+        if(!data.getBoolean(SIEGE_DONE))return 1;
+        return data.getBoolean(GOJO_DONE)?3:2;
+    }
+        // ---------------------------------------------------------------- 第三章解锁的三招 + 被动
+    /** 火山喷发：掌心高压岩浆柱，直线贯穿 10 格并把沿途地表化为焦岩（岩浆块，8 秒后还原）。 */
+    public static void castVolcanoBeam(ServerPlayer p,CharacterSkill skill,int rank) {
+        Vec3 start=p.getEyePosition(),dir=p.getLookAngle(),end=start.add(dir.scale(skill.range()));
+        var wall=p.level().clip(new net.minecraft.world.level.ClipContext(start,end,
+            net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,p));
+        if(wall.getType()!=net.minecraft.world.phys.HitResult.Type.MISS)end=wall.getLocation();
+        float dmg=CombatSettings.spellDamage(p,skill.damageAt(rank));
+        for(var target:p.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                new net.minecraft.world.phys.AABB(start,end).inflate(1.4),t->CombatSettings.canHit(p,t)&&t!=p)){
+            AttackTypes.mark(AttackTypes.MAGIC);
+            try{CombatSettings.hurt(p,target,p.damageSources().indirectMagic(p,p),dmg);}
+            finally{AttackTypes.clear();}
+            target.setSecondsOnFire(4);
+        }
+        ServerLevel level=p.serverLevel();
+        for(double t=0;t<=1.0;t+=0.07){
+            Vec3 at=start.lerp(end,t);
+            int x=(int)Math.floor(at.x),z=(int)Math.floor(at.z);
+            int y=level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE,x,z);
+            var pos=new BlockPos(x,y,z);
+            BlockState old=level.getBlockState(pos);
+            if(!old.isAir()&&!old.hasBlockEntity()&&old.getDestroySpeed(level,pos)>=0){
+                BEAM_JOURNAL.computeIfAbsent(p.getUUID(),k->new LinkedHashMap<>()).putIfAbsent(pos,old);
+                level.setBlock(pos,Blocks.MAGMA_BLOCK.defaultBlockState(),2);
+                BEAM_EXPIRE.putIfAbsent(p.getUUID(),level.getGameTime()+160);
+            }
+            Network.send(level,new Network.Effect(JogoFx.PILLAR,0,at,dir,1,6,0));
+        }
+        level.playSound(null,p.blockPosition(),SoundEvents.FIRECHARGE_USE,SoundSource.PLAYERS,1.2f,0.7f);
+    }
+    /** 岩浆陷阱：前方地面隆起、刺出火山柱，把敌人击飞。 */
+    public static void castMagmaTrap(ServerPlayer p,CharacterSkill skill,int rank) {
+        ServerLevel level=p.serverLevel();Vec3 dir=p.getLookAngle();float dmg=CombatSettings.spellDamage(p,skill.damageAt(rank));
+        for(int i=0;i<6;i++){
+            Vec3 at=p.position().add(dir.scale(2+i*1.5));
+            int x=(int)Math.floor(at.x),z=(int)Math.floor(at.z);
+            int y=level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE,x,z);
+            Vec3 ground=new Vec3(x+0.5,y+0.2,z+0.5);
+            Network.send(level,new Network.Effect(JogoFx.PILLAR,0,ground,dir,1,8,0));
+            for(var target:level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                    new net.minecraft.world.phys.AABB(ground,ground).inflate(2.2),t->CombatSettings.canHit(p,t)&&t!=p)){
+                AttackTypes.mark(AttackTypes.MAGIC);
+                try{CombatSettings.hurt(p,target,p.damageSources().indirectMagic(p,p),dmg);}
+                finally{AttackTypes.clear();}
+                target.setDeltaMovement(target.getDeltaMovement().add(0,0.95,0));
+                target.hurtMarked=true;
+                target.setSecondsOnFire(3);
+            }
+        }
+        level.playSound(null,p.blockPosition(),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.0f,0.6f);
+    }
+    /** 火山灰隐身：化作灰烬消散，隐身+加速，下一次攻击必定暴击。 */
+    public static void castAshVeil(ServerPlayer p,CharacterSkill skill,int rank) {
+        p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.INVISIBILITY,120,0,false,false));
+        p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED,120,2,false,false));
+        Curse.data(p).putBoolean(ASH_CRIT,true);
+        Network.send(p.serverLevel(),new Network.Effect(JogoFx.BUG_BURST,0,p.position(),Vec3.ZERO,2,8,0));
+        p.sendSystemMessage(net.minecraft.network.chat.Component.literal("火山灰隐身：下一次攻击必定暴击"));
+    }
+    private static final Map<UUID,LinkedHashMap<BlockPos,BlockState>> BEAM_JOURNAL=new HashMap<>();
+    private static final Map<UUID,Long> BEAM_EXPIRE=new HashMap<>();
+    /** 被动「火焰附着」：漏壶造成的伤害附带火焰；隐身后的第一击额外 50% 暴击伤害。 */
+    @SubscribeEvent public static void jogoDamage(LivingDamageEvent e) {
+        if(!(e.getSource().getEntity() instanceof ServerPlayer caster))return;
+        var target=e.getEntity();if(target==caster)return;
+        var d=CharacterService.selected(caster);if(d==null||!d.id().equals("jogo"))return;
+        target.setSecondsOnFire(4);
+        if(Curse.data(caster).getBoolean(ASH_CRIT)){
+            Curse.data(caster).putBoolean(ASH_CRIT,false);
+            e.setAmount(e.getAmount()*1.5f);
+        }
+    }
+    /** 五条悟被漏壶击杀（无掉落物）→ 第三章条件之一。 */
+    @SubscribeEvent public static void gojoDeath(net.minecraftforge.event.entity.living.LivingDeathEvent e) {
+        if(!(e.getEntity() instanceof GojoEntity))return;
+        if(!(e.getSource().getEntity() instanceof ServerPlayer p))return;
+        var d=CharacterService.selected(p);if(d==null||!d.id().equals("jogo"))return;
+        Curse.data(p).putBoolean(GOJO_KILL,true);
+        p.sendSystemMessage(net.minecraft.network.chat.Component.literal("五条悟已被击败 · 第三章节条件之一达成（无掉落物）"));
+    }
+    private static void tickBeam() {
+        if(BEAM_EXPIRE.isEmpty())return;
+        var server=net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();if(server==null)return;
+        for(var it=BEAM_EXPIRE.entrySet().iterator();it.hasNext();){
+            var entry=it.next();
+            var owner=server.getPlayerList().getPlayer(entry.getKey());
+            if(owner==null)continue;
+            if(owner.serverLevel().getGameTime()<entry.getValue())continue;
+            var journal=BEAM_JOURNAL.remove(entry.getKey());
+            if(journal!=null)for(var b:journal.entrySet())owner.serverLevel().setBlock(b.getKey(),b.getValue(),2);
+            it.remove();
+        }
+    }
+
+    /** 领域对拼获胜（由 DomainClash 回调）：五条悟会用茈打碎领域，算主动收回，并开始 3 分钟生存计时。 */
+    public static void onClashWon(ServerPlayer p) {
+        var data=Curse.data(p);
+        data.putBoolean(CLASH_DONE,true);
+        data.putLong(CLASH_AT,p.level().getGameTime());
+        closeDomain(p);
+        p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域对拼获胜：五条悟以外道「茈」击碎了盖棺铁围山 · 从现在起活过 3 分钟"));
     }
 
     // ---------------------------------------------------------------- 技能 1：火砾虫
@@ -107,6 +216,7 @@ public final class JogoCombat {
         }
         DOMAINS.add(new Domain(p,center,p.getServer().getTickCount()+DOMAIN_LIFE,DOMAIN_RADIUS,captives));
         JogoTerrain.open(p,center,DOMAIN_RADIUS);
+        DomainClash.opened(p,center,DOMAIN_RADIUS);
         Network.send(p.serverLevel(),new Network.Effect(JogoFx.DOMAIN,p.getId(),center,Vec3.ZERO,(float)DOMAIN_RADIUS,DOMAIN_LIFE,0));
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.6f,0.45f);
         p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域展开 · 盖棺铁围山"));
@@ -159,7 +269,7 @@ public final class JogoCombat {
     // ---------------------------------------------------------------- 每刻推进：火砾虫 / 陨石 / 坠落物
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e) {
         if(e.phase!=TickEvent.Phase.END)return;
-        tickBugs();tickMeteors();tickFalling();tickPillars();tickDomains();JogoTerrain.tick();
+        tickBugs();tickMeteors();tickFalling();tickPillars();tickDomains();JogoTerrain.tick();tickBeam();
     }
     private static void tickBugs() {
         for(Iterator<Bug> it=BUGS.iterator();it.hasNext();){
@@ -286,19 +396,36 @@ public final class JogoCombat {
         }
         return;
         }
-        if(data.getBoolean(SIEGE_DONE))return;
-        boolean hurt=p.getHealth()<p.getMaxHealth()*SIEGE_HEALTH;
-        int nearby=hurt?enemies(p):0;
-        boolean burning=p.isOnFire()||p.isInLava();
-        if(!burning||nearby<SIEGE_ENEMIES)return;
-        int siege=data.getInt(SIEGE)+1;data.putInt(SIEGE,siege);
-        if(siege%100==0)p.displayClientMessage(net.minecraft.network.chat.Component.literal("盖棺铁围山 "+siege/20+" / 60 秒 · 敌人 "+nearby),true);
-        if(siege>=SIEGE_TICKS){
-            data.putBoolean(SIEGE_DONE,true);
-            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第二章·盖棺铁围山 完成"));
+        if(!data.getBoolean(SIEGE_DONE)){
+            boolean nether=p.level().dimension()==net.minecraft.world.level.Level.NETHER;
+            boolean hurt=p.getHealth()<p.getMaxHealth()*SIEGE_HEALTH;
+            if(nether&&hurt){
+                int siege=data.getInt(SIEGE)+1;data.putInt(SIEGE,siege);
+                if(siege%100==0)p.displayClientMessage(net.minecraft.network.chat.Component.literal("盖棺铁围山 "+siege/20+" / 60 秒"),true);
+                if(siege>=NETHER_TICKS){
+                    data.putBoolean(SIEGE_DONE,true);
+                    p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第二章·盖棺铁围山 完成"));
+                    CharacterRewardsHook.grant(p);
+                }
+            }
+            return;
+        }
+        // 第三章：开始时给虚空钥匙；对拼获胜后活过 3 分钟 + 击杀五条悟
+        if(!data.getBoolean(KEY_GIVEN)){
+            data.putBoolean(KEY_GIVEN,true);
+            Journey.give(p,new net.minecraft.world.item.ItemStack(VoidContent.KEY.get()));
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第三章·灾厄火焰：虚空钥匙已放入背包 · 用它在虚空击败五条悟"));
+        }
+        if(data.getBoolean(GOJO_DONE))return;
+        if(data.getBoolean(CLASH_DONE)&&data.getBoolean(GOJO_KILL)&&p.level().getGameTime()-data.getLong(CLASH_AT)>=GOJO_SURVIVE){
+            data.putBoolean(GOJO_DONE,true);
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第三章·灾厄火焰：五条悟 完成"));
             CharacterRewardsHook.grant(p);
         }
+        return;
+        // 旧判定已废弃
     }
+
     /** 周围 24 格内存活的敌对生物数量（不数玩家、不数自己的召唤物）。 */
     private static int enemies(ServerPlayer p) {
         int count=0;

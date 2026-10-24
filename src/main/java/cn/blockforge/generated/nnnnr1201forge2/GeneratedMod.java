@@ -58,6 +58,12 @@ public final class GeneratedMod {
         character.CharacterPackets.register();
         MinecraftForge.EVENT_BUS.register(character.CharacterService.class);
         MinecraftForge.EVENT_BUS.register(character.CharacterRewards.class);
+        // 漏壶·灾厄火焰：三招自定义效果 + 被动免疫 + 第一章泡岩浆进度
+        character.CharacterCasting.registerEffect("jogo",character.jogo.JogoSkills.FIRE_BUG,character.jogo.JogoCombat::castBugs);
+        character.CharacterCasting.registerEffect("jogo",character.jogo.JogoSkills.METEOR,character.jogo.JogoCombat::castMeteors);
+        character.CharacterCasting.registerEffect("jogo",character.jogo.JogoSkills.LAVA_BURST,character.jogo.JogoCombat::castPillars);
+        character.CharacterService.registerRanker("jogo",character.jogo.JogoCombat::rank);
+        MinecraftForge.EVENT_BUS.register(character.jogo.JogoCombat.class);
         MinecraftForge.EVENT_BUS.register(character.toji.TojiCombat.class);
         Network.registerDrawing();
         MinecraftForge.EVENT_BUS.register(SlashForms.class);

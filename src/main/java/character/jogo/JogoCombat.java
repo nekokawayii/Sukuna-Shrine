@@ -361,6 +361,26 @@ public final class JogoCombat {
         }
         return false;
     }
+    /** 作弊道具用：直接完成"当前章节"（按顺序推进一章→二章→三章，奖励正常发放）。 */
+    public static boolean completeNextChapter(ServerPlayer p) {
+        var data=Curse.data(p);
+        if(!data.getBoolean(DONE)){
+            data.putBoolean(DONE,true);data.putInt(PROGRESS,SOAK_TICKS);data.putInt(BUCKETS,3);
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("作弊：第一章·于长夜重返大地 已跳过"));
+        }else if(!data.getBoolean(SIEGE_DONE)){
+            data.putBoolean(SIEGE_DONE,true);
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("作弊：第二章·盖棺铁围山 已跳过"));
+        }else if(!data.getBoolean(GOJO_DONE)){
+            data.putBoolean(CLASH_DONE,true);data.putLong(CLASH_AT,p.level().getGameTime()-GOJO_SURVIVE);
+            data.putBoolean(GOJO_DONE,true);
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("作弊：第三章·灾厄火焰：五条悟 已跳过"));
+        }else{
+            return false;
+        }
+        CharacterRewardsHook.grant(p);
+        return true;
+    }
+
     /** 对拼获胜时延长领域剩余时间（DomainClash.extend 会调用）。 */
     public static void extendDomain(ServerPlayer p,int ticks) {
         for(int i=0;i<DOMAINS.size();i++){

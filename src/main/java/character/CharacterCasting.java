@@ -44,8 +44,17 @@ public final class CharacterCasting {
                 ||Skills.sealing(p)||Skills.sustaining(p)||GuardianPlayerSkills.sustaining(p)||FurnaceMax.active(p)
                 ||DismantleMotion.active(p)||CombatExpansion.chanting(p))return;
         String cooldown="CharacterSkillCooldown_"+id;
-        if(Curse.active(p,cooldown)||Curse.active(p,"CharacterGlobalCooldown")){
-            p.displayClientMessage(Component.literal("技能冷却中，请稍后再试"),true);return;
+        long nowTick=p.level().getGameTime();
+        long remainSkill=Curse.data(p).getLong(cooldown)-nowTick;
+        long remainGlobal=Curse.data(p).getLong("CharacterGlobalCooldown")-nowTick;
+        if(remainSkill>0||remainGlobal>0){
+            // 冷却明示：技能名 + 剩余秒数（聊天栏，避免只闪一下动作栏看不到）
+            String text=remainSkill>=remainGlobal
+                ? skill.name()+" 冷却中 · "+String.format(java.util.Locale.ROOT,"%.1f",remainSkill/20.0)+" 秒"
+                : "公共施法间隔 · "+String.format(java.util.Locale.ROOT,"%.1f",remainGlobal/20.0)+" 秒后再试";
+            p.sendSystemMessage(Component.literal(text));
+            p.displayClientMessage(Component.literal(text),true);
+            return;
         }
         if(!Curse.spend(p,skill.cost()))return;
         double cdScale=COOLDOWN_SCALES.getOrDefault(definition.id(),pl->1.0).scale(p);

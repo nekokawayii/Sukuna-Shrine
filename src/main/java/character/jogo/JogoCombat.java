@@ -43,6 +43,12 @@ public final class JogoCombat {
     private static final List<Meteor> METEORS=new ArrayList<>();
     private static final List<Falling> FALLING=new ArrayList<>();
     private static final List<Pillar> PILLARS=new ArrayList<>();
+    /** 火焰喷发：持续 15 秒不断向前飞的扇形火焰。 */
+    private record Fan(ServerLevel level,UUID owner,Vec3 dir,float damage,int end,int wave) {}
+    /** 火山喷发：一条粗大的火柱，向前飞 40 格。 */
+    private record Column(ServerLevel level,UUID owner,Vec3 pos,Vec3 dir,float damage,double traveled) {}
+    private static final List<Fan> FANS=new ArrayList<>();
+    private static final List<Column> COLUMNS=new ArrayList<>();
     /** 盖棺铁围山：封闭式火山领域，持续 30 秒，界内敌人被高温烘烤、漏壶冷却减半。 */
     private record Domain(ServerPlayer owner, Vec3 center, int end, double radius, Map<UUID,Vec3> captives) {}
     private static final List<Domain> DOMAINS=new ArrayList<>();
@@ -59,34 +65,11 @@ public final class JogoCombat {
         // ---------------------------------------------------------------- 第三章解锁的三招 + 被动
     /** 火山喷发：掌心高压岩浆柱，直线贯穿 10 格并把沿途地表化为焦岩（岩浆块，8 秒后还原）。 */
     public static void castVolcanoBeam(ServerPlayer p,CharacterSkill skill,int rank) {
-        Vec3 start=p.getEyePosition(),dir=p.getLookAngle(),end=start.add(dir.scale(skill.range()));
-        var wall=p.level().clip(new net.minecraft.world.level.ClipContext(start,end,
-            net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,p));
-        if(wall.getType()!=net.minecraft.world.phys.HitResult.Type.MISS)end=wall.getLocation();
-        float dmg=CombatSettings.spellDamage(p,skill.damageAt(rank));
-        for(var target:p.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
-                new net.minecraft.world.phys.AABB(start,end).inflate(1.4),t->CombatSettings.canHit(p,t)&&t!=p)){
-            AttackTypes.mark(AttackTypes.MAGIC);
-            try{CombatSettings.hurt(p,target,p.damageSources().indirectMagic(p,p),dmg);}
-            finally{AttackTypes.clear();}
-            target.setSecondsOnFire(4);
-        }
-        ServerLevel level=p.serverLevel();
-        for(double t=0;t<=1.0;t+=0.07){
-            Vec3 at=start.lerp(end,t);
-            int x=(int)Math.floor(at.x),z=(int)Math.floor(at.z);
-            int y=level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE,x,z);
-            var pos=new BlockPos(x,y,z);
-            BlockState old=level.getBlockState(pos);
-            if(!old.isAir()&&!old.hasBlockEntity()&&old.getDestroySpeed(level,pos)>=0){
-                BEAM_JOURNAL.computeIfAbsent(p.getUUID(),k->new LinkedHashMap<>()).putIfAbsent(pos,old);
-                level.setBlock(pos,Blocks.MAGMA_BLOCK.defaultBlockState(),2);
-                BEAM_EXPIRE.putIfAbsent(p.getUUID(),level.getGameTime()+160);
-            }
-            Network.send(level,new Network.Effect(JogoFx.PILLAR,0,at,dir,1,6,0));
-        }
-        level.playSound(null,p.blockPosition(),SoundEvents.FIRECHARGE_USE,SoundSource.PLAYERS,1.2f,0.7f);
+        COLUMNS.add(new Column(p.serverLevel(),p.getUUID(),p.getEyePosition().add(p.getLookAngle().scale(1.2)),
+            p.getLookAngle(),CombatSettings.spellDamage(p,skill.damageAt(rank)),0));
+        p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.BLAZE_SHOOT,SoundSource.PLAYERS,1.4f,0.6f);
     }
+
     /** 岩浆陷阱：前方地面隆起、刺出火山柱，把敌人击飞。 */
     public static void castMagmaTrap(ServerPlayer p,CharacterSkill skill,int rank) {
         ServerLevel level=p.serverLevel();Vec3 dir=p.getLookAngle();float dmg=CombatSettings.spellDamage(p,skill.damageAt(rank));
@@ -183,16 +166,69 @@ public final class JogoCombat {
     // ---------------------------------------------------------------- 技能 3：火焰喷发
     /** 火焰喷发：每刻前进 1.6 格的快速岩浆柱，8 刻飞完 12 格；沿途命中即结算。 */
     public static void castPillars(ServerPlayer p,CharacterSkill skill,int rank) {
-        int count=Math.min(15,1+rank*5);
-        Vec3 start=p.getEyePosition(),look=p.getLookAngle();
-        Vec3 side=look.cross(new Vec3(0,1,0)).normalize();if(side.lengthSqr()<.01)side=new Vec3(1,0,0);
         float damage=CombatSettings.spellDamage(p,skill.damageAt(rank));
-        for(int i=0;i<count;i++){
-            double angle=Math.toRadians(-22+44.0*(count==1?0.5:i/(double)(count-1)));
-            Vec3 dir=look.scale(Math.cos(angle)).add(side.scale(Math.sin(angle))).normalize();
-            PILLARS.add(new Pillar(p.serverLevel(),p.getUUID(),start.add(dir.scale(0.6)),dir,damage,new HashSet<>(),0));
+        FANS.add(new Fan(p.serverLevel(),p.getUUID(),p.getLookAngle(),damage,p.getServer().getTickCount()+PILLAR_LIFE,0));
+        p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.FIRECHARGE_USE,SoundSource.PLAYERS,1.3f,0.8f);
+    }
+    /** 火焰喷发：每 2 刻向前推一波扇形火舌，持续 15 秒。 */
+    private static void tickFans() {
+        if(FANS.isEmpty())return;
+        for(Iterator<Fan> it=FANS.iterator();it.hasNext();){
+            Fan fan=it.next();ServerLevel level=fan.level();
+            ServerPlayer owner=level.getServer().getPlayerList().getPlayer(fan.owner());
+            if(owner==null||level.getServer().getTickCount()>=fan.end()){it.remove();continue;}
+            if(level.getServer().getTickCount()%2!=0)continue;
+            Vec3 side=fan.dir().cross(new Vec3(0,1,0)).normalize();
+            int count=Math.max(3,Math.min(15,1+CharacterService.rank(owner)*5));
+            double reach=6+(level.getServer().getTickCount()%60)*0.35;
+            for(int i=0;i<count;i++){
+                double angle=Math.toRadians(-22+44.0*(count==1?0.5:i/(double)(count-1)));
+                Vec3 dir=fan.dir().scale(Math.cos(angle)).add(side.scale(Math.sin(angle))).normalize();
+                Vec3 at=owner.getEyePosition().add(dir.scale(reach));
+                Network.send(level,new Network.Effect(JogoFx.PILLAR,0,at,dir,1,6,0));
+                for(var target:level.getEntitiesOfClass(LivingEntity.class,
+                        new net.minecraft.world.phys.AABB(at,at).inflate(2.2),t->CombatSettings.canHit(owner,t))){
+                    AttackTypes.mark(AttackTypes.MAGIC);
+                    try{CombatSettings.hurt(owner,target,owner.damageSources().indirectMagic(owner,owner),fan.damage());}
+                    finally{AttackTypes.clear();}
+                    target.setSecondsOnFire(3);
+                }
+            }
         }
-        p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.FIRECHARGE_USE,SoundSource.PLAYERS,1.2f,0.8f);
+    }
+    /** 火山喷发：一条粗大的火柱，每刻前进 2.5 格，最远 40 格。 */
+    private static void tickColumns() {
+        if(COLUMNS.isEmpty())return;
+        for(Iterator<Column> it=COLUMNS.iterator();it.hasNext();){
+            Column c=it.next();ServerLevel level=c.level();
+            ServerPlayer owner=level.getServer().getPlayerList().getPlayer(c.owner());
+            if(owner==null||c.traveled()>=40){it.remove();continue;}
+            Vec3 next=c.pos().add(c.dir().scale(2.5));
+            Network.send(level,new Network.Effect(JogoFx.PILLAR,0,next,c.dir(),2,8,0));
+            for(var target:level.getEntitiesOfClass(LivingEntity.class,
+                    new net.minecraft.world.phys.AABB(c.pos(),next).inflate(2.2),t->CombatSettings.canHit(owner,t))){
+                AttackTypes.mark(AttackTypes.MAGIC);
+                try{CombatSettings.hurt(owner,target,owner.damageSources().indirectMagic(owner,owner),c.damage());}
+                finally{AttackTypes.clear();}
+                target.setSecondsOnFire(4);
+            }
+            int x=(int)Math.floor(next.x),z=(int)Math.floor(next.z);
+            int y=level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE,x,z);
+            var pos=new BlockPos(x,y,z);
+            BlockState old=level.getBlockState(pos);
+            if(!old.isAir()&&!old.hasBlockEntity()&&old.getDestroySpeed(level,pos)>=0){
+                BEAM_JOURNAL.computeIfAbsent(owner.getUUID(),k->new LinkedHashMap<>()).putIfAbsent(pos,old);
+                level.setBlock(pos,Blocks.MAGMA_BLOCK.defaultBlockState(),2);
+                BEAM_EXPIRE.putIfAbsent(owner.getUUID(),level.getGameTime()+160);
+            }
+            COLUMNS.set(COLUMNS.indexOf(c),new Column(level,c.owner(),next,c.dir(),c.damage(),c.traveled()+2.5));
+        }
+    }
+
+        private static Vec3 aimPoint(ServerPlayer p,double range) {
+        Vec3 start=p.getEyePosition(),end=start.add(p.getLookAngle().scale(range));
+        var hit=p.level().clip(new net.minecraft.world.level.ClipContext(start,end,net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,p));
+        return hit.getType()==net.minecraft.world.phys.HitResult.Type.MISS?end:hit.getLocation();
     }
 
     // ---------------------------------------------------------------- 技能 4：领域展开·盖棺铁围山
@@ -221,24 +257,21 @@ public final class JogoCombat {
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.6f,0.45f);
         p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域展开 · 盖棺铁围山"));
     }
-    /** 漏壶是否正站在自己的领域里（冷却减半用）。 */
     public static boolean inDomain(ServerPlayer p) {
         for(Domain d:DOMAINS)if(d.owner()==p)return true;
         return false;
     }
     private static void tickDomains() {
         if(DOMAINS.isEmpty())return;
-        int now=DOMAINS.get(0).owner().getServer().getTickCount();
         for(Iterator<Domain> it=DOMAINS.iterator();it.hasNext();){
             Domain d=it.next();ServerPlayer owner=d.owner();
-            if(owner==null||!owner.isAlive()||owner.level()!=owner.serverLevel()||owner.serverLevel().getGameTime()<=0){it.remove();if(owner!=null)JogoTerrain.restore(owner);continue;}
+            if(owner==null||!owner.isAlive()||owner.level()!=owner.serverLevel()){it.remove();if(owner!=null)JogoTerrain.restore(owner);continue;}
             if(owner.getServer().getTickCount()>=d.end()){
                 JogoTerrain.restore(owner);
                 Network.send(owner.serverLevel(),new Network.Effect(JogoFx.DOMAIN_END,owner.getId(),d.center(),Vec3.ZERO,0,0,0));
                 it.remove();continue;
             }
             ServerLevel level=owner.serverLevel();
-            // 封闭：闭合时被抓到的活物越界就拉回最近一次安全位置（碰撞箱留余量）
             double limit=d.radius()-DOMAIN_INSET;
             for(var it2=d.captives().entrySet().iterator();it2.hasNext();){
                 var entry=it2.next();var raw=level.getEntity(entry.getKey());
@@ -256,7 +289,6 @@ public final class JogoCombat {
             for(var target:level.getEntitiesOfClass(LivingEntity.class,
                     new net.minecraft.world.phys.AABB(d.center(),d.center()).inflate(d.radius()),
                     t->t!=owner&&t.isAlive()&&t.position().distanceToSqr(d.center())<=d.radius()*d.radius()&&CombatSettings.canHit(owner,t))){
-                // 有火抗或飞在空中（不落地）的敌人不吃持续烘烤
                 if(target.fireImmune()||!target.onGround())continue;
                 AttackTypes.mark(AttackTypes.MAGIC);
                 try{CombatSettings.hurt(owner,target,owner.damageSources().indirectMagic(owner,owner),damage);}
@@ -264,102 +296,6 @@ public final class JogoCombat {
                 target.setRemainingFireTicks(Math.max(target.getRemainingFireTicks(),40));
             }
         }
-    }
-
-    // ---------------------------------------------------------------- 每刻推进：火砾虫 / 陨石 / 坠落物
-    @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e) {
-        if(e.phase!=TickEvent.Phase.END)return;
-        tickBugs();tickMeteors();tickFalling();tickPillars();tickDomains();JogoTerrain.tick();tickBeam();
-    }
-    private static void tickBugs() {
-        for(Iterator<Bug> it=BUGS.iterator();it.hasNext();){
-            Bug bug=it.next();Vec3 next=bug.pos().add(bug.dir().scale(BUG_SPEED));
-            ServerLevel level=bug.level();int life=bug.life()-1;
-            Network.send(level,new Network.Effect(JogoFx.BUG,0,bug.pos(),Vec3.ZERO,1,6,0));
-            var hit=level.getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(next,next).inflate(1.2),
-                t->t.getUUID().equals(bug.owner())?false:t instanceof ServerPlayer sp?CombatSettings.canHit(level.getServer().getPlayerList().getPlayer(bug.owner()),t):true);
-            boolean blocked=!level.getBlockState(BlockPos.containing(next)).isAir();
-            if(life<=0||blocked||!hit.isEmpty()){
-                explode(level,bug.owner(),next);it.remove();continue;
-            }
-            BUGS.set(BUGS.indexOf(bug),new Bug(level,bug.owner(),next,bug.dir(),life));
-        }
-    }
-    private static void explode(ServerLevel level,UUID owner,Vec3 at) {
-        Network.send(level,new Network.Effect(JogoFx.BUG_BURST,0,at,Vec3.ZERO,3,10,0));
-        ServerPlayer caster=level.getServer().getPlayerList().getPlayer(owner);if(caster==null)return;
-        float damage=CombatSettings.spellDamage(caster,8);
-        for(var target:level.getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(at,at).inflate(3),t->CombatSettings.canHit(caster,t))){
-            AttackTypes.mark(AttackTypes.MAGIC);
-            try{CombatSettings.hurt(caster,target,caster.damageSources().indirectMagic(caster,caster),damage);}
-            finally{AttackTypes.clear();}
-            target.setSecondsOnFire(2);
-        }
-    }
-    private static void tickMeteors() {
-        for(Iterator<Meteor> it=METEORS.iterator();it.hasNext();){
-            Meteor meteor=it.next();
-            if(meteor.owner().level()!=meteor.owner().serverLevel()||!meteor.owner().isAlive()){it.remove();continue;}
-            if(meteor.delay()>0){METEORS.set(METEORS.indexOf(meteor),new Meteor(meteor.owner(),meteor.target(),meteor.delay()-1));continue;}
-            ServerLevel level=meteor.owner().serverLevel();
-            var block=FallingBlockEntity.fall(level,BlockPos.containing(meteor.target().x,meteor.target().y+28,meteor.target().z),Blocks.OBSIDIAN.defaultBlockState());
-            block.setDeltaMovement(0,-1.6,0);block.dropItem=false;
-            level.addFreshEntity(block);
-            FALLING.add(new Falling(level,block,meteor.owner().getUUID(),CombatSettings.spellDamage(meteor.owner(),24)));
-            it.remove();
-        }
-    }
-    private static void tickFalling() {
-        for(Iterator<Falling> it=FALLING.iterator();it.hasNext();){
-            Falling f=it.next();var block=f.block();
-            if(block.isRemoved()){impact(f.level(),f.owner(),block.position(),f.damage());it.remove();continue;}
-            var at=block.position();
-            Network.send(f.level(),new Network.Effect(JogoFx.METEOR_TRAIL,0,at,Vec3.ZERO,1.5f,8,0));
-            if(!block.onGround()&&at.y>f.level().getMinBuildHeight()+2&&!block.verticalCollision)continue;
-            impact(f.level(),f.owner(),at,f.damage());block.discard();it.remove();
-        }
-    }
-    private static void impact(ServerLevel level,UUID owner,Vec3 at,float damage) {
-        Network.send(level,new Network.Effect(JogoFx.METEOR_IMPACT,0,at,Vec3.ZERO,5f,14,0));
-        level.playSound(null,BlockPos.containing(at),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.4f,0.7f);
-        ServerPlayer caster=level.getServer().getPlayerList().getPlayer(owner);if(caster==null)return;
-        for(var target:level.getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(at,at).inflate(4.5),t->CombatSettings.canHit(caster,t))){
-            AttackTypes.mark(AttackTypes.MAGIC);
-            try{CombatSettings.hurt(caster,target,caster.damageSources().indirectMagic(caster,caster),damage);}
-            finally{AttackTypes.clear();}
-        }
-    }
-    /** 岩浆柱：前 8 刻飞出 12 格，之后在原地停留，**总生命周期 15 秒（300 刻）**，每 0.5 秒灼烧一次。 */
-    private static void tickPillars() {
-        for(Iterator<Pillar> it=PILLARS.iterator();it.hasNext();){
-            Pillar pillar=it.next();
-            int ticks=pillar.ticks()+1;
-            ServerLevel level=pillar.level();
-            Vec3 next=ticks<=8?pillar.pos().add(pillar.dir().scale(1.6)):pillar.pos();
-            if(ticks%2==0)Network.send(level,new Network.Effect(JogoFx.PILLAR,0,next,pillar.dir(),1,6,0));
-            if(ticks%10==0){
-                pillar.hit().clear();   // 停留期允许重复灼烧
-                ServerPlayer caster=level.getServer().getPlayerList().getPlayer(pillar.owner());
-                if(caster!=null)for(var target:level.getEntitiesOfClass(LivingEntity.class,
-                        new net.minecraft.world.phys.AABB(next,next).inflate(1.8),
-                        t->CombatSettings.canHit(caster,t)&&pillar.hit().add(t.getUUID()))){
-                    AttackTypes.mark(AttackTypes.MAGIC);
-                    try{CombatSettings.hurt(caster,target,caster.damageSources().indirectMagic(caster,caster),pillar.damage());}
-                    finally{AttackTypes.clear();}
-                    target.setSecondsOnFire(3);
-                }
-            }
-            if(ticks>=PILLAR_LIFE||(ticks<=8&&!pillarFlies(next,pillar.dir(),level))){it.remove();continue;}
-            PILLARS.set(PILLARS.indexOf(pillar),new Pillar(level,pillar.owner(),next,pillar.dir(),pillar.damage(),pillar.hit(),ticks));
-        }
-    }
-    private static boolean pillarFlies(Vec3 at,Vec3 dir,ServerLevel level) {
-        return level.getBlockState(BlockPos.containing(at)).isAir()&&at.y>level.getMinBuildHeight()+1;
-    }
-    private static Vec3 aimPoint(ServerPlayer p,double range) {
-        Vec3 start=p.getEyePosition(),end=start.add(p.getLookAngle().scale(range));
-        var hit=p.level().clip(new net.minecraft.world.level.ClipContext(start,end,net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,p));
-        return hit.getType()==net.minecraft.world.phys.HitResult.Type.MISS?end:hit.getLocation();
     }
 
     /** 关服/退存档兜底：把没结束的领域地形还原，避免残留。 */
@@ -417,7 +353,7 @@ public final class JogoCombat {
             p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第三章·灾厄火焰：虚空钥匙已放入背包 · 用它在虚空击败五条悟"));
         }
         if(data.getBoolean(GOJO_DONE))return;
-        if(data.getBoolean(CLASH_DONE)&&data.getBoolean(GOJO_KILL)&&p.level().getGameTime()-data.getLong(CLASH_AT)>=GOJO_SURVIVE){
+        if(data.getBoolean(CLASH_DONE)&&p.level().getGameTime()-data.getLong(CLASH_AT)>=GOJO_SURVIVE){
             data.putBoolean(GOJO_DONE,true);
             p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第三章·灾厄火焰：五条悟 完成"));
             CharacterRewardsHook.grant(p);

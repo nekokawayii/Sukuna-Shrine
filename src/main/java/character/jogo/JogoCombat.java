@@ -349,8 +349,7 @@ public final class JogoCombat {
         // 第三章：开始时给虚空钥匙；对拼获胜后活过 3 分钟 + 击杀五条悟
         if(!data.getBoolean(KEY_GIVEN)){
             data.putBoolean(KEY_GIVEN,true);
-            Journey.give(p,new net.minecraft.world.item.ItemStack(VoidContent.KEY.get()));
-            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第三章·灾厄火焰：虚空钥匙已放入背包 · 用它在虚空击败五条悟"));
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第三章·灾厄火焰：无需钥匙，可直接前往虚空竞技场"));
         }
         if(data.getBoolean(GOJO_DONE))return;
         if(data.getBoolean(CLASH_DONE)&&p.level().getGameTime()-data.getLong(CLASH_AT)>=GOJO_SURVIVE){

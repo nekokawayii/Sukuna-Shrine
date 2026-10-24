@@ -20,8 +20,6 @@ public final class VoidJourney {
     public static boolean evolved(Player p){return Curse.data(p).getBoolean("VoidShrine");}
     public static void enter(ServerPlayer p){
         if(p.level().dimension()==ARENA){leave(p);return;}
-        if(!SoulJourney.evolved(p)&&!Journey.maidCleared(p,"YujiDefeated")){p.sendSystemMessage(Component.literal("先击败虎杖残影，觉醒灵魂御厨子，再挑战五条悟。"));return;}
-        if(p.level().getDifficulty()==net.minecraft.world.Difficulty.PEACEFUL){p.sendSystemMessage(Component.literal("请将难度改为简单、普通或困难。"));return;}
         ServerLevel l=p.server.getLevel(ARENA);if(l==null){p.sendSystemMessage(Component.literal("虚空竞技场尚未载入，请重新打开存档。"));return;}
         var d=Curse.data(p);d.putString("VoidReturnDimension",p.level().dimension().location().toString());d.putDouble("VoidReturnX",p.getX());d.putDouble("VoidReturnY",p.getY());d.putDouble("VoidReturnZ",p.getZ());
         for(int x=-3;x<=3;x++)for(int z=-3;z<=3;z++)l.getChunk(x,z);
@@ -84,7 +82,6 @@ public final class VoidJourney {
     @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent e){
         if(e.phase!=TickEvent.Phase.END||!(e.player instanceof ServerPlayer p))return;
         if(p.tickCount%20==0)repairOldVictory(p);
-        if((SoulJourney.evolved(p)||Journey.maidCleared(p,"YujiDefeated"))&&!Curse.data(p).getBoolean("VoidKeyGiven")){Journey.give(p,new ItemStack(VoidContent.KEY.get()));Curse.data(p).putBoolean("VoidKeyGiven",true);p.sendSystemMessage(Component.literal("获得虚空钥匙：右键进入基岩层虚空竞技场。"));}
         if(p.level().dimension()==ARENA&&p.isAlive()&&p.tickCount%10==0&&(p.getY()<-60||p.getY()>-30||p.position().multiply(1,0,1).lengthSqr()>47*47))p.teleportTo(p.serverLevel(),0.5,-59,38.5,180,0);
     }
     @SubscribeEvent public static void livingTick(LivingEvent.LivingTickEvent e){

@@ -20,7 +20,12 @@ public final class JogoDomainRender {
         Vec3 cam=e.getCamera().getPosition();
         float time=(Minecraft.getInstance().level.getGameTime()+e.getPartialTick())*0.05f;
         var buffer=Tesselator.getInstance().getBuilder();
+        int previous0=RenderSystem.getShaderTexture(0),previous1=RenderSystem.getShaderTexture(1);
         RenderSystem.setShader(()->shader);
+        if(JogoDomainShaders.textured){
+            RenderSystem.setShaderTexture(0,JogoDomainShaders.WALL);
+            RenderSystem.setShaderTexture(1,JogoDomainShaders.EMISSION);
+        }
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(true);
         RenderSystem.disableBlend();
@@ -47,6 +52,8 @@ public final class JogoDomainRender {
             }
         }
         BufferUploader.drawWithShader(buffer.end());
+        RenderSystem.setShaderTexture(0,previous0);
+        RenderSystem.setShaderTexture(1,previous1);
         RenderSystem.enableCull();
         RenderSystem.enableBlend();
     }

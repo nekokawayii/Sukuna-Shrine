@@ -6,7 +6,7 @@ import static character.CharacterSkill.Shape.*;
 
 /** 漏壶·灾厄火焰：三招都是自定义效果（见 {@link JogoCombat}），这里只声明参数与轮盘文字。 */
 public final class JogoSkills {
-    public static final int FIRE_BUG=1000, METEOR=1001, LAVA_BURST=1002;
+    public static final int FIRE_BUG=1000, METEOR=1001, LAVA_BURST=1002, DOMAIN=1003;
 
     public static List<CharacterSkill> all() {
         return List.of(
@@ -19,7 +19,10 @@ public final class JogoSkills {
                 0xFFFF4A12,150,160,RAY,32,1,35,26,4,1,1,0,0),
             new CharacterSkill(LAVA_BURST,"灾厄·火焰喷发","火焰喷发",
                 "单手前指，向前方扇形喷出 1~15 条岩浆柱，灼烧范围内的敌人。",
-                0xFFFFB024,220,220,CONE,18,2,22,14,3,15,3,40,1)
+                0xFFFFB024,220,160,CONE,18,2,22,14,3,15,3,40,1),
+            new CharacterSkill(DOMAIN,"领域展开·盖棺铁围山","盖棺铁围山",
+                "封闭式火山领域：暗红火山岩壁围住战场，地面岩浆翻滚，界内敌人被高温持续烘烤；漏壶在领域内技能冷却减半。完成第二章解锁。",
+                0xFFFF3A0A,800,6000,BURST,20,1,180,0,0,1,0,0,0)
         );
     }
     private JogoSkills() {}

@@ -62,7 +62,9 @@ public final class GeneratedMod {
         character.CharacterCasting.registerEffect("jogo",character.jogo.JogoSkills.FIRE_BUG,character.jogo.JogoCombat::castBugs);
         character.CharacterCasting.registerEffect("jogo",character.jogo.JogoSkills.METEOR,character.jogo.JogoCombat::castMeteors);
         character.CharacterCasting.registerEffect("jogo",character.jogo.JogoSkills.LAVA_BURST,character.jogo.JogoCombat::castPillars);
+        character.CharacterCasting.registerEffect("jogo",character.jogo.JogoSkills.DOMAIN,character.jogo.JogoCombat::castDomain);
         character.CharacterService.registerRanker("jogo",character.jogo.JogoCombat::rank);
+        character.CharacterCasting.registerCooldownScale("jogo",pl->character.jogo.JogoCombat.inDomain(pl)?0.5:1.0);
         MinecraftForge.EVENT_BUS.register(character.jogo.JogoCombat.class);
         MinecraftForge.EVENT_BUS.register(character.toji.TojiCombat.class);
         Network.registerDrawing();

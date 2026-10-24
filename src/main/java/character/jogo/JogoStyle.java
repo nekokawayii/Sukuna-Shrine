@@ -12,7 +12,7 @@ public final class JogoStyle {
             new Stats(1000,10,2,0,10),   // 开局：咒力上限、额外生命、额外近战、术式加成、每秒回咒
             Stats.ZERO,                  // 每章固定成长设 0，全部写进 JogoStory 的章节奖励
             JogoSkills.all(),
-            Map.of(),                    // 三招开局全可用；要逐章解锁就在这里写 招式,章数
+            Map.of(JogoSkills.DOMAIN,2), // 前三招开局可用；领域展开在完成第二章后解锁
             Map.of()                     // 旧技能改显示用；漏壶全部是自定义技能
         );
     }

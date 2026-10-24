@@ -37,6 +37,10 @@ public final class JogoCombat {
     private static final List<Meteor> METEORS=new ArrayList<>();
     private static final List<Falling> FALLING=new ArrayList<>();
     private static final List<Pillar> PILLARS=new ArrayList<>();
+    /** 盖棺铁围山：封闭式火山领域，持续 30 秒，界内敌人被高温烘烤、漏壶冷却减半。 */
+    private record Domain(ServerPlayer owner, Vec3 center, int end, double radius) {}
+    private static final List<Domain> DOMAINS=new ArrayList<>();
+    public static final int DOMAIN_RADIUS=20, DOMAIN_LIFE=600;
 
     /** 章节进度：一章=泡岩浆满 30 秒；二章=盖棺铁围山坚持 60 秒。 */
     public static int rank(ServerPlayer p) {
@@ -80,16 +84,53 @@ public final class JogoCombat {
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.FIRECHARGE_USE,SoundSource.PLAYERS,1.2f,0.8f);
     }
 
+    // ---------------------------------------------------------------- 技能 4：领域展开·盖棺铁围山
+    public static void castDomain(ServerPlayer p,CharacterSkill skill,int rank) {
+        Vec3 center=p.position();
+        DOMAINS.removeIf(d->d.owner()==p);
+        DOMAINS.add(new Domain(p,center,p.getServer().getTickCount()+DOMAIN_LIFE,DOMAIN_RADIUS));
+        Network.send(p.serverLevel(),new Network.Effect(JogoFx.DOMAIN,p.getId(),center,Vec3.ZERO,(float)DOMAIN_RADIUS,DOMAIN_LIFE,0));
+        p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.6f,0.45f);
+        p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域展开 · 盖棺铁围山"));
+    }
+    /** 漏壶是否正站在自己的领域里（冷却减半用）。 */
+    public static boolean inDomain(ServerPlayer p) {
+        for(Domain d:DOMAINS)if(d.owner()==p)return true;
+        return false;
+    }
+    private static void tickDomains() {
+        if(DOMAINS.isEmpty())return;
+        int now=DOMAINS.get(0).owner().getServer().getTickCount();
+        for(Iterator<Domain> it=DOMAINS.iterator();it.hasNext();){
+            Domain d=it.next();ServerPlayer owner=d.owner();
+            if(owner==null||!owner.isAlive()||owner.level()!=owner.serverLevel()||owner.serverLevel().getGameTime()<=0){it.remove();continue;}
+            if(owner.getServer().getTickCount()>=d.end()){it.remove();continue;}
+            if(owner.getServer().getTickCount()%10!=0)continue;
+            ServerLevel level=owner.serverLevel();
+            float damage=CombatSettings.spellDamage(owner,6);
+            for(var target:level.getEntitiesOfClass(LivingEntity.class,
+                    new net.minecraft.world.phys.AABB(d.center(),d.center()).inflate(d.radius()),
+                    t->t!=owner&&t.isAlive()&&t.position().distanceToSqr(d.center())<=d.radius()*d.radius()&&CombatSettings.canHit(owner,t))){
+                // 有火抗或飞在空中（不落地）的敌人不吃持续烘烤
+                if(target.fireImmune()||!target.onGround())continue;
+                AttackTypes.mark(AttackTypes.MAGIC);
+                try{CombatSettings.hurt(owner,target,owner.damageSources().indirectMagic(owner,owner),damage);}
+                finally{AttackTypes.clear();}
+                target.setRemainingFireTicks(Math.max(target.getRemainingFireTicks(),40));
+            }
+        }
+    }
+
     // ---------------------------------------------------------------- 每刻推进：火砾虫 / 陨石 / 坠落物
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e) {
         if(e.phase!=TickEvent.Phase.END)return;
-        tickBugs();tickMeteors();tickFalling();tickPillars();
+        tickBugs();tickMeteors();tickFalling();tickPillars();tickDomains();
     }
     private static void tickBugs() {
         for(Iterator<Bug> it=BUGS.iterator();it.hasNext();){
             Bug bug=it.next();Vec3 next=bug.pos().add(bug.dir().scale(BUG_SPEED));
             ServerLevel level=bug.level();int life=bug.life()-1;
-            level.sendParticles(ParticleTypes.FLAME,bug.pos().x,bug.pos().y,bug.pos().z,2,.05,.05,.05,0.01);
+            Network.send(level,new Network.Effect(JogoFx.BUG,0,bug.pos(),Vec3.ZERO,1,6,0));
             var hit=level.getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(next,next).inflate(1.2),
                 t->t.getUUID().equals(bug.owner())?false:t instanceof ServerPlayer sp?CombatSettings.canHit(level.getServer().getPlayerList().getPlayer(bug.owner()),t):true);
             boolean blocked=!level.getBlockState(BlockPos.containing(next)).isAir();
@@ -100,8 +141,7 @@ public final class JogoCombat {
         }
     }
     private static void explode(ServerLevel level,UUID owner,Vec3 at) {
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,at.x,at.y,at.z,1,0,0,0,0);
-        level.sendParticles(ParticleTypes.LAVA,at.x,at.y,at.z,12,.4,.4,.4,0.2);
+        Network.send(level,new Network.Effect(JogoFx.BUG_BURST,0,at,Vec3.ZERO,3,10,0));
         ServerPlayer caster=level.getServer().getPlayerList().getPlayer(owner);if(caster==null)return;
         float damage=CombatSettings.spellDamage(caster,8);
         for(var target:level.getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(at,at).inflate(3),t->CombatSettings.canHit(caster,t))){
@@ -129,15 +169,13 @@ public final class JogoCombat {
             Falling f=it.next();var block=f.block();
             if(block.isRemoved()){impact(f.level(),f.owner(),block.position(),f.damage());it.remove();continue;}
             var at=block.position();
-            f.level().sendParticles(ParticleTypes.FLAME,at.x,at.y+0.5,at.z,4,.25,.5,.25,0.02);
-            f.level().sendParticles(ParticleTypes.LAVA,at.x,at.y+0.4,at.z,2,.2,.3,.2,0.05);
+            Network.send(f.level(),new Network.Effect(JogoFx.METEOR_TRAIL,0,at,Vec3.ZERO,1.5f,8,0));
             if(!block.onGround()&&at.y>f.level().getMinBuildHeight()+2&&!block.verticalCollision)continue;
             impact(f.level(),f.owner(),at,f.damage());block.discard();it.remove();
         }
     }
     private static void impact(ServerLevel level,UUID owner,Vec3 at,float damage) {
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,at.x,at.y,at.z,2,.6,.2,.6,0);
-        level.sendParticles(ParticleTypes.LAVA,at.x,at.y,at.z,24,.8,.4,.8,0.3);
+        Network.send(level,new Network.Effect(JogoFx.METEOR_IMPACT,0,at,Vec3.ZERO,5f,14,0));
         level.playSound(null,BlockPos.containing(at),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.4f,0.7f);
         ServerPlayer caster=level.getServer().getPlayerList().getPlayer(owner);if(caster==null)return;
         for(var target:level.getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(at,at).inflate(4.5),t->CombatSettings.canHit(caster,t))){
@@ -151,7 +189,7 @@ public final class JogoCombat {
             Pillar pillar=it.next();
             Vec3 next=pillar.pos().add(pillar.dir().scale(1.6));
             ServerLevel level=pillar.level();
-            for(double t=0;t<=1.0;t+=0.34){Vec3 at=pillar.pos().lerp(next,t);level.sendParticles(ParticleTypes.LAVA,at.x,at.y,at.z,2,.12,.12,.12,0.02);level.sendParticles(ParticleTypes.FLAME,at.x,at.y,at.z,2,.18,.18,.18,0.03);}
+            Network.send(level,new Network.Effect(JogoFx.PILLAR,0,next,pillar.dir(),1,6,0));
             ServerPlayer caster=level.getServer().getPlayerList().getPlayer(pillar.owner());
             if(caster!=null)for(var target:level.getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(pillar.pos(),next).inflate(1.5),
                     t->CombatSettings.canHit(caster,t)&&pillar.hit().add(t.getUUID()))){

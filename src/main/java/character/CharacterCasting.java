@@ -20,6 +20,13 @@ public final class CharacterCasting {
     @FunctionalInterface public interface CooldownScale { double scale(ServerPlayer player); }
     private static final java.util.Map<String,CooldownScale> COOLDOWN_SCALES=new java.util.HashMap<>();
     public static void registerCooldownScale(String character,CooldownScale scale) { if(scale!=null)COOLDOWN_SCALES.put(character,scale); }
+
+    /** 允许在「无量空处」压制下仍然能施放的角色技能（漏壶的盖棺铁围山要在对方领域里展开打对拼）。 */
+    private static final java.util.Set<String> MIND_LOCK_CASTABLE=new java.util.HashSet<>();
+    public static void allowWhileMindLocked(String character,int skill) { MIND_LOCK_CASTABLE.add(character+"#"+skill); }
+    private static boolean mindLockAllowed(CharacterDefinition d,int skill) {
+        return d!=null&&MIND_LOCK_CASTABLE.contains(d.id()+"#"+skill);
+    }
     private record Key(String character,int skill) {}
     private static final java.util.Map<Key,Effect> EFFECTS=new java.util.HashMap<>();
     public static void registerEffect(String character,int skill,Effect effect) {
@@ -33,7 +40,7 @@ public final class CharacterCasting {
         var skill=definition.config().skill(id);if(skill==null)return;
         if(!p.isAlive()||p.isSpectator()||p.isPassenger()||p.isSleeping()||p.isUsingItem()||!Curse.canUseTechnique(p)
                 ||PrisonSystem.locked(p)||ObserverRitual.active(p)||TenShadows.locked(p)||DeathStar.charging(p)||DeathStar.anemic(p)
-                ||Shinbuke.holding(p)||GojoEntity.mindLocked(p)||GuardianPlayerSkills.locked(p)||SoulCombat.suppressed(p)
+                ||Shinbuke.holding(p)||(GojoEntity.mindLocked(p)&&!mindLockAllowed(definition,id))||GuardianPlayerSkills.locked(p)||SoulCombat.suppressed(p)
                 ||Skills.sealing(p)||Skills.sustaining(p)||GuardianPlayerSkills.sustaining(p)||FurnaceMax.active(p)
                 ||DismantleMotion.active(p)||CombatExpansion.chanting(p))return;
         String cooldown="CharacterSkillCooldown_"+id;

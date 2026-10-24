@@ -91,7 +91,8 @@ public final class CombatSettings {
     @SubscribeEvent(priority=net.minecraftforge.eventbus.api.EventPriority.LOWEST)
     public static void enemyMelee(net.minecraftforge.event.entity.player.AttackEntityEvent event){
         if(!(event.getEntity() instanceof ServerPlayer p)||MaidBridge.isCaster(p)||!(event.getTarget() instanceof Player target))return;
-        if(target.canHarmPlayer(p)||!canHit(p,target)||Curse.fingers(p)<5||!Curse.canUseTechnique(p)||SoulCombat.suppressed(p)||DomainClash.active(p)||DomainClash.active(target))return;
+        boolean physical=character.CharacterService.toji(p)||character.CharacterService.yuji(p);
+        if(target.canHarmPlayer(p)||!canHit(p,target)||(!physical&&(Curse.fingers(p)<5||!Curse.canUseTechnique(p)))||SoulCombat.suppressed(p)||DomainClash.active(p)||DomainClash.active(target))return;
         float strength=p.getAttackStrengthScale(0.5f);
         float amount=(float)p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)*(0.2f+strength*strength*0.8f);
         amount+=net.minecraft.world.item.enchantment.EnchantmentHelper.getDamageBonus(p.getMainHandItem(),target.getMobType())*strength;

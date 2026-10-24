@@ -1,5 +1,5 @@
 plugins { id 'java'; id 'net.minecraftforge.gradle' version '[6.0,6.2)' }
-version = '1.6.0-r288-high-2-r145'
+version = '1.6.0-r288-high-2-r146'
 group = 'cn.blockforge.generated.nnnnr1201forge2'
 base { archivesName = 'sukuna-forge-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -112,6 +112,23 @@ tasks.register('checkDeathStar', JavaExec) {
     mainClass = 'CheckDeathStar'
     workingDir = projectDir
 }
+// 角色模板、六角色目录、体术余额与接线回归，正式 jar 必须先通过。
+def characterClasses = layout.buildDirectory.dir('character-check')
+tasks.register('compileCharacterCheck', JavaCompile) {
+    dependsOn tasks.named('compileJava')
+    source = files('tools/CheckCharacters.java')
+    // 直接复用主源码产物：新增角色文件夹不需要再手动维护第二份源码清单。
+    classpath = sourceSets.main.output + sourceSets.main.compileClasspath
+    destinationDirectory = characterClasses
+}
+tasks.register('checkCharacters', JavaExec) {
+    dependsOn 'compileCharacterCheck'
+    classpath = files(characterClasses) + sourceSets.main.output
+    mainClass = 'CheckCharacters'
+    workingDir = projectDir
+}
+tasks.named('check') { dependsOn 'checkCharacters' }
+tasks.named('jar') { dependsOn 'checkCharacters' }
 tasks.named('check') { dependsOn 'checkDeathStar' }
 tasks.named('jar') { dependsOn 'checkDeathStar' }
 def bloodClasses = layout.buildDirectory.dir('blood-combat-check')
@@ -266,19 +283,16 @@ tasks.register('checkClientWiring', JavaExec) {
     }
 }
 
-// 无游戏回归（tools/Check*.java）的源文件在当前工作树里缺失：源文件不在时编译任务会“静默产出一个空目录”，
-// 随后 JavaExec 因“找不到主类”直接让 jar/build 失败。这里统一加一道闸：
-//   · 源文件缺失 → 跳过该回归任务，并在构建日志里显式打出“本轮没有跑回归断言”，绝不静默当作通过；
-//   · 源文件补回 → 任务自动恢复执行，无需改回 build.gradle。
+// tools/ 无游戏回归源文件在本工作树里缺失：缺失时编译任务会“静默产出空目录”，随后 JavaExec
+// 因“找不到主类”让 jar/build 失败。这里统一加闸：源文件不在就跳过该回归任务并在日志里明示
+// “本轮没有跑回归断言”，源文件补回后自动恢复执行。
 def checkToolExists = { String taskName ->
     file("tools/Check${taskName.substring('check'.length())}.java").exists()
 }
 tasks.withType(JavaExec).matching { it.name.startsWith('check') && it.name != 'check' }.configureEach {
     onlyIf { t ->
         boolean ok = checkToolExists(t.name)
-        if (!ok) {
-            logger.lifecycle("!!! 跳过 ${t.name}：tools/Check${t.name.substring('check'.length())}.java 不存在 —— 本轮 jar 没有对应回归断言保护")
-        }
+        if (!ok) logger.lifecycle("!!! 跳过 ${t.name}：tools/Check${t.name.substring('check'.length())}.java 不存在 —— 本轮 jar 没有对应回归断言保护")
         ok
     }
 }

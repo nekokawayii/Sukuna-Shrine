@@ -12,6 +12,7 @@ public final class ClientBootstrap {
     public static void install() {
         if(installed)return;
         installed=true;
+        character.CharacterClient.install();
         var modBus=FMLJavaModLoadingContext.get().getModEventBus();
         modBus.register(Client.Registration.class);
         modBus.register(TenShadowsClient.Registration.class);

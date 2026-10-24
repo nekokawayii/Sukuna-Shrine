@@ -31,7 +31,7 @@ public final class SukunaBranches {
     private static final List<Web> webs=new ArrayList<>();
     private static final List<Multi> multis=new ArrayList<>();
     private static final List<Wall> walls=new ArrayList<>();
-    public static int stage(ServerPlayer p){return GuardianCombat.awakened(p)?10:VoidJourney.evolved(p)?9:SoulJourney.evolved(p)?8:Journey.nine(p)?7:Curse.awakened(p)?6:Math.max(0,Curse.tier(p)-1);}
+    public static int stage(ServerPlayer p){if(character.CharacterService.family(p,character.CharacterDefinition.Family.BLOOD))return 7+character.CharacterService.rank(p);return GuardianCombat.awakened(p)?10:VoidJourney.evolved(p)?9:SoulJourney.evolved(p)?8:Journey.nine(p)?7:Curse.awakened(p)?6:Math.max(0,Curse.tier(p)-1);}
     public static double cleaveFactor(ServerPlayer p){return BranchRules.cleave(Curse.rawEnergy(p),Curse.rawMaximum(p));}
     public static int wallSize(ServerPlayer p){return BranchRules.wallSize(Journey.nine(p),SoulJourney.evolved(p),VoidJourney.evolved(p),GuardianCombat.awakened(p));}
     public static int wallSpacing(ServerPlayer p){int n=Curse.data(p).getInt("WallSpacing");return n>=1&&n<=20?n:4;}

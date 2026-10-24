@@ -40,7 +40,7 @@ public final class Authority {
     });
     public static void init(){} // 在 Content.ITEMS 注册前触发字段初始化。
     public static boolean hidden(Item i){return i==PERMISSION.get()||i==CURSE.get()||i==MARKER.get()||i==BANNER.get()||i==EDITOR.get()||i==MEDIUM.get();}
-    public static boolean unlocked(Player p){return Curse.data(p).getBoolean("WorldAuthority");}
+    public static boolean unlocked(Player p){return !character.CharacterService.toji(p)&&Curse.data(p).getBoolean("WorldAuthority");}
     public static boolean instant(Player p){return unlocked(p)||p instanceof MaidBridge.Actor a&&owner(a)!=null;}
     public static boolean countedAsMaid(Player p){return MaidBridge.isCaster(p)&&damageOwner(p)==null;}
     public static ServerPlayer owner(MaidBridge.Actor a){var tag=a.maid.getPersistentData();if(tag.hasUUID("AuthorityEchoOwner"))return a.server.getPlayerList().getPlayer(tag.getUUID("AuthorityEchoOwner"));ServerPlayer p=Legion.owner(a.maid);return p!=null&&unlocked(p)?p:null;}

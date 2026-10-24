@@ -35,7 +35,7 @@ public final class MeleeComboClient {
     }
     private static boolean available(){
         var mc=Minecraft.getInstance();var p=mc.player;
-        return p!=null&&mc.level!=null&&Client.progress.sukuna()&&p.isAlive()&&!p.isSpectator()
+        return p!=null&&mc.level!=null&&(Client.progress.sukuna()||character.CharacterClient.toji()||character.CharacterClient.selected()!=null&&character.CharacterClient.selected().family()==character.CharacterDefinition.Family.MARTIAL)&&p.isAlive()&&!p.isSpectator()
             &&mc.screen==null&&mc.isWindowActive()&&mc.mouseHandler.isMouseGrabbed()&&!p.isUsingItem()
             &&!p.isPassenger()&&!p.isSleeping()&&!p.isFallFlying()&&!p.isSwimming()
             &&!DismantleMotionClient.active(p.getId())&&!DismantleMotionClient.simpleDomain(p.getId())

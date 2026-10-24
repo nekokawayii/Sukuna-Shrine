@@ -57,10 +57,10 @@ public final class GojoPlayer {
      *  之前轮盘直接拿格号索引 DESC（格号 2 = 茈，却取到 DESC[2] 的赫·最大功率），
      *  所以悬停"茈"时显示的说明是"赫·最大功率"——这就是用户报的"普通茈在轮盘变成了赫·最大功率"。 */
     public static String descOfSlot(int slot){return slot>=0&&slot<SLOTS?desc(WHEEL[slot]):"";}
-    public static boolean unlocked(Player p){return Curse.data(p).getBoolean("GojoMemory");}
+    public static boolean unlocked(Player p){return character.CharacterService.family(p,character.CharacterDefinition.Family.LIMITLESS)||character.CharacterService.permits(p,character.CharacterDefinition.Family.LIMITLESS)&&Curse.data(p).getBoolean("GojoMemory");}
     /** 吃下六眼：玩家与女仆共用同一条数据位；女仆不能走 displayClientMessage（没有连接会崩）。 */
     public static boolean consume(Player p){
-        if(unlocked(p))return false;
+        if(unlocked(p)||!character.CharacterService.permits(p,character.CharacterDefinition.Family.LIMITLESS))return false;
         Curse.data(p).putBoolean("GojoMemory",true);
         if(p instanceof MaidBridge.Actor maid){
             ServerPlayer owner=MaidBridge.owner(maid);

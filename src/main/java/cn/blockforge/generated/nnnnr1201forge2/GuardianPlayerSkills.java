@@ -44,7 +44,7 @@ public final class GuardianPlayerSkills {
     private static final class Blood {final State s;final UUID target;Vec3 pos,velocity;int age;Blood(State s,LivingEntity t,Vec3 velocity){this.s=s;target=t==null?null:t.getUUID();pos=s.p.getEyePosition();this.velocity=t==null?s.p.getLookAngle().scale(Math.max(0.2,velocity.length())).add(velocity.scale(0.18)):velocity;}}
     private record Poison(ServerPlayer owner,ServerLevel level,UUID target,long until,float damage){}
     private static final class Grid {final State s;final AABB bounds;final Set<UUID> hit=new HashSet<>();int remaining=GuardianGridSlash.LIFETIME;Grid(State s){this.s=s;Vec3 p=s.p.position();double r=Math.min(512,s.v("GridRadius"));bounds=new AABB(p.x-r,p.y,p.z-r,p.x+r,p.y+8,p.z+r);}}
-    private static boolean valid(State s){return valid(s.p,s.level)&&GuardianCombat.awakened(s.p);}
+    private static boolean valid(State s){return valid(s.p,s.level)&&(GuardianCombat.awakened(s.p)||character.CharacterService.yuji(s.p));}
     private static boolean valid(ServerPlayer p,ServerLevel level){return p.isAlive()&&!p.isRemoved()&&!p.isSpectator()&&p.level()==level;}
     private static void fx(State s,int kind,Vec3 point,Vec3 direction,float size,int life,long seed){Network.send(s.level,new Network.Effect(kind,s.p.getId(),point,direction,size,life,seed));}
     private static LivingEntity target(State s){var e=s.target==null?null:s.level.getEntity(s.target);return e instanceof LivingEntity t&&CombatSettings.canHit(s.p,t)?t:null;}
@@ -76,7 +76,7 @@ public final class GuardianPlayerSkills {
         return s==null?Curse.data(p).getLong("GuardianSkillCooldown"+skill):s.cooldowns[skill];
     }
     public static boolean available(ServerPlayer p,int skill){
-        if(skill<0||skill>=COUNT||!p.isAlive()||p.isSpectator()||DomainClash.active(p)||!GuardianCombat.awakened(p))return false;
+        if(skill<0||skill>=COUNT||!p.isAlive()||p.isSpectator()||DomainClash.active(p)||!(GuardianCombat.awakened(p)||character.CharacterService.yuji(p))||!character.CharacterService.allowsSkill(p,skill+7))return false;
         if(skill==7)return p instanceof MaidBridge.Actor actor?ReverseOutput.maidReady(actor):Curse.canSpend(p,COST[skill])&&!Curse.active(p,"ReverseOutputCooldown");
         State s=states.get(p.getUUID());long now=p.level().getGameTime();
         if(!Curse.canSpend(p,COST[skill])||!Curse.canUseTechnique(p)||SoulCombat.suppressed(p)||now<cooldownUntil(p,s,skill)||s!=null&&(s.casting>=0||s.stunUntil>now))return false;
@@ -85,7 +85,7 @@ public final class GuardianPlayerSkills {
     }
     public static void cast(ServerPlayer p,int skill){
         if(skill==7){ReverseOutput.cast(p);return;}
-        if(skill<0||skill>=COUNT||!p.isAlive()||p.isSpectator()||DomainClash.active(p)||!GuardianCombat.awakened(p))return;
+        if(skill<0||skill>=COUNT||!p.isAlive()||p.isSpectator()||DomainClash.active(p)||!(GuardianCombat.awakened(p)||character.CharacterService.yuji(p))||!character.CharacterService.allowsSkill(p,skill+7))return;
         if(Curse.burnout(p)&&skill!=7){p.displayClientMessage(Component.literal("术式熔断中：只能使用术式反转或修复熔断"),true);return;}
         State s=states.get(p.getUUID());if(s==null||s.p!=p||s.level!=p.level()){if(s!=null)cleanup(s);s=new State(p);states.put(p.getUUID(),s);}
         long now=p.level().getGameTime();

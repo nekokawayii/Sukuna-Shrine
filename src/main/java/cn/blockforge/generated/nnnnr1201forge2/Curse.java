@@ -31,14 +31,14 @@ public final class Curse {
     public static double soulSlashMultiplier(Player p){return 1;}
     public static double soulSlashBonus(Player p){return Math.max(0,Math.min(300,data(p).getInt("SoulFeasts")));}
     private static boolean soul(Player p){return data(p).getBoolean("SoulPowerDouble");}
-    private static double rawHealthBonus(Player p){return GrowthRules.health(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p));}
+    private static double rawHealthBonus(Player p){if(character.CharacterService.toji(p))return 0;if(character.CharacterService.active(p)&&!Journey.unlocked(p))return character.CharacterService.stats(p).health();return GrowthRules.health(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p));}
     public static double healthBonus(Player p){return BalanceRules.strength(rawHealthBonus(p),BalanceRules.Category.PLAYER_HEALTH);}
-    public static double attackBonus(Player p){return BalanceRules.strength(GrowthRules.attack(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p)),BalanceRules.Category.PLAYER_ATTACK);}
-    public static double spellBonus(Player p){return GrowthRules.spell(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p),0);}
+    public static double attackBonus(Player p){if(character.CharacterService.toji(p))return 0;if(character.CharacterService.active(p)&&!Journey.unlocked(p))return character.CharacterService.stats(p).attack();return BalanceRules.strength(GrowthRules.attack(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p)),BalanceRules.Category.PLAYER_ATTACK);}
+    public static double spellBonus(Player p){if(character.CharacterService.toji(p))return 0;if(character.CharacterService.active(p)&&!Journey.unlocked(p))return character.CharacterService.stats(p).spell();return GrowthRules.spell(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p),0);}
     public static double domainSpellBonus(Player p){return spellBonus(p)*0.5;}
-    public static double rawMaximum(Player p){ServerPlayer pool=Authority.pool(p);if(pool!=null)return rawMaximum(pool);return AuthorityRules.maximum(EnergyRules.maximum(GrowthRules.energy(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p)),Uraume.fish(p)),Authority.unlocked(p));}
+    public static double rawMaximum(Player p){if(character.CharacterService.toji(p))return 0;if(character.CharacterService.active(p)&&!Journey.unlocked(p))return character.CharacterService.stats(p).energy()+EnergyRules.fishBonus(Uraume.fish(p));ServerPlayer pool=Authority.pool(p);if(pool!=null)return rawMaximum(pool);return AuthorityRules.maximum(EnergyRules.maximum(GrowthRules.energy(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p)),Uraume.fish(p)),Authority.unlocked(p));}
     public static double maximum(Player p){return rawMaximum(p);}
-    public static double rawEnergy(Player p){ServerPlayer pool=Authority.pool(p);return pool!=null?rawEnergy(pool):EnergyRules.current(data(p).getDouble("Energy"),rawMaximum(p));}
+    public static double rawEnergy(Player p){if(character.CharacterService.toji(p))return 0;ServerPlayer pool=Authority.pool(p);return pool!=null?rawEnergy(pool):EnergyRules.current(data(p).getDouble("Energy"),rawMaximum(p));}
     public static double energy(Player p){return rawEnergy(p);}
     public static boolean canSpend(Player p,double rawCost){return EnergyRules.canSpend(rawEnergy(p),rawCost);}
     public static double power(Player p){return scale(p)*Journey.bonus(p)*(active(p,"Disorder")?0.8:1);}
@@ -53,7 +53,7 @@ public final class Curse {
     public static double reverseHealing(Player p){return BalanceRules.strength(ReverseRules.healing(rawHealthBonus(p)),BalanceRules.Category.HEALING);}
     public static double reverseCost(Player p){return DomainClash.penalized(p)?DomainClashRules.healCost(maximum(p)):ReverseRules.cost(rawHealthBonus(p));}
     public static boolean repaired(Player p){return active(p,"TechniqueRepairedUntil");}
-    public static boolean canUseTechnique(Player p){return !PrisonSystem.locked(p)&&!SixfoldFinale.active(p)&&!SixfoldFinale.controlled(p)&&!burnout(p)&&!DomainClash.active(p)&&!NetBranches.locked(p)&&!Uraume.locked(p)&&!CombatExpansion.controlled(p);}
+    public static boolean canUseTechnique(Player p){return !character.CharacterService.toji(p)&&!PrisonSystem.locked(p)&&!SixfoldFinale.active(p)&&!SixfoldFinale.controlled(p)&&!burnout(p)&&!DomainClash.active(p)&&!NetBranches.locked(p)&&!Uraume.locked(p)&&!CombatExpansion.controlled(p);}
     public static double damageFactor(Player p){return burnout(p)?0.7:1.0;}
     public static double residueFactor(Player p){return 1+Journey.residuePercent(p)/100.0;}
     public static void status(Player p,String key,int ticks){data(p).putLong(key,p.level().getGameTime()+ticks);}
@@ -82,11 +82,12 @@ public final class Curse {
         target.setSecondsOnFire(8);var tag=target.getPersistentData();tag.putBoolean("SukunaSoulFire",true);tag.putUUID("SukunaSoulFireOwner",p.getUUID());tag.putBoolean("SukunaSoulFireMaid",MaidBridge.isCaster(p));tag.putBoolean("SukunaNoHeal",true);
     }
     /** 咒力的显示、存档、恢复和扣费统一用原单位，模式切换不改余额。 */
-    public static void add(Player p,double amount){ServerPlayer pool=Authority.pool(p);if(pool!=null){add(pool,amount);return;}if(amount>0&&active(p,"FinaleNoRecovery"))return;data(p).putDouble("Energy",EnergyRules.add(rawEnergy(p),rawMaximum(p),amount));}
+    public static void add(Player p,double amount){if(character.CharacterService.toji(p)){data(p).putDouble("Energy",0);return;}ServerPlayer pool=Authority.pool(p);if(pool!=null){add(pool,amount);return;}if(amount>0&&active(p,"FinaleNoRecovery"))return;data(p).putDouble("Energy",EnergyRules.add(rawEnergy(p),rawMaximum(p),amount));}
     public static void addRaw(Player p,double amount){add(p,amount);}
     /** 固定消耗与按上限百分比计算的消耗均不再受伤害倍率缩放。 */
     public static boolean spend(ServerPlayer p,double amount){return spendEffective(p,amount);}
     public static boolean spendEffective(ServerPlayer p,double amount){
+        if(character.CharacterService.toji(p))return false;
         ServerPlayer pool=Authority.pool(p);if(pool!=null)return spendEffective(pool,amount);
         if(!EnergyRules.canSpend(energy(p),amount)){p.displayClientMessage(Component.literal("咒力不足，术式已停止"),true);sync(p);return false;}
         add(p,-amount);status(p,"RecoveryDelay",60);sync(p);return true;
@@ -94,10 +95,11 @@ public final class Curse {
     public static double drain(ServerPlayer p,double fraction){ServerPlayer pool=Authority.pool(p);if(pool!=null)return drain(pool,fraction);double n=energy(p)*fraction;add(p,-n);status(p,"Siphon",14);status(p,"RecoveryDelay",60);sync(p);return n;}
     public static void apply(Player p){
         if(p instanceof MaidBridge.Actor actor){MaidBridge.apply(actor);return;}
-        if(awakened(p)&&!p.getAbilities().mayfly){p.getAbilities().mayfly=true;if(p instanceof ServerPlayer sp)sp.onUpdateAbilities();}
+        if(!character.CharacterService.toji(p)&&awakened(p)&&!p.getAbilities().mayfly){p.getAbilities().mayfly=true;if(p instanceof ServerPlayer sp)sp.onUpdateAbilities();}
         modifier(p.getAttribute(Attributes.MAX_HEALTH),HEALTH,healthBonus(p));
         modifier(p.getAttribute(Attributes.ATTACK_DAMAGE),ATTACK,attackBonus(p));
         modifier(p.getAttribute(Attributes.MOVEMENT_SPEED),SLOW,active(p,"Parasite")?-0.02:0);
+        character.toji.TojiCombat.attributes(p);
         if(p.getHealth()>p.getMaxHealth())p.setHealth(p.getMaxHealth());
     }
     private static void modifier(AttributeInstance a,UUID id,double amount){if(a==null)return;var old=a.getModifier(id);if(old!=null&&old.getOperation()==AttributeModifier.Operation.ADDITION&&Math.abs(old.getAmount()-amount)<0.00001)return;a.removeModifier(id);if(amount!=0)a.addTransientModifier(new AttributeModifier(id,"宿傩成长",amount,AttributeModifier.Operation.ADDITION));}
@@ -109,7 +111,7 @@ public final class Curse {
         if(body||old!=tier)Network.send(p.serverLevel(),new Network.Effect(20,p.getId(),p.position(),net.minecraft.world.phys.Vec3.ZERO,body?6:tier,80,body?1:0));
         p.displayClientMessage(Component.literal(body?"即身佛肉体融合：世界斩觉醒，"+GrowthConfig.BODY.description():"宿傩手指 "+fingers(p)+" / 20 · 每根"+GrowthConfig.FINGER.description()),false);
     }
-    public static void sync(ServerPlayer p){if(p instanceof net.minecraftforge.common.util.FakePlayer)return;Network.syncCombat(p);Network.CHANNEL.send(PacketDistributor.PLAYER.with(()->p),new Network.Progress(energy(p),maximum(p),fingers(p),awakened(p),active(p,"Siphon"),active(p,"Disorder"),Journey.unlocked(p)||Uraume.unlocked(p)||GojoPlayer.unlocked(p)||TechniqueRules.selected(p),Journey.nine(p),Journey.rotation(p),data(p).getBoolean("Fist"),Journey.guide(p),SoulJourney.evolved(p),VoidJourney.evolved(p),GuardianCombat.awakened(p),burnout(p),reverseHealing(p),reverseCost(p),BalanceRules.modpackMode(),DomainClash.penaltyTicks(p),Journey.unlocked(p),Uraume.unlocked(p),Uraume.fish(p),SukunaBranches.wallSpacing(p),SukunaBranches.diagonal(p),SlashForms.qi(p),DomainAmplification.active(p),GojoPlayer.unlocked(p),SukunaBranches.domainRadiusPts(p),SukunaBranches.domainDamagePts(p),SukunaBranches.domainSpeedPts(p),SukunaBranches.domainVerticalKill(p),TechniqueRules.current(p),TechniqueRules.stamina(p)));}
+    public static void sync(ServerPlayer p){if(p instanceof net.minecraftforge.common.util.FakePlayer)return;character.CharacterPackets.sync(p,false);Network.syncCombat(p);Network.CHANNEL.send(PacketDistributor.PLAYER.with(()->p),new Network.Progress(energy(p),maximum(p),fingers(p),awakened(p),active(p,"Siphon"),active(p,"Disorder"),Journey.unlocked(p)||Uraume.unlocked(p)||GojoPlayer.unlocked(p)||character.CharacterService.active(p),Journey.nine(p),Journey.rotation(p),data(p).getBoolean("Fist"),Journey.guide(p),SoulJourney.evolved(p),VoidJourney.evolved(p),GuardianCombat.awakened(p),burnout(p),reverseHealing(p),reverseCost(p),BalanceRules.modpackMode(),DomainClash.penaltyTicks(p),Journey.unlocked(p),Uraume.unlocked(p),Uraume.fish(p),SukunaBranches.wallSpacing(p),SukunaBranches.diagonal(p),SlashForms.qi(p),DomainAmplification.active(p),GojoPlayer.unlocked(p),SukunaBranches.domainRadiusPts(p),SukunaBranches.domainDamagePts(p),SukunaBranches.domainSpeedPts(p),SukunaBranches.domainVerticalKill(p)));}
     private static String reverseBlocked(ServerPlayer p){
         if(DeathStar.anemic(p))return "严重贫血期间无法回血";
         if(SixfoldFinale.active(p)||SixfoldFinale.controlled(p)||!p.isAlive()||p.isSpectator()||!(Journey.unlocked(p)||GojoPlayer.unlocked(p))||DomainClash.active(p)||NetBranches.locked(p)||Uraume.locked(p))return "当前无法使用反转术式";
@@ -144,6 +146,7 @@ public final class Curse {
     }
     @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent e){if(e.phase==TickEvent.Phase.END&&e.player instanceof ServerPlayer p&&p.tickCount%20==0)tickCaster(p);}
     public static void tickCaster(ServerPlayer p){
+        if(character.CharacterService.toji(p)){data(p).putDouble("Energy",0);data(p).putBoolean("Fist",false);apply(p);sync(p);return;}
         if(Authority.pool(p)!=null){if(data(p).getBoolean("TechniqueBurnout")&&!active(p,"TechniqueBurnoutUntil"))clearBurnout(p);return;} // 军团不凭空为共享池叠加回咒。
         apply(p);data(p).remove("TechniqueBurnoutAt");
         if(data(p).getBoolean("TechniqueBurnout")){
@@ -164,11 +167,11 @@ public final class Curse {
                 com.mojang.logging.LogUtils.getLogger().info("[附拳] {} 每秒消耗 10 咒力，剩余 {}",p.getScoreboardName(),(int)energy(p));
             }
         }
-        if(p.isAlive()&&!fist&&!SixfoldFinale.active(p)&&!active(p,"FinaleNoRecovery")&&!active(p,"RecoveryDelay")&&!Skills.sustaining(p)&&!GuardianPlayerSkills.sustaining(p))addRaw(p,15+fingers(p)*3+(awakened(p)?10:0)+(nine(p)?10:0)+(soul(p)?20:0)+(VoidController.boosted(p)?15:0)+(GuardianCombat.awakened(p)?30:0));sync(p);
+        if(p.isAlive()&&!fist&&!SixfoldFinale.active(p)&&!active(p,"FinaleNoRecovery")&&!active(p,"RecoveryDelay")&&!Skills.sustaining(p)&&!GuardianPlayerSkills.sustaining(p))addRaw(p,(character.CharacterService.active(p)&&!Journey.unlocked(p)?character.CharacterService.stats(p).recovery():15)+fingers(p)*3+(awakened(p)?10:0)+(nine(p)?10:0)+(soul(p)?20:0)+(VoidController.boosted(p)?15:0)+(GuardianCombat.awakened(p)?30:0));sync(p);
     }
     @SubscribeEvent public static void soulFire(TickEvent.LevelTickEvent e){if(e.phase!=TickEvent.Phase.END||!(e.level instanceof net.minecraft.server.level.ServerLevel l)||l.getGameTime()%20!=0)return;for(var entity:l.getAllEntities())if(entity instanceof net.minecraft.world.entity.LivingEntity target&&target.getPersistentData().getBoolean("SukunaSoulFire")){var tag=target.getPersistentData();ServerPlayer owner=tag.hasUUID("SukunaSoulFireOwner")?MaidBridge.find(l,tag.getUUID("SukunaSoulFireOwner")):null;if(owner==null){target.clearFire();continue;}if(!CombatSafety.canAffect(owner,target)){target.clearFire();tag.remove("SukunaSoulFire");tag.remove("SukunaSoulFireOwner");tag.remove("SukunaNoHeal");continue;}target.setSecondsOnFire(3);tag.putBoolean("SukunaNoHeal",true);}}
     @SubscribeEvent public static void noSoulHeal(net.minecraftforge.event.entity.living.LivingHealEvent e){if(e.getEntity().getPersistentData().getBoolean("SukunaNoHeal"))e.setCanceled(true);}
-    @SubscribeEvent public static void clone(PlayerEvent.Clone e){e.getEntity().getPersistentData().put(KEY,data(e.getOriginal()).copy());apply(e.getEntity());if(e.isWasDeath()){data(e.getEntity()).putDouble("Energy",active(e.getEntity(),"FinaleNoRecovery")?0:rawMaximum(e.getEntity()));data(e.getEntity()).remove("Siphon");data(e.getEntity()).remove("Disorder");data(e.getEntity()).remove("RecoveryDelay");data(e.getEntity()).remove("MultiArmed");}}
+    @SubscribeEvent public static void clone(PlayerEvent.Clone e){e.getEntity().getPersistentData().put(KEY,data(e.getOriginal()).copy());apply(e.getEntity());if(e.isWasDeath()){data(e.getEntity()).putDouble("Energy",active(e.getEntity(),"FinaleNoRecovery")?0:rawMaximum(e.getEntity()));data(e.getEntity()).remove("Siphon");data(e.getEntity()).remove("Disorder");data(e.getEntity()).remove("RecoveryDelay");data(e.getEntity()).remove("MultiArmed");if(character.CharacterService.toji(e.getEntity())){data(e.getEntity()).putDouble("TojiStamina",character.toji.TojiCombat.maximum(e.getEntity()));data(e.getEntity()).remove("TojiAirUsed");data(e.getEntity()).remove("TojiRecoveryDelay");data(e.getEntity()).remove("TojiLeapLock");}}}
     @SubscribeEvent public static void pickup(PlayerEvent.ItemPickupEvent e){if(e.getEntity() instanceof ServerPlayer p&&e.getStack().is(Content.BODY.get())){Network.send(p.serverLevel(),new Network.Effect(44,p.getId(),p.position(),net.minecraft.world.phys.Vec3.ZERO,1,30,0));p.serverLevel().playSound(null,p.blockPosition(),net.minecraft.sounds.SoundEvents.EVOKER_CELEBRATE,net.minecraft.sounds.SoundSource.PLAYERS,1,0.55f);}}
     @SubscribeEvent public static void login(PlayerEvent.PlayerLoggedInEvent e){if(e.getEntity() instanceof ServerPlayer p){apply(p);sync(p);}}
     @SubscribeEvent public static void respawn(PlayerEvent.PlayerRespawnEvent e){if(e.getEntity() instanceof ServerPlayer p){apply(p);p.setHealth(p.getMaxHealth());sync(p);}}

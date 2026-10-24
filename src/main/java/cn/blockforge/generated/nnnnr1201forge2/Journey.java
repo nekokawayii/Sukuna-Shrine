@@ -26,9 +26,9 @@ public final class Journey {
     public static final double[] GOALS={1200,21,5000,600,500,200,20,36000,300};
     private record Position(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension,net.minecraft.world.phys.Vec3 pos){}
     private static final Map<UUID,Position> positions=new HashMap<>();
-    public static boolean unlocked(Player p){return Curse.data(p).getBoolean("Memory");}
+    public static boolean unlocked(Player p){return character.CharacterService.permits(p,character.CharacterDefinition.Family.SHRINE)&&Curse.data(p).getBoolean("Memory");}
     public static boolean maidCleared(Player p,String flag){return Curse.data(p).getBoolean(flag);}
-    public static boolean nine(Player p){return Curse.data(p).getBoolean("Nine");}
+    public static boolean nine(Player p){return character.CharacterService.family(p,character.CharacterDefinition.Family.BLOOD)||(!character.CharacterService.active(p)||character.CharacterService.family(p,character.CharacterDefinition.Family.SHRINE))&&Curse.data(p).getBoolean("Nine");}
     public static boolean rotation(Player p){return nine(p)&&Curse.active(p,"Rotation");}
     public static int residuePercent(Player p){return ShrineRules.residuePercent(Curse.data(p).getInt("ResidueUpgrades"));}
     public static double bonus(Player p){return 1;}
@@ -58,14 +58,13 @@ public final class Journey {
     public static void give(ServerPlayer p,ItemStack stack){if(p instanceof MaidBridge.Actor a){a.maid.spawnAtLocation(stack);return;}if(!p.getInventory().add(stack))p.drop(stack,false);}
     private static String mahitoGuide(Player p){return maidCleared(p,"BrokenMahitoDefeated")?"真人任务已完成 · 岩手通路已开启":"真人任务未完成 · 前往灵魂通道南端挑战真人";}
     public static String guide(Player p){
-        int tech=TechniqueRules.current(p);
-        if(TechniqueRules.valid(tech))return "流派 · "+TechniqueRules.NAMES[tech]+"（"+TechniqueRules.OWNERS[tech]+"）· "+(tech==TechniqueRules.TOJI?"无轮盘 · 体术条随命中回复":"长按 N 开轮盘，R 释放");
+        String personal=character.CharacterService.guide(p);if(!personal.isEmpty())return personal;
         if(Uraume.unlocked(p)&&!unlocked(p))return "里梅 · 冰鱼 "+Uraume.fish(p)+" 条 · 冰伤 +"+Uraume.fish(p)+"% · 技能强化 "+Uraume.upgrades(p)+" 次；长按 N 选冰凝咒法";
         if(GuardianCombat.awakened(p))return "阶段7 · 传承已吸收 · 蓝色觉醒 · 守护者技能与术式反转外放已解锁";
         if(!unlocked(p)&&VoidJourney.defeated(p))return "五条悟已通关 · 未吃宿傩记忆，不直接获得术式；虚空相咒胎可留给灵魂御厨子阶段的女仆";
         if(!unlocked(p)&&maidCleared(p,"BrokenMahitoDefeated"))return "女仆已完成真人任务 · 可前往岩手区域；吃下记忆后才解锁术式奖励";
         if(!unlocked(p)&&maidCleared(p,"YujiDefeated"))return "女仆已完成虎杖残影任务 · 可前往真人或虚空聚合体；吃下记忆后才解锁术式奖励";
-        if(!unlocked(p))return "起始 · 吃下宿傩记忆，解锁术式与成长任务";
+        if(!unlocked(p))return "起始 · 右键咒术选择书，选择角色与个人线";
         if(Curse.fingers(p)<20)return "阶段1 · 吞噬宿傩手指 "+Curse.fingers(p)+"/20；探索宿傩神庙击败咒胎戴天";
         if(!Curse.data(p).getBoolean("BuddhaDefeated")||!Curse.awakened(p))return "阶段2 · 击败即身佛并吞噬肉体；空旷处右键即身佛召唤香（前方留8格）";
         if(!nine(p)){int i=page(p);if(i==9)return "阶段3 · 九胎齐全：在工作台合成咒胎九相图并吃下";double divisor=i==0||i==3||i==7?20:1;return "阶段3 · "+PAGES[i]+"："+CONDITIONS[i]+" ["+(int)(value(p,i)/divisor)+"/"+(int)(GOALS[i]/divisor)+"]";}
@@ -82,7 +81,7 @@ public final class Journey {
         var d=Curse.data(p);
         if(!d.getBoolean("R7Migrated")){if(Curse.awakened(p))d.putBoolean("BuddhaDefeated",true);d.putBoolean("R7Migrated",true);}
         if(p.tickCount%20==0){
-            if(!d.getBoolean("MemoryGiven")){give(p,new ItemStack(ProgressionContent.BOOK.get()));d.putBoolean("MemoryGiven",true);p.sendSystemMessage(Component.literal("你获得了《咒术选择书》。右键打开，六种咒式选一种；之后再吃一本可以重选（60 秒冷却）。"));}
+            if(!(p instanceof net.minecraftforge.common.util.FakePlayer)&&!d.getBoolean("ChoiceBookGiven")){if(p.getInventory().countItem(ProgressionContent.MEMORY.get())==0)give(p,new ItemStack(ProgressionContent.MEMORY.get()));d.putBoolean("MemoryGiven",true);d.putBoolean("ChoiceBookGiven",true);p.sendSystemMessage(Component.literal("你获得了咒术选择书。右键选择角色；N选择术式，R释放，J查看个人线。甚尔使用体术条，没有轮盘。"));}
             if(ready(p)){for(int i=0;i<9;i++)if(p.getInventory().countItem(ProgressionContent.PAGES.get(i).get())>0)d.putBoolean("Page"+i,true);}
         }
         if(!ready(p))return;
@@ -95,7 +94,6 @@ public final class Journey {
     }
     @SubscribeEvent(priority=EventPriority.LOWEST) public static void damage(LivingDamageEvent e){if(e.getAmount()<=0||e.isCanceled())return;
         ServerPlayer attacker=CombatSettings.caster(e.getSource());if(attacker!=null&&e.getEntity()!=MaidBridge.body(attacker))Curse.status(attacker,"Combat",200);
-        if(attacker!=null&&e.getEntity()!=attacker&&TechniqueRules.toji(attacker))TechniqueRules.addStamina(attacker,TechniqueRules.STAMINA_PER_HIT);
         ServerPlayer p=MaidBridge.progression(e.getEntity());if(p==null)return;
         float actual=Math.min(p.getHealth(),e.getAmount());
         if(e.getSource().getEntity() instanceof LivingEntity enemy&&enemy!=p){Curse.status(p,"Combat",200);add(p,5,1);}
@@ -115,7 +113,7 @@ public final class Journey {
     @SubscribeEvent public static void logout(PlayerEvent.PlayerLoggedOutEvent e){positions.remove(e.getEntity().getUUID());}
     @SubscribeEvent public static void commands(RegisterCommandsEvent e){
         e.getDispatcher().register(Commands.literal("sukuna")
-            .then(Commands.literal("guide").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();p.sendSystemMessage(Component.literal(guide(p)+"\n召唤香配方：上中烈焰棒；中排金锭、末影之眼、金锭；下中灵魂沙。\n九相条件按以下顺序，已获得则跳过："));for(int i=0;i<9;i++)p.sendSystemMessage(Component.literal((Curse.data(p).getBoolean("Page"+i)?"✓ ":"○ ")+PAGES[i]+"："+CONDITIONS[i]));return 1;}))
+            .then(Commands.literal("guide").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();if(!character.CharacterService.guide(p).isEmpty()){character.CharacterService.showStory(p);return 1;}p.sendSystemMessage(Component.literal(guide(p)+"\n召唤香配方：上中烈焰棒；中排金锭、末影之眼、金锭；下中灵魂沙。\n九相条件按以下顺序，已获得则跳过："));for(int i=0;i<9;i++)p.sendSystemMessage(Component.literal((Curse.data(p).getBoolean("Page"+i)?"✓ ":"○ ")+PAGES[i]+"："+CONDITIONS[i]));return 1;}))
             .then(Commands.literal("ch")
                 .executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();p.sendSystemMessage(Component.literal(residueStatus(p)+"\n管理员设置：/sukuna ch xp 数字（满100自动凝炼）；/sukuna ch level 数字（每个加伤3%，34个完成凝练）。"));return 1;})
                 .then(Commands.literal("xp").requires(s->s.hasPermission(2))

@@ -22,7 +22,7 @@ public final class StageFood extends Item {
     private final Stage stage;
     private StageFood(Stage stage){super(new Properties().rarity(Rarity.EPIC).food(new FoodProperties.Builder().nutrition(1).saturationMod(0).alwaysEat().build()));this.stage=stage;}
     public static void init(){}
-    public static boolean allowed(Player p,Stage stage){return ShrineRules.allows(stage.ordinal(),Journey.nine(p),Curse.data(p).getInt("ResidueUpgrades"),SoulJourney.evolved(p),VoidJourney.evolved(p),GuardianCombat.awakened(p));}
+    public static boolean allowed(Player p,Stage stage){return character.CharacterService.permits(p,character.CharacterDefinition.Family.SHRINE)&&ShrineRules.allows(stage.ordinal(),Journey.nine(p),Curse.data(p).getInt("ResidueUpgrades"),SoulJourney.evolved(p),VoidJourney.evolved(p),GuardianCombat.awakened(p));}
     public static boolean consume(ServerPlayer p,Stage stage){
         if(!allowed(p,stage)){p.displayClientMessage(Component.literal(stage==Stage.VOID?"虚空相咒胎需要先觉醒灵魂御厨子，且不能重复吸收；击败记录不等于已觉醒":"当前成长阶段不符，不能跨阶段或重复吸收"),true);return false;}
         float old=MaidBridge.body(p).getMaxHealth();var d=Curse.data(p);

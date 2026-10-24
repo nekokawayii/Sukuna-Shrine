@@ -31,6 +31,15 @@ public final class TechniqueInput {
     public static Input intent(ServerPlayer p){return intents.getOrDefault(p.getUUID(),new Input(0,0,false,false,false));}
     public static boolean holding(ServerPlayer p,int skill){Hold h=holds.get(p.getUUID());return h!=null&&h.skill==skill;}
     public static void receive(ServerPlayer p,Input input){
+        if(!character.CharacterService.allowsSkill(p,input.skill())){if(input.phase()==3)cancel(p);return;}
+        if(character.CharacterSkill.custom(input.skill())){
+            if(input.phase()==0)character.CharacterCasting.cast(p,input.skill());
+            return;
+        }
+        if(character.CharacterService.yuji(p)){
+            if(input.phase()==0&&allowed(p)&&character.CharacterService.allowsSkill(p,input.skill()))GuardianPlayerSkills.cast(p,input.skill()-7);
+            return;
+        }
         if(input.phase()==0)MeleeCombo.cancel(p);
         if(PrisonSystem.locked(p)||ObserverRitual.active(p)||TenShadows.locked(p)||DeathStar.charging(p))return;
         if(BloodRules.skill(input.skill())){BloodArts.input(p,input);return;}
@@ -131,12 +140,14 @@ public final class TechniqueInput {
         if(input.skill==0&&!Curse.canSpend(p,Curse.COST[0])){cancel(p);CastFeedback.unavailable(p,Curse.COST[0]);return;}
         cast(p,input.skill,input);hold.triggered=true;hold.slashes=1;
     }
-    static boolean allowed(ServerPlayer p){return !PrisonSystem.locked(p)&&!Shinbuke.holding(p)&&!GojoEntity.mindLocked(p)&&CombatExpansion.valid(p,p.serverLevel())&&(Journey.unlocked(p)||Uraume.unlocked(p)||GojoPlayer.unlocked(p)||TechniqueRules.selected(p))&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p)&&!MaidBridge.recovering(p)&&!CombatExpansion.controlled(p);}
+    static boolean allowed(ServerPlayer p){return !PrisonSystem.locked(p)&&!Shinbuke.holding(p)&&!GojoEntity.mindLocked(p)&&CombatExpansion.valid(p,p.serverLevel())&&(Journey.unlocked(p)||Uraume.unlocked(p)||GojoPlayer.unlocked(p)||character.CharacterService.active(p))&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p)&&!MaidBridge.recovering(p)&&!CombatExpansion.controlled(p);}
     private static void cast(ServerPlayer p,int skill,Input input){
         intents.put(p.getUUID(),input);
         try{castRaw(p,skill);}finally{intents.remove(p.getUUID());}
     }
     public static void castRaw(ServerPlayer p,int skill){
+        if(!character.CharacterService.allowsSkill(p,skill))return;
+        if(character.CharacterSkill.custom(skill)){character.CharacterCasting.cast(p,skill);return;}
         // 每次施法先落一条适应细分：解/捌/网分支/形状分支/苍/赫/茈…延迟命中的伤害靠它分类。
         // 各技能内部的 AttackTypes.prepare 更精确，这里只是兜底，保证绝不残留上一次的招。
         AttackTypes.prepare(AttackTypes.pendingFor(skill));

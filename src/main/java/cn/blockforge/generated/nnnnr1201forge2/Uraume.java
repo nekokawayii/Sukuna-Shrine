@@ -28,7 +28,7 @@ public final class Uraume {
     private static final List<Pillar> pillars=new ArrayList<>();
     private static final Map<UUID,Frozen> frozen=new HashMap<>();
     private static long nextFreeze;
-    public static boolean unlocked(Player p){return Curse.data(p).getBoolean("UraumeMemory");}
+    public static boolean unlocked(Player p){return character.CharacterService.family(p,character.CharacterDefinition.Family.ICE)||character.CharacterService.permits(p,character.CharacterDefinition.Family.ICE)&&Curse.data(p).getBoolean("UraumeMemory");}
     public static int fish(Player p){return Math.max(0,Curse.data(p).getInt("IceFish"));}
     public static int upgrades(Player p){return BranchRules.upgrades(fish(p));}
     public static double length(Player p){return BranchRules.iceLength(fish(p));}
@@ -37,7 +37,7 @@ public final class Uraume {
     public static double scatter(Player p){return BranchRules.iceScatter(fish(p));}
     public static int pillarBonus(Player p){return BranchRules.icePillars(fish(p));}
     public static boolean consumeMemory(ServerPlayer p){
-        if(!BranchRules.acceptMemory(Journey.unlocked(p),unlocked(p),MaidBridge.isCaster(p),true))return false;
+        if(!character.CharacterService.permits(p,character.CharacterDefinition.Family.ICE)||!BranchRules.acceptMemory(Journey.unlocked(p),unlocked(p),MaidBridge.isCaster(p),true))return false;
         Curse.data(p).putBoolean("UraumeMemory",true);Curse.data(p).putBoolean("MemoryGiven",true);Curse.addRaw(p,400);Curse.sync(p);
         p.sendSystemMessage(Component.literal("里梅记忆苏醒：长按 N 选霜凪或直瀑，R 释放；吃冰鱼强化。"));return true;
     }

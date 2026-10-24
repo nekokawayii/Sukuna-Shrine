@@ -25,7 +25,7 @@ public final class IceContent {
     private static final class IceFood extends Item {
         private final boolean memory;
         IceFood(boolean memory){super(new Properties().stacksTo(memory?1:64).rarity(memory?Rarity.EPIC:Rarity.UNCOMMON).food(new FoodProperties.Builder().nutrition(memory?0:2).saturationMod(0.1f).alwaysEat().build()));this.memory=memory;}
-        private boolean allowed(Player p){return memory?BranchRules.acceptMemory(Journey.unlocked(p),Uraume.unlocked(p),MaidBridge.isCaster(p),true):Uraume.unlocked(p);}
+        private boolean allowed(Player p){return memory?character.CharacterService.permits(p,character.CharacterDefinition.Family.ICE)&&BranchRules.acceptMemory(Journey.unlocked(p),Uraume.unlocked(p),MaidBridge.isCaster(p),true):Uraume.unlocked(p);}
         @Override public InteractionResultHolder<ItemStack> use(Level l,Player p,InteractionHand h){if(!l.isClientSide&&!allowed(p)){p.displayClientMessage(Component.literal(memory?"已经吃过里梅记忆":"先吃里梅记忆，冰鱼才能强化冰凝咒法"),true);return InteractionResultHolder.fail(p.getItemInHand(h));}return super.use(l,p,h);}
         @Override public void appendHoverText(ItemStack stack,Level l,List<Component> lines,TooltipFlag flags){
             lines.add(Component.literal(memory?"长按右键：解锁霜凪与直瀑":"右键**使用**：每条永久增加"+BalanceRules.number(EnergyRules.ICE_FISH_BONUS)+"咒力上限，并恢复等量咒力；冰伤 +1%"));

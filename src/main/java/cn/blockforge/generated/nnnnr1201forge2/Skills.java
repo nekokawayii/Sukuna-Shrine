@@ -91,7 +91,7 @@ public final class Skills {
         ServerPlayer p=CombatSettings.caster(event.getSource());if(event.isCanceled()||event.getAmount()<=0||p==null)return;
         LivingEntity target=event.getEntity();if(!canHit(p,target))return;
         remember(p,target);
-        if(!(event.getSource().is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)||MaidBridge.isCaster(p)&&event.getSource().is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK))||Curse.fingers(p)<5||MaidBridge.recovering(p)||SoulCombat.suppressed(p)||!Curse.canUseTechnique(p))return;
+        if(!(event.getSource().is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)||MaidBridge.isCaster(p)&&event.getSource().is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK))||!character.CharacterService.permits(p,character.CharacterDefinition.Family.SHRINE)||Curse.fingers(p)<5||MaidBridge.recovering(p)||SoulCombat.suppressed(p)||!Curse.canUseTechnique(p))return;
         // 取本次普通攻击结算伤害；附加解不再叠术式成长，不递归触发普攻事件。
         if(meleeCuts.size()<4096)meleeCuts.add(new MeleeCut(p,p.serverLevel(),target.getUUID(),p.level().getGameTime()+1,event.getAmount()*0.7f));
         if(!Journey.unlocked(p)||!Curse.data(p).getBoolean("Fist"))return;

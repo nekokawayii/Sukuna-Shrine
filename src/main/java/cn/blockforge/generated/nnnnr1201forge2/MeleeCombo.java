@@ -33,7 +33,7 @@ public final class MeleeCombo {
             .consumerMainThread((m,c)->{receiver.accept(m);c.get().setPacketHandled(true);}).add();
     }
     private static boolean allowed(ServerPlayer p){
-        return Journey.unlocked(p)&&p.isAlive()&&!p.isRemoved()&&!p.hasDisconnected()&&!p.isSpectator()
+        return (Journey.unlocked(p)||character.CharacterService.toji(p)||character.CharacterService.yuji(p))&&p.isAlive()&&!p.isRemoved()&&!p.hasDisconnected()&&!p.isSpectator()
             &&!p.isUsingItem()&&!p.isPassenger()&&!p.isSleeping()&&!p.isFallFlying()&&!p.isSwimming()
             &&!DismantleMotion.active(p)&&!SixfoldFinale.active(p)&&!SixfoldFinale.controlled(p)
             &&!DomainClash.active(p)&&!NetBranches.locked(p)&&!Uraume.locked(p)&&!CombatExpansion.controlled(p)

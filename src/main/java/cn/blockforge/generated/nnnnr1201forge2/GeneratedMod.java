@@ -55,6 +55,10 @@ public final class GeneratedMod {
         Content.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         SkillSounds.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         Network.init();
+        character.CharacterPackets.register();
+        MinecraftForge.EVENT_BUS.register(character.CharacterService.class);
+        MinecraftForge.EVENT_BUS.register(character.CharacterRewards.class);
+        MinecraftForge.EVENT_BUS.register(character.toji.TojiCombat.class);
         Network.registerDrawing();
         MinecraftForge.EVENT_BUS.register(SlashForms.class);
         MinecraftForge.EVENT_BUS.register(DismantleMotion.class);

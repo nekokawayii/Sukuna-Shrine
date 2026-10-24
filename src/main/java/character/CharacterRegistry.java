@@ -18,6 +18,7 @@ public final class CharacterRegistry {
         register(YujiCharacter.create());
         register(SukunaCharacter.create());
         register(TojiCharacter.create());
+        register(character.yuta.YutaCharacter.create());
         // 启用完整示例：register(character.example.CharacterTemplate.create());
         // 复制到自己的文件夹后：register(character.my_ice.MyIceCharacter.create());
     }

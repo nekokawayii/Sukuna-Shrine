@@ -18,43 +18,31 @@ public final class CharacterRewards {
         if(d==null||d.family()==CharacterDefinition.Family.SHRINE||!p.isAlive())return;
         var data=Curse.data(p);var paid=data.getCompound("CharacterPaidChapters");
         int rank=CharacterService.rank(p);
-        // 事件型个人线：章节来自 events 列表，发放规则与普通章节完全一致（按章编号去重）。
-        if(d.hasEvents()){
-            for(int i=0;i<rank&&i<d.events().size();i++){
-                var chapter=d.events().get(i);
-                pay(p,data,paid,chapter.id(),chapter.title(),chapter.grants(),chapter.grants().summary());
-            }
-            return;
-        }
         for(int i=0;i<rank;i++){
-            var chapter=d.story().get(i);
-            pay(p,data,paid,chapter.id(),chapter.title(),chapter.grants(),d.rewards(i));
-        }
-    }
-    /** 发放单章奖励：先整章校验物品，全合法才落标记并发奖，避免半发导致重登重复领取。 */
-    private static void pay(ServerPlayer p,net.minecraft.nbt.CompoundTag data,net.minecraft.nbt.CompoundTag paid,
-            String id,String title,CharacterReward reward,String summary) {
-        if(paid.getBoolean(id))return;
-        boolean valid=true;
-        for(var item:reward.items()){
-            var key=new ResourceLocation(item.id());
-            if(!ForgeRegistries.ITEMS.containsKey(key)||ForgeRegistries.ITEMS.getValue(key)==Items.AIR){valid=false;break;}
-        }
-        if(!valid){
-            if(!data.getBoolean("RewardError_"+id)){
-                p.sendSystemMessage(Component.literal("章节奖励暂未发放："+title+"含不存在的物品编号，请修正角色配置；奖励记录已保留。"));
-                data.putBoolean("RewardError_"+id,true);
+            var chapter=d.story().get(i);if(paid.getBoolean(chapter.id()))continue;
+            var reward=chapter.grants();
+            // 整章先验证物品，拼错编号时不吞奖励，也不先发一半导致重登重复领取。
+            boolean valid=true;
+            for(var item:reward.items()){
+                var key=new ResourceLocation(item.id());
+                if(!ForgeRegistries.ITEMS.containsKey(key)||ForgeRegistries.ITEMS.getValue(key)==Items.AIR){valid=false;break;}
             }
-            return;
+            if(!valid){
+                if(!data.getBoolean("RewardError_"+chapter.id())){
+                    p.sendSystemMessage(Component.literal("章节奖励暂未发放："+chapter.title()+"含不存在的物品编号，请修正角色配置；奖励记录已保留。"));
+                    data.putBoolean("RewardError_"+chapter.id(),true);
+                }
+                continue;
+            }
+            paid.putBoolean(chapter.id(),true);data.put("CharacterPaidChapters",paid);
+            data.remove("RewardError_"+chapter.id());
+            p.giveExperiencePoints(reward.experience());Curse.add(p,reward.energy());
+            for(var item:reward.items()){
+                var type=ForgeRegistries.ITEMS.getValue(new ResourceLocation(item.id()));int left=item.count();
+                while(left>0){var stack=new ItemStack(type,Math.min(left,type.getMaxStackSize()));left-=stack.getCount();Journey.give(p,stack);}
+            }
+            if(!reward.equals(CharacterReward.NONE))p.sendSystemMessage(Component.literal("已领取「"+chapter.title()+"」奖励："+d.rewards(i)));
         }
-        paid.putBoolean(id,true);data.put("CharacterPaidChapters",paid);
-        data.remove("RewardError_"+id);
-        p.giveExperiencePoints(reward.experience());Curse.add(p,reward.energy());
-        for(var item:reward.items()){
-            var type=ForgeRegistries.ITEMS.getValue(new ResourceLocation(item.id()));int left=item.count();
-            while(left>0){var stack=new ItemStack(type,Math.min(left,type.getMaxStackSize()));left-=stack.getCount();Journey.give(p,stack);}
-        }
-        if(!reward.equals(CharacterReward.NONE))p.sendSystemMessage(Component.literal("已领取「"+title+"」奖励："+summary));
     }
     @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent e) {
         if(e.phase==TickEvent.Phase.END&&e.player instanceof ServerPlayer p&&p.tickCount%20==0)grant(p);

@@ -170,6 +170,95 @@ public final class JogoCombat {
         FANS.add(new Fan(p.serverLevel(),p.getUUID(),p.getLookAngle(),damage,p.getServer().getTickCount()+PILLAR_LIFE,0));
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.FIRECHARGE_USE,SoundSource.PLAYERS,1.3f,0.8f);
     }
+    @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e) {
+        if(e.phase!=TickEvent.Phase.END)return;
+        tickBugs();tickMeteors();tickFalling();tickFans();tickColumns();tickDomains();JogoTerrain.tick();tickBeam();
+    }
+    private static void tickBugs() {
+        for(Iterator<Bug> it=BUGS.iterator();it.hasNext();){
+            Bug bug=it.next();Vec3 next=bug.pos().add(bug.dir().scale(BUG_SPEED));
+            ServerLevel level=bug.level();int life=bug.life()-1;
+            Network.send(level,new Network.Effect(JogoFx.BUG,0,bug.pos(),Vec3.ZERO,1,6,0));
+            var hit=level.getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(next,next).inflate(1.2),
+                t->t.getUUID().equals(bug.owner())?false:t instanceof ServerPlayer sp?CombatSettings.canHit(level.getServer().getPlayerList().getPlayer(bug.owner()),t):true);
+            boolean blocked=!level.getBlockState(BlockPos.containing(next)).isAir();
+            if(life<=0||blocked||!hit.isEmpty()){
+                explode(level,bug.owner(),next);it.remove();continue;
+            }
+            BUGS.set(BUGS.indexOf(bug),new Bug(level,bug.owner(),next,bug.dir(),life));
+        }
+    }
+    private static void explode(ServerLevel level,UUID owner,Vec3 at) {
+        Network.send(level,new Network.Effect(JogoFx.BUG_BURST,0,at,Vec3.ZERO,3,10,0));
+        ServerPlayer caster=level.getServer().getPlayerList().getPlayer(owner);if(caster==null)return;
+        float damage=CombatSettings.spellDamage(caster,8);
+        for(var target:level.getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(at,at).inflate(3),t->CombatSettings.canHit(caster,t))){
+            AttackTypes.mark(AttackTypes.MAGIC);
+            try{CombatSettings.hurt(caster,target,caster.damageSources().indirectMagic(caster,caster),damage);}
+            finally{AttackTypes.clear();}
+            target.setSecondsOnFire(2);
+        }
+    }
+    private static void tickMeteors() {
+        for(Iterator<Meteor> it=METEORS.iterator();it.hasNext();){
+            Meteor meteor=it.next();
+            if(meteor.owner().level()!=meteor.owner().serverLevel()||!meteor.owner().isAlive()){it.remove();continue;}
+            if(meteor.delay()>0){METEORS.set(METEORS.indexOf(meteor),new Meteor(meteor.owner(),meteor.target(),meteor.delay()-1));continue;}
+            ServerLevel level=meteor.owner().serverLevel();
+            var block=FallingBlockEntity.fall(level,BlockPos.containing(meteor.target().x,meteor.target().y+28,meteor.target().z),Blocks.OBSIDIAN.defaultBlockState());
+            block.setDeltaMovement(0,-1.6,0);block.dropItem=false;
+            level.addFreshEntity(block);
+            FALLING.add(new Falling(level,block,meteor.owner().getUUID(),CombatSettings.spellDamage(meteor.owner(),24)));
+            it.remove();
+        }
+    }
+    private static void tickFalling() {
+        for(Iterator<Falling> it=FALLING.iterator();it.hasNext();){
+            Falling f=it.next();var block=f.block();
+            if(block.isRemoved()){impact(f.level(),f.owner(),block.position(),f.damage());it.remove();continue;}
+            var at=block.position();
+            Network.send(f.level(),new Network.Effect(JogoFx.METEOR_TRAIL,0,at,Vec3.ZERO,1.5f,8,0));
+            if(!block.onGround()&&at.y>f.level().getMinBuildHeight()+2&&!block.verticalCollision)continue;
+            impact(f.level(),f.owner(),at,f.damage());block.discard();it.remove();
+        }
+    }
+    private static void impact(ServerLevel level,UUID owner,Vec3 at,float damage) {
+        Network.send(level,new Network.Effect(JogoFx.METEOR_IMPACT,0,at,Vec3.ZERO,5f,14,0));
+        level.playSound(null,BlockPos.containing(at),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.4f,0.7f);
+        ServerPlayer caster=level.getServer().getPlayerList().getPlayer(owner);if(caster==null)return;
+        for(var target:level.getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(at,at).inflate(4.5),t->CombatSettings.canHit(caster,t))){
+            AttackTypes.mark(AttackTypes.MAGIC);
+            try{CombatSettings.hurt(caster,target,caster.damageSources().indirectMagic(caster,caster),damage);}
+            finally{AttackTypes.clear();}
+        }
+    }
+    /** 岩浆柱：前 8 刻飞出 12 格，之后在原地停留，**总生命周期 15 秒（300 刻）**，每 0.5 秒灼烧一次。 */
+    private static void tickPillars() {
+        for(Iterator<Pillar> it=PILLARS.iterator();it.hasNext();){
+            Pillar pillar=it.next();
+            int ticks=pillar.ticks()+1;
+            ServerLevel level=pillar.level();
+            Vec3 next=ticks<=8?pillar.pos().add(pillar.dir().scale(1.6)):pillar.pos();
+            if(ticks%2==0)Network.send(level,new Network.Effect(JogoFx.PILLAR,0,next,pillar.dir(),1,6,0));
+            if(ticks%10==0){
+                pillar.hit().clear();   // 停留期允许重复灼烧
+                ServerPlayer caster=level.getServer().getPlayerList().getPlayer(pillar.owner());
+                if(caster!=null)for(var target:level.getEntitiesOfClass(LivingEntity.class,
+                        new net.minecraft.world.phys.AABB(next,next).inflate(1.8),
+                        t->CombatSettings.canHit(caster,t)&&pillar.hit().add(t.getUUID()))){
+                    AttackTypes.mark(AttackTypes.MAGIC);
+                    try{CombatSettings.hurt(caster,target,caster.damageSources().indirectMagic(caster,caster),pillar.damage());}
+                    finally{AttackTypes.clear();}
+                    target.setSecondsOnFire(3);
+                }
+            }
+            if(ticks>=PILLAR_LIFE||(ticks<=8&&!pillarFlies(next,pillar.dir(),level))){it.remove();continue;}
+            PILLARS.set(PILLARS.indexOf(pillar),new Pillar(level,pillar.owner(),next,pillar.dir(),pillar.damage(),pillar.hit(),ticks));
+        }
+    }
+    private static boolean pillarFlies(Vec3 at,Vec3 dir,ServerLevel level) {
+        return level.getBlockState(BlockPos.containing(at)).isAir()&&at.y>level.getMinBuildHeight()+1;
+    }
     /** 火焰喷发：每 2 刻向前推一波扇形火舌，持续 15 秒。 */
     private static void tickFans() {
         if(FANS.isEmpty())return;

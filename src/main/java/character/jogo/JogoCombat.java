@@ -38,9 +38,10 @@ public final class JogoCombat {
     private static final List<Falling> FALLING=new ArrayList<>();
     private static final List<Pillar> PILLARS=new ArrayList<>();
     /** 盖棺铁围山：封闭式火山领域，持续 30 秒，界内敌人被高温烘烤、漏壶冷却减半。 */
-    private record Domain(ServerPlayer owner, Vec3 center, int end, double radius) {}
+    private record Domain(ServerPlayer owner, Vec3 center, int end, double radius, Map<UUID,Vec3> captives) {}
     private static final List<Domain> DOMAINS=new ArrayList<>();
-    public static final int DOMAIN_RADIUS=20, DOMAIN_LIFE=600;
+    public static final int DOMAIN_RADIUS=100, DOMAIN_LIFE=600;   // 用户指定：半径 100 格
+    private static final double DOMAIN_INSET=0.35;               // 碰撞箱留出的安全余量
 
     /** 章节进度：一章=泡岩浆满 30 秒；二章=盖棺铁围山坚持 60 秒。 */
     public static int rank(ServerPlayer p) {
@@ -88,7 +89,12 @@ public final class JogoCombat {
     public static void castDomain(ServerPlayer p,CharacterSkill skill,int rank) {
         Vec3 center=p.position();
         DOMAINS.removeIf(d->d.owner()==p);
-        DOMAINS.add(new Domain(p,center,p.getServer().getTickCount()+DOMAIN_LIFE,DOMAIN_RADIUS));
+        var captives=new HashMap<UUID,Vec3>();
+        for(var e:p.serverLevel().getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(center,center).inflate(DOMAIN_RADIUS),
+                t->t.isAlive()&&!t.isSpectator()&&t.position().distanceToSqr(center)<=DOMAIN_RADIUS*DOMAIN_RADIUS)){
+            captives.put(e.getUUID(),e.position());
+        }
+        DOMAINS.add(new Domain(p,center,p.getServer().getTickCount()+DOMAIN_LIFE,DOMAIN_RADIUS,captives));
         Network.send(p.serverLevel(),new Network.Effect(JogoFx.DOMAIN,p.getId(),center,Vec3.ZERO,(float)DOMAIN_RADIUS,DOMAIN_LIFE,0));
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.6f,0.45f);
         p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域展开 · 盖棺铁围山"));
@@ -105,8 +111,21 @@ public final class JogoCombat {
             Domain d=it.next();ServerPlayer owner=d.owner();
             if(owner==null||!owner.isAlive()||owner.level()!=owner.serverLevel()||owner.serverLevel().getGameTime()<=0){it.remove();continue;}
             if(owner.getServer().getTickCount()>=d.end()){it.remove();continue;}
-            if(owner.getServer().getTickCount()%10!=0)continue;
             ServerLevel level=owner.serverLevel();
+            // 封闭：闭合时被抓到的活物越界就拉回最近一次安全位置（碰撞箱留余量）
+            double limit=d.radius()-DOMAIN_INSET;
+            for(var it2=d.captives().entrySet().iterator();it2.hasNext();){
+                var entry=it2.next();var raw=level.getEntity(entry.getKey());
+                if(!(raw instanceof LivingEntity living)||!living.isAlive()||living.isSpectator()){it2.remove();continue;}
+                if(living==owner)continue;
+                double dx=living.getX()-d.center().x,dy=living.getY()-d.center().y,dz=living.getZ()-d.center().z;
+                if(dx*dx+dy*dy+dz*dz<=limit*limit){entry.setValue(living.position());continue;}
+                Vec3 back=entry.getValue();
+                living.teleportTo(back.x,back.y,back.z);
+                living.setDeltaMovement(Vec3.ZERO);
+                living.hurtMarked=true;
+            }
+            if(owner.getServer().getTickCount()%10!=0)continue;
             float damage=CombatSettings.spellDamage(owner,6);
             for(var target:level.getEntitiesOfClass(LivingEntity.class,
                     new net.minecraft.world.phys.AABB(d.center(),d.center()).inflate(d.radius()),

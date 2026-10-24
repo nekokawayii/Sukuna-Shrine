@@ -48,10 +48,14 @@ public final class JogoFxClient {
             case JogoFx.DOMAIN -> {
                 double radius=Math.max(6,e.size());
                 int life=Math.max(40,e.life());
-                PhotonFx.domain(pos,radius,life);                                  // 暗色球壳结界
-                PhotonFx.ring(pos.add(0,0.15,0),radius,2.4,FIRE,FIRE_BLOOM,radius*2.2,life,14);   // 暗红火山岩壁边界
-                PhotonFx.ring(pos.add(0,0.05,0),radius*0.82,1.2,LAVA,FIRE_BLOOM,radius*1.6,life,10); // 地面岩浆环
-                PhotonFx.sphere(pos,radius*0.55,radius*0.35,LAVA,FIRE_BLOOM,GLOW,true,life,60,(int)Math.max(3,radius*0.6),0.05);
+                // 半径 100 时粒子会被"稀疏"，改用：稀疏球壳 + 分层环墙 + 地面岩浆环，保证边界一眼可见
+                PhotonFx.domain(pos,Math.min(radius,60),life);                                     // 主体暗壳（按 60 格上限，避免单颗粒子过大）
+                for(int i=1;i<=6;i++){                                                              // 六层环墙：0.2R~1.0R 高度
+                    double h=radius*0.18*i;
+                    PhotonFx.ring(pos.add(0,h,0),radius,3.0,FIRE,FIRE_BLOOM,radius*1.4,life,16);
+                }
+                PhotonFx.ring(pos.add(0,0.15,0),radius,4.0,FIRE,FIRE_BLOOM,radius*2.0,life,16);     // 地面暗红岩壁
+                PhotonFx.ring(pos.add(0,0.05,0),radius*0.82,2.0,LAVA,FIRE_BLOOM,radius*1.4,life,12);// 地面岩浆环
                 DOMAINS.add(new Domain(pos,radius,Minecraft.getInstance().level.getGameTime()+life));
             }
             default -> {}

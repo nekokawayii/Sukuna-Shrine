@@ -49,14 +49,8 @@ public final class JogoFxClient {
             case JogoFx.DOMAIN -> {
                 double radius=Math.max(6,e.size());
                 int life=Math.max(40,e.life());
-                // 半径 100 时粒子会被"稀疏"，改用：稀疏球壳 + 分层环墙 + 地面岩浆环，保证边界一眼可见
-                PhotonFx.domain(pos,Math.min(radius,60),life);                                     // 主体暗壳（按 60 格上限，避免单颗粒子过大）
-                for(int i=1;i<=6;i++){                                                              // 六层环墙：0.2R~1.0R 高度
-                    double h=radius*0.18*i;
-                    PhotonFx.ring(pos.add(0,h,0),radius,3.0,FIRE,FIRE_BLOOM,radius*1.4,life,16);
-                }
-                PhotonFx.ring(pos.add(0,0.15,0),radius,4.0,FIRE,FIRE_BLOOM,radius*2.0,life,16);     // 地面暗红岩壁
-                PhotonFx.ring(pos.add(0,0.05,0),radius*0.82,2.0,LAVA,FIRE_BLOOM,radius*1.4,life,12);// 地面岩浆环
+                // 只保留球壳本体的光晕；地面不再铺任何 PhotonFx（改用真实方块变化）
+                PhotonFx.domain(pos,Math.min(radius,60),life);
                 DOMAINS.add(new Domain(pos,radius,Minecraft.getInstance().level.getGameTime()+life));
             }
             default -> {}
@@ -69,18 +63,7 @@ public final class JogoFxClient {
         if(mc.level==null||DOMAINS.isEmpty())return;
         long now=mc.level.getGameTime();
         DOMAINS.removeIf(d->now>=d.end());
-        for(Domain d:DOMAINS){
-            if(now%4==0){
-                for(int i=0;i<3;i++){
-                    double a=RANDOM.nextDouble()*Math.PI*2,r=Math.sqrt(RANDOM.nextDouble())*d.radius()*0.92;
-                    Vec3 at=d.center().add(Math.cos(a)*r,0.2,Math.sin(a)*r);
-                    PhotonFx.spark(at,0.9,0.6,RANDOM.nextBoolean()?LAVA:EMBER,FIRE_BLOOM,GLOW,true,2,10,16,0.25);
-                }
-            }
-            if(now%10==0)PhotonFx.spark(d.center().add((RANDOM.nextDouble()-.5)*d.radius()*1.6,d.radius()*0.9,(RANDOM.nextDouble()-.5)*d.radius()*1.6),
-                1.6,1.0,ASH,0,STREAK,false,8,40,10,0.1);
-            if(now%6==0)PhotonFx.ring(d.center().add(0,0.1,0),d.radius()*0.9,0.7,FIRE,FIRE_BLOOM,18,2,6);
-        }
+        // 地面表现全部交给真实方块（见 JogoTerrain），这里不再生成任何地面粒子
     }
     public static void clear(){DOMAINS.clear();}
     private JogoFxClient() {}

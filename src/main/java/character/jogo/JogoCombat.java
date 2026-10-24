@@ -118,11 +118,11 @@ public final class JogoCombat {
             for(var it2=d.captives().entrySet().iterator();it2.hasNext();){
                 var entry=it2.next();var raw=level.getEntity(entry.getKey());
                 if(!(raw instanceof LivingEntity living)||!living.isAlive()||living.isSpectator()){it2.remove();continue;}
-                if(living==owner)continue;
                 double dx=living.getX()-d.center().x,dy=living.getY()-d.center().y,dz=living.getZ()-d.center().z;
                 if(dx*dx+dy*dy+dz*dz<=limit*limit){entry.setValue(living.position());continue;}
                 Vec3 back=entry.getValue();
-                living.teleportTo(back.x,back.y,back.z);
+                if(living instanceof ServerPlayer sp)sp.connection.teleport(back.x,back.y,back.z,sp.getYRot(),sp.getXRot());
+                else living.teleportTo(back.x,back.y,back.z);
                 living.setDeltaMovement(Vec3.ZERO);
                 living.hurtMarked=true;
             }

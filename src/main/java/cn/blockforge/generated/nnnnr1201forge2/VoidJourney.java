@@ -20,6 +20,9 @@ public final class VoidJourney {
     public static boolean evolved(Player p){return Curse.data(p).getBoolean("VoidShrine");}
     public static void enter(ServerPlayer p){
         if(p.level().dimension()==ARENA){leave(p);return;}
+        grantKey(p);
+        boolean hasKey=p.getInventory().contains(new net.minecraft.world.item.ItemStack(VoidContent.KEY.get()));
+        if(!hasKey){p.sendSystemMessage(Component.literal("虚空竞技场需要虚空钥匙：击败虎杖残影后获得，或用 /sukuna void key 补领。"));return;}
         ServerLevel l=p.server.getLevel(ARENA);if(l==null){p.sendSystemMessage(Component.literal("虚空竞技场尚未载入，请重新打开存档。"));return;}
         var d=Curse.data(p);d.putString("VoidReturnDimension",p.level().dimension().location().toString());d.putDouble("VoidReturnX",p.getX());d.putDouble("VoidReturnY",p.getY());d.putDouble("VoidReturnZ",p.getZ());
         for(int x=-3;x<=3;x++)for(int z=-3;z<=3;z++)l.getChunk(x,z);
@@ -34,6 +37,14 @@ public final class VoidJourney {
         try{l=p.server.getLevel(ResourceKey.create(Registries.DIMENSION,new ResourceLocation(d.getString("VoidReturnDimension"))));}catch(RuntimeException ignored){}
         if(l==null)l=p.server.overworld();var spawn=l.getSharedSpawnPos();
         clear(p);Skills.closeDomain(p);Skills.cancelCharge(p);p.teleportTo(l,d.contains("VoidReturnX")?d.getDouble("VoidReturnX"):spawn.getX()+0.5,d.contains("VoidReturnY")?d.getDouble("VoidReturnY"):spawn.getY(),d.contains("VoidReturnZ")?d.getDouble("VoidReturnZ"):spawn.getZ()+0.5,p.getYRot(),0);
+    }
+    /** 击败虎杖残影（或女仆通关）后自动补发一把虚空钥匙。 */
+    public static void grantKey(ServerPlayer p){
+        if((SoulJourney.evolved(p)||Journey.maidCleared(p,"YujiDefeated"))&&!Curse.data(p).getBoolean("VoidKeyGiven")){
+            Journey.give(p,new ItemStack(VoidContent.KEY.get()));
+            Curse.data(p).putBoolean("VoidKeyGiven",true);
+            p.sendSystemMessage(Component.literal("获得虚空钥匙：右键进入基岩层虚空竞技场。"));
+        }
     }
     public static boolean defeated(Player p){return Curse.data(p).getBoolean("VoidBossDefeated");}
     private static void addCredit(java.util.Map<java.util.UUID,ServerPlayer> credited,ServerPlayer p){if(p!=null)credited.put(p.getUUID(),p);}

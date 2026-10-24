@@ -272,6 +272,13 @@ public final class JogoCombat {
         }
         return false;
     }
+    /** 对拼获胜时延长领域剩余时间（DomainClash.extend 会调用）。 */
+    public static void extendDomain(ServerPlayer p,int ticks) {
+        for(int i=0;i<DOMAINS.size();i++){
+            var d=DOMAINS.get(i);
+            if(d.owner()==p)DOMAINS.set(i,new Domain(d.owner(),d.center(),d.end()+ticks,d.radius(),d.captives()));
+        }
+    }
     public static boolean inDomain(ServerPlayer p) {
         for(Domain d:DOMAINS)if(d.owner()==p)return true;
         return false;

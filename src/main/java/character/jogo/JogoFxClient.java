@@ -12,8 +12,9 @@ import java.util.Random;
 public final class JogoFxClient {
     private static final String GLOW="textures/effect/glow.png", STREAK="textures/effect/streak.png", RING="textures/effect/ring.png";
     private static final int FIRE=0xFFFF7A18, FIRE_BLOOM=0xFFFF3A00, LAVA=0xFFFFB024, EMBER=0xFFFFD08A, ASH=0xFF2A1A18;
-    private record Domain(Vec3 center,double radius,long end) {}
+    public record Domain(Vec3 center,double radius,long end) {}
     private static final List<Domain> DOMAINS=new ArrayList<>();
+    public static List<Domain> domains(){return DOMAINS;}
     private static final Random RANDOM=new Random();
 
     public static void receive(Network.Effect e) {

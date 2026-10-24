@@ -364,6 +364,7 @@ public final class Client {
         Minecraft mc=Minecraft.getInstance();if(mc.level==null)return;
         if(e.getStage()==RenderLevelStageEvent.Stage.AFTER_SKY){if(ObserverClient.active()){ObserverClient.whiteSky(e);return;}if(inside())sky(e);return;}
         if(e.getStage()!=RenderLevelStageEvent.Stage.AFTER_PARTICLES)return;
+        character.jogo.JogoDomainRender.render(e);   // 盖棺铁围山不透明球壳（写深度，粒子之后画）
         PoseStack ps=e.getPoseStack();Vec3 cam=e.getCamera().getPosition();ps.pushPose();ps.translate(-cam.x,-cam.y,-cam.z);
         MultiBufferSource.BufferSource source=mc.renderBuffers().bufferSource();
         for(DomainVisual d:domains.values()){

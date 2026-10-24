@@ -95,6 +95,7 @@ public final class JogoCombat {
             captives.put(e.getUUID(),e.position());
         }
         DOMAINS.add(new Domain(p,center,p.getServer().getTickCount()+DOMAIN_LIFE,DOMAIN_RADIUS,captives));
+        JogoTerrain.open(p,center,DOMAIN_RADIUS);
         Network.send(p.serverLevel(),new Network.Effect(JogoFx.DOMAIN,p.getId(),center,Vec3.ZERO,(float)DOMAIN_RADIUS,DOMAIN_LIFE,0));
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.6f,0.45f);
         p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域展开 · 盖棺铁围山"));
@@ -109,8 +110,8 @@ public final class JogoCombat {
         int now=DOMAINS.get(0).owner().getServer().getTickCount();
         for(Iterator<Domain> it=DOMAINS.iterator();it.hasNext();){
             Domain d=it.next();ServerPlayer owner=d.owner();
-            if(owner==null||!owner.isAlive()||owner.level()!=owner.serverLevel()||owner.serverLevel().getGameTime()<=0){it.remove();continue;}
-            if(owner.getServer().getTickCount()>=d.end()){it.remove();continue;}
+            if(owner==null||!owner.isAlive()||owner.level()!=owner.serverLevel()||owner.serverLevel().getGameTime()<=0){it.remove();if(owner!=null)JogoTerrain.restore(owner);continue;}
+            if(owner.getServer().getTickCount()>=d.end()){JogoTerrain.restore(owner);it.remove();continue;}
             ServerLevel level=owner.serverLevel();
             // 封闭：闭合时被抓到的活物越界就拉回最近一次安全位置（碰撞箱留余量）
             double limit=d.radius()-DOMAIN_INSET;

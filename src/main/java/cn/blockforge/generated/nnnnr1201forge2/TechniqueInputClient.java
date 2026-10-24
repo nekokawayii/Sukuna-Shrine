@@ -23,8 +23,8 @@ public final class TechniqueInputClient {
     public static void inputChanged(){update(false);}
     private static void update(boolean gameTick){
         if(ObserverClient.active()){clear();return;}
-        var mc=Minecraft.getInstance();boolean down=ClientInput.held(Client.CAST);
-        boolean valid=mc.player!=null&&mc.player.isAlive()&&mc.screen==null&&mc.isWindowActive()&&mc.mouseHandler.isMouseGrabbed()&&Client.progress.unlocked();
+        var mc=Minecraft.getInstance();boolean down=ClientInput.held(Client.CAST);Client.selected=Client.techSanitize(Client.selected);
+        boolean valid=mc.player!=null&&mc.player.isAlive()&&mc.screen==null&&mc.isWindowActive()&&mc.mouseHandler.isMouseGrabbed()&&(Client.progress.unlocked()||TechniqueRules.valid(Client.progress.technique()));
         // 手持神武解：释放键改为"充能"，与轮盘选择无关（先处理，避免被 selected 校验打断）
         boolean tool=mc.player!=null&&(mc.player.getMainHandItem().is(VoidContent.SHINBUKE.get())||mc.player.getOffhandItem().is(VoidContent.SHINBUKE.get()));
         if(tool){
@@ -40,6 +40,7 @@ public final class TechniqueInputClient {
         if(gameTick&&worldLease>0){worldLease--;if(worldLease%10==0)send(SlashFormRules.WORLD,1);}
         // 动作中的输入不能再次启动技能，但仍必须送达松手与取消。
         if(heldSkill>=0){if(!down){send(heldSkill,2);heldSkill=-1;}else if(gameTick&&++ticks%10==0)send(heldSkill,1);}
+        if(Client.selected<0){previous=down;return;}
         if(down&&!previous&&heldSkill<0&&!FinaleClient.local()&&!DomainClashClient.active()&&!NetBranchVisuals.locked()&&!DismantleMotionClient.locked()&&(Client.selected!=SlashFormRules.FREEHAND||AuthorityClient.enabled()&&mc.player!=null&&(Authority.medium(mc.player.getMainHandItem())>=0||Authority.medium(mc.player.getOffhandItem())>=0))){
             heldSkill=Client.selected;ticks=0;
             if(heldSkill==SlashFormRules.WORLD)worldLease=320;

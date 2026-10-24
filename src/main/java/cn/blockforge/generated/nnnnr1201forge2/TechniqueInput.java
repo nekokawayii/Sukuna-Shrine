@@ -131,7 +131,7 @@ public final class TechniqueInput {
         if(input.skill==0&&!Curse.canSpend(p,Curse.COST[0])){cancel(p);CastFeedback.unavailable(p,Curse.COST[0]);return;}
         cast(p,input.skill,input);hold.triggered=true;hold.slashes=1;
     }
-    static boolean allowed(ServerPlayer p){return !PrisonSystem.locked(p)&&!Shinbuke.holding(p)&&!GojoEntity.mindLocked(p)&&CombatExpansion.valid(p,p.serverLevel())&&(Journey.unlocked(p)||Uraume.unlocked(p)||GojoPlayer.unlocked(p))&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p)&&!MaidBridge.recovering(p)&&!CombatExpansion.controlled(p);}
+    static boolean allowed(ServerPlayer p){return !PrisonSystem.locked(p)&&!Shinbuke.holding(p)&&!GojoEntity.mindLocked(p)&&CombatExpansion.valid(p,p.serverLevel())&&(Journey.unlocked(p)||Uraume.unlocked(p)||GojoPlayer.unlocked(p)||TechniqueRules.selected(p))&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p)&&!MaidBridge.recovering(p)&&!CombatExpansion.controlled(p);}
     private static void cast(ServerPlayer p,int skill,Input input){
         intents.put(p.getUUID(),input);
         try{castRaw(p,skill);}finally{intents.remove(p.getUUID());}

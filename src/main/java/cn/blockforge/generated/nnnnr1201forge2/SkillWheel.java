@@ -14,17 +14,28 @@ public final class SkillWheel extends Screen {
     private static final int[] GUARDIAN_WHEEL={0,1,2,3,4,5,6,8,9};
     private static final String[] SHORT={"解","网","捌","开","灶","领域","剥离"};
     public SkillWheel(){
-        super(Component.literal("咒术 · 技能轮盘"));page=BloodRules.pageOf(Client.selected);if(page==1&&!Client.progress.pureLandVictory()||page>=2&&!Client.progress.nine())page=0;Client.wheelPage=page;
+        super(Component.literal("咒术 · 技能轮盘"));
+        int tech=Client.progress.technique();
+        page=tech==TechniqueRules.BLOOD?2:BloodRules.pageOf(Client.selected);
+        if(page==1&&!Client.progress.pureLandVictory()||page>=2&&!(Client.progress.nine()||tech==TechniqueRules.BLOOD))page=0;
+        Client.wheelPage=page;
         current=Client.selected;current=switch(current){case 17,21->1;case 18,24,26,27,28,29->0;case 19,20,25,32->2;case 30->3;case FurnaceMax.SKILL->3;case 31->5;case 33->0;default->current;};
-        if(!Client.availableSkill(current))current=Client.progress.sukuna()?0:BranchRules.FROST;
+        if(tech==TechniqueRules.LIMITLESS)current=34;
+        else if(tech==TechniqueRules.ICE)current=BranchRules.FROST;
+        else if(tech==TechniqueRules.BLOOD)current=BloodRules.global(2,0);
+        else if(tech==TechniqueRules.MELEE||tech==TechniqueRules.SHRINE)current=0;
+        else if(!Client.availableSkill(current))current=Client.progress.sukuna()?0:BranchRules.FROST;
     }
+    /** 选过咒式就算"已解锁"：轮盘与 HUD 不再依赖宿傩记忆/六眼旗标。 */
+    private boolean chosen(){return TechniqueRules.valid(Client.progress.technique());}
+    private int tech(){return Client.progress.technique();}
     private boolean ice(){return Client.progress.uraume();}
     private boolean gojo(){return Client.progress.gojo();}
     private boolean pages(){return Client.progress.sukuna()&&(Client.progress.pureLandVictory()||Client.progress.nine());}
-    private int[] unlockedPages(){return BloodRules.pages(Client.progress.pureLandVictory(),Client.progress.nine());}
-    private int centerX(){return WheelSideSlots.centerX(width,height,ice(),gojo());}
-    private int count(){return page>=2?BloodRules.count(page):page==1?GUARDIAN_WHEEL.length:Client.baseWheelCount();}
-    private int global(int index){return page>=2?BloodRules.global(page,index):page==1?GUARDIAN_WHEEL[index]+7:index;}
+    private int centerX(){boolean side=!chosen();return WheelSideSlots.centerX(width,height,side&&ice(),side&&gojo());}
+    private int[] unlockedPages(){return BloodRules.pages(Client.progress.pureLandVictory(),Client.progress.nine()||chosen());}
+    private int count(){int t=tech();if(t==TechniqueRules.LIMITLESS)return GojoPlayer.SLOTS;if(t==TechniqueRules.ICE)return 2;if(t==TechniqueRules.BLOOD)return BloodRules.count(2);return page>=2?BloodRules.count(page):page==1?GUARDIAN_WHEEL.length:Client.baseWheelCount();}
+    private int global(int index){int t=tech();if(t==TechniqueRules.LIMITLESS)return 34+index;if(t==TechniqueRules.ICE)return index==0?BranchRules.FROST:BranchRules.ICEFALL;if(t==TechniqueRules.BLOOD)return BloodRules.global(2,index);return page>=2?BloodRules.global(page,index):page==1?GUARDIAN_WHEEL[index]+7:index;}
     private String shortName(int skill){if(BloodRules.skill(skill))return skill==BloodRules.DOMAIN?"胎海":BloodRules.name(skill);if(skill==Skills.FIST_SKILL)return "咒力附拳";if(skill==FurnaceMax.SKILL)return FurnaceMax.SHORT;if(skill==SimpleDomain.SKILL)return "简易领域 · 捌";if(skill>=34)return GojoPlayer.shortName(skill-34);if(CombatExpansionRules.branch(skill))return CombatExpansionRules.name(skill).replace("解 · ","").replace("捌 · ","");if(skill>=24)return SlashFormRules.name(skill).replace("解 · ","").replace("捌 · ","");return skill==22?"霜凪":skill==23?"直瀑":skill>=7&&skill<17?GuardianPlayerSkills.SHORT[skill-7]:skill>=17?BranchRules.name(skill):SHORT[skill];}
     private Button modeButton;
     @Override protected void init(){
@@ -40,13 +51,13 @@ public final class SkillWheel extends Screen {
     @Override public boolean mouseScrolled(double x,double y,double delta){if(delta!=0&&pages()){changePage(delta>0?-1:1);return true;}return super.mouseScrolled(x,y,delta);}
     @Override public boolean keyPressed(int key,int scan,int mods){if((key==GLFW.GLFW_KEY_LEFT||key==GLFW.GLFW_KEY_RIGHT||key==GLFW.GLFW_KEY_PAGE_UP||key==GLFW.GLFW_KEY_PAGE_DOWN)&&pages()){changePage(key==GLFW.GLFW_KEY_LEFT||key==GLFW.GLFW_KEY_PAGE_UP?-1:1);return true;}return super.keyPressed(key,scan,mods);}
     @Override public boolean isPauseScreen(){return false;}
-    private int outerRadius(){return WheelSideSlots.radius(width,height,ice(),gojo());}
+    private int outerRadius(){boolean side=!chosen();return WheelSideSlots.radius(width,height,side&&ice(),side&&gojo());}
     private int[] branches(){if(page!=0||!Client.progress.sukuna())return new int[0];
         // 「咒力附拳」不占分支：它是轮盘右上角的固定格（见 {@link WheelSideSlots#fist}），始终显示。
         if(current==0)return Client.progress.awakened()?new int[]{18,24,26,27,28,29}:new int[]{24,26,28,29};if(current==1&&Client.progress.awakened())return new int[]{17,21};if(current==2&&Client.progress.fingers()>=5)return new int[]{19,20,25,32,SimpleDomain.SKILL};if(current==3&&Client.voidStage())return new int[]{30,FurnaceMax.SKILL};if(current==5&&Client.progress.awakened())return new int[]{31};return new int[0];}
     private WheelSideSlots.Box branchBox(int i){int n=branches().length,step=Math.min(34,Math.max(18,(height-94)/Math.max(1,n)));return new WheelSideSlots.Box(centerX()+outerRadius()+4,height/2-n*step/2+i*step,74,step-3);}
     private int centerRadius(){return page==2?(int)(outerRadius()*.32):outerRadius()/2;}
-    private int skillAt(double x,double y){if(page==2)return global(BloodRules.wheelSlot(x,y,outerRadius()));return BranchRules.wheelSkill(true,false,page,count(),x,y);}
+    private int skillAt(double x,double y){int t=tech();if(t==TechniqueRules.LIMITLESS)return 34+WheelSideSlots.gojoSector(width,height,centerX()+x,height/2.0+y);if(t==TechniqueRules.ICE)return y<0?BranchRules.FROST:BranchRules.ICEFALL;if(t==TechniqueRules.BLOOD)return BloodRules.wheelSlot(x,y,outerRadius());return page==2?global(BloodRules.wheelSlot(x,y,outerRadius())):BranchRules.wheelSkill(true,false,page,count(),x,y);}
     private boolean starCenter(){return Client.progress.nine()&&BloodClient.ownDomain();}
     private void updateHover(double mx,double my){
         starHover=starCenter()&&Math.pow(mx-centerX(),2)+Math.pow(my-height/2.0,2)<Math.pow(centerRadius()-3,2);
@@ -60,7 +71,7 @@ public final class SkillWheel extends Screen {
     }
     private void confirm(){
         if(confirmed||minecraft==null||minecraft.screen!=this)return;confirmed=true;updateHover(mouseX,mouseY);
-        if(minecraft.player!=null&&minecraft.player.isAlive()&&!minecraft.player.isSpectator()&&Client.progress.unlocked()){
+        if(minecraft.player!=null&&minecraft.player.isAlive()&&!minecraft.player.isSpectator()&&(Client.progress.unlocked()||chosen())){
             if(starHover){if(!DeathStarClient.anemic())Client.selected=BloodRules.DEATH_STAR;}
             else if(finaleHover)Client.selected=FinaleRules.SKILL;
             else if(fistHover)Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.TOGGLE_FIST));   // 右上角固定格：松手即开关附拳
@@ -71,7 +82,7 @@ public final class SkillWheel extends Screen {
         }
         minecraft.setScreen(null);
     }
-    @Override public void tick(){if(minecraft.player==null||!minecraft.player.isAlive()||!Client.progress.unlocked()||!minecraft.isWindowActive()){confirmed=true;minecraft.setScreen(null);return;}if(!Client.wheelHeld())confirm();}
+    @Override public void tick(){if(minecraft.player==null||!minecraft.player.isAlive()||!(Client.progress.unlocked()||chosen())||!minecraft.isWindowActive()||Client.progress.technique()==TechniqueRules.TOJI){confirmed=true;minecraft.setScreen(null);return;}if(!Client.wheelHeld())confirm();}
     @Override public boolean keyReleased(int key,int scan,int mods){ClientInput.key(key,scan,GLFW.GLFW_RELEASE,mods);if(Client.WHEEL.matches(key,scan)){confirm();return true;}return super.keyReleased(key,scan,mods);}
     @Override public boolean mouseReleased(double x,double y,int button){updateHover(x,y);if(Client.WHEEL.matchesMouse(button)){confirm();return true;}return super.mouseReleased(x,y,button);}
     private boolean branchCorridor(double mx,double my){
@@ -83,7 +94,11 @@ public final class SkillWheel extends Screen {
     }
     @Override public void mouseMoved(double mx,double my){
         if(Client.wheelHeld()){
-            if(ice()&&WheelSideSlots.iceContains(width,height,mx,my))current=my<height/2.0?BranchRules.FROST:BranchRules.ICEFALL;
+            if(chosen()){
+                double dx=mx-centerX(),dy=my-height/2.0,r=dx*dx+dy*dy;int outer=outerRadius();
+                if(r>=centerRadius()*centerRadius()&&r<=outer*outer)current=skillAt(dx,dy);
+            }
+            else if(ice()&&WheelSideSlots.iceContains(width,height,mx,my))current=my<height/2.0?BranchRules.FROST:BranchRules.ICEFALL;
             else if(gojo()&&WheelSideSlots.gojoContains(width,height,mx,my))current=34+WheelSideSlots.gojoSector(width,height,mx,my);
             else if(Client.progress.sukuna()&&!branchCorridor(mx,my)){
                 double x=mx-centerX(),y=my-height/2.0,r=x*x+y*y;int outer=outerRadius();
@@ -141,9 +156,15 @@ public final class SkillWheel extends Screen {
         if(modeButton!=null)modeButton.setMessage(Component.literal(modeText()));
         updateHover(mx,my);int cx=centerX(),cy=height/2,outer=outerRadius(),inner=centerRadius(),skill=starHover?BloodRules.DEATH_STAR:finaleHover?FinaleRules.SKILL:branchHover>=0?branchHover:current;
         g.fill(0,0,width,height,0xBA100D18);WheelBackdrop.draw(g,width,height,minecraft.level==null?0:minecraft.level.getGameTime()+partial);
-        if(Client.progress.sukuna()){
+        if(chosen())g.drawCenteredString(font,"流派 · "+TechniqueRules.NAMES[tech()],width/2,8,0xFF9FE8FF);
+        else g.drawCenteredString(font,"未选择咒式",width/2,8,0xFFFF9E7A);
+        if(Client.progress.sukuna()||chosen()){
             ring(g,cx,cy,outer,false);
-            if(page==2){for(int i=0;i<count();i++){int offset=i<8?0:8,n=i<8?8:11;double a=-Math.PI/2+(i-offset)*Math.PI*2/n;bloodLabel(g,global(i),cx,cy,outer*(i<8?.48:.82),a);}}
+            int t=tech();
+            if(t==TechniqueRules.LIMITLESS){
+                for(int i=0;i<GojoPlayer.SLOTS;i++){double a=-Math.PI/2+(i+0.5)*Math.PI*2/GojoPlayer.SLOTS;int lx=cx+(int)Math.round(Math.cos(a)*(outer+inner)/2.0),ly=cy+(int)Math.round(Math.sin(a)*(outer+inner)/2.0);boolean on=34+i==current;if(on){int w=font.width(GojoPlayer.WHEEL_LABELS[i]);g.fill(lx-w/2-3,ly-6,lx+w/2+3,ly+6,0x99000000);}g.drawCenteredString(font,GojoPlayer.WHEEL_LABELS[i],lx,ly-4,on?0xFFFFFFFF:0xFFE6DCE6);}
+            }else if(t==TechniqueRules.ICE){label(g,BranchRules.FROST,cx,cy,outer,inner,-Math.PI/2);label(g,BranchRules.ICEFALL,cx,cy,outer,inner,Math.PI/2);}
+            else if(page==2||t==TechniqueRules.BLOOD){for(int i=0;i<count();i++){int offset=i<8?0:8,n=i<8?8:11;double a=-Math.PI/2+(i-offset)*Math.PI*2/n;bloodLabel(g,global(i),cx,cy,outer*(i<8?.48:.82),a);}}
             else for(int i=0;i<count();i++)label(g,global(i),cx,cy,outer,inner,-Math.PI/2+i*Math.PI*2/count());
             if(starCenter()){
                 for(int y=-inner+3;y<=inner-3;y++){int x=(int)Math.sqrt(Math.max(0,(inner-3)*(inner-3)-y*y));g.fill(cx-x,cy+y,cx+x,cy+y+1,DeathStarClient.anemic()?0xDC33232A:starHover?0xEEA8002A:0xDC4F0018);}
@@ -151,17 +172,19 @@ public final class SkillWheel extends Screen {
             }else if(page==0&&FinaleClient.ready()){
                 for(int y=-inner+3;y<=inner-3;y++){int x=(int)Math.sqrt(Math.max(0,(inner-3)*(inner-3)-y*y));g.fill(cx-x,cy+y,cx+x,cy+y+1,finaleHover?0xEEA88736:0xDC45331C);}
                 g.drawCenteredString(font,"終式",cx,cy-16,0xFFFFE49A);g.drawCenteredString(font,"六道連斬",cx,cy-2,0xFFFFFFFF);g.drawCenteredString(font,"长按8秒",cx,cy+13,0xFFFFE1B8);
-            }else{g.drawCenteredString(font,page>=2?"赤血操术":page==1?"守护者":"宿 傩",cx,cy-14,0xFFDFBACF);g.drawCenteredString(font,current<22||BloodRules.skill(current)?shortName(current):"",cx,cy+4,0xFFFFFFFF);}
+            }else if(t==TechniqueRules.LIMITLESS){g.drawCenteredString(font,"五条悟",cx,cy-14,0xFFDFBACF);g.drawCenteredString(font,current>=34?GojoPlayer.shortName(current-34):"六眼",cx,cy+4,0xFFFFFFFF);}
+            else if(t==TechniqueRules.ICE){g.drawCenteredString(font,"里梅",cx,cy-14,0xFFBEEFFF);g.drawCenteredString(font,shortName(current),cx,cy+4,0xFFFFFFFF);}
+            else{g.drawCenteredString(font,page>=2||t==TechniqueRules.BLOOD?"赤血操术":page==1?"守护者":"宿 傩",cx,cy-14,0xFFDFBACF);g.drawCenteredString(font,current<22||BloodRules.skill(current)?shortName(current):"",cx,cy+4,0xFFFFFFFF);}
             reverse(g);fist(g);
         }
-        if(ice()){
+        if(ice()&&!chosen()){
             int ix=WheelSideSlots.iceX(width,height),ir=WheelSideSlots.iceRadius(width,height);
             ring(g,ix,cy,ir,true);label(g,22,ix,cy,ir,ir/2,-Math.PI/2);label(g,23,ix,cy,ir,ir/2,Math.PI/2);
             g.drawCenteredString(font,"里梅",ix,cy-4,0xFFBEEFFF);
             g.drawCenteredString(font,"冰凝咒法",ix,cy-ir-14,0xFFBEEFFF);
             g.drawCenteredString(font,"冰鱼 "+Client.progress.iceFish(),ix,cy+ir+7,0xFFAEE3F1);
         }
-        if(gojo()){
+        if(gojo()&&!chosen()){
             int gx=WheelSideSlots.gojoX(width,height),gr=WheelSideSlots.gojoRadius(width,height);
             gojoRing(g,gx,cy,gr);
             int sel=current-34;

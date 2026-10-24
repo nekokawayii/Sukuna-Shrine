@@ -22,6 +22,8 @@ public final class ProgressionContent {
     private static final List<RegistryObject<Item>> ALL=new ArrayList<>();
     private static RegistryObject<Item> item(String id,java.util.function.Supplier<Item> factory){var r=Content.ITEMS.register(id,factory);ALL.add(r);return r;}
     public static final RegistryObject<Item> MEMORY=item("sukuna_memory",()->new UnlockFood(false));
+    /** 开局发放的《咒术选择书》：右键选六大流派之一（宿傩记忆改为可选分支，不再开局强制）。 */
+    public static final RegistryObject<Item> BOOK=item("technique_book",()->new TechniqueBook());
     public static final RegistryObject<Item> NINE=item("nine_death_paintings",()->new UnlockFood(true));
     public static final List<RegistryObject<Item>> PAGES=new ArrayList<>();
     static {for(int i=0;i<9;i++){final int index=i;PAGES.add(item("page_"+Journey.IDS[i],()->new Item(new Item.Properties().rarity(Rarity.RARE)){

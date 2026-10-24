@@ -58,6 +58,8 @@ public final class Journey {
     public static void give(ServerPlayer p,ItemStack stack){if(p instanceof MaidBridge.Actor a){a.maid.spawnAtLocation(stack);return;}if(!p.getInventory().add(stack))p.drop(stack,false);}
     private static String mahitoGuide(Player p){return maidCleared(p,"BrokenMahitoDefeated")?"真人任务已完成 · 岩手通路已开启":"真人任务未完成 · 前往灵魂通道南端挑战真人";}
     public static String guide(Player p){
+        int tech=TechniqueRules.current(p);
+        if(TechniqueRules.valid(tech))return "流派 · "+TechniqueRules.NAMES[tech]+"（"+TechniqueRules.OWNERS[tech]+"）· "+(tech==TechniqueRules.TOJI?"无轮盘 · 体术条随命中回复":"长按 N 开轮盘，R 释放");
         if(Uraume.unlocked(p)&&!unlocked(p))return "里梅 · 冰鱼 "+Uraume.fish(p)+" 条 · 冰伤 +"+Uraume.fish(p)+"% · 技能强化 "+Uraume.upgrades(p)+" 次；长按 N 选冰凝咒法";
         if(GuardianCombat.awakened(p))return "阶段7 · 传承已吸收 · 蓝色觉醒 · 守护者技能与术式反转外放已解锁";
         if(!unlocked(p)&&VoidJourney.defeated(p))return "五条悟已通关 · 未吃宿傩记忆，不直接获得术式；虚空相咒胎可留给灵魂御厨子阶段的女仆";
@@ -80,7 +82,7 @@ public final class Journey {
         var d=Curse.data(p);
         if(!d.getBoolean("R7Migrated")){if(Curse.awakened(p))d.putBoolean("BuddhaDefeated",true);d.putBoolean("R7Migrated",true);}
         if(p.tickCount%20==0){
-            if(!d.getBoolean("MemoryGiven")){give(p,new ItemStack(ProgressionContent.MEMORY.get()));d.putBoolean("MemoryGiven",true);p.sendSystemMessage(Component.literal("你获得了宿傩记忆。长按右键吃下后，按 N 选择术式；按 J 查看成长任务。"));}
+            if(!d.getBoolean("MemoryGiven")){give(p,new ItemStack(ProgressionContent.BOOK.get()));d.putBoolean("MemoryGiven",true);p.sendSystemMessage(Component.literal("你获得了《咒术选择书》。右键打开，六种咒式选一种；之后再吃一本可以重选（60 秒冷却）。"));}
             if(ready(p)){for(int i=0;i<9;i++)if(p.getInventory().countItem(ProgressionContent.PAGES.get(i).get())>0)d.putBoolean("Page"+i,true);}
         }
         if(!ready(p))return;
@@ -93,6 +95,7 @@ public final class Journey {
     }
     @SubscribeEvent(priority=EventPriority.LOWEST) public static void damage(LivingDamageEvent e){if(e.getAmount()<=0||e.isCanceled())return;
         ServerPlayer attacker=CombatSettings.caster(e.getSource());if(attacker!=null&&e.getEntity()!=MaidBridge.body(attacker))Curse.status(attacker,"Combat",200);
+        if(attacker!=null&&e.getEntity()!=attacker&&TechniqueRules.toji(attacker))TechniqueRules.addStamina(attacker,TechniqueRules.STAMINA_PER_HIT);
         ServerPlayer p=MaidBridge.progression(e.getEntity());if(p==null)return;
         float actual=Math.min(p.getHealth(),e.getAmount());
         if(e.getSource().getEntity() instanceof LivingEntity enemy&&enemy!=p){Curse.status(p,"Combat",200);add(p,5,1);}

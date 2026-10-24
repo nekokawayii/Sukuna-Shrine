@@ -17,6 +17,11 @@ public final class Network {
     public static Boolean clientModpackMode;
     public static double tooltipFactor(BalanceRules.Category category){return BalanceRules.factor(clientModpackMode!=null?clientModpackMode:BalanceRules.modpackMode(),category);}
     public record Cast(SkillAction action) {}
+    /** 27：服务端让客户端打开《咒术选择书》界面。 */
+    public record OpenTechnique() {}
+    /** 28：客户端把选定的流派发给服务端。 */
+    public record ChooseTechnique(int technique) {}
+    public static Consumer<OpenTechnique> techniqueReceiver = t -> {};
     public record StreamToggle() {}
     public record TestReset() {}
     public record AimState(boolean enabled,double angle,double range,boolean circle) {}
@@ -70,9 +75,9 @@ public final class Network {
     }
     public static Consumer<ControllerState> controllerReceiver = p -> {};
     public static Consumer<Progress> progressReceiver = p -> {};
-    public record Progress(double energy,double maximum,int fingers,boolean awakened,boolean siphon,boolean disorder,boolean unlocked,boolean nine,boolean rotation,boolean fist,String guide,boolean soulShrine,boolean voidShrine,boolean pureLandVictory,boolean burnout,double reverseHealing,double reverseCost,boolean modpackMode,int clashPenaltyTicks,boolean sukuna,boolean uraume,int iceFish,int wallSpacing,boolean wallDiagonal,boolean dismantleQi,boolean amplification,boolean gojo,int domainRadiusPts,int domainDamagePts,int domainSpeedPts,boolean domainVerticalKill) {
-        static Progress read(FriendlyByteBuf b){return new Progress(b.readDouble(),b.readDouble(),b.readVarInt(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readUtf(2048),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readDouble(),b.readDouble(),b.readBoolean(),b.readVarInt(),b.readBoolean(),b.readBoolean(),b.readVarInt(),b.readVarInt(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readVarInt(),b.readVarInt(),b.readVarInt(),b.readBoolean());}
-        void write(FriendlyByteBuf b){b.writeDouble(energy);b.writeDouble(maximum);b.writeVarInt(fingers);b.writeBoolean(awakened);b.writeBoolean(siphon);b.writeBoolean(disorder);b.writeBoolean(unlocked);b.writeBoolean(nine);b.writeBoolean(rotation);b.writeBoolean(fist);b.writeUtf(guide,2048);b.writeBoolean(soulShrine);b.writeBoolean(voidShrine);b.writeBoolean(pureLandVictory);b.writeBoolean(burnout);b.writeDouble(reverseHealing);b.writeDouble(reverseCost);b.writeBoolean(modpackMode);b.writeVarInt(clashPenaltyTicks);b.writeBoolean(sukuna);b.writeBoolean(uraume);b.writeVarInt(iceFish);b.writeVarInt(wallSpacing);b.writeBoolean(wallDiagonal);b.writeBoolean(dismantleQi);b.writeBoolean(amplification);b.writeBoolean(gojo);b.writeVarInt(domainRadiusPts);b.writeVarInt(domainDamagePts);b.writeVarInt(domainSpeedPts);b.writeBoolean(domainVerticalKill);}
+    public record Progress(double energy,double maximum,int fingers,boolean awakened,boolean siphon,boolean disorder,boolean unlocked,boolean nine,boolean rotation,boolean fist,String guide,boolean soulShrine,boolean voidShrine,boolean pureLandVictory,boolean burnout,double reverseHealing,double reverseCost,boolean modpackMode,int clashPenaltyTicks,boolean sukuna,boolean uraume,int iceFish,int wallSpacing,boolean wallDiagonal,boolean dismantleQi,boolean amplification,boolean gojo,int domainRadiusPts,int domainDamagePts,int domainSpeedPts,boolean domainVerticalKill,int technique,float stamina) {
+        static Progress read(FriendlyByteBuf b){return new Progress(b.readDouble(),b.readDouble(),b.readVarInt(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readUtf(2048),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readDouble(),b.readDouble(),b.readBoolean(),b.readVarInt(),b.readBoolean(),b.readBoolean(),b.readVarInt(),b.readVarInt(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readBoolean(),b.readVarInt(),b.readVarInt(),b.readVarInt(),b.readBoolean(),b.readVarInt(),b.readFloat());}
+        void write(FriendlyByteBuf b){b.writeDouble(energy);b.writeDouble(maximum);b.writeVarInt(fingers);b.writeBoolean(awakened);b.writeBoolean(siphon);b.writeBoolean(disorder);b.writeBoolean(unlocked);b.writeBoolean(nine);b.writeBoolean(rotation);b.writeBoolean(fist);b.writeUtf(guide,2048);b.writeBoolean(soulShrine);b.writeBoolean(voidShrine);b.writeBoolean(pureLandVictory);b.writeBoolean(burnout);b.writeDouble(reverseHealing);b.writeDouble(reverseCost);b.writeBoolean(modpackMode);b.writeVarInt(clashPenaltyTicks);b.writeBoolean(sukuna);b.writeBoolean(uraume);b.writeVarInt(iceFish);b.writeVarInt(wallSpacing);b.writeBoolean(wallDiagonal);b.writeBoolean(dismantleQi);b.writeBoolean(amplification);b.writeBoolean(gojo);b.writeVarInt(domainRadiusPts);b.writeVarInt(domainDamagePts);b.writeVarInt(domainSpeedPts);b.writeBoolean(domainVerticalKill);b.writeVarInt(technique);b.writeFloat(stamina);}
     }
     public record WallOptions(int halfBlocks,boolean diagonal){}
     /** 伏魔御厨子的三项点数（每项 0~总点数，三项之和 ≤ 可用总点数：开关开=10 / 关=11）与「纵向伤敌」开关：界面按「确定」立刻发这条保存，
@@ -203,6 +208,13 @@ public final class Network {
     CHANNEL.messageBuilder(BlackFlashStrike.class,26,NetworkDirection.PLAY_TO_SERVER)
         .encoder((m,b)->b.writeVarInt(m.targetId())).decoder(b->new BlackFlashStrike(b.readVarInt()))
         .consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null)BlackFlashMarks.strike(p,m.targetId());c.get().setPacketHandled(true);}).add();
+    // 27 = 打开《咒术选择书》界面（S2C）；28 = 客户端把选定的流派发回来（C2S）。
+    CHANNEL.messageBuilder(OpenTechnique.class,27,NetworkDirection.PLAY_TO_CLIENT)
+        .encoder((m,b)->{}).decoder(b->new OpenTechnique())
+        .consumerMainThread((m,c)->{techniqueReceiver.accept(m);c.get().setPacketHandled(true);}).add();
+    CHANNEL.messageBuilder(ChooseTechnique.class,28,NetworkDirection.PLAY_TO_SERVER)
+        .encoder((m,b)->b.writeVarInt(m.technique())).decoder(b->new ChooseTechnique(b.readVarInt()))
+        .consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null)TechniqueBook.choose(p,m.technique());c.get().setPacketHandled(true);}).add();
     }
     public static void registerDrawing(){
         WallpaperPackets.register();

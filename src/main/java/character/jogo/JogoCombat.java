@@ -21,8 +21,11 @@ import java.util.*;
 
 /** 漏壶的三招实现、被动免疫与第一章「泡岩浆 30 秒」。全部在服务端结算，客户端只看粒子。 */
 public final class JogoCombat {
-    private static final String DONE="JogoLavaDone", PROGRESS="JogoLavaTicks", BUCKETS="JogoLavaBuckets";
+    private static final String DONE="JogoLavaDone", PROGRESS="JogoLavaTicks", BUCKETS="JogoLavaBuckets", SIEGE="JogoSiegeTicks", SIEGE_DONE="JogoSiegeDone";
     private static final int SOAK_TICKS=600;   // 30 秒
+    private static final int SIEGE_TICKS=1200; // 盖棺铁围山：坚持 60 秒
+    private static final float SIEGE_HEALTH=.30f;  // 生命低于 30%
+    private static final int SIEGE_ENEMIES=5, SIEGE_RADIUS=24;
     private static final int BUG_LIFE=400;     // 火砾虫 20 秒
     private static final double BUG_SPEED=0.55;
 
@@ -35,8 +38,12 @@ public final class JogoCombat {
     private static final List<Falling> FALLING=new ArrayList<>();
     private static final List<Pillar> PILLARS=new ArrayList<>();
 
-    /** 第一章完成度：泡满 30 秒才算 1 章。 */
-    public static int rank(ServerPlayer p) { return Curse.data(p).getBoolean(DONE)?1:0; }
+    /** 章节进度：一章=泡岩浆满 30 秒；二章=盖棺铁围山坚持 60 秒。 */
+    public static int rank(ServerPlayer p) {
+        var data=Curse.data(p);
+        if(!data.getBoolean(DONE))return 0;
+        return data.getBoolean(SIEGE_DONE)?2:1;
+    }
 
     // ---------------------------------------------------------------- 技能 1：火砾虫
     public static void castBugs(ServerPlayer p,CharacterSkill skill,int rank) {
@@ -172,18 +179,17 @@ public final class JogoCombat {
         var d=CharacterService.selected(p);if(d==null||!d.id().equals("jogo"))return;
         var source=e.getSource();
         if(source.is(DamageTypeTags.IS_FIRE)||source.is(DamageTypeTags.IS_EXPLOSION)&&source.is(DamageTypeTags.IS_FIRE)||source.is(net.minecraft.world.damagesource.DamageTypes.LAVA)||source.is(net.minecraft.world.damagesource.DamageTypes.IN_FIRE)||source.is(net.minecraft.world.damagesource.DamageTypes.ON_FIRE)||source.is(net.minecraft.world.damagesource.DamageTypes.HOT_FLOOR)){
-            e.setCanceled(true);p.clearFire();
+            e.setCanceled(true);
         }
     }
     @SubscribeEvent public static void playerTick(TickEvent.PlayerTickEvent e) {
         if(e.phase!=TickEvent.Phase.END||!(e.player instanceof ServerPlayer p))return;
         var d=CharacterService.selected(p);if(d==null||!d.id().equals("jogo"))return;
-        p.clearFire();
         var data=Curse.data(p);
         // 不再直接发岩浆：玩家要自己去弄到 3 桶岩浆（记录曾经同时持有过的最大桶数）。
         int buckets=p.getInventory().countItem(net.minecraft.world.item.Items.LAVA_BUCKET);
         if(buckets>data.getInt(BUCKETS))data.putInt(BUCKETS,buckets);
-        if(data.getBoolean(DONE))return;
+        if(!data.getBoolean(DONE)){
         boolean lava=p.isInLava()||p.level().getFluidState(p.blockPosition()).is(net.minecraft.tags.FluidTags.LAVA);
         if(!lava)return;
         int ticks=data.getInt(PROGRESS)+1;data.putInt(PROGRESS,ticks);
@@ -193,6 +199,28 @@ public final class JogoCombat {
             p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第一章·于长夜重返大地 完成"));
             CharacterRewardsHook.grant(p);
         }
+        return;
+        }
+        if(data.getBoolean(SIEGE_DONE))return;
+        boolean hurt=p.getHealth()<p.getMaxHealth()*SIEGE_HEALTH;
+        int nearby=hurt?enemies(p):0;
+        boolean burning=p.isOnFire()||p.isInLava();
+        if(!burning||nearby<SIEGE_ENEMIES)return;
+        int siege=data.getInt(SIEGE)+1;data.putInt(SIEGE,siege);
+        if(siege%100==0)p.displayClientMessage(net.minecraft.network.chat.Component.literal("盖棺铁围山 "+siege/20+" / 60 秒 · 敌人 "+nearby),true);
+        if(siege>=SIEGE_TICKS){
+            data.putBoolean(SIEGE_DONE,true);
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第二章·盖棺铁围山 完成"));
+            CharacterRewardsHook.grant(p);
+        }
+    }
+    /** 周围 24 格内存活的敌对生物数量（不数玩家、不数自己的召唤物）。 */
+    private static int enemies(ServerPlayer p) {
+        int count=0;
+        for(var e:p.serverLevel().getEntitiesOfClass(LivingEntity.class,p.getBoundingBox().inflate(SIEGE_RADIUS),t->t.isAlive()&&t instanceof net.minecraft.world.entity.monster.Enemy&&t!=p)){
+            if(CombatSafety.canAffect(p,e))count++;
+        }
+        return count;
     }
     /** 只在本类内部用来触发发奖，避免循环依赖写死 CharacterRewards 的调用顺序。 */
     static final class CharacterRewardsHook {

@@ -57,7 +57,7 @@ public final class CharacterCasting {
         var definition=CharacterService.selected(p);
         if(definition==null)return;
         if(!CharacterService.allowsSkill(p,id)){
-            p.sendSystemMessage(Component.literal("无法施放：该技能未解锁（"+definition.name()+" 当前阶段 "+CharacterService.rank(p)+"）"));
+            p.sendSystemMessage(Component.literal("无法施放：技能"+id+" 未解锁（"+definition.name()+" 阶段"+CharacterService.rank(p)+"，需求"+definition.config().unlockChapter(id)+"，已注册"+(definition.config().skill(id)==null?"否":"是")+"）"));
             return;
         }
         // 乙骨忧太：释放掠夺来的旧术式。必须先召唤里香；不限次数，但冷却为原术式的两倍。

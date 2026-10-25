@@ -56,115 +56,131 @@ def lamp(x, y, z):
 
 def school():
     blocks.clear()
-    # ---------- 校园围墙与大门 ----------
-    for x in range(2, 126):
-        for z in (2, 126):
-            box(x, 2, z, x, 3, z, "minecraft:cobblestone_wall")
-    for z in range(2, 127):
-        for x in (2, 126):
-            box(x, 2, z, x, 3, z, "minecraft:cobblestone_wall")
-    air(60, 2, 0, 68, 4, 4)          # 南侧大门洞
-    box(58, 2, 1, 70, 4, 1, "minecraft:stone_bricks")
+    # ================= 四面教学楼围合式学校 =================
+    # 中央操场：X 34..94, Z 30..98
+    box(34, 1, 30, 94, 1, 98, "minecraft:grass_block")
+    box(36, 1, 32, 92, 1, 96, "minecraft:gravel")        # 跑道
+    box(42, 1, 38, 86, 1, 90, "minecraft:grass_block")    # 内场
+    box(12, 1, 28, 118, 1, 29, "minecraft:stone_bricks")  # 南北通道
+    box(12, 1, 99, 118, 1, 100, "minecraft:stone_bricks")
+    box(31, 1, 28, 33, 1, 100, "minecraft:stone_bricks")  # 东西通道
+    box(95, 1, 28, 97, 1, 100, "minecraft:stone_bricks")
 
-    # ---------- 主楼外壳 ----------
-    X1, X2, Z1, Z2 = 8, 120, 8, 80
-    box(X1, 0, Z1, X2, 2, Z2, "minecraft:stone_bricks")      # 地基
-    air(X1 + 2, 3, Z1 + 2, X2 - 2, 19, Z2 - 2)               # 内部清空
-    box(X1, 3, Z1, X2, 3, Z2, "minecraft:dark_oak_planks")   # 一层地板
-    # 外墙（两层）
-    for (y1, y2) in ((4, 10), (12, 18)):
-        box(X1, y1, Z1, X2, y2, Z1, "minecraft:stone_bricks")
-        box(X1, y1, Z2, X2, y2, Z2, "minecraft:stone_bricks")
-        box(X1, y1, Z1, X1, y2, Z2, "minecraft:stone_bricks")
-        box(X2, y1, Z1, X2, y2, Z2, "minecraft:stone_bricks")
-    box(X1, 11, Z1, X2, 11, Z2, "minecraft:dark_oak_planks")  # 二层地板
-    # 窗户（每 8 格一组）
-    for x in range(X1 + 4, X2 - 3, 8):
-        for (y1, y2) in ((6, 8), (14, 16)):
-            box(x, y1, Z1, x + 2, y2, Z1, "minecraft:glass")
-            box(x, y1, Z2, x + 2, y2, Z2, "minecraft:glass")
-    for z in range(Z1 + 6, Z2 - 3, 10):
-        for (y1, y2) in ((6, 8), (14, 16)):
-            box(X1, y1, z, X1, y2, z + 2, "minecraft:glass")
-            box(X2, y1, z, X2, y2, z + 2, "minecraft:glass")
-    # 正门（南墙中央）
-    air(60, 4, Z2, 68, 7, Z2)
-    box(58, 4, Z2, 59, 7, Z2, "minecraft:stone_bricks")
-    box(69, 4, Z2, 70, 7, Z2, "minecraft:stone_bricks")
-    box(60, 8, Z2, 68, 8, Z2, "minecraft:stone_bricks")
+    def wing(x1, z1, x2, z2, name_hint):
+        """一个教学楼翼：地基 + 两层 + 平顶 + 栏杆 + 隔间/课桌/灯。"""
+        box(x1, 0, z1, x2, 2, z2, "minecraft:stone_bricks")
+        air(x1 + 1, 4, z1 + 1, x2 - 1, 19, z2 - 1)
+        box(x1, 3, z1, x2, 3, z2, "minecraft:dark_oak_planks")     # 一层地板
+        for (y1, y2) in ((4, 10), (12, 18)):                        # 两层外墙
+            box(x1, y1, z1, x2, y2, z1, "minecraft:stone_bricks")
+            box(x1, y1, z2, x2, y2, z2, "minecraft:stone_bricks")
+            box(x1, y1, z1, x1, y2, z2, "minecraft:stone_bricks")
+            box(x2, y1, z1, x2, y2, z2, "minecraft:stone_bricks")
+        box(x1, 11, z1, x2, 11, z2, "minecraft:dark_oak_planks")   # 二层地板
+        box(x1, 19, z1, x2, 19, z2, "minecraft:deepslate_tiles")   # 屋顶楼板（封顶）
+        for (x, z) in ((x1, z1), (x2, z1), (x1, z2), (x2, z2)):
+            box(x, 20, z, x, 22, z, "minecraft:stone_bricks")      # 角柱
+        # 女儿墙
+        box(x1, 20, z1, x2, 21, z1, "minecraft:stone_bricks")
+        box(x1, 20, z2, x2, 21, z2, "minecraft:stone_bricks")
+        box(x1, 20, z1, x1, 21, z2, "minecraft:stone_bricks")
+        box(x2, 20, z1, x2, 21, z2, "minecraft:stone_bricks")
+        # 窗（外侧两面）
+        long_x = (x2 - x1) >= (z2 - z1)
+        if long_x:
+            for x in range(x1 + 4, x2 - 2, 8):
+                for (y1, y2) in ((6, 8), (14, 16)):
+                    box(x, y1, z1, x + 2, y2, z1, "minecraft:glass")
+                    box(x, y1, z2, x + 2, y2, z2, "minecraft:glass")
+        else:
+            for z in range(z1 + 4, z2 - 2, 8):
+                for (y1, y2) in ((6, 8), (14, 16)):
+                    box(x1, y1, z, x1, y2, z + 2, "minecraft:glass")
+                    box(x2, y1, z, x2, y2, z + 2, "minecraft:glass")
+        # 每个翼两层的隔间与门（沿长边每 14 格一道墙）
+        if long_x:
+            cuts = list(range(x1 + 14, x2 - 6, 14))
+            for (y1, y2) in ((4, 10), (12, 18)):
+                for cx in cuts:
+                    box(cx, y1, z1 + 1, cx, y2, z2 - 1, "minecraft:stone_bricks")
+            for cx in cuts:
+                for y in (4, 12):
+                    air(cx, y, z1 + 2, cx, y + 2, z1 + 3)          # 门洞
+            # 课桌（放在地板之上 y=4 / y=12）
+            for cx in range(x1 + 4, x2 - 3, 14):
+                for row, z in ((0, z1 + 5), (1, z1 + 9)):
+                    y = 4 if row == 0 else 12
+                    for k in range(3):
+                        desk(cx + k * 2, y, z)
+            for x in range(x1 + 6, x2 - 3, 12):
+                lamp(x, 4, z2 - 3)
+                lamp(x, 12, z2 - 3)
+        else:
+            cuts = list(range(z1 + 14, z2 - 6, 14))
+            for (y1, y2) in ((4, 10), (12, 18)):
+                for cz in cuts:
+                    box(x1 + 1, y1, cz, x2 - 1, y2, cz, "minecraft:stone_bricks")
+            for cz in cuts:
+                for y in (4, 12):
+                    air(x1 + 2, y, cz, x1 + 3, y + 2, cz)
+            for cz in range(z1 + 4, z2 - 3, 14):
+                for row, x in ((0, x1 + 5), (1, x1 + 9)):
+                    y = 4 if row == 0 else 12
+                    for k in range(3):
+                        desk(x, y, cz + k * 2)
+            for z in range(z1 + 6, z2 - 3, 12):
+                lamp(x2 - 3, 4, z)
+                lamp(x2 - 3, 12, z)
+        # 一层门（朝操场一侧）
+        return
 
-    # ---------- 走廊 ----------
-    for (y1, y2) in ((4, 10), (12, 18)):
-        box(60, y1, Z1 + 2, 68, y2, Z2 - 2, "minecraft:air")
-    box(64, 3, Z1 + 2, 64, 3, Z2 - 2, "minecraft:red_carpet")
-    # 二层走廊楼板缺口 + 楼梯
-    box(62, 11, 70, 66, 11, 74, "minecraft:air")
-    for i in range(9):
-        put(64, 3 + i, 74 - i, "minecraft:dark_oak_stairs",
-            {"facing": "north", "half": "bottom", "shape": "straight", "waterlogged": "false"})
+    # 四个翼（外框 10..118 / 10..118，中央留操场）
+    wing(10, 10, 118, 26, "north")
+    wing(10, 102, 118, 118, "south")
+    wing(10, 30, 30, 98, "west")
+    wing(98, 30, 118, 98, "east")
 
-    # ---------- 教室隔墙（每层各 3 间） ----------
-    for (y1, y2) in ((4, 10), (12, 18)):
-        for z in (30, 52):
-            box(X1 + 2, y1, z, 59, y2, z, "minecraft:stone_bricks")
-            box(69, y1, z, X2 - 2, y2, z, "minecraft:stone_bricks")
-            air(40, y1, z, 43, y1 + 2, z)     # 左侧门洞
-            air(84, y1, z, 87, y1 + 2, z)     # 右侧门洞
-        box(52, y1, Z1 + 2, 52, y2, Z2 - 2, "minecraft:stone_bricks")
-        box(76, y1, Z1 + 2, 76, y2, Z2 - 2, "minecraft:stone_bricks")
-        for z in (20, 42, 66):
-            air(52, y1, z, 52, y1 + 2, z + 1)
-            air(76, y1, z, 76, y1 + 2, z + 1)
+    # ---------- 入口（南翼中间开门） ----------
+    air(60, 4, 102, 68, 7, 102)
+    air(60, 3, 103, 68, 3, 104)
+    box(58, 4, 102, 59, 7, 102, "minecraft:stone_bricks")
+    box(69, 4, 102, 70, 7, 102, "minecraft:stone_bricks")
 
-    # ---------- 课桌与讲台 ----------
-    for y in (3, 11):
-        for cx in (24, 38, 60 + 0, 88, 104):
-            for rz in (18, 26):
-                desk(cx, y, rz)
-                desk(cx + 6, y, rz)
-        for z in (14, 38):
-            for x in (14, 20, 94, 100, 110):
-                desk(x, y, z)
+    # ---------- 办公室/图书角（北翼中部，带箱子） ----------
+    box(58, 3, 14, 70, 3, 22, "minecraft:dark_oak_planks")
+    chest(60, 4, 20, "north")
+    chest(62, 4, 20, "north")
+    put(66, 4, 20, "minecraft:bookshelf")
+    put(67, 4, 20, "minecraft:bookshelf")
+    put(64, 4, 16, "minecraft:lectern",
+        {"facing": "south", "has_book": "false", "powered": "false"})
+    for x in (56, 72):
+        lamp(x, 4, 12)
 
-    # ---------- 讲台与办公室 ----------
-    box(40, 3, 12, 50, 3, 14, "minecraft:polished_deepslate")
-    put(45, 4, 13, "minecraft:lectern",
-        {"facing": "north", "has_book": "false", "powered": "false"})
-    box(112, 3, 70, 118, 3, 76, "minecraft:dark_oak_planks")
-    chest(114, 4, 74, "north")
-    chest(116, 4, 74, "north")
-    put(112, 4, 76, "minecraft:bookshelf")
-    put(113, 4, 76, "minecraft:bookshelf")
-
-    # ---------- 屋顶（阶梯坡） ----------
-    for step in range(7):
-        y = 19 + step
-        x1, x2 = X1 + step, X2 - step
-        z1, z2 = Z1 + step, Z2 - step
-        if x1 > x2 or z1 > z2:
-            break
-        box(x1, y, z1, x2, y, z1, "minecraft:deepslate_tiles")
-        box(x1, y, z2, x2, y, z2, "minecraft:deepslate_tiles")
-        box(x1, y, z1, x1, y, z2, "minecraft:deepslate_tiles")
-        box(x2, y, z1, x2, y, z2, "minecraft:deepslate_tiles")
-        if step < 6:
-            air(x1 + 1, y, z1 + 1, x2 - 1, y, z2 - 1)
-
-    # ---------- 庭院 ----------
-    box(60, 1, 84, 68, 1, 124, "minecraft:stone_bricks")
-    for x in (30, 90):
-        box(x, 1, 88, x, 1, 122, "minecraft:gravel")
-    for (x, z) in ((40, 96), (86, 96), (40, 116), (86, 116)):
+    # ---------- 操场设施 ----------
+    for (x, z) in ((40, 36), (88, 36), (40, 92), (88, 92)):
         lamp(x, 2, z)
-    for x in range(14, 114, 12):
-        box(x, 1, 120, x + 2, 2, 122, "minecraft:oak_leaves")
-    # 主楼通往大门的路
-    box(60, 3, Z2 + 1, 68, 3, 84, "minecraft:dark_oak_planks")
+    for z in (44, 58, 72, 86):
+        lamp(38, 2, z); lamp(90, 2, z)
+    for x in range(46, 84, 12):
+        box(x, 2, 46, x + 2, 3, 48, "minecraft:oak_leaves")
+        box(x, 2, 82, x + 2, 3, 84, "minecraft:oak_leaves")
+    # 操场中央旗杆
+    box(63, 2, 63, 65, 2, 65, "minecraft:stone_bricks")
+    box(64, 3, 64, 64, 9, 64, "minecraft:oak_fence")
+    put(65, 9, 64, "minecraft:white_banner")
 
-    # ---------- 静态检查：主走廊连续可走 ----------
-    for z in range(Z1 + 2, Z2 - 1):
-        assert blocks[(60, 4, z)][0] == "minecraft:air"
-        assert blocks[(64, 3, z)][0] in ("minecraft:red_carpet", "minecraft:air", "minecraft:dark_oak_planks", "minecraft:dark_oak_stairs")
+    # 走廊灯具（走廊为翼内通道，补充顶灯避免全黑）
+    for x in range(16, 114, 12):
+        box(x, 9, 28, x, 9, 29, "minecraft:lantern",
+            {"hanging": "true", "waterlogged": "false"})
+        box(x, 9, 99, x, 9, 100, "minecraft:lantern",
+            {"hanging": "true", "waterlogged": "false"})
+    for z in range(34, 96, 12):
+        box(31, 9, z, 32, 9, z, "minecraft:lantern",
+            {"hanging": "true", "waterlogged": "false"})
+        box(96, 9, z, 97, 9, z, "minecraft:lantern",
+            {"hanging": "true", "waterlogged": "false"})
 
 
 def text(value: str) -> bytes:

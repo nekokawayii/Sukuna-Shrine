@@ -28,7 +28,7 @@ import org.joml.Vector3f;
  * 里香：乙骨忧太「真赝相爱」的召唤物模型 {@code rika.bbmodel}。
  * <p>无限血、存在 2400 刻（2 分钟）；自动攻击最近的敌对生物，
  * 交替使用「撕咬」（bite）与「拳击」（punch/punch_2）。
- * <p>伤害随主人的章节（{@code CharacterService.rank}）提升：咬 25+5×章，拳 15+3×章。
+ * <p>伤害随主人的章节（{@code CharacterService.rank}）提升：咬 120+30×章，拳 90+20×章。
  */
 public final class RikaEntity extends PathfinderMob {
     public static final int BITE = 1, PUNCH = 2;
@@ -36,7 +36,8 @@ public final class RikaEntity extends PathfinderMob {
         SynchedEntityData.defineId(RikaEntity.class, EntityDataSerializers.OPTIONAL_UUID);
     private static final EntityDataAccessor<Integer> ACTION = SynchedEntityData.defineId(RikaEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> AGE = SynchedEntityData.defineId(RikaEntity.class, EntityDataSerializers.INT);
-    private static final int ATTACK_INTERVAL = 20;
+    /** 攻击间隔（刻）：0.6 秒一次，比原来的 1 秒更快。 */
+    private static final int ATTACK_INTERVAL = 12;
 
     private int life = RikaRules.DURATION;
     private long nextAttack;
@@ -52,7 +53,7 @@ public final class RikaEntity extends PathfinderMob {
             .add(Attributes.MAX_HEALTH, 1024)
             .add(Attributes.MOVEMENT_SPEED, 0.34)
             .add(Attributes.FOLLOW_RANGE, 32)
-            .add(Attributes.ATTACK_DAMAGE, 25);
+            .add(Attributes.ATTACK_DAMAGE, 120);
     }
 
     @Override protected void defineSynchedData() {
@@ -103,7 +104,7 @@ public final class RikaEntity extends PathfinderMob {
         long now = server.getGameTime();
         if (target != null) {
             getNavigation().moveTo(target, 1.5);
-            if (distanceToSqr(target) <= 6.25 && now >= nextAttack) {
+            if (distanceToSqr(target) <= 12.25 && now >= nextAttack) {   // 触及距离 2.5 → 3.5 格
                 nextAttack = now + ATTACK_INTERVAL;
                 strike(server, target);
             }
@@ -115,7 +116,7 @@ public final class RikaEntity extends PathfinderMob {
     }
 
     private LivingEntity findTarget() {
-        List<LivingEntity> list = level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(20),
+        List<LivingEntity> list = level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(28),
             e -> e.isAlive() && e != this && e instanceof Enemy && !(e instanceof RikaEntity));
         list.sort(java.util.Comparator.comparingDouble(this::distanceToSqr));
         return list.isEmpty() ? null : list.get(0);
@@ -126,7 +127,7 @@ public final class RikaEntity extends PathfinderMob {
         Player owner = owner();
         if (owner != null) rank = character.CharacterService.rank(owner);
         boolean bite = (server.getGameTime() / ATTACK_INTERVAL) % 2 == 0;
-        float damage = bite ? 25f + 5f * rank : 15f + 3f * rank;
+        float damage = bite ? 120f + 30f * rank : 90f + 20f * rank;
         target.hurt(damageSources().mobAttack(this), damage);
         entityData.set(ACTION, bite ? BITE : PUNCH);
         entityData.set(AGE, 0);

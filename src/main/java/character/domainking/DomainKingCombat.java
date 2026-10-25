@@ -38,6 +38,14 @@ public final class DomainKingCombat {
         if (p.level() instanceof ServerLevel level) {
             level.playSound(null, p.blockPosition(), net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE,
                 net.minecraft.sounds.SoundSource.PLAYERS, 1.4f, 0.6f);
+            // 展开瞬间：中心光爆 + 一圈火柱，保证玩家肉眼可见
+            Network.send(level, new Network.Effect(character.jogo.JogoFx.BUG_BURST, p.getId(), p.position(),
+                Vec3.ZERO, (float) radius * 0.25f, 20, 0));
+            for (int i = 0; i < 12; i++) {
+                double a = i * Math.PI * 2 / 12;
+                Vec3 at = p.position().add(Math.cos(a) * radius, 0, Math.sin(a) * radius);
+                Network.send(level, new Network.Effect(character.jogo.JogoFx.PILLAR, 0, at, Vec3.ZERO, 2f, 14, 0));
+            }
         }
         p.sendSystemMessage(Component.literal("领域展开 · " + name));
     }
@@ -63,6 +71,14 @@ public final class DomainKingCombat {
                 it.remove();
                 owner.sendSystemMessage(Component.literal("领域 · " + f.name() + " 已收起"));
                 continue;
+            }
+            if (now % 10 == 0) {
+                // 每 0.5 秒一圈脉冲火柱，避免"只有伤害没有画面"
+                for (int i = 0; i < 8; i++) {
+                    double a = i * Math.PI * 2 / 8 + now * 0.02;
+                    Vec3 at = owner.position().add(Math.cos(a) * f.radius(), 0, Math.sin(a) * f.radius());
+                    Network.send(level, new Network.Effect(character.jogo.JogoFx.PILLAR, 0, at, Vec3.ZERO, 1.6f, 10, 0));
+                }
             }
             if (now % 10 != 0) continue;
             for (LivingEntity t : level.getEntitiesOfClass(LivingEntity.class,

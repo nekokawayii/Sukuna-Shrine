@@ -31,6 +31,35 @@ public final class Content {
     public static final RegistryObject<Item> MAHITO_FINGER=ITEMS.register("mahito_finger",()->new Item(new Item.Properties().rarity(Rarity.EPIC).stacksTo(16)));
     public static final RegistryObject<Item> YUJI_FAMILY_PHOTO=ITEMS.register("yuji_family_photo",()->new Item(new Item.Properties().rarity(Rarity.RARE).stacksTo(1)));
     /** 不属于这个世界的碎片：五条悟通关后从灵魂通道裂隙里掉出来的剧情道具，长得像一张网页截图/鼠标指针。 */
+    /** 咒具第一条分支：黑绳。长鞭式咒具，右键横扫 10 格内的敌人，强制僵直 0.1 秒并清除已放出的术式。 */
+    public static final RegistryObject<Item> BLACK_ROPE=ITEMS.register("black_rope",()->new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)){
+        @Override public InteractionResultHolder<ItemStack> use(Level level,Player player,InteractionHand hand){
+            ItemStack stack=player.getItemInHand(hand);
+            if(!level.isClientSide&&player instanceof ServerPlayer sp){
+                Vec3 look=sp.getLookAngle();
+                int hits=0;
+                for(var target:sp.serverLevel().getEntitiesOfClass(LivingEntity.class,
+                        sp.getBoundingBox().inflate(10),e->e!=sp&&e.isAlive()&&!e.isSpectator()&&CombatSettings.canHit(sp,e))){
+                    if(target.position().distanceToSqr(sp.position())>100)continue;
+                    if(look.dot(target.position().add(0,target.getBbHeight()*0.5,0).subtract(sp.getEyePosition()).normalize())<0.2)continue;
+                    AttackTypes.mark(AttackTypes.MAGIC);
+                    try{CombatSettings.hurt(sp,target,sp.damageSources().magic(),10f);}
+                    finally{AttackTypes.clear();}
+                    // 强制僵直 0.1 秒（2 刻）
+                    target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                        net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN,2,10,false,false));
+                    target.setDeltaMovement(0,Math.min(0,target.getDeltaMovement().y),0);
+                    target.hurtMarked=true;
+                    clearTechniques(target);
+                    Network.send(sp.serverLevel(),new Network.Effect(0,sp.getId(),target.position(),look,10,12,0));
+                    hits++;
+                }
+                sp.sendSystemMessage(net.minecraft.network.chat.Component.literal(hits>0?"黑绳 · 命中了 "+hits+" 个目标（僵直+术式抹除）":"黑绳 · 10 格内前方没有目标"));
+                sp.serverLevel().playSound(null,sp.blockPosition(),net.minecraft.sounds.SoundEvents.TRIDENT_HIT,net.minecraft.sounds.SoundSource.PLAYERS,1.2f,0.8f);
+            }
+            return InteractionResultHolder.sidedSuccess(stack,level.isClientSide);
+        }
+    });
     /** 作弊道具：仅创造模式可得，右键立刻完成当前角色章节（漏壶按章节旗标推进，其他角色按击杀数推进）。 */
     public static final RegistryObject<Item> CHAPTER_CHEAT=ITEMS.register("chapter_cheat",()->new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)){
         @Override public InteractionResultHolder<ItemStack> use(Level level,Player player,InteractionHand hand){
@@ -89,11 +118,23 @@ public final class Content {
     public static final RegistryObject<Item> EGG=ITEMS.register("buddha_spawn_egg",()->new net.minecraftforge.common.ForgeSpawnEggItem(BUDDHA,0x493d2b,0x9a47b6,new Item.Properties()));
     public static void init(IEventBus bus){ITEMS.register(bus);ENTITIES.register(bus);bus.addListener(Content::attributes);}
     private static void attributes(EntityAttributeCreationEvent e){e.put(DAITIAN.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,200).add(Attributes.MOVEMENT_SPEED,0.26).add(Attributes.ATTACK_DAMAGE,5).add(Attributes.FOLLOW_RANGE,32).add(Attributes.KNOCKBACK_RESISTANCE,0.4).build());e.put(BUDDHA.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,5000).add(Attributes.MOVEMENT_SPEED,0.24).add(Attributes.ATTACK_DAMAGE,10).add(Attributes.FOLLOW_RANGE,64).add(Attributes.KNOCKBACK_RESISTANCE,0.9).build());e.put(PARASITE.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,12).add(Attributes.MOVEMENT_SPEED,0.32).add(Attributes.ATTACK_DAMAGE,2).add(Attributes.FOLLOW_RANGE,48).build());e.put(MOTHER.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,160).add(Attributes.MOVEMENT_SPEED,0.23).add(Attributes.ATTACK_DAMAGE,12).add(Attributes.FOLLOW_RANGE,48).add(Attributes.KNOCKBACK_RESISTANCE,0.8).build());e.put(BROKEN_MAHITO.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,20000).add(Attributes.MOVEMENT_SPEED,0.34).add(Attributes.ATTACK_DAMAGE,40).add(Attributes.FOLLOW_RANGE,64).add(Attributes.ARMOR,20).add(Attributes.KNOCKBACK_RESISTANCE,0.55).build());e.put(MAHITO_LIMB.get(),MahitoLimbEntity.createAttributes());e.put(OBSERVER.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,1).add(Attributes.MOVEMENT_SPEED,0).add(Attributes.FOLLOW_RANGE,64).add(Attributes.KNOCKBACK_RESISTANCE,1).build());}
-    private static void tabs(BuildCreativeModeTabContentsEvent e){if(e.getTabKey()==CreativeModeTabs.COMBAT){e.accept(FINGER.get());e.accept(BODY.get());e.accept(ORB.get());e.accept(RELIC.get());e.accept(SEAL.get());e.accept(INCENSE.get());e.accept(EGG.get());e.accept(IDLE_TRANSFIGURATION_CURSE.get());e.accept(MAHITO_FINGER.get());e.accept(YUJI_FAMILY_PHOTO.get());e.accept(CHAPTER_CHEAT.get());e.accept(SOUL_SEPARATION_NEEDLE.get());e.accept(EternalLove.TRUE_FALSE.get());}}
+    private static void tabs(BuildCreativeModeTabContentsEvent e){if(e.getTabKey()==CreativeModeTabs.COMBAT){e.accept(FINGER.get());e.accept(BODY.get());e.accept(ORB.get());e.accept(RELIC.get());e.accept(SEAL.get());e.accept(INCENSE.get());e.accept(EGG.get());e.accept(IDLE_TRANSFIGURATION_CURSE.get());e.accept(MAHITO_FINGER.get());e.accept(YUJI_FAMILY_PHOTO.get());e.accept(CHAPTER_CHEAT.get());e.accept(BLACK_ROPE.get());e.accept(SOUL_SEPARATION_NEEDLE.get());e.accept(EternalLove.TRUE_FALSE.get());}}
     private static class GrowthFood extends Item {
         final boolean body;GrowthFood(boolean body){super(new Properties().stacksTo(16).rarity(Rarity.EPIC).fireResistant().food(new FoodProperties.Builder().nutrition(1).saturationMod(0).alwaysEat().build()));this.body=body;}
         private boolean allowed(Player p){return character.CharacterService.permits(p,character.CharacterDefinition.Family.SHRINE)&&!(Uraume.unlocked(p)&&!Journey.unlocked(p))&&(body?Curse.fingers(p)>=20&&!Curse.awakened(p):Curse.fingers(p)<20);}
         @Override public InteractionResultHolder<ItemStack> use(Level level,Player p,InteractionHand hand){if(!level.isClientSide&&!allowed(p)){p.displayClientMessage(Component.literal(!character.CharacterService.permits(p,character.CharacterDefinition.Family.SHRINE)?"请先用选择书切回宿傩，才能吸收宿傩成长物品":Uraume.unlocked(p)&&!Journey.unlocked(p)?"你已选择里梅，不能吸收宿傩成长物品":body?(Curse.awakened(p)?"已经融合过即身佛肉体":"先吞下20根宿傩手指，才能承受肉体融合"):"已经吸收20根手指，无法继续增加"),true);return InteractionResultHolder.fail(p.getItemInHand(hand));}return super.use(level,p,hand);}
         @Override public ItemStack finishUsingItem(ItemStack stack,Level level,LivingEntity user){if(user instanceof ServerPlayer p){if(!allowed(p))return stack;Curse.consume(p,body);}return super.finishUsingItem(stack,level,user);}
+    }
+    private static void clearTechniques(net.minecraft.world.entity.LivingEntity target){
+        if(target instanceof ServerPlayer sp){
+            try{Skills.cancelCharge(sp);}catch(Throwable ignored){}
+            try{Skills.closeDomain(sp);}catch(Throwable ignored){}
+            try{GojoCombat.closeDomain(sp);}catch(Throwable ignored){}
+            try{GuardianPlayerSkills.closeOwnedDomain(sp,false);}catch(Throwable ignored){}
+            try{BloodDomain.close(sp);}catch(Throwable ignored){}
+            try{character.jogo.JogoCombat.closeDomain(sp);}catch(Throwable ignored){}
+        }else if(target instanceof GojoEntity gojo){
+            try{gojo.clashCloseDomain();}catch(Throwable ignored){}
+        }
     }
 }

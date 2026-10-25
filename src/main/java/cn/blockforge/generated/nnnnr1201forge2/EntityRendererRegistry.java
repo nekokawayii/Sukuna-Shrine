@@ -44,6 +44,7 @@ public final class EntityRendererRegistry {
     // RegistryObject 仅在注册/检查时取值，不能在模组构造阶段提前解析。
     private static final java.util.List<Entry<?>> ENTRIES=java.util.List.of(
         entry(VoidContent.GOJO,GojoRenderer.class,GojoRenderer::new),
+        entry(Content.CHOSO,ChosoRenderer.class,ChosoRenderer::new),
         entry(VoidContent.MAHORAGA,MahoragaRenderer.class,MahoragaRenderer::new),
         entry(SoulContent.YUJI,YujiRenderer.class,YujiRenderer::new),
         entry(SoulContent.GUARDIAN,GuardianRenderer.class,GuardianRenderer::new),

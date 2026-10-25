@@ -42,7 +42,7 @@ public class JogoNpcEntity extends Monster {
         goalSelector.addGoal(9, new RandomLookAroundGoal(this));
         targetSelector.addGoal(1, new HurtByTargetGoal(this));
         targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true,
-            e -> e instanceof Player p && !p.isCreative() && !p.isSpectator()));
+            e -> e instanceof Player p  && !p.isSpectator()));
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -62,7 +62,7 @@ public class JogoNpcEntity extends Monster {
         // 领域持续伤害
         if (now < domainEnd) {
             for (var t : world.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(27),
-                    e -> e instanceof Player p && !p.isCreative() && e.isAlive())) {
+                    e -> e instanceof Player p && e.isAlive())) {
                 if (now % 10 == 0) {
                     NpcCombat.hurt(this, t, 4f);
                     t.setSecondsOnFire(3);
@@ -111,7 +111,7 @@ public class JogoNpcEntity extends Monster {
             case 2 -> { // 岩浆·火焰喷发
                 Network.send(world, new Network.Effect(character.jogo.JogoFx.PILLAR, 0, eye, dir, 2f, 14, 0));
                 for (var t : world.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(18),
-                        e -> e instanceof Player p && !p.isCreative() && e.isAlive()
+                        e -> e instanceof Player p && e.isAlive()
                             && e.position().subtract(position()).normalize().dot(dir) > 0.45)) {
                     NpcCombat.hurt(this, t, 7f);
                     t.setSecondsOnFire(5);
@@ -120,7 +120,7 @@ public class JogoNpcEntity extends Monster {
             case 3 -> { // 火山喷发：直线火柱 40 格
                 Network.send(world, new Network.Effect(character.jogo.JogoFx.PILLAR, 0, eye, dir, 2f, 16, 0));
                 for (var t : world.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(40),
-                        e -> e instanceof Player p && !p.isCreative() && e.isAlive()
+                        e -> e instanceof Player p && e.isAlive()
                             && Math.abs(e.position().subtract(eye).normalize().dot(dir) - 1) < 0.06)) {
                     NpcCombat.hurt(this, t, 10f);
                     t.setSecondsOnFire(6);
@@ -147,6 +147,6 @@ public class JogoNpcEntity extends Monster {
 
     private java.util.List<LivingEntity> near(Vec3 at, double r) {
         return level().getEntitiesOfClass(LivingEntity.class, new AABB(at, at).inflate(r),
-            e -> e instanceof Player p && !p.isCreative() && e.isAlive());
+            e -> e instanceof Player p && e.isAlive());
     }
 }

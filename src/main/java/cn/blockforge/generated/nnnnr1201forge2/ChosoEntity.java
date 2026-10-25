@@ -213,7 +213,7 @@ public class ChosoEntity extends PathfinderMob {
         for (var e : closest) { double d = e.distanceToSqr(this); if (d < bestDist) { bestDist = d; best = e; } }
         if (best != null) return best;
         for (var p : level().getEntitiesOfClass(Player.class, getBoundingBox().inflate(24),
-                p -> p.isAlive() && !p.isCreative() && p.getLastHurtByMob() == this)) return p;
+                p -> p.isAlive()  && p.getLastHurtByMob() == this)) return p;
         return null;
     }
 

@@ -39,7 +39,7 @@ public class UraumeNpcEntity extends Monster {
         goalSelector.addGoal(9, new RandomLookAroundGoal(this));
         targetSelector.addGoal(1, new HurtByTargetGoal(this));
         targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true,
-            e -> e instanceof Player p && !p.isCreative() && !p.isSpectator()));
+            e -> e instanceof Player p  && !p.isSpectator()));
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -69,7 +69,7 @@ public class UraumeNpcEntity extends Monster {
             // 冰凝咒法 · 霜凪：前方锥形寒气
             Network.send(world, new Network.Effect(BranchRules.FX_FROST, getId(), eye, dir, 14, 10, 0));
             for (var t : world.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(14),
-                    e -> e != this && e.isAlive() && e instanceof Player p && !p.isCreative()
+                    e -> e != this && e.isAlive() && e instanceof Player p
                         && e.position().subtract(position()).normalize().dot(dir) > 0.55)) {
                 NpcCombat.hurt(this, t, 12f);
                 t.setTicksFrozen(Math.min(600, t.getTicksFrozen() + 200));
@@ -78,7 +78,7 @@ public class UraumeNpcEntity extends Monster {
             // 冰凝咒法 · 直瀑：目标处冰柱
             Network.send(world, new Network.Effect(BranchRules.FX_ICE, getId(), to.add(0, 10, 0), new Vec3(0, -1, 0), 3, 20, 0));
             for (var t : world.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(to, to).inflate(3.5),
-                    e -> e != this && e.isAlive() && e instanceof Player p && !p.isCreative())) {
+                    e -> e != this && e.isAlive() && e instanceof Player p)) {
                 NpcCombat.hurt(this, t, 16f);
                 t.setTicksFrozen(Math.min(600, t.getTicksFrozen() + 120));
             }

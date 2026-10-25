@@ -72,6 +72,11 @@ public final class YutaProgress {
             && rika.ownerId() != null && rika.level() instanceof ServerLevel rl) {
             killer = rl.getServer().getPlayerList().getPlayer(rika.ownerId());
         }
+        // 兜底：某些 BOSS 的死亡结算拿不到标准伤害来源，退回「击杀者 / 最后攻击者」。
+        if (killer == null) {
+            if (e.getSource().getEntity() instanceof ServerPlayer sp) killer = sp;
+            else if (e.getSource().getDirectEntity() instanceof ServerPlayer dp) killer = dp;
+        }
         if (killer == null || !isYuta(killer)) return;
 
         // ① 窗口内击杀计数
@@ -93,8 +98,10 @@ public final class YutaProgress {
         }
 
         // ② 击败夏油杰
-        // 第四章：击杀虎杖残影（sukuna:yuji_echo）。
-        if (dead instanceof cn.blockforge.generated.nnnnr1201forge2.YujiEntity) {
+        // 第四章：击杀虎杖残影本体。它放出来的 6 个「残影分身」（decoy，1 血）
+        // 以及与虎杖家相关的家人形态都不能算数，否则玩家打掉一个分身就以为完成了。
+        if (dead instanceof cn.blockforge.generated.nnnnr1201forge2.YujiEntity yuji
+            && !yuji.decoy() && !yuji.familyMember()) {
             CharacterService.markChapter(killer, "execute_yuji");
         }
 

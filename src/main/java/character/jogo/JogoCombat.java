@@ -24,7 +24,7 @@ import java.util.*;
 public final class JogoCombat {
     private static final String DONE="JogoLavaDone", PROGRESS="JogoLavaTicks", BUCKETS="JogoLavaBuckets",
             SIEGE="JogoNetherTicks", SIEGE_DONE="JogoNetherDone",
-            CLASH_DONE="JogoClashDone", CLASH_AT="JogoClashAt", CH3_START="JogoCh3Start", GOJO_KILL="JogoGojoKilled", GOJO_DONE="JogoGojoDone",
+            CLASH_DONE="JogoClashDone", CLASH_AT="JogoClashAt", CH3_START="JogoCh3Start", IN_ARENA="JogoCh3InArena", GOJO_KILL="JogoGojoKilled", GOJO_DONE="JogoGojoDone",
             KEY_GIVEN="JogoVoidKeyGiven", ASH_CRIT="JogoAshCrit";
     private static final int NETHER_TICKS=1200, GOJO_SURVIVE=3600;
     private static final int SOAK_TICKS=600;   // 30 秒
@@ -529,13 +529,22 @@ public final class JogoCombat {
         }
         // 第三章：开始时给虚空钥匙；对拼获胜后活过 3 分钟 + 击杀五条悟
         long nowTick=p.level().getGameTime();
-        if(!data.getBoolean(KEY_GIVEN)||data.getLong(CH3_START)<=0){
+        if(!data.getBoolean(KEY_GIVEN)){
             data.putBoolean(KEY_GIVEN,true);
-            data.putLong(CH3_START,nowTick);
             Journey.give(p,new net.minecraft.world.item.ItemStack(VoidContent.KEY.get()));
-            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第三章·灾厄火焰：进入虚空竞技场，3 分钟内完成一次领域对拼 · 虚空钥匙已放入背包"));
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第三章·灾厄火焰：进入虚空竞技场后开始 3 分钟倒计时 · 虚空钥匙已放入背包"));
         }
         if(data.getBoolean(GOJO_DONE))return;
+        // 计时起点 = 进入虚空竞技场那一刻（每次进入重新计时）
+        boolean inArena=p.level().dimension()==VoidJourney.ARENA;
+        if(inArena&&!data.getBoolean(IN_ARENA)){
+            data.putBoolean(IN_ARENA,true);
+            data.putLong(CH3_START,nowTick);
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("已进入虚空竞技场：3 分钟内完成一次领域对拼"));
+        }else if(!inArena&&data.getBoolean(IN_ARENA)){
+            data.putBoolean(IN_ARENA,false);
+        }
+        if(data.getLong(CH3_START)<=0)return;
         long elapsed=nowTick-data.getLong(CH3_START);
         if(data.getBoolean(CLASH_DONE)){
             data.putBoolean(GOJO_DONE,true);

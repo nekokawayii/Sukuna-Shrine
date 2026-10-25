@@ -70,7 +70,7 @@ public class UraumeNpcEntity extends Monster {
             for (var t : world.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(14),
                     e -> e != this && e.isAlive() && e instanceof Player p && !p.isCreative()
                         && e.position().subtract(position()).normalize().dot(dir) > 0.55)) {
-                t.hurt(damageSources().mobAttack(this), 12f);
+                NpcCombat.hurt(this, t, 12f);
                 t.setTicksFrozen(Math.min(600, t.getTicksFrozen() + 200));
                 t.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 2, false, false));
             }
@@ -80,7 +80,7 @@ public class UraumeNpcEntity extends Monster {
             Network.send(world, new Network.Effect(BranchRules.FX_ICE, getId(), at.add(0, 10, 0), new Vec3(0, -1, 0), 3, 20, 0));
             for (var t : world.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(at, at).inflate(3.5),
                     e -> e != this && e.isAlive() && e instanceof Player p && !p.isCreative())) {
-                t.hurt(damageSources().mobAttack(this), 16f);
+                NpcCombat.hurt(this, t, 16f);
                 t.setTicksFrozen(Math.min(600, t.getTicksFrozen() + 120));
             }
         }

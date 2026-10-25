@@ -224,12 +224,5 @@ public class ChosoEntity extends PathfinderMob {
                 && !(e instanceof Player p && p.isCreative()));
     }
 
-    private void hurt(LivingEntity target, float amount) {
-        AttackTypes.mark(AttackTypes.MAGIC);
-        boolean ok;
-        try { ok = target.hurt(damageSources().mobAttack(this), amount); }
-        finally { AttackTypes.clear(); }
-        if (!ok) target.hurt(damageSources().magic(), amount);   // 兜底：mobAttack 被拦时用魔法伤害再试一次
-        com.mojang.logging.LogUtils.getLogger().info("[胀相] 伤害 {} -> {} ok={}", Math.round(amount), target.getName().getString(), ok);
-    }
+    private void hurt(LivingEntity target, float amount) { NpcCombat.hurt(this, target, amount); }
 }

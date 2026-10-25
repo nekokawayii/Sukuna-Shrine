@@ -64,7 +64,7 @@ public class JogoNpcEntity extends Monster {
             for (var t : world.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(27),
                     e -> e instanceof Player p && !p.isCreative() && e.isAlive())) {
                 if (now % 10 == 0) {
-                    t.hurt(damageSources().mobAttack(this), 4f);
+                    NpcCombat.hurt(this, t, 4f);
                     t.setSecondsOnFire(3);
                 }
             }
@@ -99,20 +99,20 @@ public class JogoNpcEntity extends Monster {
             case 0 -> { // 火砾虫
                 Network.send(world, new Network.Effect(character.jogo.JogoFx.BUG, getId(), eye, dir, 1f, 20, 0));
                 if (distanceToSqr(target) <= 24 * 24) {
-                    target.hurt(damageSources().mobAttack(this), 6f);
+                    NpcCombat.hurt(this, target, 6f);
                     target.setSecondsOnFire(3);
                 }
             }
             case 1 -> { // 陨石
                 Network.send(world, new Network.Effect(character.jogo.JogoFx.METEOR_IMPACT, getId(), to, Vec3.ZERO, 4f, 16, 0));
-                for (var t : near(to, 4.5)) { t.hurt(damageSources().mobAttack(this), 12f); t.setSecondsOnFire(4); }
+                for (var t : near(to, 4.5)) { NpcCombat.hurt(this, t, 12f); t.setSecondsOnFire(4); }
             }
             case 2 -> { // 岩浆·火焰喷发
                 Network.send(world, new Network.Effect(character.jogo.JogoFx.PILLAR, 0, eye, dir, 2f, 14, 0));
                 for (var t : world.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(18),
                         e -> e instanceof Player p && !p.isCreative() && e.isAlive()
                             && e.position().subtract(position()).normalize().dot(dir) > 0.45)) {
-                    t.hurt(damageSources().mobAttack(this), 7f);
+                    NpcCombat.hurt(this, t, 7f);
                     t.setSecondsOnFire(5);
                 }
             }
@@ -121,7 +121,7 @@ public class JogoNpcEntity extends Monster {
                 for (var t : world.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(40),
                         e -> e instanceof Player p && !p.isCreative() && e.isAlive()
                             && Math.abs(e.position().subtract(eye).normalize().dot(dir) - 1) < 0.06)) {
-                    t.hurt(damageSources().mobAttack(this), 10f);
+                    NpcCombat.hurt(this, t, 10f);
                     t.setSecondsOnFire(6);
                 }
             }
@@ -130,7 +130,7 @@ public class JogoNpcEntity extends Monster {
                     Vec3 at = to.add((getRandom().nextDouble() - .5) * 6, 0, (getRandom().nextDouble() - .5) * 6);
                     Network.send(world, new Network.Effect(character.jogo.JogoFx.PILLAR, 0, at, Vec3.ZERO, 1.5f, 12, 0));
                     for (var t : near(at, 2.6)) {
-                        t.hurt(damageSources().mobAttack(this), 7f);
+                        NpcCombat.hurt(this, t, 7f);
                         t.setDeltaMovement(t.getDeltaMovement().add(0, .8, 0)); t.hurtMarked = true;
                         t.setSecondsOnFire(3);
                     }

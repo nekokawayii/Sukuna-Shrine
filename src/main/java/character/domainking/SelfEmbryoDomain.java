@@ -157,17 +157,15 @@ public final class SelfEmbryoDomain {
                 if (build.level.getBlockEntity(pos) != null) continue;
                 if (old.getDestroySpeed(build.level, pos) < 0) continue;   // 基岩等不可破坏方块
                 BlockState target;
-                if (pos.getY() == build.center.getY() - 1 && old != Blocks.BLACK_CONCRETE.defaultBlockState()) {
-                    target = Blocks.BLACK_CONCRETE.defaultBlockState();
+                if (pos.getY() == build.center.getY() - 1) {
+                    target = Blocks.MAGENTA_CONCRETE.defaultBlockState();    // 地面：淡紫色混凝土（最近的浅紫）
                 } else if (pos.getY() == build.center.getY()) {
-                    // 地板层与其上一层：只给非最外圈铺亮度 15 光源（最外圈保持纯黑混凝土）
+                    // 地板上一层：只给非最外圈铺亮度 15 光源（最外圈不放光源）
                     double hd2 = (pos.getX() - build.center.getX()) * (double) (pos.getX() - build.center.getX())
                         + (pos.getZ() - build.center.getZ()) * (double) (pos.getZ() - build.center.getZ());
-                    if (pos.getY() == build.center.getY() && hd2 > (RADIUS - 1) * (RADIUS - 1)) {
-                        target = Blocks.BLACK_CONCRETE.defaultBlockState();
-                    } else {
-                        target = Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 15);
-                    }
+                    target = hd2 > (RADIUS - 1) * (RADIUS - 1)
+                        ? Blocks.AIR.defaultBlockState()
+                        : Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 15);
                 } else {
                     double d2 = pos.distSqr(build.center);
                     double in2 = (RADIUS - 1) * (RADIUS - 1), r2 = RADIUS * RADIUS;

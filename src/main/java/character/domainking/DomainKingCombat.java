@@ -64,7 +64,9 @@ public final class DomainKingCombat {
             }
             case DomainKingSkills.SHRINE -> {         // 伏魔御厨子：宿傩线原实现（神龛/必中斩击）
                 cn.blockforge.generated.nnnnr1201forge2.Skills.cast(p, 5);
-                p.sendSystemMessage(Component.literal("领域展开 · 伏魔御厨子"));
+                boolean ok = cn.blockforge.generated.nnnnr1201forge2.Skills.domainActive(p);
+                com.mojang.logging.LogUtils.getLogger().info("[领域王] 御厨子 cast 后 domainActive={}", ok);
+                p.sendSystemMessage(Component.literal(ok ? "领域展开 · 伏魔御厨子" : "伏魔御厨子被原系统拒绝（宿傩线需要结印/阶段条件，日志已记录）"));
                 return;
             }
             case DomainKingSkills.BLOOD -> {          // 血之领域·胎海：赤血线原实现
@@ -74,7 +76,9 @@ public final class DomainKingCombat {
             }
             case DomainKingSkills.YUTA -> {           // 真赝相爱：乙骨线原实现
                 character.yuta.YutaDomain.open(p);
-                p.sendSystemMessage(Component.literal("领域展开 · 真赝相爱"));
+                boolean ok = character.yuta.YutaDomain.active(p);
+                com.mojang.logging.LogUtils.getLogger().info("[领域王] 真赝相爱 open 后 active={}", ok);
+                p.sendSystemMessage(Component.literal(ok ? "领域展开 · 真赝相爱" : "真赝相爱未展开（日志已记录）"));
                 return;
             }
             case DomainKingSkills.SIMPLE -> {          // 简易领域·捌：原实现

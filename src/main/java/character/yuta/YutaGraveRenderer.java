@@ -12,7 +12,8 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
  */
 public final class YutaGraveRenderer implements BlockEntityRenderer<YutaGraveBlockEntity> {
     private static final BbModel MODEL = new BbModel("oni_muramasa_sheathed", "oni_muramasa_sheathed");
-    private static final float TARGET_HEIGHT = 1.2f;
+    /** 目标高度（格）：一把插在地上的刀，正常武器大小约 0.9 格。 */
+    private static final float TARGET_HEIGHT = 0.9f;
 
     public YutaGraveRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -20,9 +21,10 @@ public final class YutaGraveRenderer implements BlockEntityRenderer<YutaGraveBlo
     public void render(YutaGraveBlockEntity be, float partial, PoseStack ps, MultiBufferSource buffers, int light, int overlay) {
         if (be.taken()) return;
         float raw = Math.max(0.05f, MODEL.heightBlocks());
-        float scale = TARGET_HEIGHT / raw;
+        // 只缩小、不放大：模型本身若已比目标矮，保持原尺寸，避免被放大成巨型刀。
+        float scale = Math.min(1.0f, TARGET_HEIGHT / raw);
         ps.pushPose();
-        ps.translate(0.5, 0.05, 0.5);
+        ps.translate(0.5, 0.02, 0.5);
         ps.scale(scale, scale, scale);
         MODEL.render(ps, buffers, light, "", 0f, 1f, 1f, 1f, 1f);
         ps.popPose();

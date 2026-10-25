@@ -61,7 +61,7 @@ public class UraumeNpcEntity extends Monster {
         long now = world.getGameTime();
         if (now < shotAt) return;
         shotAt = (int) now + 50;
-        if (!character.CharacterCasting.castFor(this, (skillIndex++ & 1) == 0 ? BranchRules.FROST : BranchRules.ICEFALL)) { shotAt = (int) now + 20; return; }
+        if (!NpcCurse.spend(this, 40)) { shotAt = (int) now + 20; return; }
         Vec3 eye = getEyePosition();
         Vec3 to = target.getBoundingBox().getCenter();
         Vec3 dir = to.subtract(eye).normalize();
@@ -73,20 +73,18 @@ public class UraumeNpcEntity extends Monster {
                         && e.position().subtract(position()).normalize().dot(dir) > 0.55)) {
                 NpcCombat.hurt(this, t, 12f);
                 t.setTicksFrozen(Math.min(600, t.getTicksFrozen() + 200));
-                t.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 2, false, false));
             }
         } else {
-            // 冰凝咒法 · 直瀑：目标处落下冰柱
-            Vec3 at = to;
-            Network.send(world, new Network.Effect(BranchRules.FX_ICE, getId(), at.add(0, 10, 0), new Vec3(0, -1, 0), 3, 20, 0));
-            for (var t : world.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(at, at).inflate(3.5),
+            // 冰凝咒法 · 直瀑：目标处冰柱
+            Network.send(world, new Network.Effect(BranchRules.FX_ICE, getId(), to.add(0, 10, 0), new Vec3(0, -1, 0), 3, 20, 0));
+            for (var t : world.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(to, to).inflate(3.5),
                     e -> e != this && e.isAlive() && e instanceof Player p && !p.isCreative())) {
                 NpcCombat.hurt(this, t, 16f);
                 t.setTicksFrozen(Math.min(600, t.getTicksFrozen() + 120));
             }
         }
-        world.playSound(null, blockPosition(),
-            skillIndex % 2 == 1 ? net.minecraft.sounds.SoundEvents.GLASS_BREAK : net.minecraft.sounds.SoundEvents.POWDER_SNOW_BREAK,
+        world.playSound(null, blockPosition(), (skillIndex & 1) == 1
+            ? net.minecraft.sounds.SoundEvents.GLASS_BREAK : net.minecraft.sounds.SoundEvents.POWDER_SNOW_BREAK,
             net.minecraft.sounds.SoundSource.HOSTILE, 1.4f, 0.8f);
     }
 }

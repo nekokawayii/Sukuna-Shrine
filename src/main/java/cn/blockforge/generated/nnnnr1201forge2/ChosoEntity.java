@@ -79,7 +79,8 @@ public class ChosoEntity extends PathfinderMob {
             if (idx == DOMAIN_INDEX) domainReady = now + DOMAIN_TIDE;
             if (idx == DEATH_STAR_INDEX) deathStarReady = now + DEATH_STAR_TIDE;
             shotAt = (int) now + 70;
-            if (!character.CharacterCasting.castFor(this, idx)) shotAt = (int) now + 20;
+            if (!NpcCurse.spend(this, 25)) { shotAt = (int) now + 20; return; }
+            cast(idx, target);
             return;
         }
         shotAt = (int) now + 70;

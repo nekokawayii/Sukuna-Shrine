@@ -19,17 +19,17 @@ import net.minecraft.world.level.Level;
 
 /**
  * 「鬼妖村正」——从领域坟头拔出的刀。
- * <p>左键：结算 20 点<b>魔法伤害</b>（魔法伤害不吃护甲），并经过 {@code CombatSettings.spellDamage}，
+ * <p>左键：结算 200 点<b>魔法伤害</b>（魔法伤害不吃护甲），并经过 {@code CombatSettings.spellDamage}，
  * 因此能吃到术式加成与借用爆发窗口。
- * <p>右键：消耗这把刀，随机释放一条**已复制**的术式，伤害按 3 倍（{@link YutaBoost} 覆盖倍率），
+ * <p>右键：消耗这把刀，随机释放一条**已复制**的术式，伤害按 5 倍（{@link YutaBoost} 覆盖倍率），
  * 该术式随后从轮盘消失（需要重新去掠夺）。
  * <p>没有复制任何术式时右键不生效、刀不报废。
  */
 public final class YutaKatanaItem extends SwordItem {
     /** 基础伤害（无视护甲）。 */
-    private static final float BASE_DAMAGE = 20f;
+    private static final float BASE_DAMAGE = 200f;
     /** 右键释放时的伤害倍率。 */
-    private static final double CAST_MULTIPLIER = 3.0;
+    private static final double CAST_MULTIPLIER = 5.0;
 
     public YutaKatanaItem(Properties properties) {
         // 木剑基底：普通挥砍只贡献极低的物理伤害，真实伤害走下面的魔法结算。
@@ -76,7 +76,7 @@ public final class YutaKatanaItem extends SwordItem {
         }
         stack.setCount(0);
         inv.setChanged();
-        p.displayClientMessage(Component.literal("太刀断裂 · 释放 " + YutaCopies.nameOf(picked) + "（×3）"), false);
+        p.displayClientMessage(Component.literal("太刀断裂 · 释放 " + YutaCopies.nameOf(picked) + "（×5）"), false);
         return InteractionResultHolder.sidedSuccess(stack, false);
     }
 }

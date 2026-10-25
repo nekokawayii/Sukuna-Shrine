@@ -72,21 +72,36 @@ public final class CharacterClient {
     public static void openWheel() { var mc=Minecraft.getInstance();if(toji())return;mc.setScreen(customWheel()?new CharacterWheel():new SkillWheel()); }
     public static int rank() { return state.rank(); }
     public static CharacterSkill custom(int skill) { var d=selected();return d==null?null:d.config().skill(skill); }
+
+    /** 复制来的技能可能属于别的角色（如漏壶 1000–1006），按所有已注册角色反查其定义。 */
+    private static CharacterSkill foreign(int skill) {
+        var own = custom(skill);
+        if (own != null) return own;
+        if (!copied(skill)) return null;
+        for (var d : CharacterRegistry.all()) {
+            var sk = d.config().skill(skill);
+            if (sk != null) return sk;
+        }
+        return null;
+    }
     private static CharacterConfig.SkillText text(int skill) { var d=selected();return d==null?null:d.config().text().get(skill); }
     public static int skillColor(int skill) { var text=text(skill);var custom=custom(skill);return text!=null?text.color():custom!=null?custom.color():selected()==null?0xFFFFFFFF:selected().config().wheel().text(); }
     public static String label(int skill) {
-        var text=text(skill);if(text!=null)return text.label();var custom=custom(skill);if(custom!=null)return custom.label();
+        var text=text(skill);if(text!=null)return text.label();var custom=foreign(skill);if(custom!=null)return custom.label();
         String label=BloodRules.skill(skill)?BloodRules.name(skill):skill>=34&&skill<41?GojoPlayer.WHEEL_LABELS[skill-34]:skill==22?"霜凪":skill==23?"直瀑":skill>=7&&skill<17?GuardianPlayerSkills.SHORT[skill-7]:name(skill);
         return label.replace("血之领域·", "").replace("赤鳞跃动·载", "跃动·载");
     }
     public static String name(int skill) {
         var text=text(skill);if(text!=null)return text.name();var custom=custom(skill);if(custom!=null)return custom.name();
-        if(CharacterSkill.custom(skill))return "未配置技能";
+        if(CharacterSkill.custom(skill)){
+            var outer=foreign(skill);
+            return outer!=null?outer.name():"未配置技能";
+        }
         if(skill>=34&&skill<34+GojoPlayer.SLOTS)return GojoPlayer.nameOf(GojoPlayer.WHEEL[skill-34]);
         return Client.skillName(skill);
     }
     public static int cost(int skill) {
-        var custom=custom(skill);if(custom!=null)return custom.cost();
+        var custom=foreign(skill);if(custom!=null)return custom.cost();
         if(BloodRules.skill(skill))return BloodRules.cost(skill);
         if(skill==22||skill==23)return Uraume.cost(skill);
         if(skill>=34&&skill<34+GojoPlayer.SLOTS)return GojoPlayer.costOf(GojoPlayer.WHEEL[skill-34]);
@@ -94,7 +109,7 @@ public final class CharacterClient {
         return skill>=0&&skill<7?Curse.COST[skill]:0;
     }
     public static String description(int skill) {
-        var text=text(skill);if(text!=null)return text.description();var custom=custom(skill);if(custom!=null)return custom.description()+" · 冷却"+(custom.cooldown()/20.0)+"秒 · 本阶段最多"+custom.targetsAt(state.rank())+"目标";
+        var text=text(skill);if(text!=null)return text.description();var custom=foreign(skill);if(custom!=null)return custom.description()+" · 冷却"+(custom.cooldown()/20.0)+"秒 · 本阶段最多"+custom.targetsAt(state.rank())+"目标";
         if(BloodRules.skill(skill))return BloodRules.DESC[skill-BloodRules.FIRST];
         if(skill==22)return "前方冰汽冻结敌人；冰鱼强化保留";
         if(skill==23)return "身后冰柱向准星区域降落；冰鱼强化保留";

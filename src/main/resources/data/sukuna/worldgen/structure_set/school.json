@@ -1,0 +1,13 @@
+{
+  "structures": [
+    { "structure": "sukuna:school", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "salt": 913571,
+    "spacing": 44,
+    "separation": 16,
+    "spread_type": "linear",
+    "frequency": 0.6
+  }
+}

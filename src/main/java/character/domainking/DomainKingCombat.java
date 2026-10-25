@@ -62,11 +62,9 @@ public final class DomainKingCombat {
                 p.sendSystemMessage(Component.literal("领域展开 · 无量空处"));
                 return;
             }
-            case DomainKingSkills.SHRINE -> {         // 伏魔御厨子：宿傩线原实现（神龛/必中斩击）
-                cn.blockforge.generated.nnnnr1201forge2.Skills.cast(p, 5);
-                boolean ok = cn.blockforge.generated.nnnnr1201forge2.Skills.domainActive(p);
-                com.mojang.logging.LogUtils.getLogger().info("[领域王] 御厨子 cast 后 domainActive={}", ok);
-                p.sendSystemMessage(Component.literal(ok ? "领域展开 · 伏魔御厨子" : "伏魔御厨子被原系统拒绝（宿傩线需要结印/阶段条件，日志已记录）"));
+            case DomainKingSkills.SHRINE -> {         // 伏魔御厨子：绕过宿傩阶段门禁，直接调原 openDomain
+                boolean opened = openSukunaDomain(p);
+                if (!opened) p.sendSystemMessage(Component.literal("伏魔御厨子打开失败（见日志）"));
                 return;
             }
             case DomainKingSkills.BLOOD -> {          // 血之领域·胎海：赤血线原实现
@@ -130,6 +128,23 @@ public final class DomainKingCombat {
             default -> { }
         }
         FIELDS.removeIf(f -> f.owner() == p);
+    }
+
+    /** 直接调用宿傩线的私有 openDomain（跳过 Journey.unlocked / 结印时间轴等宿傩专属门禁）。 */
+    private static boolean openSukunaDomain(ServerPlayer p) {
+        try {
+            var m = cn.blockforge.generated.nnnnr1201forge2.Skills.class.getDeclaredMethod("openDomain", ServerPlayer.class);
+            m.setAccessible(true);
+            m.invoke(null, p);
+            boolean ok = cn.blockforge.generated.nnnnr1201forge2.Skills.domainActive(p);
+            com.mojang.logging.LogUtils.getLogger().info("[领域王] 御厨子 openDomain 反射调用完成 domainActive={}", ok);
+            p.sendSystemMessage(Component.literal(ok ? "领域展开 · 伏魔御厨子" : "伏魔御厨子 openDomain 已调用但未生效"));
+            return ok;
+        } catch (Throwable t) {
+            com.mojang.logging.LogUtils.getLogger().error("[领域王] 御厨子 openDomain 反射失败", t);
+            p.sendSystemMessage(Component.literal("伏魔御厨子调用失败：" + t.getClass().getSimpleName()));
+            return false;
+        }
     }
 
     private DomainKingCombat() {}

@@ -29,6 +29,7 @@ public class ChosoEntity extends PathfinderMob {
     private static final int DOMAIN_TIDE = 6000, DEATH_STAR_TIDE = 6000;   // 300 秒
 
     private int shotAt;
+    private int fxIndex;
     private int skillIndex;
     private long domainReady, deathStarReady;
 
@@ -52,7 +53,7 @@ public class ChosoEntity extends PathfinderMob {
 
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes()
-            .add(Attributes.MAX_HEALTH, BalanceRules.health(550.0))
+            .add(Attributes.MAX_HEALTH, BalanceRules.modpackMode() ? 550.0 * 30.0 : 550.0)
             .add(Attributes.ATTACK_DAMAGE, 5.0)
             .add(Attributes.MOVEMENT_SPEED, 0.30)
             .add(Attributes.FOLLOW_RANGE, 32.0)
@@ -63,7 +64,11 @@ public class ChosoEntity extends PathfinderMob {
         super.tick();
         if (level().isClientSide) return;
         LivingEntity target = getTarget();
-        if (target == null || !target.isAlive()) { skillIndex = 0; return; }
+        if (target == null || !target.isAlive()) {
+            target = fallbackTarget();
+            if (target == null) return;
+            setTarget(target);
+        }
         long now = level().getGameTime();
         if (now < shotAt) return;
         if (distanceToSqr(target) > 32 * 32) return;
@@ -86,10 +91,13 @@ public class ChosoEntity extends PathfinderMob {
         Vec3 eye = getEyePosition();
         Vec3 to = target.getBoundingBox().getCenter();
         Vec3 dir = to.subtract(eye).normalize();
+        fxIndex = index;
+        com.mojang.logging.LogUtils.getLogger().info("[胀相] 施放 {} -> {}", SKILLS[index], target.getName().getString());
         switch (index) {
             case 0 -> { // 赤缚：定身
                 target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 6, false, false));
                 target.setDeltaMovement(0, 0, 0); target.hurtMarked = true;
+                hurt(target, 6f);
                 fx(world, to, Vec3.ZERO, 3, 10);
             }
             case 1 -> { fx(world, position(), Vec3.ZERO, 6, 14); for (var t : near(6)) hurt(t, 12f); }        // 苅祓
@@ -186,7 +194,26 @@ public class ChosoEntity extends PathfinderMob {
     }
 
     private void fx(ServerLevel world, Vec3 at, Vec3 dir, double size, int life) {
-        Network.send(world, new Network.Effect(412, getId(), at, dir, (float) size, life, 0));
+        int kind = 400 + Math.min(31, fxIndex);
+        int shown = Math.max(40, life * 4);   // 血系特效的 life 单位很短，放大 4 倍并至少 2 秒
+        Network.send(world, new Network.Effect(kind, getId(), at, dir, (float) size, shown, 0));
+    }
+    /** 记录当前施放的是第几招，让特效号随招式变化（400+index）。 */
+    private void fx(ServerLevel world, int index, Vec3 at, Vec3 dir, double size, int life) {
+        fxIndex = index;
+        fx(world, at, dir, size, life);
+    }
+
+    /** 兜底索敌：附近敌怪优先，其次 24 格内挑衅过自己的玩家。 */
+    private LivingEntity fallbackTarget() {
+        var closest = level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(16),
+            e -> e != this && e.isAlive() && e instanceof net.minecraft.world.entity.monster.Monster);
+        LivingEntity best = null; double bestDist = Double.MAX_VALUE;
+        for (var e : closest) { double d = e.distanceToSqr(this); if (d < bestDist) { bestDist = d; best = e; } }
+        if (best != null) return best;
+        for (var p : level().getEntitiesOfClass(Player.class, getBoundingBox().inflate(24),
+                p -> p.isAlive() && !p.isCreative() && p.getLastHurtByMob() == this)) return p;
+        return null;
     }
 
     private java.util.List<LivingEntity> near(double radius) { return near(position(), radius); }
@@ -199,7 +226,10 @@ public class ChosoEntity extends PathfinderMob {
 
     private void hurt(LivingEntity target, float amount) {
         AttackTypes.mark(AttackTypes.MAGIC);
-        try { target.hurt(damageSources().indirectMagic(this, this), amount); }
+        boolean ok;
+        try { ok = target.hurt(damageSources().mobAttack(this), amount); }
         finally { AttackTypes.clear(); }
+        if (!ok) target.hurt(damageSources().magic(), amount);   // 兜底：mobAttack 被拦时用魔法伤害再试一次
+        com.mojang.logging.LogUtils.getLogger().info("[胀相] 伤害 {} -> {} ok={}", Math.round(amount), target.getName().getString(), ok);
     }
 }

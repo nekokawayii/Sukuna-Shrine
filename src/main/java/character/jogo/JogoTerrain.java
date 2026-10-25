@@ -24,6 +24,7 @@ public final class JogoTerrain {
     private record Change(BlockPos pos,BlockState state) {}
     private static final Map<UUID,LinkedHashMap<BlockPos,BlockState>> JOURNAL=new HashMap<>();
     private static final Map<UUID,ArrayDeque<Change>> QUEUE=new HashMap<>();
+    private static final Map<UUID,Integer> RATE=new HashMap<>();
 
     public static void open(ServerPlayer owner,Vec3 center,double radius) {
         restore(owner);
@@ -40,10 +41,10 @@ public final class JogoTerrain {
                 if(h2>R*R)continue;
                 BlockPos pos=new BlockPos(bx+dx,by-1,bz+dz);
                 if(!inWorld(level,pos))continue;
-                int roll=random.nextInt(10);
-                BlockState floor=roll==0?Blocks.MAGMA_BLOCK.defaultBlockState()
-                        :roll<3?Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
-                        :Blocks.DEEPSLATE_TILES.defaultBlockState();
+                int roll=random.nextInt(100);
+                BlockState floor=roll<62?Blocks.COBBLESTONE.defaultBlockState()
+                        :roll<88?Blocks.MAGMA_BLOCK.defaultBlockState()
+                        :Blocks.LAVA.defaultBlockState();
                 queue.add(new Change(pos,floor));
             }
         }
@@ -77,6 +78,17 @@ public final class JogoTerrain {
                 }
             }
         }
+        // 逐环展开：地板按半径由内向外，再按球壳半径由内向外
+        var ordered=new ArrayList<Change>(queue.size());
+        var floorPart=new ArrayList<Change>();
+        var shellPart=new ArrayList<Change>();
+        var centerPos=new BlockPos(bx,by,bz);
+        for(var c:queue)(c.state().isAir()?shellPart:(c.pos().getY()==by-1?floorPart:shellPart)).add(c);
+        floorPart.sort((a,b)->Integer.compare(a.pos().distManhattan(centerPos),b.pos().distManhattan(centerPos)));
+        shellPart.sort((a,b)->Integer.compare(a.pos().distManhattan(centerPos),b.pos().distManhattan(centerPos)));
+        ordered.addAll(floorPart);ordered.addAll(shellPart);
+        queue.clear();queue.addAll(ordered);
+        RATE.put(owner.getUUID(),Math.max(1,queue.size()/60));   // 3 秒（60 刻）铺完
         QUEUE.put(owner.getUUID(),queue);
         owner.sendSystemMessage(net.minecraft.network.chat.Component.literal(
             "盖棺铁围山 · 清场：地板 + 穹顶 + 内部清空，共 "+queue.size()+" 个方块，分批施工，结束还原"));
@@ -98,8 +110,9 @@ public final class JogoTerrain {
             ServerLevel level=owner.serverLevel();
             var journal=JOURNAL.computeIfAbsent(entry.getKey(),k->new LinkedHashMap<>());
             var queue=entry.getValue();
+            int perTick=Math.max(1,RATE.getOrDefault(entry.getKey(),PER_TICK));
             int done=0;
-            while(done<PER_TICK&&!queue.isEmpty()){
+            while(done<perTick&&!queue.isEmpty()){
                 Change change=queue.poll();
                 BlockPos pos=change.pos();
                 if(!inWorld(level,pos))continue;
@@ -119,6 +132,7 @@ public final class JogoTerrain {
     /** 还原所有改过的方块；收起、结束、死亡、关服都调用。 */
     public static void restore(ServerPlayer owner) {
         QUEUE.remove(owner.getUUID());
+        RATE.remove(owner.getUUID());
         var journal=JOURNAL.remove(owner.getUUID());
         if(journal==null||journal.isEmpty())return;
         ServerLevel level=owner.serverLevel();

@@ -66,24 +66,13 @@ public final class DomainKingCombat {
                 p.sendSystemMessage(Component.literal("领域展开 · 真赝相爱"));
                 return;
             }
-            default -> { }                             // 简易领域·捌：走下面的通用实现
-        }
-        long end = p.level().getGameTime() + 600;   // 30 秒
-        FIELDS.removeIf(f -> f.owner() == p);
-        FIELDS.add(new Field(p, name, color, radius, end, (float) skill.damage(), 1));
-        if (p.level() instanceof ServerLevel level) {
-            level.playSound(null, p.blockPosition(), net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE,
-                net.minecraft.sounds.SoundSource.PLAYERS, 1.4f, 0.6f);
-            // 展开瞬间：中心光爆 + 一圈火柱，保证玩家肉眼可见
-            Network.send(level, new Network.Effect(character.jogo.JogoFx.BUG_BURST, p.getId(), p.position(),
-                Vec3.ZERO, (float) radius * 0.25f, 20, 0));
-            for (int i = 0; i < 12; i++) {
-                double a = i * Math.PI * 2 / 12;
-                Vec3 at = p.position().add(Math.cos(a) * radius, 0, Math.sin(a) * radius);
-                Network.send(level, new Network.Effect(character.jogo.JogoFx.PILLAR, 0, at, Vec3.ZERO, 2f, 14, 0));
+            case DomainKingSkills.SIMPLE -> {          // 简易领域·捌：原实现
+                cn.blockforge.generated.nnnnr1201forge2.SimpleDomain.start(p);
+                p.sendSystemMessage(Component.literal("领域展开 · 简易领域·捌"));
+                return;
             }
+            default -> { }
         }
-        p.sendSystemMessage(Component.literal("领域展开 · " + name));
     }
 
     /** 咒力无限：领域王每刻把咒力补满（上限 1,000,000，HUD 显示 ∞）。 */
@@ -96,33 +85,16 @@ public final class DomainKingCombat {
         cn.blockforge.generated.nnnnr1201forge2.Curse.sync(p);
     }
 
+    /** 只负责盖棺铁围山的地形按时还原；其它领域的伤害/特效全由各条线自己的系统处理。 */
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e) {
         if (e.phase != TickEvent.Phase.END || FIELDS.isEmpty()) return;
         for (var it = FIELDS.iterator(); it.hasNext(); ) {
             Field f = it.next();
             ServerPlayer owner = f.owner();
             if (owner == null || !owner.isAlive() || !(owner.level() instanceof ServerLevel level)) { it.remove(); continue; }
-            long now = level.getGameTime();
-            if (now >= f.end()) {
+            if (level.getGameTime() >= f.end()) {
                 it.remove();
                 if (f.name().equals("盖棺铁围山")) character.jogo.JogoTerrain.restore(owner);
-                owner.sendSystemMessage(Component.literal("领域 · " + f.name() + " 已收起"));
-                continue;
-            }
-            if (now % 10 == 0) {
-                // 每 0.5 秒一圈脉冲火柱，避免"只有伤害没有画面"
-                for (int i = 0; i < 8; i++) {
-                    double a = i * Math.PI * 2 / 8 + now * 0.02;
-                    Vec3 at = owner.position().add(Math.cos(a) * f.radius(), 0, Math.sin(a) * f.radius());
-                    Network.send(level, new Network.Effect(character.jogo.JogoFx.PILLAR, 0, at, Vec3.ZERO, 1.6f, 10, 0));
-                }
-            }
-            if (now % 10 != 0) continue;
-            for (LivingEntity t : level.getEntitiesOfClass(LivingEntity.class,
-                    new net.minecraft.world.phys.AABB(owner.position(), owner.position()).inflate(f.radius()),
-                    t -> t != owner && t.isAlive() && t.position().distanceToSqr(owner.position()) <= f.radius() * f.radius())) {
-                t.hurt(owner.damageSources().indirectMagic(owner, owner), f.dps());
-                if (f.slowAmp() > 0) t.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, f.slowAmp(), false, false));
             }
         }
     }

@@ -1,6 +1,6 @@
 {
   "parent": "item/handheld",
   "textures": {
-    "layer0": "minecraft:item/netherite_sword"
+    "layer0": "sukuna:item/tai_dao"
   }
 }

@@ -126,6 +126,6 @@
   "task.sukuna.malevolent_shrine.desc": "Shift+右键喂食或查看咒力；先吃下宿傩记忆才会开启；优先低消耗咒术，无法施术时肉搏；领域共用120秒冷却，外放治疗主人",
   "task.sukuna.six_eyes": "六眼",
   "task.sukuna.six_eyes.desc": "Shift+右键喂六眼解锁（没有任何阶段要求）；选中后女仆改用五条悟技能组：苍、赫、茈、无量空处，场上有苍时会用赫撞出无限制茈；与宿傩/里梅任务并存，随时可切回",
-  "item.sukuna.yuta_katana": "鬼妖村正",
-  "block.sukuna.yuta_grave": "坟头·鬼妖村正"
+  "item.sukuna.yuta_katana": "太刀",
+  "block.sukuna.yuta_grave": "坟头·太刀"
 }

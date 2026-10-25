@@ -46,6 +46,17 @@ public final class CharacterCasting {
         return false;
     }
 
+    /** 以指定角色身份施放其自定义技能（乙骨复制来的漏壶术式走这里）。 */
+    public static boolean castAs(ServerPlayer p,String character,int id,int rank){
+        var def=CharacterRegistry.get(character);
+        if(def==null)return false;
+        CharacterSkill skill=def.config().skill(id);
+        var effect=EFFECTS.get(new Key(character,id));
+        if(skill==null||effect==null)return false;
+        effect.apply(p,skill,rank);
+        return true;
+    }
+
     private record Key(String character,int skill) {}
     private static final java.util.Map<Key,Effect> EFFECTS=new java.util.HashMap<>();
     public static void registerEffect(String character,int skill,Effect effect) {
@@ -79,7 +90,14 @@ public final class CharacterCasting {
                 return;
             }
             character.yuta.CopyBorrow.begin(p);
-            try { AuthoritySkills.cast(p,target); }
+            try {
+                if (character.yuta.YutaCopies.isCustom(id)) {
+                    // 漏壶这类自定义技能：转调到它自己的实现，否则旧版分派里根本不存在。
+                    castAs(p, character.yuta.YutaCopies.ownerOf(id), id, CharacterService.rank(p));
+                } else {
+                    AuthoritySkills.cast(p,target);
+                }
+            }
             finally { character.yuta.CopyBorrow.end(p); }
             // 冷却翻倍 + 开 3 秒爆发窗口（倍率 1.5 + 0.5×章节）。
             Curse.status(p,copyKey,character.yuta.YutaCopies.copiedCooldown(id));

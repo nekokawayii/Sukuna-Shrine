@@ -91,6 +91,11 @@ public final class YutaDomain {
                 p.displayClientMessage(Component.literal("咒力耗尽，领域解除"), false);
                 continue;
             }
+            // 领域维持期间：每 0.1 秒（2 刻）把咒力回满，实测等于用不完。
+            if (age % 2 == 0) {
+                Curse.data(p).putDouble("Energy", 1e18D);
+                Curse.sync(p);
+            }
             ensureRika(p);
         }
     }

@@ -45,7 +45,7 @@ public class YutaGraveBlock extends Block implements EntityBlock {
         p.getInventory().setChanged();
         level.removeBlock(pos, false);
         level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1f, 1.2f);
-        p.displayClientMessage(net.minecraft.network.chat.Component.literal("拔出了鬼妖村正"), true);
+        p.displayClientMessage(net.minecraft.network.chat.Component.literal("拔出了太刀"), true);
         return InteractionResult.CONSUME;
     }
 }

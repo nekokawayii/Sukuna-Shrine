@@ -37,11 +37,6 @@ public final class YutaKatanaItem extends SwordItem {
     }
 
     @Override
-    public void initializeClient(java.util.function.Consumer<net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
-        consumer.accept(character.yuta.YutaClient.katanaExtensions());
-    }
-
-    @Override
     public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         if (attacker instanceof ServerPlayer p) {
             float damage = CombatSettings.spellDamage(p, BASE_DAMAGE);
@@ -81,7 +76,7 @@ public final class YutaKatanaItem extends SwordItem {
         }
         stack.setCount(0);
         inv.setChanged();
-        p.displayClientMessage(Component.literal("村正断裂 · 释放 " + YutaCopies.nameOf(picked) + "（×3）"), false);
+        p.displayClientMessage(Component.literal("太刀断裂 · 释放 " + YutaCopies.nameOf(picked) + "（×3）"), false);
         return InteractionResultHolder.sidedSuccess(stack, false);
     }
 }

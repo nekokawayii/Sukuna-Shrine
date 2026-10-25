@@ -105,10 +105,21 @@ public final class YutaCopies {
             return cn.blockforge.generated.nnnnr1201forge2.GojoPlayer.nameOf(
                 cn.blockforge.generated.nnnnr1201forge2.GojoPlayer.WHEEL[id - 34]);
         }
+        if (isCustom(id)) {
+            for (var sk : character.jogo.JogoSkills.all()) if (sk.id() == id) return sk.name();
+        }
         return cn.blockforge.generated.nnnnr1201forge2.AuthoritySkills.name(id);
     }
 
     /** 目标对应的可复制池；空数组表示这个生物没有可掠夺的术式。 */
+    /** 漏壶的自定义技能（灾厄火焰，排除领域 1003）。 */
+    public static final int[] JOGO = {1000, 1001, 1002, 1004, 1005, 1006};
+
+    /** 这条编号是否属于「其它角色的自定义技能」（需要走 castAs 转调，而不是旧版 AuthoritySkills）。 */
+    public static boolean isCustom(int id) { return id >= 1000 && id <= 1006; }
+
+    public static String ownerOf(int id) { return isCustom(id) ? "jogo" : ""; }
+
     public static int[] poolFor(Entity target) {
         if (target instanceof Player p) {
             var d = character.CharacterService.selected(p);
@@ -127,6 +138,9 @@ public final class YutaCopies {
         if (target instanceof cn.blockforge.generated.nnnnr1201forge2.GuardianEntity) return YUJI;
         // 胀相会赤血操术全套（jogo 线），同样可以掠夺；池子沿用赤血（不含领域胎海与死胎星）。
         if (target instanceof cn.blockforge.generated.nnnnr1201forge2.ChosoEntity) return BLOOD;
+        // 新 NPC：里梅会冰凝咒法（旧版编号，可直接借用）；漏壶是自定义技能，走 castAs 转调。
+        if (target instanceof cn.blockforge.generated.nnnnr1201forge2.UraumeNpcEntity) return URAUME;
+        if (target instanceof cn.blockforge.generated.nnnnr1201forge2.JogoNpcEntity) return JOGO;
         return new int[0];
     }
 

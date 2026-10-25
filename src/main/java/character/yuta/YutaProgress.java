@@ -152,6 +152,11 @@ public final class YutaProgress {
             y = spawn.getY();
             z = spawn.getZ() + 0.5;
         }
+        // 保险：用该列的地表高度校正 Y，避免回到实心方块里（会卡死客户端）。
+        int surfaceY = overworld.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+            net.minecraft.core.BlockPos.containing(x, 0, z).getX(),
+            net.minecraft.core.BlockPos.containing(x, 0, z).getZ());
+        if (y < surfaceY) y = surfaceY;
         p.teleportTo(overworld, x, y, z, p.getYRot(), p.getXRot());
         p.displayClientMessage(Component.literal("百鬼夜行结束，已返回主世界"), false);
     }
@@ -164,10 +169,15 @@ public final class YutaProgress {
             return;
         }
         // 记录进入前的主世界坐标，章成后自动送回去。
+        // 只在主世界记录：若玩家已经在百鬼夜行里（重复触发），不能把维度内的坐标当成回程点，
+        // 否则会把人送回主世界地底（实测 y=-59.5 卡死）。
         var data = Curse.data(p);
-        data.putDouble("YutaReturnX", p.getX());
-        data.putDouble("YutaReturnY", p.getY());
-        data.putDouble("YutaReturnZ", p.getZ());
+        boolean inOverworld = p.level().dimension().equals(net.minecraft.world.level.Level.OVERWORLD);
+        if (inOverworld) {
+            data.putDouble("YutaReturnX", p.getX());
+            data.putDouble("YutaReturnY", p.getY());
+            data.putDouble("YutaReturnZ", p.getZ());
+        }
         int surface = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, 0, 0);
         BlockPos base = new BlockPos(0, surface, 0);
         buildRuins(level, base);

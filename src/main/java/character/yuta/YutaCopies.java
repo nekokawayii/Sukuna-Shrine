@@ -114,6 +114,8 @@ public final class YutaCopies {
         if (target instanceof cn.blockforge.generated.nnnnr1201forge2.GojoEntity) return GOJO;
         if (target instanceof cn.blockforge.generated.nnnnr1201forge2.YujiEntity) return YUJI;
         if (target instanceof cn.blockforge.generated.nnnnr1201forge2.GuardianEntity) return YUJI;
+        // 胀相会赤血操术全套（jogo 线），同样可以掠夺；池子沿用赤血（不含领域胎海与死胎星）。
+        if (target instanceof cn.blockforge.generated.nnnnr1201forge2.ChosoEntity) return BLOOD;
         return new int[0];
     }
 

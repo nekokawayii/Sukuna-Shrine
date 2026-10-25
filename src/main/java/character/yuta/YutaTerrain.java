@@ -82,24 +82,26 @@ public final class YutaTerrain {
         }
         job.floorEnd = job.plan.size();
 
-        // ② 球壳（黑混凝土）+ 内侧光源层 + 内部清空：自下而上
+        // ② 球壳（黑混凝土）+ 内侧光源层 + 内部清空
+        // 用真三维距离判定 d²=x²+y²+z²，壳是一层连续球面：
+        //   (R-1)² < d² ≤ R²        → 黑混凝土外壳（含正上方顶点，不会留洞）
+        //   (R-2)² < d² ≤ (R-1)²    → 15 级光源层（照亮内部）
+        //   d² ≤ (R-2)²             → 清空（只收非空气）
         var light = Blocks.LIGHT.defaultBlockState()
             .setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 15);
+        int outer2 = R * R;
+        int shell2 = (R - 1) * (R - 1);
+        int glow2 = Math.max(0, R - 2) * Math.max(0, R - 2);
         for (int y = 0; y <= R; y++) {
-            int lr = (int) Math.floor(Math.sqrt((double) R * R - (double) y * y));
-            int inner = Math.max(0, lr - 1);
-            int glow = Math.max(0, inner - 1);   // 紧贴球壳内侧的一层光源
-            for (int x = -lr; x <= lr; x++) {
-                for (int z = -lr; z <= lr; z++) {
-                    int d2 = x * x + z * z;
-                    if (d2 > lr * lr) continue;
+            for (int x = -R; x <= R; x++) {
+                for (int z = -R; z <= R; z++) {
+                    int d2 = x * x + y * y + z * z;
+                    if (d2 > outer2) continue;
                     BlockPos pos = c.offset(x, y, z);
-                    // 顶点（lr==0）必须强制封上，否则顶部会留一个洞
-                    if (lr == 0 || d2 > inner * inner) {
+                    if (d2 > shell2) {
                         job.plan.add(new Rec(pos, Blocks.BLACK_CONCRETE.defaultBlockState()));
-                    } else if (d2 > glow * glow) {
-                        // 内侧一圈 15 级光源：把领域内部照亮（无碰撞，不影响走动）
-                        if (!job.level.getBlockState(pos).is(Blocks.LIGHT)) job.plan.add(new Rec(pos, light));
+                    } else if (d2 > glow2) {
+                        job.plan.add(new Rec(pos, light));
                     } else if (!job.level.getBlockState(pos).isAir()) {
                         job.plan.add(new Rec(pos, Blocks.AIR.defaultBlockState()));
                     }

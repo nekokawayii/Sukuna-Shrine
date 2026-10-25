@@ -38,7 +38,11 @@ public class YutaGraveBlock extends Block implements EntityBlock {
         }
         grave.taken(true);
         // 拔出：给一把鬼妖村正，方块本身移除（领域还原时该格会按记录回到原状）。
-        p.getInventory().placeItemBackInInventory(new ItemStack(Content.YUTA_KATANA.get()));
+        ItemStack katana = new ItemStack(Content.YUTA_KATANA.get());
+        if (!p.getInventory().add(katana)) {
+            p.drop(katana, false);   // 背包满就掉在脚下，避免"拔了却没拿到"
+        }
+        p.getInventory().setChanged();
         level.removeBlock(pos, false);
         level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1f, 1.2f);
         p.displayClientMessage(net.minecraft.network.chat.Component.literal("拔出了鬼妖村正"), true);

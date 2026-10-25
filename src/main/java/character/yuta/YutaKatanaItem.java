@@ -69,7 +69,9 @@ public final class YutaKatanaItem extends SwordItem {
         // 刀报废 + 该术式从轮盘消失（需要重新掠夺）。
         YutaCopies.remove(p, picked);
         YutaCopies.sync(p);
-        stack.shrink(1);
+        // 明确置空（shrink 在部分情况下会被客户端回滚），并同步背包。
+        stack.setCount(0);
+        p.getInventory().setChanged();
         p.displayClientMessage(Component.literal("村正断裂 · 释放 " + YutaCopies.nameOf(picked) + "（×3）"), false);
         return InteractionResultHolder.sidedSuccess(stack, false);
     }

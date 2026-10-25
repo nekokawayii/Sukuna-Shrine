@@ -30,10 +30,10 @@ public final class YutaStory {
         return List.of(
             new EventChapter("witness_rika", "第一章·目睹里香",
                 "100格内有村民死亡后，120秒内击败3只敌人", 3, ChapterKind.VILLAGER_THEN_KILLS, null,
-                new CharacterReward(new Stats(200, 4, 1, 2, 1), 30, 100, List.of())),
+                new CharacterReward(new Stats(1000, 4, 1, 2, 1), 30, 100, List.of())),
             new EventChapter("geto_duel", "第二章·决战夏油杰",
                 "击败夏油杰", 1, ChapterKind.BOSS_KILL, "sukuna:geto",
-                new CharacterReward(new Stats(300, 6, 1, 3, 1), 60, 150, List.of())),
+                new CharacterReward(new Stats(500, 6, 1, 3, 1), 60, 150, List.of())),
             new EventChapter("hyakki_yagyo", "第三章·百鬼夜行",
                 "在百鬼夜行维度内击败50只咒灵（每10只一波，共5波）", 50, ChapterKind.DIMENSION_KILLS, null,
                 new CharacterReward(new Stats(500, 10, 2, 5, 2), 100, 250, List.of()))

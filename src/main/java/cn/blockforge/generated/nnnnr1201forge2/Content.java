@@ -31,44 +31,44 @@ public final class Content {
     public static final RegistryObject<Item> MAHITO_FINGER=ITEMS.register("mahito_finger",()->new Item(new Item.Properties().rarity(Rarity.EPIC).stacksTo(16)));
     public static final RegistryObject<Item> YUJI_FAMILY_PHOTO=ITEMS.register("yuji_family_photo",()->new Item(new Item.Properties().rarity(Rarity.RARE).stacksTo(1)));
     /** 不属于这个世界的碎片：五条悟通关后从灵魂通道裂隙里掉出来的剧情道具，长得像一张网页截图/鼠标指针。 */
-    /** 咒具第一条分支：黑绳。长鞭式咒具，右键横扫 10 格内的敌人，强制僵直 0.1 秒并清除已放出的术式。 */
+    /** 咒具第一条分支：黑绳。左键甩出，抽打 10 格内正前方的敌人。 */
     public static final RegistryObject<Item> BLACK_ROPE=ITEMS.register("black_rope",()->new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)){
         @Override public InteractionResultHolder<ItemStack> use(Level level,Player player,InteractionHand hand){
-            ItemStack stack=player.getItemInHand(hand);
-            if(!level.isClientSide&&player instanceof ServerPlayer sp){
-                Vec3 look=sp.getLookAngle();
-                int hits=0;
-                for(var target:sp.serverLevel().getEntitiesOfClass(LivingEntity.class,
-                        sp.getBoundingBox().inflate(10),e->e!=sp&&e.isAlive()&&!e.isSpectator()&&CombatSettings.canHit(sp,e))){
-                    if(target.position().distanceToSqr(sp.position())>100)continue;
-                    if(look.dot(target.position().add(0,target.getBbHeight()*0.5,0).subtract(sp.getEyePosition()).normalize())<0.2)continue;
-                    // 黑绳是天生的"无下限克星"：这一击临时给五条悟打穿透标记，不需要领域展延
-                    boolean amplified=false;
-                    if(target instanceof GojoEntity gojo){
-                        amplified=!gojo.getPersistentData().getBoolean("GojoAmplified");
-                        gojo.getPersistentData().putBoolean("GojoAmplified",true);
-                    }
-                    AttackTypes.mark(AttackTypes.MAGIC);
-                    try{CombatSettings.hurt(sp,target,sp.damageSources().magic(),10f);}
-                    finally{
-                        AttackTypes.clear();
-                        if(amplified&&target instanceof GojoEntity gojo)gojo.getPersistentData().remove("GojoAmplified");
-                    }
-                    // 强制僵直 0.1 秒（2 刻）
-                    target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                        net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN,2,10,false,false));
-                    target.setDeltaMovement(0,Math.min(0,target.getDeltaMovement().y),0);
-                    target.hurtMarked=true;
-                    clearTechniques(target);
-                    Network.send(sp.serverLevel(),new Network.Effect(0,sp.getId(),target.position(),look,10,12,0));
-                    hits++;
-                }
-                sp.sendSystemMessage(net.minecraft.network.chat.Component.literal(hits>0?"黑绳 · 命中了 "+hits+" 个目标（僵直+术式抹除）":"黑绳 · 10 格内前方没有目标"));
-                sp.serverLevel().playSound(null,sp.blockPosition(),net.minecraft.sounds.SoundEvents.TRIDENT_HIT,net.minecraft.sounds.SoundSource.PLAYERS,1.2f,0.8f);
-            }
-            return InteractionResultHolder.sidedSuccess(stack,level.isClientSide);
+            if(!level.isClientSide&&player instanceof ServerPlayer sp)blackRopeSweep(sp);
+            return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand),level.isClientSide);
         }
     });
+    /** 黑绳横扫：10 格内正前方的敌人，10 点伤害、僵直 0.1 秒、抹除术式，并不需要领域展延就能命中五条悟。 */
+    public static void blackRopeSweep(ServerPlayer sp){
+        Vec3 look=sp.getLookAngle();
+        Network.send(sp.serverLevel(),new Network.Effect(265,sp.getId(),sp.getEyePosition(),look,10,12,0));
+        int hits=0;
+        for(var target:sp.serverLevel().getEntitiesOfClass(LivingEntity.class,
+                sp.getBoundingBox().inflate(10),e->e!=sp&&e.isAlive()&&!e.isSpectator()&&CombatSettings.canHit(sp,e))){
+            if(target.position().distanceToSqr(sp.position())>100)continue;
+            if(look.dot(target.position().add(0,target.getBbHeight()*0.5,0).subtract(sp.getEyePosition()).normalize())<0.2)continue;
+            boolean amplified=false;
+            if(target instanceof GojoEntity gojo){
+                amplified=!gojo.getPersistentData().getBoolean("GojoAmplified");
+                gojo.getPersistentData().putBoolean("GojoAmplified",true);
+            }
+            AttackTypes.mark(AttackTypes.MAGIC);
+            try{CombatSettings.hurt(sp,target,sp.damageSources().magic(),10f);}
+            finally{
+                AttackTypes.clear();
+                if(amplified&&target instanceof GojoEntity gojo)gojo.getPersistentData().remove("GojoAmplified");
+            }
+            target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN,2,10,false,false));
+            target.setDeltaMovement(0,Math.min(0,target.getDeltaMovement().y),0);
+            target.hurtMarked=true;
+            clearTechniques(target);
+            hits++;
+        }
+        sp.sendSystemMessage(net.minecraft.network.chat.Component.literal(hits>0?"黑绳 · 抽中了 "+hits+" 个目标（僵直+术式抹除）":"黑绳 · 10 格内前方没有目标"));
+        sp.serverLevel().playSound(null,sp.blockPosition(),net.minecraft.sounds.SoundEvents.TRIDENT_HIT,net.minecraft.sounds.SoundSource.PLAYERS,1.2f,0.8f);
+    }
+
     /** 作弊道具：仅创造模式可得，右键立刻完成当前角色章节（漏壶按章节旗标推进，其他角色按击杀数推进）。 */
     public static final RegistryObject<Item> CHAPTER_CHEAT=ITEMS.register("chapter_cheat",()->new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)){
         @Override public InteractionResultHolder<ItemStack> use(Level level,Player player,InteractionHand hand){

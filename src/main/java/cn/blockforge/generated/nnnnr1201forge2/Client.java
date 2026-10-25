@@ -394,6 +394,7 @@ public final class Client {
             if(kind==96){Vec3 axis=slashAxis(v.e);SlashStyle.draw(b,ps,v.e.position().subtract(axis.scale(v.e.size()/2)),v.e.position().add(axis.scale(v.e.size()/2)),.12,Math.max(0,1-age/v.e.life()),cam);}
             if(kind==0||kind==12||kind==72||kind==123)drawSlash(b,ps,v,cam,e.getPartialTick());
              if(kind==122)VoidTechniqueClient.drawSwordQi(b,ps,v.e,cam,age);
+            if(kind==265)drawRope(b,ps,v.e,cam,age);
             if(kind>=20)BattleVisuals.draw(b,ps,v.e,cam,age);
             if(kind==7||kind==10||kind==11)drawHit(b,ps,v,cam,e.getPartialTick());
             if(kind==2||kind==70&&v.e.size()==3){var p=mc.level.getEntity(v.e.owner());if(p!=null){
@@ -605,6 +606,22 @@ public final class Client {
         SlashStyle.draw(b,ps,p.subtract(axis.scale(length/2)),p.add(axis.scale(length/2)),Math.min(.4,Math.max(.06,length*.018)),alpha,cam);
     }
     static void ring(BufferBuilder b,PoseStack ps,Vec3 c,double radius,double width,int color,Vec3 cam){for(int i=0;i<64;i++){double a=i*Math.PI/32,z=(i+1)*Math.PI/32;Vec3 p=c.add(Math.cos(a)*radius,0,Math.sin(a)*radius),q=c.add(Math.cos(z)*radius,0,Math.sin(z)*radius);ribbon(b,ps,p,q,width,color,cam);}}
+    /** 黑绳：从施术者眼睛甩出去，末端下垂，像一根被舞动的绳子。 */
+    private static void drawRope(BufferBuilder b,PoseStack ps,Network.Effect e,Vec3 cam,float age){
+        Vec3 eye=e.position(),dir=e.direction().normalize();
+        double len=Math.max(1,e.size()),extend=Math.min(1,age/4.0);
+        double sway=Math.sin(age*0.9)*0.35;
+        Vec3 prev=eye;
+        for(int i=1;i<=22;i++){
+            double t=i/22.0*extend;
+            Vec3 q=eye.add(dir.scale(len*t))
+                .add(new Vec3(-dir.z,0,dir.x).normalize().scale(Math.sin(t*Math.PI)*sway))
+                .add(0,-Math.sin(Math.PI*t)*0.55,0);
+            ribbon(b,ps,prev,q,0.11,0xFF16100C,cam);
+            ribbon(b,ps,prev,q,0.05,0xFF3B2A1E,cam);
+            prev=q;
+        }
+    }
     static void ribbon(BufferBuilder b,PoseStack ps,Vec3 a,Vec3 z,double width,int color,Vec3 cam){
         Vec3 line=z.subtract(a);if(line.lengthSqr()<1.0E-8)return;
         Vec3 edge=line.cross(cam.subtract(a));

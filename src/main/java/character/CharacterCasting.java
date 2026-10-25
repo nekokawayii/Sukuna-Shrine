@@ -63,6 +63,11 @@ public final class CharacterCasting {
                 ||Shinbuke.holding(p)||(GojoEntity.mindLocked(p)&&!mindLockAllowed(definition,id))||GuardianPlayerSkills.locked(p)||SoulCombat.suppressed(p)
                 ||Skills.sealing(p)||Skills.sustaining(p)||GuardianPlayerSkills.sustaining(p)||FurnaceMax.active(p)
                 ||DismantleMotion.active(p)||CombatExpansion.chanting(p))return;
+        // 乙骨领域：展开中再次按下 = 主动收起（必须放在冷却判断之前，否则第二次按会被冷却吃掉）。
+        if("yuta".equals(definition.id())&&id==character.yuta.YutaDomain.SKILL&&character.yuta.YutaDomain.active(p)){
+            character.yuta.YutaDomain.close(p,"主动解除");
+            return;
+        }
         String cooldown="CharacterSkillCooldown_"+id;
         long nowTick=p.level().getGameTime();
         long remainSkill=Curse.data(p).getLong(cooldown)-nowTick;

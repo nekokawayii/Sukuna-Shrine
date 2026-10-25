@@ -30,6 +30,14 @@ public final class JogoTerrain {
                 if(d2>radius*radius)continue;
                 int x=cxi+dx,z=czi+dz;
                 int surface=level.getHeight(Heightmap.Types.WORLD_SURFACE,x,z);
+                // 先把这列球体内的方块清成空气（A 方案：舞台内原地形临时替换）
+                for(int yy=surface+1;yy<=(int)center.y+(int)radius&&queue.size()<MAX_BLOCKS;yy++){
+                    var p2=new BlockPos(x,yy,z);
+                    if(p2.distSqr(new BlockPos((int)center.x,(int)center.y,(int)center.z))>radius*radius)continue;
+                    BlockState st=level.getBlockState(p2);
+                    if(st.isAir()||st.getDestroySpeed(level,p2)<0)continue;
+                    queue.add(new Change(p2,Blocks.AIR.defaultBlockState()));
+                }
                 double core=1.0-Math.sqrt(d2)/radius;
                 double roll=random.nextDouble();
                 BlockState top=roll<0.18+core*0.62?Blocks.LAVA.defaultBlockState()
@@ -38,6 +46,24 @@ public final class JogoTerrain {
                 queue.add(new Change(new BlockPos(x,surface,z),top));
                 queue.add(new Change(new BlockPos(x,surface-1,z),
                         roll<0.62?Blocks.MAGMA_BLOCK.defaultBlockState():Blocks.COBBLESTONE.defaultBlockState()));
+            }
+        }
+        // ---- A 方案：真实方块外壳（1 格厚球壳），彻底挡住天空与山体 ----
+        int latSteps=Math.max(24,(int)(Math.PI*radius));
+        for(int i=0;i<=latSteps&&queue.size()<MAX_BLOCKS;i++){
+            double theta=Math.PI*i/latSteps;
+            int lonSteps=Math.max(12,(int)(2*Math.PI*radius*Math.sin(theta)));
+            for(int j=0;j<lonSteps&&queue.size()<MAX_BLOCKS;j++){
+                double phi=2*Math.PI*j/Math.max(1,lonSteps);
+                int x=(int)Math.round(center.x+radius*Math.sin(theta)*Math.cos(phi));
+                int y=(int)Math.round(center.y+radius*Math.cos(theta));
+                int z=(int)Math.round(center.z+radius*Math.sin(theta)*Math.sin(phi));
+                if(y<level.getMinBuildHeight()+1||y>=level.getMaxBuildHeight()-1)continue;
+                // 主题：黑石为主，每 7 个点夹一格岩浆块做暗红发热纹
+                BlockState wall=((queue.size()%7)==0)?Blocks.MAGMA_BLOCK.defaultBlockState()
+                    :((queue.size()%3)==0)?Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                    :Blocks.DEEPSLATE_TILES.defaultBlockState();
+                queue.add(new Change(new BlockPos(x,y,z),wall));
             }
         }
         QUEUE.put(owner.getUUID(),queue);

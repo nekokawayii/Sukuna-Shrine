@@ -43,6 +43,10 @@ public final class TechniqueInput {
             return;
         }
         if(character.CharacterSkill.custom(input.skill())){
+            // 领域王：再按同一领域=收起（在冷却/维持/扣费检查之前拦下）
+            if(input.phase()==0&&character.CharacterService.selected(p)!=null
+                    &&character.CharacterService.selected(p).id().equals("domainking")
+                    &&character.domainking.DomainKingCombat.toggleClose(p,input.skill()))return;
             // 盖棺铁围山：领域开着时再按一次=提前收起（要在冷却/扣费检查之前拦下）
             if(input.phase()==0&&input.skill()==character.jogo.JogoSkills.DOMAIN&&character.jogo.JogoCombat.inDomain(p)){
                 character.jogo.JogoCombat.closeDomain(p);return;

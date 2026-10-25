@@ -112,6 +112,22 @@ public final class DomainKingCombat {
         }
     }
 
+    /** 该技能是否是玩家当前展开中的领域。 */
+    public static boolean isActive(ServerPlayer p, int skill) {
+        Integer id = ACTIVE.get(p.getUUID());
+        return id != null && id == skill;
+    }
+
+    /** 从施法入口直接收起（绕开"领域维持中不能施法"的门禁）。 */
+    public static boolean toggleClose(ServerPlayer p, int skill) {
+        Integer id = ACTIVE.get(p.getUUID());
+        if (id == null || id != skill) return false;
+        close(p, id);
+        ACTIVE.remove(p.getUUID());
+        p.sendSystemMessage(Component.literal("领域 · " + skill + " 已收起"));
+        return true;
+    }
+
     /** 按技能号收起对应的原实现领域。 */
     private static void close(ServerPlayer p, int id) {
         switch (id) {

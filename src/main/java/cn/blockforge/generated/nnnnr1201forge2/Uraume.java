@@ -28,7 +28,7 @@ public final class Uraume {
     private static final List<Pillar> pillars=new ArrayList<>();
     private static final Map<UUID,Frozen> frozen=new HashMap<>();
     private static long nextFreeze;
-    public static boolean unlocked(Player p){return character.CharacterService.family(p,character.CharacterDefinition.Family.ICE)||character.CharacterService.permits(p,character.CharacterDefinition.Family.ICE)&&Curse.data(p).getBoolean("UraumeMemory");}
+    public static boolean unlocked(Player p){return character.yuta.CopyBorrow.borrowing(p)||character.CharacterService.family(p,character.CharacterDefinition.Family.ICE)||character.CharacterService.permits(p,character.CharacterDefinition.Family.ICE)&&Curse.data(p).getBoolean("UraumeMemory");}
     public static int fish(Player p){return Math.max(0,Curse.data(p).getInt("IceFish"));}
     public static int upgrades(Player p){return BranchRules.upgrades(fish(p));}
     public static double length(Player p){return BranchRules.iceLength(fish(p));}

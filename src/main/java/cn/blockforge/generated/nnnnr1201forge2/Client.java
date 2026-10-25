@@ -58,6 +58,9 @@ public final class Client {
         return p!=null&&(p.getMainHandItem().is(VoidContent.SHINBUKE.get())||p.getOffhandItem().is(VoidContent.SHINBUKE.get()));
     }
     public static boolean availableSkill(int skill){if(toolBlocksTechnique()||!character.CharacterClient.allows(skill))return false;
+        // 乙骨的复制品：借用的是旧术式编号，但不该受原角色的解锁链约束。
+        // 否则永远选不中，Client.selected 会停在 1000（里香），表现为「复制术式变成里香、共用冷却」。
+        if(character.CharacterClient.copied(skill))return true;
         if(character.CharacterSkill.custom(skill))return character.CharacterClient.custom(skill)!=null;
         var role=character.CharacterClient.selected();if(role!=null&&role.family()==character.CharacterDefinition.Family.MARTIAL)return role.skills().contains(skill);
         if(BloodRules.skill(skill))return progress.nine()&&!DeathStarClient.anemic()&&(skill!=BloodRules.DEATH_STAR||BloodClient.ownDomain());

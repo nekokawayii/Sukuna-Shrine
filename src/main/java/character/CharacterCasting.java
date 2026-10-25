@@ -41,7 +41,16 @@ public final class CharacterCasting {
         if(definition.config().skill(id)==null&&character.yuta.YutaCopies.has(p,id)){
             if(!RikaRules.active(p)){p.displayClientMessage(Component.literal("未召唤里香，无法使用复制术式"),true);return;}
             if(!character.yuta.YutaCopies.consumeUse(p,id)){p.displayClientMessage(Component.literal("本次召唤已用过 "+character.yuta.YutaCopies.nameOf(id)),true);return;}
-            AuthoritySkills.cast(p,id);
+            // AuthoritySkills 的分派里五条只认 100–108，而掠夺来的是 34–40（苍/赫/…），
+            // 直接传会在里面静默掉，所以先按 WHEEL 换算成 100+ 的内部偏移编号。
+            int target=id;
+            if(id>=34&&id<34+cn.blockforge.generated.nnnnr1201forge2.GojoPlayer.SLOTS)
+                target=100+cn.blockforge.generated.nnnnr1201forge2.GojoPlayer.WHEEL[id-34];
+            // 借用放行：各家族的 unlocked 会检查「是否开启了该家族」，乙骨永远不满足，
+            // 会在 AuthoritySkills.cast 里被拒（例如「尚未睁开六眼」）。转调期间临时放行。
+            character.yuta.CopyBorrow.begin(p);
+            try { AuthoritySkills.cast(p,target); }
+            finally { character.yuta.CopyBorrow.end(p); }
             return;
         }
         var skill=definition.config().skill(id);if(skill==null)return;

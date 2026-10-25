@@ -70,6 +70,7 @@ public final class EntityRendererRegistry {
     private static boolean reportedPlayer,playerRecoveryTried;
 
     public static void register(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(Content.YUTA_GRAVE_BE.get(), character.yuta.YutaGraveRenderer::new);
         for(var entry:ENTRIES)entry.register(event);
         Set<EntityType<?>> covered=new HashSet<>();
         for(var entry:ENTRIES) {

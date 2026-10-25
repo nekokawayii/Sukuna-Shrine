@@ -117,6 +117,7 @@ public final class YutaTerrain {
         if (job.floorR > job.radius && !job.floorDone) {
             job.floorDone = true;
             placePattern(job);
+            placeGraves(job);
         }
     }
 
@@ -129,6 +130,22 @@ public final class YutaTerrain {
         BlockPos origin = job.center.offset(-t.getSize().getX() / 2, 0, -t.getSize().getZ() / 2);
         var settings = new StructurePlaceSettings().setIgnoreEntities(true).setKnownShape(true);
         t.placeInWorld(job.level, origin, origin, settings, job.level.random, 2);
+    }
+
+    /** 按「已复制术式数量」在领域里摆对应数量的坟头，单次领域不刷新。 */
+    private static void placeGraves(Job job) {
+        ServerPlayer owner = job.level.getServer().getPlayerList().getPlayer(job.owner);
+        int count = owner == null ? 0 : YutaCopies.copies(owner).size();
+        if (count <= 0) return;
+        for (int i = 0; i < count; i++) {
+            double a = Math.PI * 2 * i / count;
+            int x = (int) Math.round(Math.cos(a) * 12);
+            int z = (int) Math.round(Math.sin(a) * 12);
+            set(job, job.center.offset(x, 0, z),
+                cn.blockforge.generated.nnnnr1201forge2.Content.YUTA_GRAVE.get().defaultBlockState());
+        }
+        if (owner != null) owner.displayClientMessage(
+            net.minecraft.network.chat.Component.literal("坟头已立：" + count + " 座（对应你已复制的术式）"), false);
     }
 
     /** 第二阶段：自下而上合球壳，并把内部清空（只处理非空气，减少记录量）。 */

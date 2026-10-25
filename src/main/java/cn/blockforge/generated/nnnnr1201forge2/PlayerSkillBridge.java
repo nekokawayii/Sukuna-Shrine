@@ -19,6 +19,8 @@ public final class PlayerSkillBridge {
             return castPlayer(p, characterId, skill);
         }
         if (body instanceof Mob mob) {
+            // 里梅：直接转调 Uraume 的 SkillCaster 重载（同一套数值/特效/冷却语义）
+            if ("uraume".equals(characterId)) return Uraume.cast(caster, skill);
             return NpcSkillCast.cast(NpcSkillCast.Caster.of(mob, characterId), skill, mob.getTarget());
         }
         return false;

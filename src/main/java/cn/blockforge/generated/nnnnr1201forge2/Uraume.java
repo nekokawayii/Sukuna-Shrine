@@ -53,6 +53,39 @@ public final class Uraume {
     public static int cost(int skill){return skill==BranchRules.FROST?160:240;}
     public static boolean breathing(ServerPlayer p){return breaths.stream().anyMatch(b->b.owner==p&&valid(p,b.level)&&p.level().getGameTime()<b.end);}
     public static boolean available(ServerPlayer p,int skill){return (skill==BranchRules.FROST||skill==BranchRules.ICEFALL)&&unlocked(p)&&valid(p,p.serverLevel())&&!p.isSpectator()&&!MaidBridge.recovering(p)&&!SoulCombat.suppressed(p)&&Curse.canUseTechnique(p)&&!Curse.active(p,"IceCooldown"+skill)&&Curse.canSpend(p,cost(skill));}
+    /** 玩家与生物共用入口：玩家走原逻辑，生物用同一套数值/特效（含咒力与冷却自理）。 */
+    public static boolean cast(character.SkillCaster caster,int skill){
+        if(!(caster.body() instanceof net.minecraft.world.entity.Mob mob)){
+            if(caster.body() instanceof ServerPlayer p){cast(p,skill);return true;}
+            return false;
+        }
+        if(skill!=BranchRules.FROST&&skill!=BranchRules.ICEFALL)return false;
+        if(!caster.spend(cost(skill)))return false;
+        net.minecraft.server.level.ServerLevel level=(net.minecraft.server.level.ServerLevel)mob.level();
+        net.minecraft.world.phys.Vec3 look=mob.getLookAngle().normalize(),eye=mob.getEyePosition();
+        net.minecraft.world.entity.LivingEntity t=mob.getTarget();
+        net.minecraft.world.phys.Vec3 aim=t==null?eye.add(look.scale(30)):t.getBoundingBox().getCenter();
+        if(skill==BranchRules.FROST){
+            Network.send(level,new Network.Effect(BranchRules.FX_FROST,mob.getId(),eye,look,14,10,0));
+            for(var h:level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,mob.getBoundingBox().inflate(14),
+                    e->e!=mob&&e.isAlive()&&e.position().subtract(mob.position()).normalize().dot(look)>0.55)){
+                caster.hurt(h, (float) BranchRules.iceDamage(1));
+                h.setTicksFrozen(Math.min(600,h.getTicksFrozen()+200));
+            }
+            return true;
+        }
+        // 直瀑：目标处冰柱
+        Network.send(level,new Network.Effect(BranchRules.FX_ICE,mob.getId(),aim.add(0,10,0),new net.minecraft.world.phys.Vec3(0,-1,0),3,20,0));
+        for(var h:level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                new net.minecraft.world.phys.AABB(aim,aim).inflate(3.5),e->e!=mob&&e.isAlive())){
+            caster.hurt(h, (float) BranchRules.iceDamage(2));
+            h.setTicksFrozen(Math.min(600,h.getTicksFrozen()+120));
+        }
+        level.playSound(null,mob.blockPosition(),net.minecraft.sounds.SoundEvents.GLASS_BREAK,
+                net.minecraft.sounds.SoundSource.HOSTILE,1.4f,0.6f);
+        return true;
+    }
+
     public static void cast(ServerPlayer p,int skill){
         if(skill!=BranchRules.FROST&&skill!=BranchRules.ICEFALL)return;
         if(CastFeedback.cooldown(p,"IceCooldown"+skill,BranchRules.name(skill)))return;

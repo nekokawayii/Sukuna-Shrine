@@ -41,10 +41,23 @@ public final class JogoFxClient {
                 }
             }
             case JogoFx.PILLAR -> {
-                Vec3 dir=e.direction().lengthSqr()<1e-4?new Vec3(0,0,1):e.direction().normalize();
-                Vec3 end=pos.add(dir.scale(1.6));
-                PhotonFx.beam(pos,end,0.55,5);
-                PhotonFx.spark(pos,1.2,0.8,LAVA,FIRE_BLOOM,GLOW,true,2,7,24,0.4);
+                if(e.direction().lengthSqr()<1e-4){
+                    // 脚下火柱：从地面竖直窜起 10 格（粗芯 + 外焰 + 分段爆点）
+                    Vec3 top=pos.add(0,10,0);
+                    PhotonFx.beam(pos,top,1.15,10);
+                    PhotonFx.beam(pos,top,2.0,6);
+                    for(int i=0;i<5;i++){
+                        double h=i*2.0;
+                        PhotonFx.spark(pos.add(0,h,0),1.5+i*0.15,1.1,LAVA,FIRE_BLOOM,GLOW,true,3,9,28,0.35);
+                        PhotonFx.ring(pos.add(0,h,0),1.3+i*0.12,0.35,FIRE,FIRE_BLOOM,12,4,4);
+                    }
+                    PhotonFx.spark(pos.add(0,10,0),2.2,1.4,FIRE,FIRE_BLOOM,GLOW,true,4,12,26,0.5);
+                }else{
+                    Vec3 dir=e.direction().normalize();
+                    Vec3 end=pos.add(dir.scale(1.6));
+                    PhotonFx.beam(pos,end,0.55,5);
+                    PhotonFx.spark(pos,1.2,0.8,LAVA,FIRE_BLOOM,GLOW,true,2,7,24,0.4);
+                }
             }
             case JogoFx.DOMAIN -> {
                 double radius=Math.max(6,e.size());

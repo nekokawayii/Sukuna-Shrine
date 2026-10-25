@@ -169,7 +169,10 @@ public final class YutaTerrain {
                     BlockPos pos = origin.offset(x, y, z);
                     before.put(pos, job.level.getBlockState(pos));
                     var be = job.level.getBlockEntity(pos);
-                    if (be != null) job.blockEntities.putIfAbsent(pos.immutable(), be.saveWithoutMetadata());
+                    if (be != null) {
+                        job.blockEntities.putIfAbsent(pos.immutable(), be.saveWithoutMetadata());
+                        job.level.removeBlockEntity(pos);
+                    }
                 }
         var settings = new StructurePlaceSettings().setIgnoreEntities(true).setKnownShape(true);
         t.placeInWorld(job.level, origin, origin, settings, job.level.random, 3);
@@ -200,8 +203,13 @@ public final class YutaTerrain {
         if (now == e.state()) return;
         // 覆盖前先把方块实体（箱子/熔炉等）的内容存下来，结束后连内容一起还原。
         var be = job.level.getBlockEntity(e.pos());
-        if (be != null && !job.blockEntities.containsKey(e.pos())) {
-            job.blockEntities.put(e.pos().immutable(), be.saveWithoutMetadata());
+        if (be != null) {
+            if (!job.blockEntities.containsKey(e.pos())) {
+                job.blockEntities.put(e.pos().immutable(), be.saveWithoutMetadata());
+            }
+            // 关键：先摘掉方块实体再换方块。否则 ChestBlock.onRemove 会把里面的东西
+            // 全部喷到地上，而我们又保存了 NBT 用于还原 —— 一份物品变两份（刷物品）。
+            job.level.removeBlockEntity(e.pos());
         }
         job.saved.add(new Rec(e.pos(), now));
         int flags = e.state().is(Blocks.LIGHT) ? 2 : 3;

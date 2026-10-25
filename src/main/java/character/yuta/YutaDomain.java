@@ -27,6 +27,8 @@ import net.minecraftforge.registries.ForgeRegistries;
 @Mod.EventBusSubscriber(modid = "sukuna")
 public final class YutaDomain {
     public static final int SKILL = 1002;
+    /** 领域半径（方块）。 */
+    private static final int RADIUS = 50;
 
     /** 每秒消耗咒力。 */
     private static final int DRAIN_PER_SECOND = 30;
@@ -48,6 +50,7 @@ public final class YutaDomain {
             return;
         }
         ACTIVE.put(p.getUUID(), new Active(p.serverLevel().getGameTime()));
+        YutaTerrain.begin(p, RADIUS);
         play(p, "sukuna:yuta_domain_start");
         ensureRika(p);
         p.displayClientMessage(Component.literal("领域展开 · 真赝相爱"), false);
@@ -55,17 +58,23 @@ public final class YutaDomain {
 
     public static void close(ServerPlayer p, String reason) {
         if (ACTIVE.remove(p.getUUID()) == null) return;
+        YutaTerrain.restore(p);
         p.displayClientMessage(Component.literal("领域解除：" + reason), false);
     }
 
     @SubscribeEvent
     public static void tick(TickEvent.ServerTickEvent e) {
-        if (e.phase != TickEvent.Phase.END || ACTIVE.isEmpty()) return;
+        if (e.phase != TickEvent.Phase.END) return;
+        YutaTerrain.tick(e.getServer());
+        if (ACTIVE.isEmpty()) return;
         long now = e.getServer().overworld().getGameTime();
         for (var it = ACTIVE.entrySet().iterator(); it.hasNext(); ) {
             var entry = it.next();
             ServerPlayer p = e.getServer().getPlayerList().getPlayer(entry.getKey());
-            if (p == null || !p.isAlive() || p.level().isClientSide) { it.remove(); continue; }
+            if (p == null || !p.isAlive() || p.level().isClientSide) {
+                YutaTerrain.restore(p);
+                it.remove(); continue;
+            }
             long age = now - entry.getValue().start();
             if (age == MID_TICK) play(p, "sukuna:yuta_domain_mid");
             if (age == OST_TICK) play(p, "sukuna:yuta_domain_ost");
@@ -73,6 +82,7 @@ public final class YutaDomain {
             // 每秒扣一次咒力；不够就自动关闭。
             if (age > 0 && age % 20 == 0 && !Curse.spend(p, DRAIN_PER_SECOND)) {
                 it.remove();
+                YutaTerrain.restore(p);
                 p.displayClientMessage(Component.literal("咒力耗尽，领域解除"), false);
                 continue;
             }

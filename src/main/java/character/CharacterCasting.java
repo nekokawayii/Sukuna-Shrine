@@ -46,7 +46,11 @@ public final class CharacterCasting {
             int target=id;
             if(id>=34&&id<34+cn.blockforge.generated.nnnnr1201forge2.GojoPlayer.SLOTS)
                 target=100+cn.blockforge.generated.nnnnr1201forge2.GojoPlayer.WHEEL[id-34];
-            AuthoritySkills.cast(p,target);
+            // 借用放行：各家族的 unlocked 会检查「是否开启了该家族」，乙骨永远不满足，
+            // 会在 AuthoritySkills.cast 里被拒（例如「尚未睁开六眼」）。转调期间临时放行。
+            character.yuta.CopyBorrow.begin(p);
+            try { AuthoritySkills.cast(p,target); }
+            finally { character.yuta.CopyBorrow.end(p); }
             return;
         }
         var skill=definition.config().skill(id);if(skill==null)return;

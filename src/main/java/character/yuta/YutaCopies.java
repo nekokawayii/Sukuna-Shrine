@@ -78,7 +78,22 @@ public final class YutaCopies {
         return String.join("、", names);
     }
 
+    /** 复制列表的原始编号数组，用于同步给客户端拼进轮盘。 */
+    public static int[] array(Player p) {
+        Set<Integer> set = copies(p);
+        int[] arr = new int[set.size()];
+        int i = 0;
+        for (int id : set) arr[i++] = id;
+        return arr;
+    }
+
     public static String nameOf(int id) {
+        // 五条的 34–42 不在 AuthoritySkills 的映射里（那边只认 100+），必须按 WHEEL 换算，
+        // 否则会显示成「未刻写」。
+        if (id >= 34 && id < 34 + cn.blockforge.generated.nnnnr1201forge2.GojoPlayer.SLOTS) {
+            return cn.blockforge.generated.nnnnr1201forge2.GojoPlayer.nameOf(
+                cn.blockforge.generated.nnnnr1201forge2.GojoPlayer.WHEEL[id - 34]);
+        }
         return cn.blockforge.generated.nnnnr1201forge2.AuthoritySkills.name(id);
     }
 

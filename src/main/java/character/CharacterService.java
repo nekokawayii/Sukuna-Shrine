@@ -57,6 +57,8 @@ public final class CharacterService {
     }
     public static boolean allowsSkill(Player p,int skill) {
         var d=selected(p);if(d==null)return !CharacterSkill.custom(skill);
+        // 乙骨掠夺来的旧术式不在角色静态技能表里，按复制记录单独授权（施放时还会校验里香与单次次数）。
+        for(int id:character.yuta.YutaCopies.array(p))if(id==skill)return true;
         if(CharacterSkill.custom(skill))return d.config().skill(skill)!=null&&d.unlocked(skill,rank(p));
         if(!d.hasWheel())return false;
         if(d.family()==CharacterDefinition.Family.SHRINE)return !(skill>=22&&skill<=23)&&!(skill>=34&&skill<=42);

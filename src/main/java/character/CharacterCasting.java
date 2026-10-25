@@ -26,6 +26,13 @@ public final class CharacterCasting {
     public static void cast(ServerPlayer p,int id) {
         var definition=CharacterService.selected(p);
         if(definition==null||!CharacterService.allowsSkill(p,id))return;
+        // 乙骨忧太：释放掠夺来的旧术式。必须先召唤里香，且同一次召唤内每招只能用一次。
+        if(definition.config().skill(id)==null&&character.yuta.YutaCopies.has(p,id)){
+            if(!RikaRules.active(p)){p.displayClientMessage(Component.literal("未召唤里香，无法使用复制术式"),true);return;}
+            if(!character.yuta.YutaCopies.consumeUse(p,id)){p.displayClientMessage(Component.literal("本次召唤已用过 "+character.yuta.YutaCopies.nameOf(id)),true);return;}
+            AuthoritySkills.cast(p,id);
+            return;
+        }
         var skill=definition.config().skill(id);if(skill==null)return;
         if(!p.isAlive()||p.isSpectator()||p.isPassenger()||p.isSleeping()||p.isUsingItem()||!Curse.canUseTechnique(p)
                 ||PrisonSystem.locked(p)||ObserverRitual.active(p)||TenShadows.locked(p)||DeathStar.charging(p)||DeathStar.anemic(p)

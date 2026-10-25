@@ -92,6 +92,9 @@ public final class RikaEntity extends PathfinderMob {
         if (level().isClientSide) return;
         ServerLevel server = (ServerLevel) level();
         if (--life <= 0) { vanish(server); return; }
+        // 每秒给主人播报剩余时间（actionbar）。
+        if (life % 20 == 0 && owner() instanceof ServerPlayer sp)
+            sp.displayClientMessage(net.minecraft.network.chat.Component.literal("里香 剩余 " + (life / 20) + " 秒"), true);
         if (action() != 0) entityData.set(AGE, actionAge() + 1);
         if (action() != 0 && actionAge() > 20) entityData.set(ACTION, 0);
 

@@ -1,57 +1,23 @@
 package cn.blockforge.generated.nnnnr1201forge2;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.culling.Frustum;
-import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * 低级咒灵渲染器：运行时解析 {@code models/basement_wanderer.bbmodel}，
- * 贴图按 {@link BbModel} 约定取 {@code textures/entity/basement_wanderer_<i>.png}（模型内嵌了 9 张）。
- * <p>模型按「正常大小」缩放到 2 格高。
+ * 低级咒灵渲染器（临时方案）：原版僵尸骨架 + 僵尸贴图。
+ * <p>注意：{@code ZombieModel} 的泛型限定是 {@code T extends Zombie}，我们的实体不是僵尸，
+ * 所以这里用同样 64×64 布局的 {@link HumanoidModel} 套僵尸的骨架层与贴图，外观就是僵尸。
+ * <p>原来的 {@code basement_wanderer.bbmodel} 体量过大（592 元素 / 9 张内嵌贴图），先换掉跑通玩法。
  */
-public final class LowCurseRenderer extends EntityRenderer<LowCurseEntity> {
-    private static final BbModel MODEL = new BbModel("basement_wanderer", "basement_wanderer");
-    /** 目标身高（格）：夏油杰体型的一半左右。 */
-    private static final float TARGET_HEIGHT = 2.0f;
-    private static final String ANIM_IDLE = "扭曲行走", ANIM_RUN = "冲刺", ANIM_ATTACK = "攻击";
+public final class LowCurseRenderer extends MobRenderer<LowCurseEntity, HumanoidModel<LowCurseEntity>> {
+    private static final ResourceLocation TEXTURE = new ResourceLocation("textures/entity/zombie/zombie.png");
 
     public LowCurseRenderer(EntityRendererProvider.Context context) {
-        super(context);
-        shadowRadius = 0.7f;
+        super(context, new HumanoidModel<>(context.bakeLayer(ModelLayers.ZOMBIE)), 0.5f);
     }
 
-    @Override public ResourceLocation getTextureLocation(LowCurseEntity entity) { return MODEL.texture(0); }
-
-    @Override public boolean shouldRender(LowCurseEntity e, Frustum frustum, double x, double y, double z) {
-        return frustum.isVisible(e.getBoundingBox().inflate(4));
-    }
-
-    @Override public void render(LowCurseEntity e, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int light) {
-        float age = e.actionAge() + partial;
-        float seconds = (e.tickCount + partial) / 20f;
-        String animation = e.action() == LowCurseEntity.ATTACK ? ANIM_ATTACK
-            : e.getDeltaMovement().horizontalDistanceSqr() > 0.0016 ? ANIM_RUN : ANIM_IDLE;
-        if (e.action() == LowCurseEntity.ATTACK) seconds = age / 20f;
-
-        float rawHeight = Math.max(0.05f, MODEL.heightBlocks());
-        float scale = TARGET_HEIGHT / rawHeight;
-
-        ps.pushPose();
-        ps.mulPose(Axis.YP.rotationDegrees(180 - yaw));
-        ps.scale(scale, scale, scale);
-        float alpha = 1f;
-        if (e.emerging()) {
-            // 没有「爬出」片段：用下沉 + 渐显模拟破土而出的过程。
-            float t = Math.min(1f, age / 20f);
-            ps.translate(0, -rawHeight * (1 - t) * 0.9, 0);
-            alpha = Math.max(0.05f, t);
-        }
-        MODEL.render(ps, buffers, light, animation, seconds, 1, 1, 1, alpha);
-        ps.popPose();
-        super.render(e, yaw, partial, ps, buffers, light);
-    }
+    @Override public ResourceLocation getTextureLocation(LowCurseEntity entity) { return TEXTURE; }
 }

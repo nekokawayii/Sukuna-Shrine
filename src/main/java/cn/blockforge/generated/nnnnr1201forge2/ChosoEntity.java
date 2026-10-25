@@ -80,7 +80,8 @@ public class ChosoEntity extends PathfinderMob {
             if (idx == DEATH_STAR_INDEX) deathStarReady = now + DEATH_STAR_TIDE;
             shotAt = (int) now + 70;
             if (!NpcCurse.spend(this, 25)) { shotAt = (int) now + 20; return; }
-            cast(idx, target);
+            // 优先交给玩家同款 BloodArts 自动施法；门禁拒绝时回退到自身实现
+            if (!NpcSkillDriver.blood(this, target, 60 + idx, 0)) cast(idx, target);
             return;
         }
         shotAt = (int) now + 70;

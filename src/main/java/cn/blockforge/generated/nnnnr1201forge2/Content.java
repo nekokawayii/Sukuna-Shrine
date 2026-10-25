@@ -193,6 +193,10 @@ public final class Content {
             return InteractionResultHolder.sidedSuccess(stack,level.isClientSide);}
     });
     public static final RegistryObject<Item> EGG=ITEMS.register("buddha_spawn_egg",()->new net.minecraftforge.common.ForgeSpawnEggItem(BUDDHA,0x493d2b,0x9a47b6,new Item.Properties()));
+    /** 咒灵操术之符：右键召唤夏油杰（正常游玩入口）。 */
+    public static final RegistryObject<Item> SUMMON_TALISMAN=ITEMS.register("curse_summon_talisman",
+        ()->new SummonTalismanItem(new Item.Properties().stacksTo(16).rarity(Rarity.RARE)));
+
     /** 领域内的坟头（插着鬼妖村正，右键拔出）。 */
     public static final net.minecraftforge.registries.DeferredRegister<net.minecraft.world.level.block.Block> YUTA_BLOCKS=
         net.minecraftforge.registries.DeferredRegister.create(net.minecraftforge.registries.ForgeRegistries.BLOCKS,"sukuna");

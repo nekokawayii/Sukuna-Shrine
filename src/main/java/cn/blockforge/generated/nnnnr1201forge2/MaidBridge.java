@@ -23,7 +23,7 @@ public final class MaidBridge {
     private static final UUID HEALTH=UUID.fromString("dc148a77-3c9b-4775-8b36-e02d40832101"),ATTACK=UUID.fromString("dc148a77-3c9b-4775-8b36-e02d40832102");
     public static boolean isMaid(Entity entity){var id=entity==null?null:ForgeRegistries.ENTITY_TYPES.getKey(entity.getType());return id!=null&&id.getNamespace().equals("touhou_little_maid")&&id.getPath().equals("maid");}
     public static boolean isCaster(Player p){return p instanceof Actor;}
-    public static LivingEntity body(ServerPlayer p){return p instanceof Actor a?a.maid:p;}
+    public static LivingEntity body(ServerPlayer p){if(p instanceof NpcBridge.NpcActor n)return n.mob;return p instanceof Actor a?a.maid:p;}
     public static Actor caster(Entity entity){if(entity instanceof Actor a)return a;return entity==null?null:ACTORS.get(entity.getUUID());}
     public static Actor actor(LivingEntity maid){
         Actor old=ACTORS.get(maid.getUUID());

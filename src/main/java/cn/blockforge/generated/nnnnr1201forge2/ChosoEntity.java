@@ -79,6 +79,7 @@ public class ChosoEntity extends PathfinderMob {
             if (idx == DOMAIN_INDEX) domainReady = now + DOMAIN_TIDE;
             if (idx == DEATH_STAR_INDEX) deathStarReady = now + DEATH_STAR_TIDE;
             shotAt = (int) now + 70;
+            if (!NpcCurse.spend(this, 25)) { shotAt = (int) now + 20; return; }
             cast(idx, target);
             return;
         }
@@ -212,7 +213,7 @@ public class ChosoEntity extends PathfinderMob {
         for (var e : closest) { double d = e.distanceToSqr(this); if (d < bestDist) { bestDist = d; best = e; } }
         if (best != null) return best;
         for (var p : level().getEntitiesOfClass(Player.class, getBoundingBox().inflate(24),
-                p -> p.isAlive() && !p.isCreative() && p.getLastHurtByMob() == this)) return p;
+                p -> p.isAlive()  && p.getLastHurtByMob() == this)) return p;
         return null;
     }
 
@@ -224,12 +225,5 @@ public class ChosoEntity extends PathfinderMob {
                 && !(e instanceof Player p && p.isCreative()));
     }
 
-    private void hurt(LivingEntity target, float amount) {
-        AttackTypes.mark(AttackTypes.MAGIC);
-        boolean ok;
-        try { ok = target.hurt(damageSources().mobAttack(this), amount); }
-        finally { AttackTypes.clear(); }
-        if (!ok) target.hurt(damageSources().magic(), amount);   // 兜底：mobAttack 被拦时用魔法伤害再试一次
-        com.mojang.logging.LogUtils.getLogger().info("[胀相] 伤害 {} -> {} ok={}", Math.round(amount), target.getName().getString(), ok);
-    }
+    private void hurt(LivingEntity target, float amount) { NpcCombat.hurt(this, target, amount); }
 }

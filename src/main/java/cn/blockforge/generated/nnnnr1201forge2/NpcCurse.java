@@ -8,7 +8,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 /**
  * NPC 咒力池（借用玩家技能接口层的资源层）。
- * · 每个敌对生物（含原版怪物）第一次被查询时按「最大生命的 25% + 100」初始化；
+ * · 每个敌对生物（含原版怪物）第一次被查询时按「最大生命的 20 倍」初始化；
  * · 每秒回复最大值的 2%，死亡/换维度自动清零重建；
  * · 拥有咒式的 NPC 通过 {@link #spend} 扣费，扣不起就放不出来。
  */
@@ -17,7 +17,7 @@ public final class NpcCurse {
     public static double max(LivingEntity e){
         var d=e.getPersistentData();
         if(!d.contains(MAX)){
-            double value=Math.max(100.0,e.getMaxHealth()*0.25+100.0);
+            double value=Math.max(100.0,e.getMaxHealth()*20.0);   // 用户指定：血量上限的 20 倍
             d.putDouble(MAX,value);d.putDouble(KEY,value);
         }
         return d.getDouble(MAX);

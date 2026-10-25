@@ -195,7 +195,8 @@ public class ChosoEntity extends PathfinderMob {
 
     private void fx(ServerLevel world, Vec3 at, Vec3 dir, double size, int life) {
         int kind = 400 + Math.min(31, fxIndex);
-        Network.send(world, new Network.Effect(kind, getId(), at, dir, (float) size, life, 0));
+        int shown = Math.max(40, life * 4);   // 血系特效的 life 单位很短，放大 4 倍并至少 2 秒
+        Network.send(world, new Network.Effect(kind, getId(), at, dir, (float) size, shown, 0));
     }
     /** 记录当前施放的是第几招，让特效号随招式变化（400+index）。 */
     private void fx(ServerLevel world, int index, Vec3 at, Vec3 dir, double size, int life) {
@@ -225,7 +226,10 @@ public class ChosoEntity extends PathfinderMob {
 
     private void hurt(LivingEntity target, float amount) {
         AttackTypes.mark(AttackTypes.MAGIC);
-        try { target.hurt(damageSources().mobAttack(this), amount); }
+        boolean ok;
+        try { ok = target.hurt(damageSources().mobAttack(this), amount); }
         finally { AttackTypes.clear(); }
+        if (!ok) target.hurt(damageSources().magic(), amount);   // 兜底：mobAttack 被拦时用魔法伤害再试一次
+        com.mojang.logging.LogUtils.getLogger().info("[胀相] 伤害 {} -> {} ok={}", Math.round(amount), target.getName().getString(), ok);
     }
 }

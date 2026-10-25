@@ -26,7 +26,7 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
  */
 public final class YutaTerrain {
     /** 每刻最多改动的方块数（约 1200 → 全领域 4 万块约 33 刻 ≈ 1.7 秒）。 */
-    private static final int BATCH = 1200;
+    private static final int BATCH = 4000;
 
     private record Rec(BlockPos pos, BlockState state) {}
 
@@ -42,6 +42,7 @@ public final class YutaTerrain {
         int cursor;
         boolean extrasDone;
         boolean finished;
+        long lastGraveRefresh;
 
         Job(UUID owner, ServerLevel level, BlockPos center, int radius) {
             this.owner = owner;
@@ -100,10 +101,8 @@ public final class YutaTerrain {
                     BlockPos pos = c.offset(x, y, z);
                     if (d2 > shell2) {
                         job.plan.add(new Rec(pos, Blocks.BLACK_CONCRETE.defaultBlockState()));
-                    } else if (d2 > glow2) {
+                    } else if (!job.level.getBlockState(pos).is(Blocks.LIGHT)) {
                         job.plan.add(new Rec(pos, light));
-                    } else if (!job.level.getBlockState(pos).isAir()) {
-                        job.plan.add(new Rec(pos, Blocks.AIR.defaultBlockState()));
                     }
                 }
             }
@@ -131,6 +130,10 @@ public final class YutaTerrain {
                 continue;
             }
 
+            if (job.level.getGameTime() - job.lastGraveRefresh >= 40) {
+                job.lastGraveRefresh = job.level.getGameTime();
+                placeGraves(job);
+            }
             int budget = BATCH;
             while (job.cursor < job.plan.size() && budget-- > 0) {
                 apply(job, job.plan.get(job.cursor++));
@@ -167,16 +170,17 @@ public final class YutaTerrain {
         }
     }
 
-    /** 按「已复制术式数量」在领域里摆坟头。 */
+    /** 固定的 3 个坟位（相对锚点）。 */
+    private static final int[][] GRAVE_SPOTS = {{0, -13}, {12, 7}, {-12, 7}};
+
+    /** 摆坟：最多 3 座、固定点位；只要还有已复制术式，拔走后会在 refresh 中重新长出。 */
     private static void placeGraves(Job job) {
         ServerPlayer owner = job.level.getServer().getPlayerList().getPlayer(job.owner);
-        int count = owner == null ? 0 : YutaCopies.copies(owner).size();
-        if (count <= 0) return;
+        if (owner == null || YutaCopies.copies(owner).isEmpty()) return;
         BlockState grave = cn.blockforge.generated.nnnnr1201forge2.Content.YUTA_GRAVE.get().defaultBlockState();
-        for (int i = 0; i < count; i++) {
-            double a = Math.PI * 2 * i / count;
-            BlockPos pos = job.center.offset((int) Math.round(Math.cos(a) * 12), 0, (int) Math.round(Math.sin(a) * 12));
-            apply(job, new Rec(pos, grave));
+        for (int[] spot : GRAVE_SPOTS) {
+            BlockPos pos = job.center.offset(spot[0], 0, spot[1]);
+            if (!job.level.getBlockState(pos).is(grave.getBlock())) apply(job, new Rec(pos, grave));
         }
     }
 
@@ -184,7 +188,8 @@ public final class YutaTerrain {
         BlockState now = job.level.getBlockState(e.pos());
         if (now == e.state()) return;
         job.saved.add(new Rec(e.pos(), now));
-        job.level.setBlock(e.pos(), e.state(), 3); // 3 = 更新邻居 + 同步客户端
+        int flags = e.state().is(Blocks.LIGHT) ? 2 : 3;
+        job.level.setBlock(e.pos(), e.state(), flags);
     }
 
     public static void restore(ServerPlayer p) {

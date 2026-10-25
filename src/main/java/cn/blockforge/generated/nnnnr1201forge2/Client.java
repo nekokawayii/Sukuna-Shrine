@@ -363,8 +363,9 @@ public final class Client {
     @SubscribeEvent public static void render(RenderLevelStageEvent e){
         Minecraft mc=Minecraft.getInstance();if(mc.level==null)return;
         if(e.getStage()==RenderLevelStageEvent.Stage.AFTER_SKY){if(ObserverClient.active()){ObserverClient.whiteSky(e);return;}if(inside())sky(e);return;}
+        // 盖棺铁围山的球壳画在粒子之前：否则它写深度会把领域内的火柱/火花全部盖住。
+        if(e.getStage()==RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)character.jogo.JogoDomainRender.render(e);
         if(e.getStage()!=RenderLevelStageEvent.Stage.AFTER_PARTICLES)return;
-        character.jogo.JogoDomainRender.render(e);   // 盖棺铁围山不透明球壳（写深度，粒子之后画）
         PoseStack ps=e.getPoseStack();Vec3 cam=e.getCamera().getPosition();ps.pushPose();ps.translate(-cam.x,-cam.y,-cam.z);
         MultiBufferSource.BufferSource source=mc.renderBuffers().bufferSource();
         for(DomainVisual d:domains.values()){

@@ -37,10 +37,11 @@ public final class CharacterCasting {
     public static void cast(ServerPlayer p,int id) {
         var definition=CharacterService.selected(p);
         if(definition==null||!CharacterService.allowsSkill(p,id))return;
-        // 乙骨忧太：释放掠夺来的旧术式。必须先召唤里香，且同一次召唤内每招只能用一次。
+        // 乙骨忧太：释放掠夺来的旧术式。必须先召唤里香；不限次数，但冷却为原术式的两倍。
         if(definition.config().skill(id)==null&&character.yuta.YutaCopies.has(p,id)){
             if(!RikaRules.active(p)){p.displayClientMessage(Component.literal("未召唤里香，无法使用复制术式"),true);return;}
-            if(!character.yuta.YutaCopies.consumeUse(p,id)){p.displayClientMessage(Component.literal("本次召唤已用过 "+character.yuta.YutaCopies.nameOf(id)),true);return;}
+            String copyKey="YutaCopyCooldown_"+id;
+            if(Curse.active(p,copyKey)){p.displayClientMessage(Component.literal(character.yuta.YutaCopies.nameOf(id)+" 冷却中"),true);return;}
             // AuthoritySkills 的分派里五条只认 100–108，而掠夺来的是 34–40（苍/赫/…），
             // 直接传会在里面静默掉，所以先按 WHEEL 换算成 100+ 的内部偏移编号。
             int target=id;
@@ -51,6 +52,9 @@ public final class CharacterCasting {
             character.yuta.CopyBorrow.begin(p);
             try { AuthoritySkills.cast(p,target); }
             finally { character.yuta.CopyBorrow.end(p); }
+            // 冷却翻倍 + 开 3 秒爆发窗口（倍率 1.5 + 0.5×章节）。
+            Curse.status(p,copyKey,character.yuta.YutaCopies.copiedCooldown(id));
+            character.yuta.YutaBoost.activate(p,CharacterService.rank(p));
             return;
         }
         var skill=definition.config().skill(id);if(skill==null)return;

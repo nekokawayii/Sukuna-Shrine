@@ -152,5 +152,25 @@ public final class YutaCopies {
         p.displayClientMessage(Component.literal("复制成功：" + nameOf(picked)), true);
     }
 
+    /** 复制术式的冷却：原术式的两倍；没有统一冷却表的家族按 100 刻基准。 */
+    public static int copiedCooldown(int id) {
+        int base;
+        if (id >= 34 && id < 34 + cn.blockforge.generated.nnnnr1201forge2.GojoPlayer.SLOTS) {
+            base = cn.blockforge.generated.nnnnr1201forge2.GojoPlayer.COOLDOWN[
+                cn.blockforge.generated.nnnnr1201forge2.GojoPlayer.WHEEL[id - 34]];
+        } else {
+            base = switch (id) {
+                case 0 -> 0;      // 解·远程斩击
+                case 2 -> 40;     // 捌·必断斩击
+                case 7 -> 20;     // 咒力拳
+                case 8 -> 60;     // 径庭拳
+                case 13 -> 180;   // 连续拳
+                case 17, 18 -> 60;
+                default -> 100;   // 里梅 / 赤血 等无统一表的
+            };
+        }
+        return Math.max(20, base * 2);
+    }
+
     private YutaCopies() {}
 }

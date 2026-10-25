@@ -131,6 +131,13 @@ public final class Content {
                     sp.sendSystemMessage(net.minecraft.network.chat.Component.literal("作弊：还没有选择角色，先吃《咒术选择书》"));
                 }else if(d.id().equals("jogo")){
                     done=character.jogo.JogoCombat.completeNextChapter(sp);
+                }else if(d.hasEvents()){
+                    // 乙骨这类事件型个人线：直接写入下一章的事件标记（story 里的击杀数对它无效）。
+                    int eRank=character.CharacterService.rank(sp);
+                    if(eRank<d.events().size()){
+                        character.CharacterService.markChapter(sp,d.events().get(eRank).id());
+                        done=true;
+                    }
                 }else{
                     int rank=character.CharacterService.rank(sp);
                     var story=d.story();

@@ -33,12 +33,10 @@ public final class SoulJourney {
     public static boolean ready(net.minecraft.world.entity.player.Player p){return Journey.nine(p)&&Journey.residuePercent(p)>=100;}
     public static boolean evolved(net.minecraft.world.entity.player.Player p){return Curse.data(p).getBoolean("SoulShrine");}
 
-    public static boolean entryReady(ServerPlayer p){return MaidBridge.hasCondensedMaid(p)||ready(p);}
+    public static boolean entryReady(ServerPlayer p){return true;}   // 无条件开放灵魂通道
     private static void ensureRuin(ServerPlayer p){if(p.level().dimension()!=Level.OVERWORLD||!entryReady(p))return;var tag=Curse.data(p);if(tag.getBoolean("SoulRuinBuilt")||tag.getBoolean("SoulRuinAttempted"))return;tag.putBoolean("SoulRuinAttempted",true);RuinAtmosphere.build(p);}
     public static void enter(ServerPlayer p){
         if(p.level().dimension()==CORRIDOR){leave(p);return;}
-        if(!entryReady(p)){p.sendSystemMessage(Component.literal("灵魂之门未回应：你或任意一位自己的女仆需要完成残秽凝练。你当前 +"+Journey.residuePercent(p)+"%"));return;}
-        if(p.level().getDifficulty()==net.minecraft.world.Difficulty.PEACEFUL){p.sendSystemMessage(Component.literal("虎杖试炼需要简单、普通或困难难度。"));return;}
         ServerLevel level=p.server.getLevel(CORRIDOR);if(level==null){p.sendSystemMessage(Component.literal("灵魂通道维度未载入，请重新打开存档后再试。"));return;}
         if(rebuildLevel!=null){p.sendSystemMessage(Component.literal("灵魂通道正在重建，请等待完成后再进入。"));return;}
         var tag=Curse.data(p);tag.putString("SoulReturnDimension",p.level().dimension().location().toString());tag.putDouble("SoulReturnX",p.getX());tag.putDouble("SoulReturnY",p.getY());tag.putDouble("SoulReturnZ",p.getZ());
@@ -81,12 +79,12 @@ public final class SoulJourney {
         if(p.level().dimension()!=CORRIDOR)return;
         if(rebuildLevel!=null){p.displayClientMessage(Component.literal("区域正在重建，请等待完成"),true);return;}
         if(pos.getY()<900){
-            if(!evolved(p)&&!VoidJourney.evolved(p)&&!Journey.maidCleared(p,"YujiDefeated")){p.displayClientMessage(Component.literal("击败虎杖残影后，这道通路才会开启"),true);return;}
+            // 无条件开启：通往 Y=1000 真人区域
             p.teleportTo(p.serverLevel(),-12.5,1000,-12.5,0,0);ensureMahitoWall(p.serverLevel(),p);
         }else if(pos.getY()>=1288)p.teleportTo(p.serverLevel(),0.5,1000,19,180,0);
         else if(pos.getZ()<0)p.teleportTo(p.serverLevel(),0.5,64,39.5,180,0);
         else {
-            if(!SoulWorldState.get(p.serverLevel()).mahitoDefeated()&&!Journey.maidCleared(p,"BrokenMahitoDefeated")){p.displayClientMessage(Component.literal("真人的咒力仍然封锁着岩手通路"),true);return;}
+            // 无条件开启：通往 Y=1300 岩手
             p.teleportTo(p.serverLevel(),0.5,1301,-4.5,0,0);
         }
         Skills.cancelCharge(p);Skills.closeDomain(p);

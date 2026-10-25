@@ -33,6 +33,10 @@ public final class TechniqueInput {
     public static void receive(ServerPlayer p,Input input){
         if(!character.CharacterService.allowsSkill(p,input.skill())){if(input.phase()==3)cancel(p);return;}
         if(character.CharacterSkill.custom(input.skill())){
+            // 盖棺铁围山：领域开着时再按一次=提前收起（要在冷却/扣费检查之前拦下）
+            if(input.phase()==0&&input.skill()==character.jogo.JogoSkills.DOMAIN&&character.jogo.JogoCombat.inDomain(p)){
+                character.jogo.JogoCombat.closeDomain(p);return;
+            }
             if(input.phase()==0)character.CharacterCasting.cast(p,input.skill());
             return;
         }

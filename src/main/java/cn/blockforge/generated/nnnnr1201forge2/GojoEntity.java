@@ -109,6 +109,13 @@ public final class GojoEntity extends Monster {
         if(skill!=6)SkillSounds.play(this,"guardian_"+(4+skill%6));
     }
     private void finish(){entityData.set(ACTION,0);entityData.set(AGE,0);rest=12;}
+
+    /** 领域对拼被赢下时的"秒开虚式茈"：跳过 5 秒合十，下一帧直接出紫球。 */
+    public void clashPurpleInstant(LivingEntity target){
+        clashCloseDomain();
+        begin(3,target);
+        entityData.set(AGE,99);   // 下一 Tick 的 age=100 正是出紫球那一帧
+    }
     @Override protected void customServerAiStep(){
         if(level().isClientSide)return;
         long now=level().getGameTime();
@@ -361,6 +368,7 @@ public final class GojoEntity extends Monster {
     }
     // ------------------------------------------------------------ 无量空处
     public boolean clashDomainActive(){return domain>0;}
+    public Vec3 clashCenter(){return center;}
     public void extendDomain(int ticks){if(domain>0)domain+=ticks;}
     public void clashCloseDomain(){domain=0;fx(GojoFx.DOMAIN_CLOSE,center,Vec3.ZERO,1,4,0);}
     public static boolean mindLocked(LivingEntity e){return e.getPersistentData().getLong("GojoVoid")>e.level().getGameTime();}

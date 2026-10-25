@@ -1,4 +1,9 @@
 {
+  "entity.sukuna.choso": "胀相",
+  "item.sukuna.choso_spawn_egg": "胀相刷怪蛋",
+  "item.sukuna.slaughter_demon": "屠坐魔",
+  "item.sukuna.black_rope": "咒具·黑绳",
+  "item.sukuna.chapter_cheat": "作弊·章节速通符",
   "death.attack.death_star": "%1$s被死胎星贯穿了",
   "death.attack.death_star.player": "%1$s被%2$s的死胎星贯穿了",
   "death.attack.blood": "%1$s被赤血操术击倒了",

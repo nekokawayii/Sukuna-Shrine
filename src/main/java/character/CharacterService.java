@@ -23,7 +23,15 @@ public final class CharacterService {
     public static boolean toji(Player p) { var d=selected(p);return d!=null&&d.resource()==CharacterDefinition.Resource.STAMINA; }
     public static boolean yuji(Player p) { return family(p,CharacterDefinition.Family.MARTIAL); }
     public static boolean permits(Player p,CharacterDefinition.Family f) { var d=selected(p);return d==null||d.family()==f; }
-    public static int rank(Player p) { var d=selected(p);return d==null||d.family()==CharacterDefinition.Family.SHRINE?0:d.rank(Curse.data(p).getInt("CharacterKills")); }
+    /** 角色可以自带"章节进度"实现：默认按有效击杀累计，个别角色（如漏壶的泡岩浆）自己算。 */
+    @FunctionalInterface public interface Ranker { int rank(ServerPlayer p); }
+    private static final Map<String,Ranker> RANKERS=new java.util.HashMap<>();
+    public static void registerRanker(String id,Ranker ranker) { RANKERS.put(id, ranker); }
+    public static int rank(Player p) {
+        var d=selected(p);if(d==null||d.family()==CharacterDefinition.Family.SHRINE)return 0;
+        if(p instanceof ServerPlayer sp){var r=RANKERS.get(d.id());if(r!=null)return Math.max(0,Math.min(d.story().size(),r.rank(sp)));}
+        return d.rank(Curse.data(p).getInt("CharacterKills"));
+    }
     public static CharacterConfig.Stats stats(Player p) { var d=selected(p);return d==null?CharacterConfig.Stats.ZERO:d.stats(rank(p)); }
     public static boolean allowsSkill(Player p,int skill) {
         var d=selected(p);if(d==null)return !CharacterSkill.custom(skill);

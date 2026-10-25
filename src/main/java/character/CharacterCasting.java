@@ -16,6 +16,17 @@ import org.joml.Vector3f;
 public final class CharacterCasting {
     /** 高级扩展：角色专属效果仍经过本类的资格、扣费与冷却检查。目标与伤害必须继续用统一敌友接口。 */
     @FunctionalInterface public interface Effect { void apply(ServerPlayer player,CharacterSkill skill,int rank); }
+    /** 角色可以改自己的冷却倍率（例：漏壶在盖棺铁围山里减半）。 */
+    @FunctionalInterface public interface CooldownScale { double scale(ServerPlayer player); }
+    private static final java.util.Map<String,CooldownScale> COOLDOWN_SCALES=new java.util.HashMap<>();
+    public static void registerCooldownScale(String character,CooldownScale scale) { if(scale!=null)COOLDOWN_SCALES.put(character,scale); }
+
+    /** 允许在「无量空处」压制下仍然能施放的角色技能（漏壶的盖棺铁围山要在对方领域里展开打对拼）。 */
+    private static final java.util.Set<String> MIND_LOCK_CASTABLE=new java.util.HashSet<>();
+    public static void allowWhileMindLocked(String character,int skill) { MIND_LOCK_CASTABLE.add(character+"#"+skill); }
+    private static boolean mindLockAllowed(CharacterDefinition d,int skill) {
+        return d!=null&&MIND_LOCK_CASTABLE.contains(d.id()+"#"+skill);
+    }
     private record Key(String character,int skill) {}
     private static final java.util.Map<Key,Effect> EFFECTS=new java.util.HashMap<>();
     public static void registerEffect(String character,int skill,Effect effect) {
@@ -29,15 +40,25 @@ public final class CharacterCasting {
         var skill=definition.config().skill(id);if(skill==null)return;
         if(!p.isAlive()||p.isSpectator()||p.isPassenger()||p.isSleeping()||p.isUsingItem()||!Curse.canUseTechnique(p)
                 ||PrisonSystem.locked(p)||ObserverRitual.active(p)||TenShadows.locked(p)||DeathStar.charging(p)||DeathStar.anemic(p)
-                ||Shinbuke.holding(p)||GojoEntity.mindLocked(p)||GuardianPlayerSkills.locked(p)||SoulCombat.suppressed(p)
+                ||Shinbuke.holding(p)||(GojoEntity.mindLocked(p)&&!mindLockAllowed(definition,id))||GuardianPlayerSkills.locked(p)||SoulCombat.suppressed(p)
                 ||Skills.sealing(p)||Skills.sustaining(p)||GuardianPlayerSkills.sustaining(p)||FurnaceMax.active(p)
                 ||DismantleMotion.active(p)||CombatExpansion.chanting(p))return;
         String cooldown="CharacterSkillCooldown_"+id;
-        if(Curse.active(p,cooldown)||Curse.active(p,"CharacterGlobalCooldown")){
-            p.displayClientMessage(Component.literal("技能冷却中，请稍后再试"),true);return;
+        long nowTick=p.level().getGameTime();
+        long remainSkill=Curse.data(p).getLong(cooldown)-nowTick;
+        long remainGlobal=Curse.data(p).getLong("CharacterGlobalCooldown")-nowTick;
+        if(remainSkill>0||remainGlobal>0){
+            // 冷却明示：技能名 + 剩余秒数（聊天栏，避免只闪一下动作栏看不到）
+            String text=remainSkill>=remainGlobal
+                ? skill.name()+" 冷却中 · "+String.format(java.util.Locale.ROOT,"%.1f",remainSkill/20.0)+" 秒"
+                : "公共施法间隔 · "+String.format(java.util.Locale.ROOT,"%.1f",remainGlobal/20.0)+" 秒后再试";
+            p.sendSystemMessage(Component.literal(text));
+            p.displayClientMessage(Component.literal(text),true);
+            return;
         }
         if(!Curse.spend(p,skill.cost()))return;
-        Curse.status(p,cooldown,skill.cooldown());Curse.status(p,"CharacterGlobalCooldown",4);
+        double cdScale=COOLDOWN_SCALES.getOrDefault(definition.id(),pl->1.0).scale(p);
+        Curse.status(p,cooldown,(int)Math.max(1,Math.round(skill.cooldown()*cdScale)));Curse.status(p,"CharacterGlobalCooldown",4);
         MeleeCombo.cancel(p);
         int rank=CharacterService.rank(p); // 先固定本次阶段，击杀升级不会在同次施法中再增伤。
         var effect=EFFECTS.get(new Key(definition.id(),id));

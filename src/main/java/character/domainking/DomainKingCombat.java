@@ -42,6 +42,16 @@ public final class DomainKingCombat {
         p.sendSystemMessage(Component.literal("领域展开 · " + name));
     }
 
+    /** 咒力无限：领域王每刻把咒力补满（上限 1,000,000，HUD 显示 ∞）。 */
+    @SubscribeEvent public static void refill(TickEvent.PlayerTickEvent e) {
+        if (e.phase != TickEvent.Phase.END || !(e.player instanceof ServerPlayer p)) return;
+        var d = character.CharacterService.selected(p);
+        if (d == null || !d.id().equals("domainking")) return;
+        if (p.tickCount % 10 != 0) return;
+        cn.blockforge.generated.nnnnr1201forge2.Curse.addRaw(p, 1000000);
+        cn.blockforge.generated.nnnnr1201forge2.Curse.sync(p);
+    }
+
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e) {
         if (e.phase != TickEvent.Phase.END || FIELDS.isEmpty()) return;
         for (var it = FIELDS.iterator(); it.hasNext(); ) {

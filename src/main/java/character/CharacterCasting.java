@@ -55,7 +55,11 @@ public final class CharacterCasting {
     }
     public static void cast(ServerPlayer p,int id) {
         var definition=CharacterService.selected(p);
-        if(definition==null||!CharacterService.allowsSkill(p,id))return;
+        if(definition==null)return;
+        if(!CharacterService.allowsSkill(p,id)){
+            p.sendSystemMessage(Component.literal("无法施放：该技能未解锁（"+definition.name()+" 当前阶段 "+CharacterService.rank(p)+"）"));
+            return;
+        }
         // 乙骨忧太：释放掠夺来的旧术式。必须先召唤里香；不限次数，但冷却为原术式的两倍。
         if(definition.config().skill(id)==null&&character.yuta.YutaCopies.has(p,id)){
             if(!RikaRules.active(p)){p.displayClientMessage(Component.literal("未召唤里香，无法使用复制术式"),true);return;}

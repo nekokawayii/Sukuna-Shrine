@@ -100,27 +100,17 @@ public final class SelfEmbryoDomain {
     }
 
     private static void spawnFruits(ServerLevel level, ServerPlayer p, Build build) {
+        // 玩家身后球壳内侧 5 格，只放 1 只「圆钝果实」（一堆手模型，不可移动）
         var look = p.getLookAngle();
         var back = new net.minecraft.world.phys.Vec3(-look.x, 0, -look.z).normalize();
-        for (int i = -1; i <= 1; i++) {
-            var side = new net.minecraft.world.phys.Vec3(-back.z, 0, back.x).scale(i * 1.6);
-            var at = p.position()
-                .add(back.scale(RADIUS - 5))
-                .add(side)
-                .add(0, 1.0, 0);
-            Zombie fruit = EntityType.ZOMBIE.create(level);
-            if (fruit == null) continue;
-            fruit.moveTo(at.x, at.y, at.z, p.getYRot() + 180f, 0f);
-            fruit.setNoAi(true);
-            fruit.setSilent(true);
-            fruit.setPersistenceRequired();
-            fruit.setCustomName(net.minecraft.network.chat.Component.literal("圆钝果实"));
-            fruit.setCustomNameVisible(false);
-            Objects.requireNonNull(fruit.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(1024);
-            fruit.setHealth(1024);
-            level.addFreshEntity(fruit);
-            build.fruits.add(fruit.getUUID());
-        }
+        var at = p.position().add(back.scale(RADIUS - 5)).add(0, 0.2, 0);
+        var fruit = cn.blockforge.generated.nnnnr1201forge2.Content.YIDUI.get().create(level);
+        if (fruit == null) return;
+        fruit.moveTo(at.x, at.y, at.z, p.getYRot() + 180f, 0f);
+        fruit.setCustomName(net.minecraft.network.chat.Component.literal("圆钝果实"));
+        fruit.setCustomNameVisible(false);
+        level.addFreshEntity(fruit);
+        build.fruits.add(fruit.getUUID());
     }
 
     public static void close(ServerPlayer p, String reason) {

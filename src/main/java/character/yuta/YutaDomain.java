@@ -49,6 +49,12 @@ public final class YutaDomain {
             p.displayClientMessage(Component.literal("领域已展开"), true);
             return;
         }
+        // 清场会覆盖方块，箱子内容目前还没做完整还原，所以附近有容器时直接拒绝，避免丢物品。
+        String blocked = containerNear(p, RADIUS);
+        if (blocked != null) {
+            p.displayClientMessage(Component.literal("附近有容器（" + blocked + "），领域无法在此展开"), false);
+            return;
+        }
         ACTIVE.put(p.getUUID(), new Active(p.serverLevel().getGameTime()));
         YutaTerrain.begin(p, RADIUS);
         play(p, "sukuna:yuta_domain_start");
@@ -88,6 +94,24 @@ public final class YutaDomain {
             }
             ensureRika(p);
         }
+    }
+
+    /** 扫描领域范围内的方块实体，返回第一个容器名字；没有则 null。 */
+    private static String containerNear(ServerPlayer p, int radius) {
+        if (!(p.level() instanceof ServerLevel level)) return null;
+        int minCx = (p.blockPosition().getX() - radius) >> 4, maxCx = (p.blockPosition().getX() + radius) >> 4;
+        int minCz = (p.blockPosition().getZ() - radius) >> 4, maxCz = (p.blockPosition().getZ() + radius) >> 4;
+        for (int cx = minCx; cx <= maxCx; cx++) {
+            for (int cz = minCz; cz <= maxCz; cz++) {
+                var chunk = level.getChunk(cx, cz);
+                for (var be : chunk.getBlockEntities().values()) {
+                    if (be instanceof net.minecraft.world.Container) {
+                        return be.getBlockState().getBlock().getName().getString();
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     /** 领域期间里香常驻：不在就召一只，在就不断续期。 */

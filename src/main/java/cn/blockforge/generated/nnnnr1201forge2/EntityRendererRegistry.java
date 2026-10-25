@@ -59,7 +59,10 @@ public final class EntityRendererRegistry {
         entry(Content.MAHITO_LIMB,NoopRenderer.class,NoopRenderer::new),
         entry(Content.BUDDHA,BuddhaRenderer.class,BuddhaRenderer::new),
         entry(Content.PARASITE,BuddhaRenderer.class,BuddhaRenderer::new),
-        entry(Content.MOTHER,BuddhaRenderer.class,BuddhaRenderer::new)
+        entry(Content.MOTHER,BuddhaRenderer.class,BuddhaRenderer::new),
+        entry(Content.GETO,GetoRenderer.class,GetoRenderer::new),
+        entry(Content.LOW_CURSE,LowCurseRenderer.class,LowCurseRenderer::new),
+        entry(Content.RIKA,RikaRenderer.class,RikaRenderer::new)
     );
     private static boolean ready,repairing;
     private static final Set<ResourceLocation> reportedMissing=new HashSet<>();

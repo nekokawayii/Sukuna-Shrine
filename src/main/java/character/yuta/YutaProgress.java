@@ -135,19 +135,117 @@ public final class YutaProgress {
 
     /** 简易废墟：石砖地面 + 外围断墙 + 四根残柱。已存在则不重复生成。 */
     private static void buildRuins(ServerLevel level, BlockPos base) {
-        if (!level.getBlockState(base).isAir()) return;
-        int r = 14;
-        for (int x = -r; x <= r; x++) {
-            for (int z = -r; z <= r; z++) {
-                level.setBlockAndUpdate(base.offset(x, 0, z), Blocks.STONE_BRICKS.defaultBlockState());
-                boolean edge = Math.abs(x) >= r - 1 || Math.abs(z) >= r - 1;
-                if (edge) for (int y = 1; y <= 3; y++) level.setBlockAndUpdate(base.offset(x, y, z), Blocks.COBBLESTONE.defaultBlockState());
+        if (!level.getBlockState(base).isAir()) return; // 已生成过
+        var rnd = level.random;
+        final int R = 30;
+
+        // 地面：石砖为主，混入裂砖/苔砖/砂砾，随机破洞
+        for (int x = -R; x <= R; x++) {
+            for (int z = -R; z <= R; z++) {
+                if (Math.sqrt(x * x + z * z) > R) continue;
+                var state = switch (rnd.nextInt(14)) {
+                    case 0, 1 -> Blocks.CRACKED_STONE_BRICKS.defaultBlockState();
+                    case 2, 3 -> Blocks.GRAVEL.defaultBlockState();
+                    case 4 -> Blocks.MOSSY_STONE_BRICKS.defaultBlockState();
+                    default -> Blocks.STONE_BRICKS.defaultBlockState();
+                };
+                level.setBlock(base.offset(x, 0, z), state, 2);
             }
         }
-        for (int[] c : new int[][]{{-8, -8}, {8, -8}, {-8, 8}, {8, 8}}) {
-            int h = 4 + level.random.nextInt(4);
-            for (int y = 1; y <= h; y++) level.setBlockAndUpdate(base.offset(c[0], y, c[1]), Blocks.STONE_BRICKS.defaultBlockState());
+
+        // 中央参道
+        for (int z = -R; z <= R; z++) {
+            for (int x = -1; x <= 1; x++) {
+                level.setBlock(base.offset(x, 0, z), Blocks.POLISHED_ANDESITE.defaultBlockState(), 2);
+            }
         }
+
+        // 外围断墙（高低起伏 + 随机缺口）
+        for (int x = -R; x <= R; x++) {
+            for (int z = -R; z <= R; z++) {
+                double d = Math.sqrt(x * x + z * z);
+                if (d < R - 1.2 || d > R) continue;
+                if (rnd.nextInt(7) == 0) continue; // 缺口
+                int h = 2 + rnd.nextInt(4);
+                for (int y = 1; y <= h; y++) {
+                    var state = (y == h && rnd.nextBoolean())
+                        ? Blocks.MOSSY_STONE_BRICKS.defaultBlockState()
+                        : Blocks.COBBLESTONE.defaultBlockState();
+                    level.setBlock(base.offset(x, y, z), state, 2);
+                }
+            }
+        }
+
+        // 四角残塔
+        for (int[] c : new int[][]{{-22, -22}, {22, -22}, {-22, 22}, {22, 22}}) tower(level, base.offset(c[0], 0, c[1]), rnd);
+
+        // 参道尽头的鸟居
+        torii(level, base.offset(0, 0, -24));
+
+        // 参道两侧石灯笼
+        for (int z = -20; z <= 20; z += 10) {
+            for (int side : new int[]{-4, 4}) lantern(level, base.offset(side, 0, z));
+        }
+
+        // 墓碑 / 枯树 / 瓦砾 / 蛛网 / 白骨
+        for (int i = 0; i < 26; i++) {
+            int x = -R + 3 + rnd.nextInt(2 * R - 5), z = -R + 3 + rnd.nextInt(2 * R - 5);
+            if (Math.abs(x) <= 2) continue; // 不挡参道
+            BlockPos at = base.offset(x, 1, z);
+            switch (rnd.nextInt(6)) {
+                case 0 -> { // 墓碑
+                    level.setBlock(at, Blocks.COBBLESTONE_WALL.defaultBlockState(), 2);
+                    level.setBlock(at.above(), Blocks.STONE_SLAB.defaultBlockState(), 2);
+                    if (rnd.nextBoolean()) level.setBlock(at.below(), Blocks.GRAVEL.defaultBlockState(), 2);
+                }
+                case 1 -> { // 枯树
+                    int h = 3 + rnd.nextInt(3);
+                    for (int y = 0; y < h; y++) level.setBlock(at.offset(0, y, 0), Blocks.DARK_OAK_LOG.defaultBlockState(), 2);
+                    level.setBlock(at.offset(1, h - 1, 0), Blocks.DARK_OAK_LOG.defaultBlockState(), 2);
+                    level.setBlock(at.offset(-1, h - 2, 0), Blocks.DARK_OAK_LOG.defaultBlockState(), 2);
+                }
+                case 2 -> level.setBlock(at, Blocks.COBWEB.defaultBlockState(), 2);
+                case 3 -> level.setBlock(at, Blocks.BONE_BLOCK.defaultBlockState(), 2);
+                case 4 -> level.setBlock(at, Blocks.COBBLESTONE_SLAB.defaultBlockState(), 2);
+                default -> level.setBlock(at, Blocks.DEAD_BUSH.defaultBlockState(), 2);
+            }
+        }
+    }
+
+    /** 残塔：方形塔身，顶部随机残缺。 */
+    private static void tower(ServerLevel level, BlockPos c, net.minecraft.util.RandomSource rnd) {
+        int h = 9 + rnd.nextInt(6), w = 3;
+        for (int x = -w; x <= w; x++) {
+            for (int z = -w; z <= w; z++) {
+                boolean shell = Math.abs(x) == w || Math.abs(z) == w;
+                if (!shell) continue;
+                for (int y = 1; y <= h; y++) {
+                    if (y > h - 3 && rnd.nextInt(3) == 0) continue; // 顶部残缺
+                    level.setBlock(c.offset(x, y, z), Blocks.STONE_BRICKS.defaultBlockState(), 2);
+                }
+            }
+        }
+        // 塔内一盏魂灯
+        level.setBlock(c.offset(0, 1, 0), Blocks.SOUL_LANTERN.defaultBlockState(), 2);
+    }
+
+    /** 鸟居：两根红柱 + 上下两道梁。 */
+    private static void torii(ServerLevel level, BlockPos c) {
+        for (int side : new int[]{-4, 4}) {
+            for (int y = 1; y <= 5; y++) level.setBlock(c.offset(side, y, 0), Blocks.RED_TERRACOTTA.defaultBlockState(), 2);
+        }
+        for (int x = -6; x <= 6; x++) {
+            level.setBlock(c.offset(x, 6, 0), Blocks.RED_TERRACOTTA.defaultBlockState(), 2); // 岛木
+            level.setBlock(c.offset(x, 5, 0), Blocks.RED_TERRACOTTA.defaultBlockState(), 2); // 贯
+        }
+        level.setBlock(c.offset(0, 7, 0), Blocks.RED_TERRACOTTA.defaultBlockState(), 2);
+    }
+
+    /** 石灯笼：柱 + 灯。 */
+    private static void lantern(ServerLevel level, BlockPos c) {
+        level.setBlock(c, Blocks.STONE_BRICKS.defaultBlockState(), 2);
+        level.setBlock(c.above(), Blocks.STONE_BRICK_WALL.defaultBlockState(), 2);
+        level.setBlock(c.above(2), Blocks.LANTERN.defaultBlockState(), 2);
     }
 
     private static boolean isYuta(ServerPlayer p) {

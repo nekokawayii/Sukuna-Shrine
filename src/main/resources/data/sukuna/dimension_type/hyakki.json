@@ -5,6 +5,7 @@
   "has_skylight": true,
   "has_ceiling": false,
   "ambient_light": 0.0,
+  "fixed_time": 18000,
   "piglin_safe": false,
   "bed_works": true,
   "respawn_anchor_works": false,

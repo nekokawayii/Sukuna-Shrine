@@ -9,7 +9,7 @@ import net.minecraftforge.eventbus.api.*;
 public final class GuardianCombat {
     public static void poison(LivingEntity p,GuardianEntity source,int ticks,float damage,double cooldown){ServerPlayer caster=MaidBridge.progression(p);var t=caster!=null?Curse.data(caster):p.getPersistentData();t.putLong("GuardianPoisonUntil",p.level().getGameTime()+ticks);t.putFloat("GuardianPoisonDamage",damage);t.putDouble("GuardianPoisonCooldown",cooldown);t.putUUID("GuardianPoisonSource",source.getUUID());}
     public static double cooldown(Player p){return Math.max(Curse.active(p,"GuardianPoisonUntil")?Math.max(1,Curse.data(p).getDouble("GuardianPoisonCooldown")):1,Curse.active(p,"PlayerGuardianPoisonUntil")?Math.max(1,Curse.data(p).getDouble("PlayerGuardianPoisonCooldown")):1);}
-    public static boolean awakened(Player p){return Curse.data(p).getBoolean("PureLandVictory");}
+    public static boolean awakened(Player p){return Curse.data(p).getBoolean("PureLandVictory")||character.yuta.YutaRct.active(p);}
     public static double multiplier(Player p){return 1;}
     public static void reward(ServerPlayer p){StageFood.consume(p,StageFood.Stage.LEGACY);}
     @SubscribeEvent public static void heal(LivingHealEvent e){if(e.getEntity() instanceof GuardianEntity g&&g.friendly()||e.getEntity() instanceof ServerPlayer p&&Curse.active(p,"PureLandNoHeal")||GuardianEntity.locked(e.getEntity()))e.setCanceled(true);}

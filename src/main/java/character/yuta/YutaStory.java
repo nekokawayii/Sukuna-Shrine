@@ -22,7 +22,8 @@ public final class YutaStory {
         return List.of(
             new Chapter("目睹里香", 1, "100格内有村民死亡后，120秒内击败3只敌人", "属性成长"),
             new Chapter("决战夏油杰", 2, "击败夏油杰", "属性成长"),
-            new Chapter("百鬼夜行", 3, "在百鬼夜行维度内击败50只咒灵（每10只一波，共5波）", "属性成长")
+            new Chapter("百鬼夜行", 3, "在百鬼夜行维度内击败50只咒灵（每10只一波，共5波）", "属性成长"),
+            new Chapter("处刑虎杖", 4, "击杀虎杖残影", "属性成长 · 反转术式")
         );
     }
 
@@ -36,7 +37,10 @@ public final class YutaStory {
                 new CharacterReward(new Stats(0, 6, 1, 3, 1), 60, 150, List.of())),
             new EventChapter("hyakki_yagyo", "第三章·百鬼夜行",
                 "在百鬼夜行维度内击败50只咒灵（每10只一波，共5波）", 50, ChapterKind.DIMENSION_KILLS, null,
-                new CharacterReward(new Stats(0, 10, 2, 5, 2), 100, 250, List.of()))
+                new CharacterReward(new Stats(0, 10, 2, 5, 2), 100, 250, List.of())),
+            new EventChapter("execute_yuji", "第四章·处刑虎杖",
+                "击杀虎杖残影（sukuna:yuji_echo）", 1, ChapterKind.BOSS_KILL, "sukuna:yuji_echo",
+                new CharacterReward(new Stats(0, 14, 3, 8, 3), 150, 300, List.of()))
         );
     }
     private YutaStory() {}

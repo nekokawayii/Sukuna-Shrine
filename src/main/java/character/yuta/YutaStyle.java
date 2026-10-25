@@ -12,7 +12,7 @@ public final class YutaStyle {
             new Stats(400000, 10, 2, 0, 10), // 咒力上限、额外生命、额外近战、术式加成、每秒回咒
             Stats.ZERO,                    // 每章固定加成留空，成长全部写在 YutaStory 里
             YutaSkills.all(),
-            Map.of(YutaSkills.DOMAIN, 3),  // 领域在三章全部完成后解锁
+            Map.of(YutaSkills.DOMAIN, 3, YutaSkills.SURGERY, 4, YutaSkills.RCT_OUT, 4),  // 领域在三章全部完成后解锁
             Map.of()                       // 不重命名旧术式
         );
     }

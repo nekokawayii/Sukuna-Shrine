@@ -61,6 +61,8 @@ public final class GeneratedMod {
         character.CharacterCasting.registerEffect("yuta", character.yuta.YutaSkills.RIKA, character.yuta.YutaEffects::summonRika);
         character.CharacterCasting.registerEffect("yuta", character.yuta.YutaSkills.COPY, character.yuta.YutaEffects::copyMenu);
         character.CharacterCasting.registerEffect("yuta", character.yuta.YutaSkills.DOMAIN, character.yuta.YutaEffects::domain);
+        character.CharacterCasting.registerEffect("yuta", character.yuta.YutaSkills.SURGERY, character.yuta.YutaEffects::surgery);
+        character.CharacterCasting.registerEffect("yuta", character.yuta.YutaSkills.RCT_OUT, character.yuta.YutaEffects::rctOut);
         MinecraftForge.EVENT_BUS.register(character.CharacterService.class);
         MinecraftForge.EVENT_BUS.register(character.CharacterRewards.class);
         // 漏壶·灾厄火焰：三招自定义效果 + 被动免疫 + 第一章泡岩浆进度

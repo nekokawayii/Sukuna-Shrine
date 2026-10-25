@@ -25,6 +25,18 @@ public final class YutaEffects {
         }
         p.displayClientMessage(Component.literal("已复制的术式：" + YutaCopies.describe(p)), true);
     }
+    /** 1003 反转术式：直接复用 Curse.reverse（含冷却、治疗量、咒力消耗与提示）。 */
+    public static void surgery(ServerPlayer p, CharacterSkill skill, int rank) {
+        cn.blockforge.generated.nnnnr1201forge2.Curse.reverse(p);
+    }
+
+    /** 1004 反转术式·外放：复用守护者的 ReverseOutput，临时放行「蓝色觉醒」门禁。 */
+    public static void rctOut(ServerPlayer p, CharacterSkill skill, int rank) {
+        YutaRct.begin(p);
+        try { cn.blockforge.generated.nnnnr1201forge2.ReverseOutput.cast(p); }
+        finally { YutaRct.end(p); }
+    }
+
     /** 1002 领域展开·真赝相爱。 */
     public static void domain(ServerPlayer p, CharacterSkill skill, int rank) {
         YutaDomain.open(p);

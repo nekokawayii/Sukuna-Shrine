@@ -16,6 +16,10 @@ public final class YutaSkills {
     public static final int COPY = 1001;
     /** 领域展开·真赝相爱：第三章全部完成后解锁。 */
     public static final int DOMAIN = 1002;
+    /** 反转术式（自疗），第四章解锁。 */
+    public static final int SURGERY = 1003;
+    /** 反转术式外放（治疗目标并修护甲），第四章解锁。 */
+    public static final int RCT_OUT = 1004;
 
     public static List<CharacterSkill> all() {
         return List.of(
@@ -23,6 +27,10 @@ public final class YutaSkills {
                 0xFFB9E4FF, 0, 2400, BURST, 1, .5, 180, 0, 0, 1, 0, 0, 0),
             new CharacterSkill(COPY, "复制术式", "复制", "对着生物潜行右键掠夺其术式；未召唤里香时无法使用已复制的术式。",
                 0xFF9AD8FF, 0, 20, BURST, 1, .5, 180, 0, 0, 1, 0, 0, 0),
+            new CharacterSkill(SURGERY, "反转术式", "反转", "以反转术式治疗自身，消耗随生命成长提高。",
+                0xFFFFE0E0, 0, 20, BURST, 1, .5, 180, 0, 0, 1, 0, 0, 0),
+            new CharacterSkill(RCT_OUT, "反转术式·外放", "外放", "把反转术式打向准星目标：治疗并修复其护甲（复用守护者的反转外放实现）。",
+                0xFFFFC8C8, 0, 20, RAY, 1, .5, 60, 0, 0, 1, 0, 0, 0),
             new CharacterSkill(DOMAIN, "领域展开·真赝相爱", "领域", "外围漆黑、内部坟与刀的封闭领域；每秒消耗 30 咒力，耗尽即解除。",
                 0xFFEAF6FF, 0, 2400, BURST, 1, .5, 180, 0, 0, 1, 0, 0, 0)
         );

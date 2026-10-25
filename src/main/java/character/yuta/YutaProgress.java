@@ -93,6 +93,11 @@ public final class YutaProgress {
         }
 
         // ② 击败夏油杰
+        // 第四章：击杀虎杖残影（sukuna:yuji_echo）。
+        if (dead instanceof cn.blockforge.generated.nnnnr1201forge2.YujiEntity) {
+            CharacterService.markChapter(killer, "execute_yuji");
+        }
+
         if (dead instanceof GetoEntity) {
             CharacterService.markChapter(killer, "geto_duel");
             teleportHyakki(killer);

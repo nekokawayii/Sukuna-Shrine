@@ -45,6 +45,7 @@ public final class EntityRendererRegistry {
     private static final java.util.List<Entry<?>> ENTRIES=java.util.List.of(
         entry(VoidContent.GOJO,GojoRenderer.class,GojoRenderer::new),
         entry(Content.CHOSO,ChosoRenderer.class,ChosoRenderer::new),
+        entry(Content.URAUME_NPC,UraumeNpcRenderer.class,UraumeNpcRenderer::new),
         entry(VoidContent.MAHORAGA,MahoragaRenderer.class,MahoragaRenderer::new),
         entry(SoulContent.YUJI,YujiRenderer.class,YujiRenderer::new),
         entry(SoulContent.GUARDIAN,GuardianRenderer.class,GuardianRenderer::new),

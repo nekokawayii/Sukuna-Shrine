@@ -109,7 +109,10 @@ public final class YutaProgress {
                 killer.displayClientMessage(Component.literal(
                     "百鬼夜行 第 " + wave + "/" + (HYAKKI_NEEDED / WAVE_SIZE) + " 波完成（" + n + "/" + HYAKKI_NEEDED + "）· 咒力回补"), false);
             }
-            if (n >= HYAKKI_NEEDED) CharacterService.markChapter(killer, "hyakki_yagyo");
+            if (n >= HYAKKI_NEEDED) {
+                CharacterService.markChapter(killer, "hyakki_yagyo");
+                returnToOverworld(killer);
+            }
         }
     }
 
@@ -131,6 +134,28 @@ public final class YutaProgress {
         }
     }
 
+    /** 第三章完成：送回进入前的主世界坐标（没有记录则用世界出生点）。 */
+    private static void returnToOverworld(ServerPlayer p) {
+        var data = Curse.data(p);
+        ServerLevel overworld = p.server.overworld();
+        double x, y, z;
+        if (data.contains("YutaReturnX")) {
+            x = data.getDouble("YutaReturnX");
+            y = data.getDouble("YutaReturnY");
+            z = data.getDouble("YutaReturnZ");
+            data.remove("YutaReturnX");
+            data.remove("YutaReturnY");
+            data.remove("YutaReturnZ");
+        } else {
+            var spawn = overworld.getSharedSpawnPos();
+            x = spawn.getX() + 0.5;
+            y = spawn.getY();
+            z = spawn.getZ() + 0.5;
+        }
+        p.teleportTo(overworld, x, y, z, p.getYRot(), p.getXRot());
+        p.displayClientMessage(Component.literal("百鬼夜行结束，已返回主世界"), false);
+    }
+
     /** 完成第二章后把玩家送进百鬼夜行；首次进入时用方块搭一片废墟场地。 */
     public static void teleportHyakki(ServerPlayer p) {
         ServerLevel level = p.server.getLevel(HYAKKI);
@@ -138,6 +163,11 @@ public final class YutaProgress {
             p.displayClientMessage(Component.literal("百鬼夜行维度未注册（检查 data/sukuna/dimension/hyakki.json）"), false);
             return;
         }
+        // 记录进入前的主世界坐标，章成后自动送回去。
+        var data = Curse.data(p);
+        data.putDouble("YutaReturnX", p.getX());
+        data.putDouble("YutaReturnY", p.getY());
+        data.putDouble("YutaReturnZ", p.getZ());
         int surface = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, 0, 0);
         BlockPos base = new BlockPos(0, surface, 0);
         buildRuins(level, base);

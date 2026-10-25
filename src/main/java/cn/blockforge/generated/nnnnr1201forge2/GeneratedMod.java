@@ -59,6 +59,7 @@ public final class GeneratedMod {
         // 乙骨忧太：两格轮盘的服务端效果（只登记一次，重复登记会抛异常）。
         character.CharacterCasting.registerEffect("yuta", character.yuta.YutaSkills.RIKA, character.yuta.YutaEffects::summonRika);
         character.CharacterCasting.registerEffect("yuta", character.yuta.YutaSkills.COPY, character.yuta.YutaEffects::copyMenu);
+        character.CharacterCasting.registerEffect("yuta", character.yuta.YutaSkills.DOMAIN, character.yuta.YutaEffects::domain);
         MinecraftForge.EVENT_BUS.register(character.CharacterService.class);
         MinecraftForge.EVENT_BUS.register(character.CharacterRewards.class);
         // 漏壶·灾厄火焰：三招自定义效果 + 被动免疫 + 第一章泡岩浆进度

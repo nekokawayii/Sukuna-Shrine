@@ -19,7 +19,7 @@ public final class YutaCharacter {
             Family.CUSTOM,
             Resource.CURSED_ENERGY,
             0xFF9AD8FF,                   // 天蓝
-            List.of(YutaSkills.RIKA, YutaSkills.COPY),
+            List.of(YutaSkills.RIKA, YutaSkills.COPY, YutaSkills.DOMAIN),
             YutaStory.story(),
             YutaStyle.config(),
             YutaStory.events()            // 事件型章节

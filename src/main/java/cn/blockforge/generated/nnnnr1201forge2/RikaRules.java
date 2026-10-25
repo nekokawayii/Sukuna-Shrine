@@ -33,6 +33,8 @@ public final class RikaRules {
         if (p == null || p.level().isClientSide) return false;
         var d = character.CharacterService.selected(p);
         if (d == null || !"yuta".equals(d.id())) return false;
+        // 领域展开期间不给无限咒力（领域本身按秒抽蓝）。
+        if (character.yuta.YutaDomain.active(p)) return false;
         return p.level().getGameTime() < p.getPersistentData().getLong(UNTIL);
     }
 

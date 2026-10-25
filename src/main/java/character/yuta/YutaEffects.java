@@ -25,5 +25,10 @@ public final class YutaEffects {
         }
         p.displayClientMessage(Component.literal("已复制的术式：" + YutaCopies.describe(p)), true);
     }
+    /** 1002 领域展开·真赝相爱。 */
+    public static void domain(ServerPlayer p, CharacterSkill skill, int rank) {
+        YutaDomain.open(p);
+    }
+
     private YutaEffects() {}
 }

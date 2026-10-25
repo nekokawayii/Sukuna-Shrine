@@ -45,11 +45,14 @@ public class ChosoEntity extends PathfinderMob {
         goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8f));
         goalSelector.addGoal(9, new RandomLookAroundGoal(this));
         targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        targetSelector.addGoal(2, new net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal<>(
+            this, net.minecraft.world.entity.monster.Monster.class, true,
+            e -> !(e instanceof ChosoEntity) && e.isAlive()));
     }
 
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes()
-            .add(Attributes.MAX_HEALTH, 200.0)
+            .add(Attributes.MAX_HEALTH, BalanceRules.health(550.0))
             .add(Attributes.ATTACK_DAMAGE, 5.0)
             .add(Attributes.MOVEMENT_SPEED, 0.30)
             .add(Attributes.FOLLOW_RANGE, 32.0)

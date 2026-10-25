@@ -41,7 +41,8 @@ public final class YutaProgress {
     private static final int VILLAGER_RANGE = 100;
     private static final int WINDOW_TICKS = 2400;      // 120 秒
     private static final int NEEDED_KILLS = 3;
-    private static final int HYAKKI_NEEDED = 100;
+    private static final int HYAKKI_NEEDED = 50;
+    private static final int WAVE_SIZE = 10;      // 每 10 只一波，共 5 波
     private static final int SPAWN_INTERVAL = 100;     // 5 秒
     private static final int CURSE_CAP = 15;
 
@@ -102,7 +103,12 @@ public final class YutaProgress {
             var data = Curse.data(killer);
             int n = data.getInt(HYAKKI_KILLS) + 1;
             data.putInt(HYAKKI_KILLS, n);
-            if (n % 10 == 0) killer.displayClientMessage(Component.literal("百鬼夜行 " + n + "/" + HYAKKI_NEEDED), true);
+            if (n % WAVE_SIZE == 0) {
+                int wave = n / WAVE_SIZE;
+                Curse.add(killer, 200); Curse.sync(killer);   // 每波清完回补咒力
+                killer.displayClientMessage(Component.literal(
+                    "百鬼夜行 第 " + wave + "/" + (HYAKKI_NEEDED / WAVE_SIZE) + " 波完成（" + n + "/" + HYAKKI_NEEDED + "）· 咒力回补"), false);
+            }
             if (n >= HYAKKI_NEEDED) CharacterService.markChapter(killer, "hyakki_yagyo");
         }
     }

@@ -32,6 +32,13 @@ public final class TechniqueInput {
     public static boolean holding(ServerPlayer p,int skill){Hold h=holds.get(p.getUUID());return h!=null&&h.skill==skill;}
     public static void receive(ServerPlayer p,Input input){
         if(!character.CharacterService.allowsSkill(p,input.skill())){if(input.phase()==3)cancel(p);return;}
+        // 乙骨掠夺来的术式沿用的是旧编号（34/60/…），下面会按「是否已拥有该术式」分流到
+        // BloodArts.input / AuthoritySkills.input，那条路乙骨永远走不通。这里先截下来，
+        // 统一交给 CharacterCasting（扣使用次数 + CopyBorrow 临时放行）。
+        if(character.yuta.YutaCopies.has(p,input.skill())){
+            if(input.phase()==0)character.CharacterCasting.cast(p,input.skill());
+            return;
+        }
         if(character.CharacterSkill.custom(input.skill())){
             // 盖棺铁围山：领域开着时再按一次=提前收起（要在冷却/扣费检查之前拦下）
             if(input.phase()==0&&input.skill()==character.jogo.JogoSkills.DOMAIN&&character.jogo.JogoCombat.inDomain(p)){
@@ -151,7 +158,9 @@ public final class TechniqueInput {
     }
     public static void castRaw(ServerPlayer p,int skill){
         if(!character.CharacterService.allowsSkill(p,skill))return;
-        if(character.CharacterSkill.custom(skill)){character.CharacterCasting.cast(p,skill);return;}
+        // 乙骨掠夺来的术式沿用旧编号（34/60/…），但它们没有走「已拥有该术式」的老通路，
+        // 必须交给 CharacterCasting 走「扣次数 + 借用放行」的分支，否则会静默失败。
+        if(character.CharacterSkill.custom(skill)||character.yuta.YutaCopies.has(p,skill)){character.CharacterCasting.cast(p,skill);return;}
         // 每次施法先落一条适应细分：解/捌/网分支/形状分支/苍/赫/茈…延迟命中的伤害靠它分类。
         // 各技能内部的 AttackTypes.prepare 更精确，这里只是兜底，保证绝不残留上一次的招。
         AttackTypes.prepare(AttackTypes.pendingFor(skill));

@@ -18,7 +18,7 @@ public final class JogoSkills {
             new CharacterSkill(METEOR,"灾厄·陨石","陨石",
                 "召唤 2~6 颗陨石（黑曜石带火焰拖尾）从天空砸向准星位置，落地造成范围伤害。",
                 0xFFFF4A12,150,160,RAY,32,1,35,26,4,1,1,0,0),
-            new CharacterSkill(LAVA_BURST,"灾厄·火焰喷发","火焰喷发",
+            new CharacterSkill(LAVA_BURST,"岩浆","岩浆",
                 "单手前指，向前方扇形喷出 1~15 条岩浆柱，灼烧范围内的敌人。",
                 0xFFFFB024,220,160,CONE,18,2,22,14,3,15,3,40,1),
             new CharacterSkill(DOMAIN,"领域展开·盖棺铁围山","盖棺铁围山",

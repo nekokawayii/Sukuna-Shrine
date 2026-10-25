@@ -44,7 +44,7 @@ public final class JogoCombat {
     private static final List<Falling> FALLING=new ArrayList<>();
     private static final List<Pillar> PILLARS=new ArrayList<>();
     /** 火焰喷发：持续 15 秒不断向前飞的扇形火焰。 */
-    private record Fan(ServerLevel level,UUID owner,Vec3 dir,float damage,int end,int wave) {}
+    private record Fan(ServerLevel level,UUID owner,Vec3 origin,Vec3 dir,float damage,int end,int wave) {}
     /** 火山喷发：一条粗大的火柱，向前飞 40 格。 */
     private record Column(ServerLevel level,UUID owner,Vec3 pos,Vec3 dir,float damage,double traveled) {}
     private static final List<Fan> FANS=new ArrayList<>();
@@ -187,7 +187,7 @@ public final class JogoCombat {
     /** 火焰喷发：每刻前进 1.6 格的快速岩浆柱，8 刻飞完 12 格；沿途命中即结算。 */
     public static void castPillars(ServerPlayer p,CharacterSkill skill,int rank) {
         float damage=CombatSettings.spellDamage(p,skill.damageAt(rank));
-        FANS.add(new Fan(p.serverLevel(),p.getUUID(),p.getLookAngle(),damage,p.getServer().getTickCount()+PILLAR_LIFE,0));
+        FANS.add(new Fan(p.serverLevel(),p.getUUID(),p.getEyePosition(),p.getLookAngle(),damage,p.getServer().getTickCount()+PILLAR_LIFE,0));
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.FIRECHARGE_USE,SoundSource.PLAYERS,1.3f,0.8f);
     }
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e) {
@@ -293,7 +293,7 @@ public final class JogoCombat {
             for(int i=0;i<count;i++){
                 double angle=Math.toRadians(-22+44.0*(count==1?0.5:i/(double)(count-1)));
                 Vec3 dir=fan.dir().scale(Math.cos(angle)).add(side.scale(Math.sin(angle))).normalize();
-                Vec3 at=owner.getEyePosition().add(dir.scale(reach));
+                Vec3 at=fan.origin().add(dir.scale(reach));
                 Network.send(level,new Network.Effect(JogoFx.PILLAR,0,at,dir,1,6,0));
                 for(var target:level.getEntitiesOfClass(LivingEntity.class,
                         new net.minecraft.world.phys.AABB(at,at).inflate(2.2),t->CombatSettings.canHit(owner,t))){

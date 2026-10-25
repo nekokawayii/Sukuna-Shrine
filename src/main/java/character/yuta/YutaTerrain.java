@@ -119,15 +119,18 @@ public final class YutaTerrain {
                 it.remove();
                 continue;
             }
-            if (job.finished) continue;
-
-            // 地板铺完 → 贴图案 + 立坟（各记录原方块）
-            if (!job.extrasDone && job.cursor >= job.floorEnd) {
-                placePattern(job);
-                placeGraves(job);
-                job.extrasDone = true;
-                p.displayClientMessage(Component.literal("地板完成 · 坟头已立 " + YutaCopies.copies(p).size() + " 座"), false);
+            if (job.finished) {
+                if (job.level.getGameTime() - job.lastGraveRefresh >= 40) {
+                    job.lastGraveRefresh = job.level.getGameTime();
+                    placeGraves(job);
+                }
                 continue;
+            }
+
+            // 地板铺完只提示，图案与坟等「内部填充完成」后再放，否则会被光源覆盖
+            if (!job.extrasDone && job.cursor >= job.floorEnd) {
+                job.extrasDone = true;
+                p.displayClientMessage(Component.literal("地板完成 · 正在填充内部光源"), false);
             }
 
             if (job.level.getGameTime() - job.lastGraveRefresh >= 40) {
@@ -140,6 +143,8 @@ public final class YutaTerrain {
             }
             if (job.cursor >= job.plan.size()) {
                 job.finished = true;
+                placePattern(job);   // 填充完再贴图案，避免被光源方块覆盖
+                placeGraves(job);    // 同理：坟也放到最后
                 p.displayClientMessage(Component.literal("领域成型 · 真赝相爱"), false);
             }
         }

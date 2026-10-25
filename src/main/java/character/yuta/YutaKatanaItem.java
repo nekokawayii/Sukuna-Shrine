@@ -69,14 +69,24 @@ public final class YutaKatanaItem extends SwordItem {
         List<Integer> pool = new ArrayList<>(copies);
         int picked = pool.get(p.getRandom().nextInt(pool.size()));
 
+        // 剑释放同样要付咒力（借用路径原本跳过了扣费）。
+        int cost = 300;
+        if (!cn.blockforge.generated.nnnnr1201forge2.Curse.spend(p, cost)) {
+            p.displayClientMessage(Component.literal("咒力不足（需要 " + cost + "）"), true);
+            return InteractionResultHolder.fail(stack);
+        }
         YutaBoost.activate(p, CharacterService.rank(p), CAST_MULTIPLIER);
         CharacterCasting.cast(p, picked);
         // 刀报废 + 该术式从轮盘消失（需要重新掠夺）。
         YutaCopies.remove(p, picked);
         YutaCopies.sync(p);
-        // 明确置空（shrink 在部分情况下会被客户端回滚），并同步背包。
+        // 直接清空所在槽位：只改 stack 数量会被客户端回滚（创造模式尤其明显）。
+        var inv = p.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            if (inv.getItem(i) == stack) { inv.setItem(i, ItemStack.EMPTY); break; }
+        }
         stack.setCount(0);
-        p.getInventory().setChanged();
+        inv.setChanged();
         p.displayClientMessage(Component.literal("村正断裂 · 释放 " + YutaCopies.nameOf(picked) + "（×3）"), false);
         return InteractionResultHolder.sidedSuccess(stack, false);
     }

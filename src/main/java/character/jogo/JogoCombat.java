@@ -24,7 +24,7 @@ import java.util.*;
 public final class JogoCombat {
     private static final String DONE="JogoLavaDone", PROGRESS="JogoLavaTicks", BUCKETS="JogoLavaBuckets",
             SIEGE="JogoNetherTicks", SIEGE_DONE="JogoNetherDone",
-            CLASH_DONE="JogoClashDone", CLASH_AT="JogoClashAt", GOJO_KILL="JogoGojoKilled", GOJO_DONE="JogoGojoDone",
+            CLASH_DONE="JogoClashDone", CLASH_AT="JogoClashAt", CH3_START="JogoCh3Start", GOJO_KILL="JogoGojoKilled", GOJO_DONE="JogoGojoDone",
             KEY_GIVEN="JogoVoidKeyGiven", ASH_CRIT="JogoAshCrit";
     private static final int NETHER_TICKS=1200, GOJO_SURVIVE=3600;
     private static final int SOAK_TICKS=600;   // 30 秒
@@ -183,7 +183,13 @@ public final class JogoCombat {
         data.putBoolean(CLASH_DONE,true);
         data.putLong(CLASH_AT,p.level().getGameTime());
         closeDomain(p);
-        p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域对拼获胜：五条悟以外道「茈」击碎了盖棺铁围山 · 从现在起活过 3 分钟"));
+        // 五条悟立刻开虚式茈打碎领域（不再等 AI 自己选招）
+        for(var boss:p.serverLevel().getEntitiesOfClass(GojoEntity.class,
+                new net.minecraft.world.phys.AABB(p.position(),p.position()).inflate(160),GojoEntity::isAlive)){
+            boss.clashPurpleInstant(p);
+            break;
+        }
+        p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域对拼获胜：五条悟秒开虚式「茈」击碎了盖棺铁围山 · 三分钟内再完成一次对拼即可通关"));
     }
 
     // ---------------------------------------------------------------- 技能 1：火砾虫
@@ -522,17 +528,28 @@ public final class JogoCombat {
             return;
         }
         // 第三章：开始时给虚空钥匙；对拼获胜后活过 3 分钟 + 击杀五条悟
-        if(!data.getBoolean(KEY_GIVEN)){
+        long nowTick=p.level().getGameTime();
+        if(!data.getBoolean(KEY_GIVEN)||data.getLong(CH3_START)<=0){
             data.putBoolean(KEY_GIVEN,true);
+            data.putLong(CH3_START,nowTick);
             Journey.give(p,new net.minecraft.world.item.ItemStack(VoidContent.KEY.get()));
-            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第三章·灾厄火焰：虚空钥匙已放入背包 · 右键进入虚空竞技场"));
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第三章·灾厄火焰：进入虚空竞技场，3 分钟内完成一次领域对拼 · 虚空钥匙已放入背包"));
         }
         if(data.getBoolean(GOJO_DONE))return;
-        if(data.getBoolean(CLASH_DONE)&&p.level().getGameTime()-data.getLong(CLASH_AT)>=GOJO_SURVIVE){
+        long elapsed=nowTick-data.getLong(CH3_START);
+        if(data.getBoolean(CLASH_DONE)){
             data.putBoolean(GOJO_DONE,true);
-            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第三章·灾厄火焰：五条悟 完成"));
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("第三章·灾厄火焰：五条悟 完成（对拼成功）"));
             CharacterRewardsHook.grant(p);
+            return;
         }
+        if(elapsed>=GOJO_SURVIVE){
+            data.putLong(CH3_START,nowTick);
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("3 分钟内没能完成领域对拼：计时重新开始"));
+            return;
+        }
+        if(elapsed%100==0&&elapsed>0)p.displayClientMessage(net.minecraft.network.chat.Component.literal(
+            "第三章·灾厄火焰：还剩 "+(GOJO_SURVIVE-elapsed)/20+" 秒完成一次领域对拼"),true);
         return;
         // 旧判定已废弃
     }

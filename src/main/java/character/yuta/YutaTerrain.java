@@ -82,17 +82,24 @@ public final class YutaTerrain {
         }
         job.floorEnd = job.plan.size();
 
-        // ② 球壳（黑混凝土）+ 内部清空：自下而上
+        // ② 球壳（黑混凝土）+ 内侧光源层 + 内部清空：自下而上
+        var light = Blocks.LIGHT.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 15);
         for (int y = 0; y <= R; y++) {
             int lr = (int) Math.floor(Math.sqrt((double) R * R - (double) y * y));
             int inner = Math.max(0, lr - 1);
+            int glow = Math.max(0, inner - 1);   // 紧贴球壳内侧的一层光源
             for (int x = -lr; x <= lr; x++) {
                 for (int z = -lr; z <= lr; z++) {
                     int d2 = x * x + z * z;
                     if (d2 > lr * lr) continue;
                     BlockPos pos = c.offset(x, y, z);
-                    if (d2 > inner * inner) {
+                    // 顶点（lr==0）必须强制封上，否则顶部会留一个洞
+                    if (lr == 0 || d2 > inner * inner) {
                         job.plan.add(new Rec(pos, Blocks.BLACK_CONCRETE.defaultBlockState()));
+                    } else if (d2 > glow * glow) {
+                        // 内侧一圈 15 级光源：把领域内部照亮（无碰撞，不影响走动）
+                        if (!job.level.getBlockState(pos).is(Blocks.LIGHT)) job.plan.add(new Rec(pos, light));
                     } else if (!job.level.getBlockState(pos).isAir()) {
                         job.plan.add(new Rec(pos, Blocks.AIR.defaultBlockState()));
                     }

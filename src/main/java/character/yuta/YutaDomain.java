@@ -136,8 +136,11 @@ public final class YutaDomain {
     }
 
     private static void play(ServerPlayer p, String id) {
-        var sound = ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(id));
-        if (sound != null) p.serverLevel().playSound(null, p.blockPosition(), sound, SoundSource.PLAYERS, 1.6f, 1f);
+        // 不查 ForgeRegistries：sounds.json 的动态事件在某些环境里取不到，
+        // 直接用可变范围事件按 ResourceLocation 构造，客户端会按 sounds.json 的键解析。
+        var loc = new ResourceLocation(id);
+        var sound = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(loc);
+        p.serverLevel().playSound(null, p.blockPosition(), sound, SoundSource.PLAYERS, 1.6f, 1f);
     }
 
     private YutaDomain() {}

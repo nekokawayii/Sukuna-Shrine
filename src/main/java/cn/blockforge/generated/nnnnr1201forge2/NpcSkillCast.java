@@ -24,6 +24,12 @@ public final class NpcSkillCast {
         }
     }
 
+    /** 接口版入口：技能实现只依赖 character.SkillCaster，生物/玩家都能传进来。 */
+    public static boolean cast(character.SkillCaster caster, int skill, LivingEntity target) {
+        if (!(caster.body() instanceof Mob mob)) return false;
+        return cast(Caster.of(mob, caster.character().isEmpty() ? "jogo" : caster.character()), skill, target);
+    }
+
     /** 施放一次技能：资格/冷却由调用方（NPC AI）负责，这里只管咒力、伤害归属与表现。 */
     public static boolean cast(Caster caster, int skill, LivingEntity target) {
         Mob npc = caster.body();

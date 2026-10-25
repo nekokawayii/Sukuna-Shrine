@@ -36,6 +36,9 @@ public final class CharacterCasting {
     public static void registerNpcProvider(Class<? extends net.minecraft.world.entity.LivingEntity> type,NpcProvider provider){
         if(provider!=null)NPC_PROVIDERS.put(type,provider);
     }
+    /** 把任意实体包装成施术者（玩家/生物通用）。 */
+    public static SkillCaster caster(net.minecraft.world.entity.LivingEntity entity){return SkillCaster.of(entity);}
+
     /** 生物的施法入口：找不到对应 provider 时返回 false（不会悄悄扣费）。 */
     public static boolean castFor(net.minecraft.world.entity.LivingEntity caster,int skill){
         if(caster instanceof ServerPlayer p){cast(p,skill);return true;}

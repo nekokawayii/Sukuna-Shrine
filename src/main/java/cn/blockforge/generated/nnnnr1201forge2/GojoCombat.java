@@ -100,6 +100,9 @@ public final class GojoCombat {
     private static boolean unlocked(ServerPlayer p){return GojoPlayer.unlocked(p)&&!MaidBridge.recovering(p)&&Curse.canUseTechnique(p)&&!SoulCombat.suppressed(p);}
     private static String key(int skill){return "GojoCooldown"+skill;}
     public static boolean available(ServerPlayer p,int skill){
+        // 乙骨「真赝相爱」借用：掠夺来的五条术式不做本家族的任何验证
+        // （六眼、冷却、熔断、领域对拼、消耗、控制状态全部跳过），只保留存活这一条以防崩。
+        if(character.yuta.CopyBorrow.borrowing(p))return p.isAlive()&&!p.isSpectator();
         if(skill<0||skill>=COUNT||!unlocked(p)||!p.isAlive()||p.isSpectator()||DomainClash.active(p))return false;
         if(GuardianPlayerSkills.casting(p)||!Authority.instant(p)&&Skills.sustaining(p)&&skill!=7)return false;
         if(Curse.active(p,key(skill)))return false;
@@ -278,7 +281,7 @@ public final class GojoCombat {
         if(!available(p,skill)){reject(p,skill);return;}
         State s=states.computeIfAbsent(p.getUUID(),k->new State(p));
         if(s.p!=p||s.level!=p.level()){states.put(p.getUUID(),s=new State(p));}
-        if(!Curse.spend(p,GojoPlayer.COST[skill]))return;
+        if(!character.yuta.CopyBorrow.borrowing(p)&&!Curse.spend(p,GojoPlayer.COST[skill]))return;
         // Curse.status 的第三个参数是"刻"，之前误按"秒"传入导致冷却只剩几刻
         if(GojoPlayer.COOLDOWN[skill]>0)Curse.status(p,key(skill),GojoPlayer.COOLDOWN[skill]);
         LivingEntity aim=Skills.aimTarget(p);

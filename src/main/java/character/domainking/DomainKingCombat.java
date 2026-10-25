@@ -20,6 +20,7 @@ import java.util.UUID;
 public final class DomainKingCombat {
     private record Field(ServerPlayer owner, String name, int color, double radius, long end, float dps, int slowAmp) {}
     private static final List<Field> FIELDS = new ArrayList<>();
+    private static final java.util.Map<UUID,Integer> ACTIVE = new java.util.HashMap<>();
 
     public static void register() {
         for (int id : DomainKingSkills.all().stream().mapToInt(CharacterSkill::id).toArray()) {
@@ -28,6 +29,16 @@ public final class DomainKingCombat {
     }
 
     public static void cast(ServerPlayer p, CharacterSkill skill, int rank) {
+        // 再次点击同一领域 = 立即收起（不消耗冷却）
+        Integer active = ACTIVE.get(p.getUUID());
+        if (active != null && active == skill.id()) {
+            close(p, active);
+            ACTIVE.remove(p.getUUID());
+            p.sendSystemMessage(Component.literal("领域 · " + skill.name() + " 已收起"));
+            return;
+        }
+        if (active != null) { close(p, active); ACTIVE.remove(p.getUUID()); }
+        ACTIVE.put(p.getUUID(), skill.id());
         String name = skill.name();
         int color = skill.color();
         double radius = switch (skill.id()) {
@@ -97,6 +108,24 @@ public final class DomainKingCombat {
                 if (f.name().equals("盖棺铁围山")) character.jogo.JogoTerrain.restore(owner);
             }
         }
+    }
+
+    /** 按技能号收起对应的原实现领域。 */
+    private static void close(ServerPlayer p, int id) {
+        switch (id) {
+            case DomainKingSkills.JOGO_DOMAIN -> {
+                character.jogo.JogoTerrain.restore(p);
+                Network.send((ServerLevel) p.level(), new Network.Effect(character.jogo.JogoFx.DOMAIN_END,
+                    p.getId(), p.position(), Vec3.ZERO, 0, 0, 0));
+            }
+            case DomainKingSkills.VOID -> cn.blockforge.generated.nnnnr1201forge2.GojoCombat.closeDomain(p);
+            case DomainKingSkills.SHRINE -> cn.blockforge.generated.nnnnr1201forge2.Skills.closeDomain(p);
+            case DomainKingSkills.BLOOD -> cn.blockforge.generated.nnnnr1201forge2.BloodDomain.close(p);
+            case DomainKingSkills.YUTA -> character.yuta.YutaDomain.close(p, "手动收起");
+            case DomainKingSkills.SIMPLE -> cn.blockforge.generated.nnnnr1201forge2.SimpleDomain.release(p, "手动收起");
+            default -> { }
+        }
+        FIELDS.removeIf(f -> f.owner() == p);
     }
 
     private DomainKingCombat() {}

@@ -47,8 +47,11 @@ public final class JogoCombat {
     private record Fan(ServerLevel level,UUID owner,Vec3 origin,Vec3 dir,float damage,int end,int wave) {}
     /** 火山喷发：一条粗大的火柱，向前飞 40 格。 */
     private record Column(ServerLevel level,UUID owner,Vec3 pos,Vec3 dir,float damage,double traveled) {}
+    /** 岩浆陷阱：扇形向前的火柱（按血棘的方式逐排窜出）。 */
+    private record Trap(ServerPlayer owner,ServerLevel level,Vec3 at,Vec3 dir,long due) {}
     private static final List<Fan> FANS=new ArrayList<>();
     private static final List<Column> COLUMNS=new ArrayList<>();
+    private static final List<Trap> TRAPS=new ArrayList<>();
     /** 盖棺铁围山：封闭式火山领域，持续 30 秒，界内敌人被高温烘烤、漏壶冷却减半。 */
     private record Domain(ServerPlayer owner, Vec3 center, int end, double radius, Map<UUID,Vec3> captives) {}
     private static final List<Domain> DOMAINS=new ArrayList<>();
@@ -72,24 +75,44 @@ public final class JogoCombat {
 
     /** 岩浆陷阱：前方地面隆起、刺出火山柱，把敌人击飞。 */
     public static void castMagmaTrap(ServerPlayer p,CharacterSkill skill,int rank) {
-        ServerLevel level=p.serverLevel();Vec3 dir=p.getLookAngle();float dmg=CombatSettings.spellDamage(p,skill.damageAt(rank));
-        for(int i=0;i<6;i++){
-            Vec3 at=p.position().add(dir.scale(2+i*1.5));
-            int x=(int)Math.floor(at.x),z=(int)Math.floor(at.z);
-            int y=level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE,x,z);
-            Vec3 ground=new Vec3(x+0.5,y+0.2,z+0.5);
-            Network.send(level,new Network.Effect(JogoFx.PILLAR,0,ground,dir,1,8,0));
-            for(var target:level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
-                    new net.minecraft.world.phys.AABB(ground,ground).inflate(2.2),t->CombatSettings.canHit(p,t)&&t!=p)){
+        ServerLevel level=p.serverLevel();
+        Vec3 dir=p.getLookAngle();
+        Vec3 flat=new Vec3(dir.x,0,dir.z).normalize();if(flat.lengthSqr()<.1)flat=new Vec3(0,0,1);
+        long now=level.getGameTime();
+        int lanes=7+rank*2, depth=5+rank;   // 与血棘同款：±60° 扇形、逐排向外窜出
+        for(int lane=0;lane<lanes;lane++){
+            Vec3 ray=flat.yRot((float)(-Math.PI/3+lane*(Math.PI*2/3)/(lanes-1)));
+            for(int i=1;i<=depth;i++){
+                Vec3 at=p.position().add(ray.scale(i*1.7));
+                int x=(int)Math.floor(at.x),z=(int)Math.floor(at.z);
+                int y=level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE,x,z);
+                TRAPS.add(new Trap(p,level,new Vec3(x+0.5,y+0.2,z+0.5),ray,now+i*2));
+            }
+        }
+        level.playSound(null,p.blockPosition(),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.0f,0.6f);
+    }
+    /** 岩浆陷阱：到点的火柱从地面窜起 10 格，命中者被击飞并点燃。 */
+    private static void tickTraps() {
+        if(TRAPS.isEmpty())return;
+        for(Iterator<Trap> it=TRAPS.iterator();it.hasNext();){
+            Trap t=it.next();
+            if(t.level().getGameTime()<t.due())continue;
+            it.remove();
+            ServerPlayer owner=t.owner();
+            if(owner==null||!owner.isAlive()||owner.level()!=t.level())continue;
+            float dmg=CombatSettings.spellDamage(owner,14);
+            Network.send(t.level(),new Network.Effect(JogoFx.PILLAR,owner.getId(),t.at(),Vec3.ZERO,1.6f,10,0));
+            for(var target:t.level().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                    new net.minecraft.world.phys.AABB(t.at(),t.at().add(0,10,0)).inflate(2.2),
+                    e->CombatSettings.canHit(owner,e)&&e!=owner)){
                 AttackTypes.mark(AttackTypes.MAGIC);
-                try{CombatSettings.hurt(p,target,p.damageSources().indirectMagic(p,p),dmg);}
+                try{CombatSettings.hurt(owner,target,owner.damageSources().indirectMagic(owner,owner),dmg);}
                 finally{AttackTypes.clear();}
                 target.setDeltaMovement(target.getDeltaMovement().add(0,0.95,0));
                 target.hurtMarked=true;
                 target.setSecondsOnFire(3);
             }
         }
-        level.playSound(null,p.blockPosition(),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.0f,0.6f);
     }
     /** 火山灰隐身：化作灰烬消散，隐身+加速，下一次攻击必定暴击。 */
     public static void castAshVeil(ServerPlayer p,CharacterSkill skill,int rank) {
@@ -192,7 +215,7 @@ public final class JogoCombat {
     }
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e) {
         if(e.phase!=TickEvent.Phase.END)return;
-        tickBugs();tickMeteors();tickFalling();tickFans();tickColumns();tickDomains();JogoTerrain.tick();tickBeam();
+        tickBugs();tickMeteors();tickFalling();tickFans();tickColumns();tickTraps();tickDomains();JogoTerrain.tick();tickBeam();
     }
     private static void tickBugs() {
         for(Iterator<Bug> it=BUGS.iterator();it.hasNext();){

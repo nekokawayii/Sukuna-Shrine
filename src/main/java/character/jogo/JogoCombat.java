@@ -101,6 +101,26 @@ public final class JogoCombat {
     }
     private static final Map<UUID,LinkedHashMap<BlockPos,BlockState>> BEAM_JOURNAL=new HashMap<>();
     private static final Map<UUID,Long> BEAM_EXPIRE=new HashMap<>();
+    private static final Map<UUID,Long> PILLAR_STAMP=new HashMap<>();
+    /** 盖棺铁围山：界内敌人只要受伤，脚下就窜出一根火柱（同一目标 8 刻内不重复）。 */
+    @SubscribeEvent public static void domainPillar(LivingDamageEvent e) {
+        LivingEntity victim=e.getEntity();if(victim instanceof ServerPlayer)return;
+        if(DOMAINS.isEmpty())return;
+        ServerLevel level=null;ServerPlayer owner=null;
+        for(var d:DOMAINS){
+            if(victim.level()!=d.owner().level())continue;
+            if(victim.position().distanceToSqr(d.center())>d.radius()*d.radius())continue;
+            if(victim==d.owner())continue;
+            level=(ServerLevel)victim.level();owner=d.owner();break;
+        }
+        if(level==null||owner==null)return;
+        long now=level.getGameTime();
+        if(now-PILLAR_STAMP.getOrDefault(victim.getUUID(),0L)<8)return;
+        PILLAR_STAMP.put(victim.getUUID(),now);
+        Network.send(level,new Network.Effect(JogoFx.PILLAR,owner.getId(),victim.position(),Vec3.ZERO,1.6f,10,0));
+        victim.setRemainingFireTicks(Math.max(victim.getRemainingFireTicks(),60));
+    }
+
     /** 被动「火焰附着」：漏壶造成的伤害附带火焰；隐身后的第一击额外 50% 暴击伤害。 */
     @SubscribeEvent public static void jogoDamage(LivingDamageEvent e) {
         if(!(e.getSource().getEntity() instanceof ServerPlayer caster))return;
@@ -421,6 +441,7 @@ public final class JogoCombat {
                     new net.minecraft.world.phys.AABB(d.center(),d.center()).inflate(d.radius()),
                     t->t!=owner&&t.isAlive()&&t.position().distanceToSqr(d.center())<=d.radius()*d.radius()&&CombatSettings.canHit(owner,t))){
                 if(target.fireImmune()||!target.onGround())continue;
+                Network.send(level,new Network.Effect(JogoFx.PILLAR,owner.getId(),target.position(),Vec3.ZERO,1.6f,10,0));
                 AttackTypes.mark(AttackTypes.MAGIC);
                 try{CombatSettings.hurt(owner,target,owner.damageSources().indirectMagic(owner,owner),damage);}
                 finally{AttackTypes.clear();}

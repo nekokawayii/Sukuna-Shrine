@@ -11,6 +11,7 @@ public final class DomainKingSkills {
     public static final int BLOOD = 2003;
     public static final int YUTA = 2004;
     public static final int SIMPLE = 2005;
+    public static final int SELF_EMBRYO = 2006;
 
     public static List<CharacterSkill> all() {
         return List.of(
@@ -29,6 +30,9 @@ public final class DomainKingSkills {
             new CharacterSkill(YUTA, "领域展开·真赝相爱", "真赝相爱",
                 "赝品与真品交错，界内敌人承受到复制术式的连续追击。", 0xFF66D2FF, 0, 1,
                 CharacterSkill.Shape.BURST, 20, 1, 180, 11, 1, 32, 0, 0, 0),
+            new CharacterSkill(SELF_EMBRYO, "自闭圆盾裹", "自闭圆盾裹",
+                "真人领域：黑混凝土穹顶 + 肉色网格，半径 50；身后球壳内侧立着不可移动的圆钝果实。", 0xFF2A2A2E, 0, 1,
+                CharacterSkill.Shape.BURST, 20, 1, 180, 12, 2, 32, 0, 20, 1),
             new CharacterSkill(SIMPLE, "简易领域·捌", "简易领域·捌",
                 "以自身为中心张开简易领域，持续撕裂靠近的敌人。", 0xFFFFD36A, 0, 1,
                 CharacterSkill.Shape.BURST, 8, 1, 180, 8, 1, 32, 0, 10, 0)

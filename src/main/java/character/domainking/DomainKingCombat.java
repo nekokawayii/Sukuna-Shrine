@@ -79,6 +79,11 @@ public final class DomainKingCombat {
                 p.sendSystemMessage(Component.literal(ok ? "领域展开 · 真赝相爱" : "真赝相爱未展开（日志已记录）"));
                 return;
             }
+            case DomainKingSkills.SELF_EMBRYO -> {     // 自闭圆盾裹：真人领域
+                SelfEmbryoDomain.open(p);
+                p.sendSystemMessage(Component.literal("领域展开 · 自闭圆盾裹"));
+                return;
+            }
             case DomainKingSkills.SIMPLE -> {          // 简易领域·捌：原实现
                 cn.blockforge.generated.nnnnr1201forge2.SimpleDomain.start(p);
                 p.sendSystemMessage(Component.literal("领域展开 · 简易领域·捌"));
@@ -140,6 +145,7 @@ public final class DomainKingCombat {
             case DomainKingSkills.SHRINE -> cn.blockforge.generated.nnnnr1201forge2.Skills.closeDomain(p);
             case DomainKingSkills.BLOOD -> cn.blockforge.generated.nnnnr1201forge2.BloodDomain.close(p);
             case DomainKingSkills.YUTA -> character.yuta.YutaDomain.close(p, "手动收起");
+            case DomainKingSkills.SELF_EMBRYO -> SelfEmbryoDomain.close(p, "手动收起");
             case DomainKingSkills.SIMPLE -> cn.blockforge.generated.nnnnr1201forge2.SimpleDomain.release(p, "手动收起");
             default -> { }
         }

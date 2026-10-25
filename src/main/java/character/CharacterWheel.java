@@ -55,7 +55,10 @@ public final class CharacterWheel extends Screen {
         int count=CharacterClient.skills().size();
         for(int i=0;i<count;i++){
             int n=blood()&&count==19?(i<8?8:11):count,index=blood()&&count==19?(i<8?i:i-8):i;
-            double angle=-Math.PI/2+index*Math.PI*2/n,rr=r*(blood()&&count==19?(i<8?.48:.82):.74);
+            // 技能少时把文字摆位往内收：5 个技能用 .74 会把左右两侧的文字挤出圆环外，
+            // 看起来像“没在轮盘里”。.60 能保证文字中心落在环带内。
+            double rr=r*(blood()&&count==19?(i<8?.48:.82):count<=6?.60:.74);
+            double angle=-Math.PI/2+index*Math.PI*2/n;
             int skill=CharacterClient.skills().get(i),x=cx+(int)(Math.cos(angle)*rr),y=cy+(int)(Math.sin(angle)*rr);
             String label=CharacterClient.label(skill);
             int textColor=CharacterClient.allows(skill)?CharacterClient.skillColor(skill):0xFF9299A5;

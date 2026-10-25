@@ -21,13 +21,15 @@ public final class VoidJourney {
     public static void enter(ServerPlayer p){
         if(p.level().dimension()==ARENA){leave(p);return;}
         grantKey(p);
+        long keyCd=Curse.data(p).getLong("JogoKeyCooldown")-p.level().getGameTime();
+        if(keyCd>0){p.sendSystemMessage(Component.literal("虚空钥匙冷却中 · "+(keyCd/20)+" 秒"));return;}
         boolean hasKey=p.getInventory().contains(new net.minecraft.world.item.ItemStack(VoidContent.KEY.get()));
         if(!hasKey){p.sendSystemMessage(Component.literal("虚空竞技场需要虚空钥匙：击败虎杖残影后获得，或用 /sukuna void key 补领。"));return;}
         ServerLevel l=p.server.getLevel(ARENA);if(l==null){p.sendSystemMessage(Component.literal("虚空竞技场尚未载入，请重新打开存档。"));return;}
         var d=Curse.data(p);d.putString("VoidReturnDimension",p.level().dimension().location().toString());d.putDouble("VoidReturnX",p.getX());d.putDouble("VoidReturnY",p.getY());d.putDouble("VoidReturnZ",p.getZ());
         for(int x=-3;x<=3;x++)for(int z=-3;z<=3;z++)l.getChunk(x,z);
         Skills.closeDomain(p);Skills.cancelCharge(p);p.teleportTo(l,0.5,-59,32.5,180,0);
-        if(l.getEntitiesOfClass(GojoEntity.class,new AABB(-64,-64,-64,64,0,64),GojoEntity::isAlive).isEmpty()){
+        if(l.getEntitiesOfClass(GojoEntity.class,new AABB(-128,-96,-128,128,64,128),GojoEntity::isAlive).isEmpty()){
             GojoEntity b=VoidContent.GOJO.get().create(l);if(b!=null){b.moveTo(0.5,-59,0.5,0,0);b.setTarget(p);l.addFreshEntity(b);b.setHealth(b.getMaxHealth());}
         }
         p.sendSystemMessage(Component.literal("虚空竞技场 · 基岩层 Y=-60 · 最强咒术师：五条悟。右键虚空钥匙或 /sukuna void leave 返回。"));

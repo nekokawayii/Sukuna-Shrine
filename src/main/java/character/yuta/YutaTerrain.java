@@ -36,6 +36,8 @@ public final class YutaTerrain {
         final BlockPos center;
         final int radius;
         final List<Rec> saved = new ArrayList<>();
+        /** 被覆盖的方块实体（箱子等）内容，结束后原样还原。 */
+        final java.util.Map<BlockPos, net.minecraft.nbt.CompoundTag> blockEntities = new java.util.HashMap<>();
         /** 施工清单（state 为目标状态）。 */
         final List<Rec> plan = new ArrayList<>();
         int floorEnd;
@@ -166,12 +168,16 @@ public final class YutaTerrain {
                 for (int z = 0; z < size.getZ(); z++) {
                     BlockPos pos = origin.offset(x, y, z);
                     before.put(pos, job.level.getBlockState(pos));
+                    var be = job.level.getBlockEntity(pos);
+                    if (be != null) job.blockEntities.putIfAbsent(pos.immutable(), be.saveWithoutMetadata());
                 }
         var settings = new StructurePlaceSettings().setIgnoreEntities(true).setKnownShape(true);
         t.placeInWorld(job.level, origin, origin, settings, job.level.random, 3);
         for (var e : before.entrySet()) {
             BlockState now = job.level.getBlockState(e.getKey());
-            if (now != e.getValue()) job.saved.add(new Rec(e.getKey(), e.getValue()));
+            if (now != e.getValue()) {
+            job.saved.add(new Rec(e.getKey(), e.getValue()));
+        }
         }
     }
 
@@ -192,6 +198,11 @@ public final class YutaTerrain {
     private static void apply(Job job, Rec e) {
         BlockState now = job.level.getBlockState(e.pos());
         if (now == e.state()) return;
+        // 覆盖前先把方块实体（箱子/熔炉等）的内容存下来，结束后连内容一起还原。
+        var be = job.level.getBlockEntity(e.pos());
+        if (be != null && !job.blockEntities.containsKey(e.pos())) {
+            job.blockEntities.put(e.pos().immutable(), be.saveWithoutMetadata());
+        }
         job.saved.add(new Rec(e.pos(), now));
         int flags = e.state().is(Blocks.LIGHT) ? 2 : 3;
         job.level.setBlock(e.pos(), e.state(), flags);
@@ -208,6 +219,16 @@ public final class YutaTerrain {
             Rec r = job.saved.get(i);
             job.level.setBlock(r.pos(), r.state(), 3);
         }
+        // 方块复原后，把容器内容写回去（箱子里的东西不丢）。
+        for (var e : job.blockEntities.entrySet()) {
+            var be = job.level.getBlockEntity(e.getKey());
+            if (be != null) {
+                be.load(e.getValue().copy());
+                be.setChanged();
+                job.level.sendBlockUpdated(e.getKey(), job.level.getBlockState(e.getKey()), job.level.getBlockState(e.getKey()), 3);
+            }
+        }
+        job.blockEntities.clear();
         job.saved.clear();
         job.plan.clear();
     }

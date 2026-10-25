@@ -53,12 +53,6 @@ public final class YutaDomain {
             p.displayClientMessage(Component.literal("领域已展开"), true);
             return;
         }
-        // 清场会覆盖方块，箱子内容目前还没做完整还原，所以附近有容器时直接拒绝，避免丢物品。
-        String blocked = containerNear(p, RADIUS);
-        if (blocked != null) {
-            p.displayClientMessage(Component.literal("附近有容器（" + blocked + "），领域无法在此展开"), false);
-            return;
-        }
         ACTIVE.put(p.getUUID(), new Active(p.server.overworld().getGameTime()));
         YutaTerrain.begin(p, RADIUS);
         play(p, "sukuna:yuta_domain_start");

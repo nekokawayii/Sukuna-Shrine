@@ -50,6 +50,19 @@ public final class YutaProgress {
     private static final String WIN_KILLS = "YutaWindowKills";
     private static final String HYAKKI_KILLS = "YutaHyakkiKills";
 
+    /** 虎杖残影被乙骨打过就记账：死亡归属丢失时用它兜底。 */
+    @SubscribeEvent
+    public static void yujiHurt(net.minecraftforge.event.entity.living.LivingHurtEvent e) {
+        if (!(e.getEntity() instanceof cn.blockforge.generated.nnnnr1201forge2.YujiEntity yuji)) return;
+        if (yuji.decoy() || yuji.familyMember()) return;
+        ServerPlayer attacker = CombatSettings.caster(e.getSource());
+        if (attacker == null && e.getSource().getEntity() instanceof ServerPlayer sp) attacker = sp;
+        if (attacker == null && e.getSource().getDirectEntity() instanceof ServerPlayer dp) attacker = dp;
+        if (attacker != null && isYuta(attacker)) {
+            yuji.getPersistentData().putUUID("YutaYujiCredit", attacker.getUUID());
+        }
+    }
+
     @SubscribeEvent
     public static void death(LivingDeathEvent e) {
         if (e.isCanceled()) return;
@@ -77,6 +90,35 @@ public final class YutaProgress {
             if (e.getSource().getEntity() instanceof ServerPlayer sp) killer = sp;
             else if (e.getSource().getDirectEntity() instanceof ServerPlayer dp) killer = dp;
         }
+        // 第四章：击杀虎杖残影本体（必须放在 isYuta 门禁之前——创造模式/特殊结算
+        // 常常拿不到伤害来源，killer 为 null 时下面的门禁会直接 return，判定就永远不触发）。
+        // 分身（decoy，1 血）与家人形态都不算。
+        if (dead instanceof cn.blockforge.generated.nnnnr1201forge2.YujiEntity yuji
+            && !yuji.decoy() && !yuji.familyMember()) {
+            if (killer != null && isYuta(killer)) {
+                CharacterService.markChapter(killer, "execute_yuji");
+                return;
+            }
+            var credit = yuji.getPersistentData();
+            if (credit.contains("YutaYujiCredit") && dead.getServer() != null) {
+                ServerPlayer credited = dead.getServer().getPlayerList().getPlayer(credit.getUUID("YutaYujiCredit"));
+                if (credited != null && isYuta(credited)) {
+                    CharacterService.markChapter(credited, "execute_yuji");
+                    return;
+                }
+            }
+            // 最后兜底：尸体 48 格内最近的乙骨（创造模式磨怪最常命中这条路）。
+            if (dead.getServer() != null && dead.level() instanceof ServerLevel sl2) {
+                ServerPlayer near = sl2.getEntitiesOfClass(ServerPlayer.class, dead.getBoundingBox().inflate(48))
+                    .stream().filter(character.yuta.YutaProgress::isYuta)
+                    .min(java.util.Comparator.comparingDouble(p2 -> p2.distanceToSqr(dead))).orElse(null);
+                if (near != null) {
+                    CharacterService.markChapter(near, "execute_yuji");
+                    return;
+                }
+            }
+        }
+
         if (killer == null || !isYuta(killer)) return;
 
         // ① 窗口内击杀计数
@@ -98,13 +140,6 @@ public final class YutaProgress {
         }
 
         // ② 击败夏油杰
-        // 第四章：击杀虎杖残影本体。它放出来的 6 个「残影分身」（decoy，1 血）
-        // 以及与虎杖家相关的家人形态都不能算数，否则玩家打掉一个分身就以为完成了。
-        if (dead instanceof cn.blockforge.generated.nnnnr1201forge2.YujiEntity yuji
-            && !yuji.decoy() && !yuji.familyMember()) {
-            CharacterService.markChapter(killer, "execute_yuji");
-        }
-
         if (dead instanceof GetoEntity) {
             CharacterService.markChapter(killer, "geto_duel");
             teleportHyakki(killer);

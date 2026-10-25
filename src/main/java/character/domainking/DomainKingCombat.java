@@ -1,6 +1,7 @@
 package character.domainking;
 
 import character.CharacterCasting;
+import net.minecraft.world.phys.Vec3;
 import cn.blockforge.generated.nnnnr1201forge2.Network;
 import character.CharacterSkill;
 import net.minecraft.network.chat.Component;

@@ -26,7 +26,7 @@ public final class Journey {
     public static final double[] GOALS={1200,21,5000,600,500,200,20,36000,300};
     private record Position(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimension,net.minecraft.world.phys.Vec3 pos){}
     private static final Map<UUID,Position> positions=new HashMap<>();
-    public static boolean unlocked(Player p){return character.CharacterService.permits(p,character.CharacterDefinition.Family.SHRINE)&&Curse.data(p).getBoolean("Memory");}
+    public static boolean unlocked(Player p){return character.yuta.CopyBorrow.borrowing(p)||character.CharacterService.permits(p,character.CharacterDefinition.Family.SHRINE)&&Curse.data(p).getBoolean("Memory");}
     public static boolean maidCleared(Player p,String flag){return Curse.data(p).getBoolean(flag);}
     public static boolean nine(Player p){return character.CharacterService.family(p,character.CharacterDefinition.Family.BLOOD)||(!character.CharacterService.active(p)||character.CharacterService.family(p,character.CharacterDefinition.Family.SHRINE))&&Curse.data(p).getBoolean("Nine");}
     public static boolean rotation(Player p){return nine(p)&&Curse.active(p,"Rotation");}

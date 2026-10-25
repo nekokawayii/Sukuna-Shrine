@@ -54,7 +54,7 @@ public final class BloodArts {
         Ring(ServerPlayer p,Vec3 start,Vec3 dir,int lane){this.p=p;level=p.serverLevel();this.start=start;this.dir=dir;side=NetBranches.side(dir);at=start;this.lane=lane;}
     }
     public static int rank(ServerPlayer p){return BloodRules.rank(SukunaBranches.stage(p));}
-    public static boolean unlocked(ServerPlayer p){return Journey.nine(p);}
+    public static boolean unlocked(ServerPlayer p){return character.yuta.CopyBorrow.borrowing(p)||Journey.nine(p);}
     public static boolean vision(ServerPlayer p){State s=states.get(p.getUUID());return s!=null&&s.vision&&s.flow>p.level().getGameTime();}
     public static boolean casting(ServerPlayer p){State s=states.get(p.getUUID());return s!=null&&s.charge>=0||DeathStar.charging(p);}
     public static boolean ongoing(ServerPlayer p){return states.containsKey(p.getUUID())||BloodDomain.active(p);}

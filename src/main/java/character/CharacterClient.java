@@ -30,6 +30,11 @@ public final class CharacterClient {
         for(int id:copies)if(!list.contains(id))list.add(id);
         return list;
     }
+    /** 该编号是否是乙骨掠夺来的术式（客户端判定，仅用于绕过原有解锁链把选择放行）。 */
+    public static boolean copied(int skill) {
+        for(int id:copies)if(id==skill)return true;
+        return false;
+    }
     public static boolean toji() { var d=selected();return d!=null&&d.resource()==CharacterDefinition.Resource.STAMINA; }
     public static boolean customWheel() { var d=selected();return d!=null&&d.family()!=CharacterDefinition.Family.SHRINE&&d.hasWheel(); }
     public static boolean allows(int skill) {

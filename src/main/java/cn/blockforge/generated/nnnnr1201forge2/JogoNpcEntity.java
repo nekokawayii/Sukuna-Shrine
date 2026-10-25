@@ -86,6 +86,7 @@ public class JogoNpcEntity extends Monster {
             return;
         }
         if (now < shotAt) return;
+        if (!NpcCurse.spend(this, 30)) { shotAt = (int) now + 15; return; }
         shotAt = (int) now + 10;   // 冷却极低：每 0.5 秒换一招
         cast(skillIndex++ % 6, target);
     }

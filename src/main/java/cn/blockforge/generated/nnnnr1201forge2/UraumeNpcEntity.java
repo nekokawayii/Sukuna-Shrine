@@ -60,6 +60,7 @@ public class UraumeNpcEntity extends Monster {
         if (distanceToSqr(target) > 32 * 32) return;
         long now = world.getGameTime();
         if (now < shotAt) return;
+        if (!NpcCurse.spend(this, 40)) { shotAt = (int) now + 20; return; }
         shotAt = (int) now + 50;
         Vec3 eye = getEyePosition();
         Vec3 to = target.getBoundingBox().getCenter();

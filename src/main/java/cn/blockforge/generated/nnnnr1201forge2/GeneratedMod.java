@@ -74,6 +74,7 @@ public final class GeneratedMod {
         character.CharacterService.registerRanker("jogo",character.jogo.JogoCombat::rank);
         character.CharacterCasting.registerCooldownScale("jogo",pl->character.jogo.JogoCombat.inDomain(pl)?0.5:1.0);
         MinecraftForge.EVENT_BUS.register(character.jogo.JogoCombat.class);
+        MinecraftForge.EVENT_BUS.register(NpcCurse.class);
         MinecraftForge.EVENT_BUS.register(character.toji.TojiCombat.class);
         Network.registerDrawing();
         MinecraftForge.EVENT_BUS.register(SlashForms.class);

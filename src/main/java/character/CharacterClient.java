@@ -12,6 +12,9 @@ public final class CharacterClient {
     private static boolean physicalHeld;
     /** 乙骨复制到的术式编号；服务端同步，客户端拼进轮盘。 */
     private static int[] copies=new int[0];
+    /** skills() 的缓存：轮盘每帧会多次调用，原来是每次都 new 一个 ArrayList，复制多了就卡。 */
+    private static java.util.List<Integer> skillsCache;
+    private static int skillsVersion;
     public static void install() {
         CharacterPackets.openReceiver=()->Minecraft.getInstance().setScreen(new CharacterSelectionScreen());
         CharacterPackets.receiver=CharacterClient::receive;
@@ -23,12 +26,14 @@ public final class CharacterClient {
      * （「技能编号与术式家族不匹配」），每帧 HUD 调用会把客户端打崩。
      */
     public static java.util.List<Integer> skills() {
+        if(skillsCache!=null)return skillsCache;
         CharacterDefinition base=CharacterRegistry.get(state.id());
         if(base==null)return java.util.List.of();
-        if(copies.length==0)return base.skills();
+        if(copies.length==0){skillsCache=base.skills();return skillsCache;}
         var list=new java.util.ArrayList<Integer>(base.skills());
         for(int id:copies)if(!list.contains(id))list.add(id);
-        return list;
+        skillsCache=java.util.List.copyOf(list);
+        return skillsCache;
     }
     /** 该编号是否是乙骨掠夺来的术式（客户端判定，仅用于绕过原有解锁链把选择放行）。 */
     public static boolean copied(int skill) {
@@ -46,7 +51,7 @@ public final class CharacterClient {
     }
     private static void receive(CharacterPackets.State message) {
         var mc=Minecraft.getInstance();boolean changed=!state.id().equals(message.id())||message.changed();state=message;
-        copies=message.copies()==null?new int[0]:message.copies();world=mc.level;
+        copies=message.copies()==null?new int[0]:message.copies();skillsCache=null;world=mc.level;
         if(changed){
             TechniqueInputClient.clear();var d=selected();
             Client.selected=d==null?0:Math.max(0,d.firstSkill());Client.wheelPage=d!=null&&d.family()==CharacterDefinition.Family.BLOOD?2:0;
@@ -54,7 +59,7 @@ public final class CharacterClient {
             if(mc.screen instanceof SkillWheel||mc.screen instanceof CharacterWheel||mc.screen instanceof CharacterSelectionScreen)mc.setScreen(null);
         }
     }
-    public static void clear() { state=new CharacterPackets.State("",0,100,0,false,new int[0]);copies=new int[0];world=null;physicalHeld=false; }
+    public static void clear() { state=new CharacterPackets.State("",0,100,0,false,new int[0]);copies=new int[0];skillsCache=null;world=null;physicalHeld=false; }
     public static void tick() {
         var mc=Minecraft.getInstance();if(world!=mc.level){clear();world=mc.level;}
         boolean down=ClientInput.held(Client.CAST);

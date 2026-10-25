@@ -65,6 +65,12 @@ public final class YutaProgress {
         }
 
         ServerPlayer killer = CombatSettings.caster(e.getSource());
+        // 里香不是 CombatSafety 认识的召唤物，所以「里香打死」的击杀会解析出 null，
+        // 导致乙骨主要输出手段不计入章节。这里补一条：伤害来源是里香就记到主人头上。
+        if (killer == null && e.getSource().getEntity() instanceof cn.blockforge.generated.nnnnr1201forge2.RikaEntity rika
+            && rika.ownerId() != null && rika.level() instanceof ServerLevel rl) {
+            killer = rl.getServer().getPlayerList().getPlayer(rika.ownerId());
+        }
         if (killer == null || !isYuta(killer)) return;
 
         // ① 窗口内击杀计数

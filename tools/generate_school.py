@@ -85,6 +85,23 @@ def school():
         box(x1, 20, z2, x2, 21, z2, "minecraft:stone_bricks")
         box(x1, 20, z1, x1, 21, z2, "minecraft:stone_bricks")
         box(x2, 20, z1, x2, 21, z2, "minecraft:stone_bricks")
+        # ---- 楼梯间：每翼靠内侧一段，从一层直上二层 ----
+        sx = x1 + 4
+        sz = z1 + 5
+        box(sx - 1, 3, sz - 1, sx + 2, 10, sz + 8, "minecraft:stone_bricks")   # 楼梯井墙
+        air(sx, 3, sz, sx + 1, 10, sz + 7)
+        for i in range(7):
+            y = 4 + i
+            put(sx, y, sz + i, "minecraft:dark_oak_stairs",
+                {"facing": "south", "half": "bottom", "shape": "straight", "waterlogged": "false"})
+            put(sx + 1, y, sz + i, "minecraft:dark_oak_stairs",
+                {"facing": "south", "half": "bottom", "shape": "straight", "waterlogged": "false"})
+        air(sx, 11, sz + 7, sx + 1, 11, sz + 9)   # 二层地板开口
+        box(sx - 1, 3, sz - 1, sx + 2, 3, sz + 8, "minecraft:dark_oak_planks")
+        box(sx, 10, sz + 9, sx + 1, 17, sz + 9, "minecraft:air")
+        lamp(sx + 2, 4, sz + 2)
+        lamp(sx + 2, 12, sz + 2)
+
         # 窗（外侧两面）
         long_x = (x2 - x1) >= (z2 - z1)
         if long_x:
@@ -169,6 +186,32 @@ def school():
     box(63, 2, 63, 65, 2, 65, "minecraft:stone_bricks")
     box(64, 3, 64, 64, 9, 64, "minecraft:oak_fence")
     put(65, 9, 64, "minecraft:white_banner")
+
+    # ================= 环形连廊：把四面教学楼连起来 =================
+    def walkway(x1, z1, x2, z2):
+        box(x1, 3, z1, x2, 3, z2, "minecraft:dark_oak_planks")     # 廊道地面
+        air(x1 + 1, 4, z1 + 1, x2 - 1, 7, z2 - 1)                  # 廊道净空
+        box(x1, 3, z1, x2, 7, z1, "minecraft:stone_bricks")        # 两侧矮墙
+        box(x1, 3, z2, x2, 7, z2, "minecraft:stone_bricks")
+        box(x1, 3, z1, x1, 7, z2, "minecraft:stone_bricks")
+        box(x2, 3, z1, x2, 7, z2, "minecraft:stone_bricks")
+        box(x1, 8, z1, x2, 8, z2, "minecraft:deepslate_tiles")     # 顶棚
+        for x in range(x1 + 3, x2 - 1, 6):
+            box(x, 4, z1, x + 1, 6, z1, "minecraft:glass")
+            box(x, 4, z2, x + 1, 6, z2, "minecraft:glass")
+        for x in range(x1 + 4, x2 - 1, 8):
+            box(x, 7, (z1 + z2) // 2, x, 7, (z1 + z2) // 2, "minecraft:lantern",
+                {"hanging": "true", "waterlogged": "false"})
+
+    walkway(13, 27, 115, 29)    # 北连廊
+    walkway(13, 99, 115, 101)   # 南连廊
+    walkway(31, 31, 33, 97)     # 西连廊
+    walkway(95, 31, 97, 97)     # 东连廊
+    # 连廊与各翼之间的门洞
+    for (x, z) in ((56, 26), (64, 26), (72, 26), (56, 102), (64, 102), (72, 102)):
+        air(x, 4, z, x + 1, 6, z)
+    for (x, z) in ((30, 46), (30, 64), (30, 82), (98, 46), (98, 64), (98, 82)):
+        air(x, 4, z, x, 6, z + 1)
 
     # 走廊灯具（走廊为翼内通道，补充顶灯避免全黑）
     for x in range(16, 114, 12):

@@ -24,11 +24,12 @@ import java.util.*;
  * 方块按队列逐刻施工并记录旧状态，收起/关服时整批还原。
  */
 public final class SelfEmbryoDomain {
-    public static final double RADIUS = 50;          // 领域半径（用户指定）
+    public static final double RADIUS = 30;          // 领域半径（用户指定）
     public static final int GRID_SPACING = 5;        // 网格间隔
     public static final int GRID_WIDTH = 2;          // 网格宽度
     public static final int LIFE_TICKS = 600;        // 30 秒
-    private static final int PER_TICK = 8000;        // 每刻施工方块数
+    private static final int PER_TICK = 8000;        // 每刻施工方块数上限
+    private static final int BUILD_TICKS = 60;       // 3 秒铺完（20 刻/秒）
     private static final int MAX_BLOCKS = 260000;    // 上限保护
 
     private record Edit(BlockPos pos, BlockState old) {}
@@ -41,6 +42,7 @@ public final class SelfEmbryoDomain {
         final List<BlockPos> blocks = new ArrayList<>();
         final List<UUID> fruits = new ArrayList<>();
         int cursor;
+        int rate;
         Build(ServerLevel level, BlockPos center, long end) { this.level = level; this.center = center; this.end = end; }
     }
 
@@ -60,27 +62,33 @@ public final class SelfEmbryoDomain {
             net.minecraft.sounds.SoundSource.HOSTILE, 1.8f, 0.4f);
     }
 
-    /** 收集所有需要改动的方块：先球壳（视觉最快），再地面与光源，最后清理内部。 */
+    /** 收集所有需要改动的方块：按“环”排序（球壳 → 地板 → 光源），逐环在 3 秒内铺开；最外圈地板不放光源。 */
     private static void plan(ServerLevel level, BlockPos c, Build build) {
         double r2 = RADIUS * RADIUS, in2 = (RADIUS - 1) * (RADIUS - 1);
         int ri = (int) Math.ceil(RADIUS);
-        List<BlockPos> shell = new ArrayList<>(), floor = new ArrayList<>(), interior = new ArrayList<>();
+        record Work(int ring, int type, BlockPos pos) {}
+        List<Work> works = new ArrayList<>();
         for (int dx = -ri; dx <= ri; dx++) for (int dz = -ri; dz <= ri; dz++) for (int dy = -1; dy <= ri; dy++) {
             double d2 = dx * dx + dy * dy + dz * dz;
             BlockPos pos = c.offset(dx, dy, dz);
-            if (dy == -1 && dx * dx + dz * dz <= r2) { floor.add(pos); continue; }
-            if (dy >= 0 && d2 <= in2) { interior.add(pos); continue; }
-            if (dy >= 0 && d2 > in2 && d2 <= r2) shell.add(pos);
+            if (dy == -1 && dx * dx + dz * dz <= r2) {
+                int ring = (int) Math.ceil(Math.sqrt(dx * dx + dz * dz));
+                works.add(new Work(ring, 1, pos));
+                // 最外圈地板不放光源：只有水平距离在 (R-1) 以内的地板才叠光源
+                if (dx * dx + dz * dz <= in2) works.add(new Work(ring, 2, pos.above()));
+                continue;
+            }
+            if (dy >= 0 && d2 <= in2) {
+                works.add(new Work((int) Math.ceil(Math.sqrt(d2)), 3, pos));   // 内部清理（最后）
+                continue;
+            }
+            if (dy >= 0 && d2 > in2 && d2 <= r2) {
+                works.add(new Work((int) Math.ceil(Math.sqrt(d2)), 0, pos));   // 球壳优先
+            }
         }
-        build.blocks.addAll(shell);
-        for (BlockPos pos : floor) {
-            build.blocks.add(pos);
-            build.blocks.add(pos.above());   // 亮度 15 的光源方块
-        }
-        // 内部清理按离中心距离由近到远，优先开出一片可见空间
-        interior.sort(Comparator.comparingDouble(pos -> pos.distSqr(c)));
-        build.blocks.addAll(interior);
-        if (build.blocks.size() > MAX_BLOCKS) build.blocks.subList(MAX_BLOCKS, build.blocks.size()).clear();
+        works.sort(Comparator.<Work>comparingInt(Work::ring).thenComparingInt(Work::type));
+        for (Work w : works) if (build.blocks.size() < MAX_BLOCKS) build.blocks.add(w.pos());
+        build.rate = Math.max(1, Math.min(PER_TICK, (build.blocks.size() + BUILD_TICKS - 1) / BUILD_TICKS));
     }
 
     private static BlockState shellState(BlockPos pos, BlockPos c) {
@@ -142,7 +150,7 @@ public final class SelfEmbryoDomain {
             if (p == null || !p.isAlive() || p.level() != build.level) { ACTIVE.remove(id); if (build != null) restore(build); continue; }
             if (build.level.getGameTime() >= build.end) { ACTIVE.remove(id); restore(build); p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域 · 自闭圆盾裹 已收起")); continue; }
             int done = 0;
-            while (build.cursor < build.blocks.size() && done < PER_TICK) {
+            while (build.cursor < build.blocks.size() && done < build.rate) {
                 BlockPos pos = build.blocks.get(build.cursor++);
                 BlockState old = build.level.getBlockState(pos);
                 if (build.level.getBlockEntity(pos) != null) continue;
@@ -150,8 +158,15 @@ public final class SelfEmbryoDomain {
                 BlockState target;
                 if (pos.getY() == build.center.getY() - 1 && old != Blocks.BLACK_CONCRETE.defaultBlockState()) {
                     target = Blocks.BLACK_CONCRETE.defaultBlockState();
-                } else if (pos.getY() == build.center.getY() && old.isAir()) {
-                    target = Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 15);
+                } else if (pos.getY() == build.center.getY()) {
+                    // 地板层与其上一层：只给非最外圈铺亮度 15 光源（最外圈保持纯黑混凝土）
+                    double hd2 = (pos.getX() - build.center.getX()) * (double) (pos.getX() - build.center.getX())
+                        + (pos.getZ() - build.center.getZ()) * (double) (pos.getZ() - build.center.getZ());
+                    if (pos.getY() == build.center.getY() && hd2 > (RADIUS - 1) * (RADIUS - 1)) {
+                        target = Blocks.BLACK_CONCRETE.defaultBlockState();
+                    } else {
+                        target = Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 15);
+                    }
                 } else {
                     double d2 = pos.distSqr(build.center);
                     double in2 = (RADIUS - 1) * (RADIUS - 1), r2 = RADIUS * RADIUS;

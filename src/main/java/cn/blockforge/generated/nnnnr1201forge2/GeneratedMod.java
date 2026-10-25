@@ -77,6 +77,7 @@ public final class GeneratedMod {
         MinecraftForge.EVENT_BUS.register(character.jogo.JogoCombat.class);
         character.domainking.DomainKingCombat.register();
         MinecraftForge.EVENT_BUS.register(character.domainking.DomainKingCombat.class);
+        MinecraftForge.EVENT_BUS.register(character.domainking.SelfEmbryoDomain.class);
         MinecraftForge.EVENT_BUS.register(NpcCurse.class);
         MinecraftForge.EVENT_BUS.addListener((TickEvent.ServerTickEvent e)->{if(e.phase==TickEvent.Phase.END)NpcBridge.tick();});
         character.CharacterCasting.registerNpcProvider(JogoNpcEntity.class,(e,skill)->PlayerSkillBridge.cast(character.CharacterCasting.caster(e),"jogo",skill));

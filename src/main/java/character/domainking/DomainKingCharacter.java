@@ -13,7 +13,7 @@ public final class DomainKingCharacter {
             "把已出现过的所有领域都收进轮盘：盖棺铁围山、无量空处、伏魔御厨子、胎海、真赝相爱、简易领域·捌。咒力视为无限。",
             Family.CUSTOM, Resource.CURSED_ENERGY, 0xFFB57BFF,
             List.of(DomainKingSkills.JOGO_DOMAIN, DomainKingSkills.VOID, DomainKingSkills.SHRINE,
-                DomainKingSkills.BLOOD, DomainKingSkills.YUTA, DomainKingSkills.SIMPLE),
+                DomainKingSkills.BLOOD, DomainKingSkills.YUTA, DomainKingSkills.SIMPLE, DomainKingSkills.SELF_EMBRYO),
             DomainKingStory.chapters(), DomainKingStyle.config());
     }
     private DomainKingCharacter() {}

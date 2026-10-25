@@ -42,9 +42,18 @@ public final class Content {
                         sp.getBoundingBox().inflate(10),e->e!=sp&&e.isAlive()&&!e.isSpectator()&&CombatSettings.canHit(sp,e))){
                     if(target.position().distanceToSqr(sp.position())>100)continue;
                     if(look.dot(target.position().add(0,target.getBbHeight()*0.5,0).subtract(sp.getEyePosition()).normalize())<0.2)continue;
+                    // 黑绳是天生的"无下限克星"：这一击临时给五条悟打穿透标记，不需要领域展延
+                    boolean amplified=false;
+                    if(target instanceof GojoEntity gojo){
+                        amplified=!gojo.getPersistentData().getBoolean("GojoAmplified");
+                        gojo.getPersistentData().putBoolean("GojoAmplified",true);
+                    }
                     AttackTypes.mark(AttackTypes.MAGIC);
                     try{CombatSettings.hurt(sp,target,sp.damageSources().magic(),10f);}
-                    finally{AttackTypes.clear();}
+                    finally{
+                        AttackTypes.clear();
+                        if(amplified&&target instanceof GojoEntity gojo)gojo.getPersistentData().remove("GojoAmplified");
+                    }
                     // 强制僵直 0.1 秒（2 刻）
                     target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                         net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN,2,10,false,false));

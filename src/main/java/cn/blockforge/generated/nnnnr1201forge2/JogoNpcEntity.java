@@ -18,6 +18,7 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.AABB;
 
 /** 漏壶（NPC）：敌对，使用漏壶的火焰系技能；见到玩家会开领域（冷却 300 秒）。 */
 public class JogoNpcEntity extends Monster {
@@ -85,26 +86,66 @@ public class JogoNpcEntity extends Monster {
             return;
         }
         if (now < shotAt) return;
-        shotAt = (int) now + 50;
-        Vec3 eye = getEyePosition(), to = target.getBoundingBox().getCenter(), dir = to.subtract(eye).normalize();
-        if ((skillIndex++ & 1) == 0) {
-            // 火焰喷发：前方扇形火舌
-            Network.send(world, new Network.Effect(character.jogo.JogoFx.PILLAR, 0, eye, dir, 1.6f, 12, 0));
-            for (var t : world.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(16),
-                    e -> e instanceof Player p && !p.isCreative() && e.isAlive()
-                        && e.position().subtract(position()).normalize().dot(dir) > 0.5)) {
-                t.hurt(damageSources().mobAttack(this), 8f);
-                t.setSecondsOnFire(4);
+        shotAt = (int) now + 10;   // 冷却极低：每 0.5 秒换一招
+        cast(skillIndex++ % 6, target);
+    }
+
+    /** 灾厄火焰全套（轮流）：火砾虫 / 陨石 / 岩浆·火焰喷发 / 火山喷发 / 岩浆陷阱 / 火山灰隐身。 */
+    private void cast(int idx, LivingEntity target) {
+        var world = (ServerLevel) level();
+        Vec3 eye = getEyePosition(), to = target.getBoundingBox().getCenter();
+        Vec3 dir = to.subtract(eye).normalize();
+        switch (idx) {
+            case 0 -> { // 火砾虫
+                Network.send(world, new Network.Effect(character.jogo.JogoFx.BUG, getId(), eye, dir, 1f, 20, 0));
+                if (distanceToSqr(target) <= 24 * 24) {
+                    target.hurt(damageSources().mobAttack(this), 6f);
+                    target.setSecondsOnFire(3);
+                }
             }
-        } else {
-            // 陨石：目标位置爆炸
-            Network.send(world, new Network.Effect(character.jogo.JogoFx.METEOR_IMPACT, 0, to, Vec3.ZERO, 3f, 14, 0));
-            for (var t : world.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(to, to).inflate(4),
-                    e -> e instanceof Player p && !p.isCreative() && e.isAlive())) {
-                t.hurt(damageSources().mobAttack(this), 14f);
-                t.setSecondsOnFire(3);
-                t.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1, false, false));
+            case 1 -> { // 陨石
+                Network.send(world, new Network.Effect(character.jogo.JogoFx.METEOR_IMPACT, getId(), to, Vec3.ZERO, 4f, 16, 0));
+                for (var t : near(to, 4.5)) { t.hurt(damageSources().mobAttack(this), 12f); t.setSecondsOnFire(4); }
+            }
+            case 2 -> { // 岩浆·火焰喷发
+                Network.send(world, new Network.Effect(character.jogo.JogoFx.PILLAR, 0, eye, dir, 2f, 14, 0));
+                for (var t : world.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(18),
+                        e -> e instanceof Player p && !p.isCreative() && e.isAlive()
+                            && e.position().subtract(position()).normalize().dot(dir) > 0.45)) {
+                    t.hurt(damageSources().mobAttack(this), 7f);
+                    t.setSecondsOnFire(5);
+                }
+            }
+            case 3 -> { // 火山喷发：直线火柱 40 格
+                Network.send(world, new Network.Effect(character.jogo.JogoFx.PILLAR, 0, eye, dir, 2f, 16, 0));
+                for (var t : world.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(40),
+                        e -> e instanceof Player p && !p.isCreative() && e.isAlive()
+                            && Math.abs(e.position().subtract(eye).normalize().dot(dir) - 1) < 0.06)) {
+                    t.hurt(damageSources().mobAttack(this), 10f);
+                    t.setSecondsOnFire(6);
+                }
+            }
+            case 4 -> { // 岩浆陷阱：目标周围数道火柱 + 击飞
+                for (int i = 0; i < 5; i++) {
+                    Vec3 at = to.add((getRandom().nextDouble() - .5) * 6, 0, (getRandom().nextDouble() - .5) * 6);
+                    Network.send(world, new Network.Effect(character.jogo.JogoFx.PILLAR, 0, at, Vec3.ZERO, 1.5f, 12, 0));
+                    for (var t : near(at, 2.6)) {
+                        t.hurt(damageSources().mobAttack(this), 7f);
+                        t.setDeltaMovement(t.getDeltaMovement().add(0, .8, 0)); t.hurtMarked = true;
+                        t.setSecondsOnFire(3);
+                    }
+                }
+            }
+            default -> { // 火山灰隐身
+                addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 100, 0, false, false));
+                addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 100, 2, false, false));
+                Network.send(world, new Network.Effect(character.jogo.JogoFx.BUG_BURST, getId(), position(), Vec3.ZERO, 2f, 10, 0));
             }
         }
+    }
+
+    private java.util.List<LivingEntity> near(Vec3 at, double r) {
+        return level().getEntitiesOfClass(LivingEntity.class, new AABB(at, at).inflate(r),
+            e -> e instanceof Player p && !p.isCreative() && e.isAlive());
     }
 }

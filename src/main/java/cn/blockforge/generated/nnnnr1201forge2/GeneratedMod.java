@@ -75,6 +75,8 @@ public final class GeneratedMod {
         character.CharacterService.registerRanker("jogo",character.jogo.JogoCombat::rank);
         character.CharacterCasting.registerCooldownScale("jogo",pl->character.jogo.JogoCombat.inDomain(pl)?0.5:1.0);
         MinecraftForge.EVENT_BUS.register(character.jogo.JogoCombat.class);
+        character.domainking.DomainKingCombat.register();
+        MinecraftForge.EVENT_BUS.register(character.domainking.DomainKingCombat.class);
         MinecraftForge.EVENT_BUS.register(NpcCurse.class);
         MinecraftForge.EVENT_BUS.addListener((TickEvent.ServerTickEvent e)->{if(e.phase==TickEvent.Phase.END)NpcBridge.tick();});
         character.CharacterCasting.registerNpcProvider(JogoNpcEntity.class,(e,skill)->PlayerSkillBridge.cast(character.CharacterCasting.caster(e),"jogo",skill));

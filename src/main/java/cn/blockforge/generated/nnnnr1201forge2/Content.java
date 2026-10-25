@@ -42,6 +42,33 @@ public final class Content {
         ()->EntityType.Builder.of(ChosoEntity::new,MobCategory.CREATURE).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("sukuna:choso"));
     public static final RegistryObject<Item> CHOSO_EGG=ITEMS.register("choso_spawn_egg",
         ()->new net.minecraftforge.common.ForgeSpawnEggItem(CHOSO,0x2A1030,0x8C1E3A,new Item.Properties()));
+    /** 咒具·游云：三节棍，伤害 18，右键横扫 10 格。 */
+    public static final RegistryObject<Item> YUYUN=ITEMS.register("yuyun",()->new net.minecraft.world.item.SwordItem(
+            net.minecraft.world.item.Tiers.IRON,15,-2.4f,new Item.Properties().stacksTo(1).rarity(Rarity.RARE)){
+        @Override public InteractionResultHolder<ItemStack> use(Level level,Player player,InteractionHand hand){
+            ItemStack stack=player.getItemInHand(hand);
+            if(!level.isClientSide&&player instanceof ServerPlayer sp)yuyunSweep(sp);
+            return InteractionResultHolder.sidedSuccess(stack,level.isClientSide);
+        }
+    });
+    /** 游云横扫：正前方 10 格内敌人，各 18 点伤害。 */
+    public static void yuyunSweep(ServerPlayer sp){
+        Vec3 look=sp.getLookAngle();
+        Network.send(sp.serverLevel(),new Network.Effect(0,sp.getId(),sp.getEyePosition(),look,10,10,0));
+        int hits=0;
+        for(var target:sp.serverLevel().getEntitiesOfClass(LivingEntity.class,
+                sp.getBoundingBox().inflate(10),e->e!=sp&&e.isAlive()&&!e.isSpectator()&&CombatSettings.canHit(sp,e))){
+            if(target.position().distanceToSqr(sp.position())>100)continue;
+            if(look.dot(target.position().add(0,target.getBbHeight()*0.5,0).subtract(sp.getEyePosition()).normalize())<0.15)continue;
+            AttackTypes.mark(AttackTypes.MAGIC);
+            try{CombatSettings.hurt(sp,target,sp.damageSources().playerAttack(sp),18f);}
+            finally{AttackTypes.clear();}
+            hits++;
+        }
+        sp.sendSystemMessage(net.minecraft.network.chat.Component.literal(hits>0?"游云 · 抡中 "+hits+" 个目标":"游云 · 10 格内前方没有目标"));
+        sp.serverLevel().playSound(null,sp.blockPosition(),net.minecraft.sounds.SoundEvents.TRIDENT_HIT,net.minecraft.sounds.SoundSource.PLAYERS,1.1f,1.1f);
+    }
+
     /** 剑「屠坐魔」：基础伤害 5，对亡灵造成双倍伤害。 */
     public static final RegistryObject<Item> SLAUGHTER_DEMON=ITEMS.register("slaughter_demon",()->new net.minecraft.world.item.SwordItem(
             net.minecraft.world.item.Tiers.IRON,2,-2.4f,new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
@@ -153,7 +180,7 @@ public final class Content {
     public static final RegistryObject<Item> LOW_CURSE_EGG=ITEMS.register("low_curse_spawn_egg",()->new net.minecraftforge.common.ForgeSpawnEggItem(LOW_CURSE,0x141414,0x4a4a55,new Item.Properties()));
     public static void init(IEventBus bus){ITEMS.register(bus);ENTITIES.register(bus);bus.addListener(Content::attributes);}
     private static void attributes(EntityAttributeCreationEvent e){e.put(DAITIAN.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,200).add(Attributes.MOVEMENT_SPEED,0.26).add(Attributes.ATTACK_DAMAGE,5).add(Attributes.FOLLOW_RANGE,32).add(Attributes.KNOCKBACK_RESISTANCE,0.4).build());e.put(BUDDHA.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,5000).add(Attributes.MOVEMENT_SPEED,0.24).add(Attributes.ATTACK_DAMAGE,10).add(Attributes.FOLLOW_RANGE,64).add(Attributes.KNOCKBACK_RESISTANCE,0.9).build());e.put(PARASITE.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,12).add(Attributes.MOVEMENT_SPEED,0.32).add(Attributes.ATTACK_DAMAGE,2).add(Attributes.FOLLOW_RANGE,48).build());e.put(MOTHER.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,160).add(Attributes.MOVEMENT_SPEED,0.23).add(Attributes.ATTACK_DAMAGE,12).add(Attributes.FOLLOW_RANGE,48).add(Attributes.KNOCKBACK_RESISTANCE,0.8).build());e.put(BROKEN_MAHITO.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,20000).add(Attributes.MOVEMENT_SPEED,0.34).add(Attributes.ATTACK_DAMAGE,40).add(Attributes.FOLLOW_RANGE,64).add(Attributes.ARMOR,20).add(Attributes.KNOCKBACK_RESISTANCE,0.55).build());e.put(MAHITO_LIMB.get(),MahitoLimbEntity.createAttributes());e.put(CHOSO.get(),ChosoEntity.createAttributes().build());e.put(GETO.get(),GetoEntity.createAttributes().build());e.put(LOW_CURSE.get(),LowCurseEntity.createAttributes().build());e.put(RIKA.get(),RikaEntity.createAttributes().build());e.put(OBSERVER.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,1).add(Attributes.MOVEMENT_SPEED,0).add(Attributes.FOLLOW_RANGE,64).add(Attributes.KNOCKBACK_RESISTANCE,1).build());}
-    private static void tabs(BuildCreativeModeTabContentsEvent e){if(e.getTabKey()==CreativeModeTabs.COMBAT){e.accept(FINGER.get());e.accept(BODY.get());e.accept(ORB.get());e.accept(RELIC.get());e.accept(SEAL.get());e.accept(INCENSE.get());e.accept(EGG.get());e.accept(IDLE_TRANSFIGURATION_CURSE.get());e.accept(MAHITO_FINGER.get());e.accept(YUJI_FAMILY_PHOTO.get());e.accept(CHAPTER_CHEAT.get());e.accept(BLACK_ROPE.get());e.accept(SLAUGHTER_DEMON.get());e.accept(CHOSO_EGG.get());e.accept(SOUL_SEPARATION_NEEDLE.get());e.accept(EternalLove.TRUE_FALSE.get());}}
+    private static void tabs(BuildCreativeModeTabContentsEvent e){if(e.getTabKey()==CreativeModeTabs.COMBAT){e.accept(FINGER.get());e.accept(BODY.get());e.accept(ORB.get());e.accept(RELIC.get());e.accept(SEAL.get());e.accept(INCENSE.get());e.accept(EGG.get());e.accept(IDLE_TRANSFIGURATION_CURSE.get());e.accept(MAHITO_FINGER.get());e.accept(YUJI_FAMILY_PHOTO.get());e.accept(CHAPTER_CHEAT.get());e.accept(BLACK_ROPE.get());e.accept(SLAUGHTER_DEMON.get());e.accept(YUYUN.get());e.accept(CHOSO_EGG.get());e.accept(SOUL_SEPARATION_NEEDLE.get());e.accept(EternalLove.TRUE_FALSE.get());}}
     private static class GrowthFood extends Item {
         final boolean body;GrowthFood(boolean body){super(new Properties().stacksTo(16).rarity(Rarity.EPIC).fireResistant().food(new FoodProperties.Builder().nutrition(1).saturationMod(0).alwaysEat().build()));this.body=body;}
         private boolean allowed(Player p){return character.CharacterService.permits(p,character.CharacterDefinition.Family.SHRINE)&&!(Uraume.unlocked(p)&&!Journey.unlocked(p))&&(body?Curse.fingers(p)>=20&&!Curse.awakened(p):Curse.fingers(p)<20);}

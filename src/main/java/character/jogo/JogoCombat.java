@@ -55,7 +55,7 @@ public final class JogoCombat {
     /** 盖棺铁围山：封闭式火山领域，持续 30 秒，界内敌人被高温烘烤、漏壶冷却减半。 */
     private record Domain(ServerPlayer owner, Vec3 center, int end, double radius, Map<UUID,Vec3> captives) {}
     private static final List<Domain> DOMAINS=new ArrayList<>();
-    public static final int DOMAIN_RADIUS=50, DOMAIN_LIFE=600;   // 用户指定：半径 100 格
+    public static final int DOMAIN_RADIUS=27, DOMAIN_LIFE=600;   // 用户指定：半径 100 格
     private static final double DOMAIN_INSET=0.35;               // 碰撞箱留出的安全余量
 
     /** 章节进度：一章=泡岩浆满 30 秒；二章=盖棺铁围山坚持 60 秒。 */

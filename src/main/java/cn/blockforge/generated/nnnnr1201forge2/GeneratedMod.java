@@ -75,6 +75,9 @@ public final class GeneratedMod {
         character.CharacterCasting.registerCooldownScale("jogo",pl->character.jogo.JogoCombat.inDomain(pl)?0.5:1.0);
         MinecraftForge.EVENT_BUS.register(character.jogo.JogoCombat.class);
         MinecraftForge.EVENT_BUS.register(NpcCurse.class);
+        character.CharacterCasting.registerNpcProvider(JogoNpcEntity.class,(e,skill)->NpcSkillCast.cast(NpcSkillCast.Caster.of(e,"jogo"),skill,e instanceof net.minecraft.world.entity.Mob m?m.getTarget():null));
+        character.CharacterCasting.registerNpcProvider(ChosoEntity.class,(e,skill)->NpcSkillCast.cast(NpcSkillCast.Caster.of(e,"choso"),skill,e instanceof net.minecraft.world.entity.Mob m?m.getTarget():null));
+        character.CharacterCasting.registerNpcProvider(UraumeNpcEntity.class,(e,skill)->NpcSkillCast.cast(NpcSkillCast.Caster.of(e,"uraume"),skill,e instanceof net.minecraft.world.entity.Mob m?m.getTarget():null));
         MinecraftForge.EVENT_BUS.register(character.toji.TojiCombat.class);
         Network.registerDrawing();
         MinecraftForge.EVENT_BUS.register(SlashForms.class);

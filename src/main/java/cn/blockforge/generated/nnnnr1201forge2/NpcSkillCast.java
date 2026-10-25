@@ -18,7 +18,8 @@ public final class NpcSkillCast {
 
     /** 玩家/NPC 通用施法者上下文（后续把 CharacterCasting 的 ServerPlayer 参数替换成它）。 */
     public record Caster(Mob body, String character, int rank) {
-        public static Caster of(Mob mob, String character) {
+        public static Caster of(LivingEntity npc, String character) {
+            if (!(npc instanceof Mob mob)) return new Caster(null, character, 1);
             return new Caster(mob, character, Math.max(1, (int) (mob.getMaxHealth() / 300.0)));
         }
     }

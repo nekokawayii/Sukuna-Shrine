@@ -61,7 +61,7 @@ public class UraumeNpcEntity extends Monster {
         long now = world.getGameTime();
         if (now < shotAt) return;
         shotAt = (int) now + 50;
-        if (!NpcSkillCast.cast(NpcSkillCast.Caster.of(this, "uraume"), (skillIndex++ & 1) == 0 ? BranchRules.FROST : BranchRules.ICEFALL, target)) { shotAt = (int) now + 20; return; }
+        if (!character.CharacterCasting.castFor(this, (skillIndex++ & 1) == 0 ? BranchRules.FROST : BranchRules.ICEFALL)) { shotAt = (int) now + 20; return; }
         Vec3 eye = getEyePosition();
         Vec3 to = target.getBoundingBox().getCenter();
         Vec3 dir = to.subtract(eye).normalize();

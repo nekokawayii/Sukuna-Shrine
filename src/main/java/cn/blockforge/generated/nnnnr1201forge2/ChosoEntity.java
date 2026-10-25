@@ -187,6 +187,7 @@ public class ChosoEntity extends PathfinderMob {
 
     private void fx(ServerLevel world, Vec3 at, Vec3 dir, double size, int life) {
         Network.send(world, new Network.Effect(412, getId(), at, dir, (float) size, life, 0));
+        Network.send(world, new Network.Effect(0, getId(), at, dir, (float) size, life, 0));
     }
 
     private java.util.List<LivingEntity> near(double radius) { return near(position(), radius); }
@@ -199,7 +200,7 @@ public class ChosoEntity extends PathfinderMob {
 
     private void hurt(LivingEntity target, float amount) {
         AttackTypes.mark(AttackTypes.MAGIC);
-        try { target.hurt(damageSources().indirectMagic(this, this), amount); }
+        try { target.hurt(damageSources().mobAttack(this), amount); }
         finally { AttackTypes.clear(); }
     }
 }

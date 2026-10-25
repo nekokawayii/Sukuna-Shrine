@@ -63,7 +63,7 @@ public class ChosoEntity extends PathfinderMob {
         super.tick();
         if (level().isClientSide) return;
         LivingEntity target = getTarget();
-        if (target == null || !target.isAlive()) { skillIndex = 0; return; }
+        if (target == null || !target.isAlive()) return;
         long now = level().getGameTime();
         if (now < shotAt) return;
         if (distanceToSqr(target) > 32 * 32) return;
@@ -90,6 +90,7 @@ public class ChosoEntity extends PathfinderMob {
             case 0 -> { // 赤缚：定身
                 target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 6, false, false));
                 target.setDeltaMovement(0, 0, 0); target.hurtMarked = true;
+                hurt(target, 6f);
                 fx(world, to, Vec3.ZERO, 3, 10);
             }
             case 1 -> { fx(world, position(), Vec3.ZERO, 6, 14); for (var t : near(6)) hurt(t, 12f); }        // 苅祓

@@ -9,7 +9,7 @@ public final class DomainKingStyle {
     public static CharacterConfig config() {
         return new CharacterConfig(
             new Wheel("领域王", "万域", 0xE0160A24, 0xE02A0F3C, 0xE06A2FD0, 0xB03A1370, 0xFFF0D0FF),
-            new Stats(999999999.0, 0, 0, 0, 9999),   // 咒力上限近乎无限 + 每秒回咒
+            new Stats(1000000.0, 0, 0, 0, 9999),   // 咒力上限近乎无限 + 每秒回咒
             Stats.ZERO,
             DomainKingSkills.all(),
             Map.of(DomainKingSkills.JOGO_DOMAIN, 0, DomainKingSkills.VOID, 0,

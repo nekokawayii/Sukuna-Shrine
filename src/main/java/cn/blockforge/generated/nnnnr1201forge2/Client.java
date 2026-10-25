@@ -337,7 +337,7 @@ public final class Client {
         g.fill(7,h-102,215,h-78,0xCC140E20);
         g.fill(10,h-84,212,h-80,0xFF342639);
         g.fill(10,h-84,10+(int)(202*progress.energy()/Math.max(1,progress.maximum())),h-80,progress.awakened()?0xFFE23455:0xFFAF66EB);
-        g.drawString(mc.font,(AuthorityClient.enabled()?"军团咒力池 ":"咒力 ")+(progress.maximum()>1.0e9?"∞":(int)progress.energy()+" / "+(int)progress.maximum())+(progress.sukuna()?"  手指 "+progress.fingers()+"/20":"  冰鱼 "+progress.iceFish()),12,h-97,0xFFEED5FF);
+        g.drawString(mc.font,(AuthorityClient.enabled()?"军团咒力池 ":"咒力 ")+(progress.maximum()>=999999.0?"∞":(int)progress.energy()+" / "+(int)progress.maximum())+(progress.sukuna()?"  手指 "+progress.fingers()+"/20":"  冰鱼 "+progress.iceFish()),12,h-97,0xFFEED5FF);
         if(voidStage())g.drawString(mc.font,progress.pureLandVictory()?"蓝色虚空术式 · 生命+200 · 普攻+20 · 术式+200":"虚空术式 · 解/捌造裂隙 → 灶点燃 → 开引爆",12,h-115,progress.pureLandVictory()?0xFF53CFFF:0xFFBE7CEF);
         else if(progress.awakened())g.drawString(mc.font,"肉体融合 · 解长按连发 · 世界斩在分支中选择",12,h-115,0xFFFF5774);
         if(progress.amplification())g.drawString(mc.font,"领域展延 · 每秒 "+BalanceRules.number(DomainAmplification.COST_PER_SECOND)+" 咒力 · 术式穿透无下限 · "+AMPLIFY.getTranslatedKeyMessage().getString()+" 关闭",12,h-160,0xFF9FE8FF);

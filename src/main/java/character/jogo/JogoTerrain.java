@@ -12,7 +12,7 @@ import java.util.*;
 /** 盖棺铁围山的地面变化：领域内**所有**地面列换成岩浆 / 岩浆块 / 原石，逐块记录原状态以便还原。 */
 public final class JogoTerrain {
     private static final int MAX_BLOCKS=90000;   // 半径 100 的两层地面约 6.3 万块
-    private static final int PER_TICK=4000;      // 分批施工，避免单刻卡死
+    private static final int PER_TICK=8000;      // 分批施工，避免单刻卡死
     private record Change(BlockPos pos,BlockState state) {}
     private static final Map<UUID,LinkedHashMap<BlockPos,BlockState>> JOURNAL=new HashMap<>();
     private static final Map<UUID,ArrayDeque<Change>> QUEUE=new HashMap<>();
@@ -89,7 +89,8 @@ public final class JogoTerrain {
                 BlockPos pos=change.pos();
                 if(pos.getY()<level.getMinBuildHeight()+1)continue;
                 BlockState old=level.getBlockState(pos);
-                if(old.isAir()||old.hasBlockEntity()||old.getDestroySpeed(level,pos)<0)continue;
+                if(old.hasBlockEntity()||old.getDestroySpeed(level,pos)<0)continue;   // 只跳过容器与基岩类
+                if(old==change.state())continue;
                 if(level.setBlock(pos,change.state(),2))journal.put(pos,old);
                 done++;
             }

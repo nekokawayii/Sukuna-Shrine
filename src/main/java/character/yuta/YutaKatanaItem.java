@@ -69,12 +69,6 @@ public final class YutaKatanaItem extends SwordItem {
         List<Integer> pool = new ArrayList<>(copies);
         int picked = pool.get(p.getRandom().nextInt(pool.size()));
 
-        // 剑释放同样要付咒力（借用路径原本跳过了扣费）。
-        int cost = 300;
-        if (!cn.blockforge.generated.nnnnr1201forge2.Curse.spend(p, cost)) {
-            p.displayClientMessage(Component.literal("咒力不足（需要 " + cost + "）"), true);
-            return InteractionResultHolder.fail(stack);
-        }
         YutaBoost.activate(p, CharacterService.rank(p), CAST_MULTIPLIER);
         CharacterCasting.cast(p, picked);
         // 刀报废 + 该术式从轮盘消失（需要重新掠夺）。

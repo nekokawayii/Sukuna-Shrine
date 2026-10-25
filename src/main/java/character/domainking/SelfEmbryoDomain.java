@@ -25,7 +25,7 @@ import java.util.*;
  */
 public final class SelfEmbryoDomain {
     public static final double RADIUS = 30;          // 领域半径（用户指定）
-    public static final int GRID_SPACING = 5;        // 网格间隔
+    public static final int GRID_SPACING = 15;       // 网格间隔（用户指定）
     public static final int GRID_WIDTH = 2;          // 网格宽度
     public static final int LIFE_TICKS = 600;        // 30 秒
     private static final int PER_TICK = 8000;        // 每刻施工方块数上限
@@ -71,19 +71,19 @@ public final class SelfEmbryoDomain {
         for (int dx = -ri; dx <= ri; dx++) for (int dz = -ri; dz <= ri; dz++) for (int dy = -1; dy <= ri; dy++) {
             double d2 = dx * dx + dy * dy + dz * dz;
             BlockPos pos = c.offset(dx, dy, dz);
+            int ring = (c.getY() + ri) - pos.getY();   // 从头顶往下逐层
             if (dy == -1 && dx * dx + dz * dz <= r2) {
-                int ring = (int) Math.ceil(Math.sqrt(dx * dx + dz * dz));
                 works.add(new Work(ring, 1, pos));
                 // 最外圈地板不放光源：只有水平距离在 (R-1) 以内的地板才叠光源
                 if (dx * dx + dz * dz <= in2) works.add(new Work(ring, 2, pos.above()));
                 continue;
             }
             if (dy >= 0 && d2 <= in2) {
-                works.add(new Work((int) Math.ceil(Math.sqrt(d2)), 3, pos));   // 内部清理（最后）
+                works.add(new Work(ring, 3, pos));   // 内部清理由上往下
                 continue;
             }
             if (dy >= 0 && d2 > in2 && d2 <= r2) {
-                works.add(new Work((int) Math.ceil(Math.sqrt(d2)), 0, pos));   // 球壳优先
+                works.add(new Work(ring, 0, pos));   // 球壳优先
             }
         }
         works.sort(Comparator.<Work>comparingInt(Work::ring).thenComparingInt(Work::type));

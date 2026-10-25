@@ -37,7 +37,11 @@ public final class YutaDomain {
     /** 里香在领域内不断续命，保证常驻。 */
     private static final int RIKA_KEEPALIVE = 40;
 
-    private record Active(long start) {}
+    private static final class Active {
+        final long start;
+        boolean mid, ost;
+        Active(long start) { this.start = start; }
+    }
     private static final Map<UUID, Active> ACTIVE = new HashMap<>();
 
     public static boolean active(net.minecraft.world.entity.player.Player p) {
@@ -55,7 +59,7 @@ public final class YutaDomain {
             p.displayClientMessage(Component.literal("附近有容器（" + blocked + "），领域无法在此展开"), false);
             return;
         }
-        ACTIVE.put(p.getUUID(), new Active(p.serverLevel().getGameTime()));
+        ACTIVE.put(p.getUUID(), new Active(p.server.overworld().getGameTime()));
         YutaTerrain.begin(p, RADIUS);
         play(p, "sukuna:yuta_domain_start");
         ensureRika(p);
@@ -81,9 +85,10 @@ public final class YutaDomain {
                 YutaTerrain.restore(p);
                 it.remove(); continue;
             }
-            long age = now - entry.getValue().start();
-            if (age == MID_TICK) play(p, "sukuna:yuta_domain_mid");
-            if (age == OST_TICK) play(p, "sukuna:yuta_domain_ost");
+            long age = now - entry.getValue().start;
+            var state = entry.getValue();
+            if (!state.mid && age >= MID_TICK) { play(p, "sukuna:yuta_domain_mid"); state.mid = true; }
+            if (!state.ost && age >= OST_TICK) { play(p, "sukuna:yuta_domain_ost"); state.ost = true; }
 
             // 每秒扣一次咒力；不够就自动关闭。
             if (age > 0 && age % 20 == 0 && !Curse.spend(p, DRAIN_PER_SECOND)) {

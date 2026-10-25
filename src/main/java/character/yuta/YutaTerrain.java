@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Blocks;
@@ -17,15 +19,14 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 
 /**
  * 「真赝相爱」的封闭领域地形（照《Cursed Fate 封闭式领域制作方法》实现）。
- * <p>流程：固定锚点 → 记录原方块 → 分批施工（先逐环铺地板，再自下而上合球壳并清空内部）→ 结束时逆序还原。
- * <p>只记录**非空气**方块，大幅降低内存与还原耗时；每刻有写入预算，避免一次写完造成卡顿。
- * <p>本类只管地形；领域状态、音效、耗蓝在 {@link YutaDomain}。
+ * <p><b>施工方式：开局一次性算出完整清单，再按刻消费。</b>不使用"游标逐环/逐层"的方式，
+ * 因此不会出现预算耗尽时跳环、缺层、残留的问题。
+ * <p>顺序：地板（由内向外逐环）→ 贴 nbt 地面图案 → 立坟 → 自下而上合黑混凝土球壳并清空内部。
+ * <p>每个被改动的方块都记录原状态，结束/死亡/掉线时逆序还原。
  */
 public final class YutaTerrain {
-    /** 每刻最多写入的方块数。 */
-    private static final int BATCH = 2500;
-    /** 地板每刻铺几环（越大地板扩张越快）。 */
-    private static final int FLOOR_RINGS_PER_TICK = 2;
+    /** 每刻最多改动的方块数（约 1200 → 全领域 4 万块约 33 刻 ≈ 1.7 秒）。 */
+    private static final int BATCH = 1200;
 
     private record Rec(BlockPos pos, BlockState state) {}
 
@@ -35,9 +36,12 @@ public final class YutaTerrain {
         final BlockPos center;
         final int radius;
         final List<Rec> saved = new ArrayList<>();
-        int floorR = 0;
-        boolean floorDone;
-        int y = 1;
+        /** 施工清单（state 为目标状态）。 */
+        final List<Rec> plan = new ArrayList<>();
+        int floorEnd;
+        int cursor;
+        boolean extrasDone;
+        boolean finished;
 
         Job(UUID owner, ServerLevel level, BlockPos center, int radius) {
             this.owner = owner;
@@ -49,19 +53,131 @@ public final class YutaTerrain {
 
     private static final Map<UUID, Job> JOBS = new HashMap<>();
 
-    /** 以玩家为中心展开：半径、锚点固定，之后不再跟随玩家移动。 */
+    public static boolean active(ServerPlayer p) { return p != null && JOBS.containsKey(p.getUUID()); }
+
     public static void begin(ServerPlayer p, int radius) {
         if (!(p.level() instanceof ServerLevel level)) return;
         Job old = JOBS.remove(p.getUUID());
         if (old != null) restore(old);
-        BlockPos center = p.blockPosition();
-        JOBS.put(p.getUUID(), new Job(p.getUUID(), level, center, radius));
-        p.displayClientMessage(net.minecraft.network.chat.Component.literal("领域展开：清场记录中…"), false);
+        Job job = new Job(p.getUUID(), level, p.blockPosition(), radius);
+        buildPlan(job);
+        JOBS.put(p.getUUID(), job);
     }
 
-    public static boolean active(ServerPlayer p) { return p != null && JOBS.containsKey(p.getUUID()); }
+    /** 一次性算出完整清单：先地板，再把球壳与清空排在其后。 */
+    private static void buildPlan(Job job) {
+        int R = job.radius;
+        BlockPos c = job.center;
 
-    /** 结束并还原该玩家领地形的所有方块（幂等）。 */
+        // ① 地板：由内向外逐环，纯内存计算
+        for (int r = 0; r <= R; r++) {
+            for (int x = -r; x <= r; x++) {
+                for (int z = -r; z <= r; z++) {
+                    int d2 = x * x + z * z;
+                    if (d2 > r * r) continue;
+                    if (r > 0 && d2 <= (r - 1) * (r - 1)) continue;
+                    job.plan.add(new Rec(c.offset(x, -1, z), Blocks.STONE.defaultBlockState()));
+                }
+            }
+        }
+        job.floorEnd = job.plan.size();
+
+        // ② 球壳（黑混凝土）+ 内部清空：自下而上
+        for (int y = 0; y <= R; y++) {
+            int lr = (int) Math.floor(Math.sqrt((double) R * R - (double) y * y));
+            int inner = Math.max(0, lr - 1);
+            for (int x = -lr; x <= lr; x++) {
+                for (int z = -lr; z <= lr; z++) {
+                    int d2 = x * x + z * z;
+                    if (d2 > lr * lr) continue;
+                    BlockPos pos = c.offset(x, y, z);
+                    if (d2 > inner * inner) {
+                        job.plan.add(new Rec(pos, Blocks.BLACK_CONCRETE.defaultBlockState()));
+                    } else if (!job.level.getBlockState(pos).isAir()) {
+                        job.plan.add(new Rec(pos, Blocks.AIR.defaultBlockState()));
+                    }
+                }
+            }
+        }
+    }
+
+    public static void tick(MinecraftServer server) {
+        if (JOBS.isEmpty()) return;
+        for (Iterator<Job> it = JOBS.values().iterator(); it.hasNext(); ) {
+            Job job = it.next();
+            ServerPlayer p = server.getPlayerList().getPlayer(job.owner);
+            if (p == null || !p.isAlive() || p.level() != job.level) {
+                restore(job);
+                it.remove();
+                continue;
+            }
+            if (job.finished) continue;
+
+            // 地板铺完 → 贴图案 + 立坟（各记录原方块）
+            if (!job.extrasDone && job.cursor >= job.floorEnd) {
+                placePattern(job);
+                placeGraves(job);
+                job.extrasDone = true;
+                p.displayClientMessage(Component.literal("地板完成 · 坟头已立 " + YutaCopies.copies(p).size() + " 座"), false);
+                continue;
+            }
+
+            int budget = BATCH;
+            while (job.cursor < job.plan.size() && budget-- > 0) {
+                apply(job, job.plan.get(job.cursor++));
+            }
+            if (job.cursor >= job.plan.size()) {
+                job.finished = true;
+                p.displayClientMessage(Component.literal("领域成型 · 真赝相爱"), false);
+            }
+        }
+    }
+
+    /** 贴 resources/data/sukuna/structures/zhenyanxiangai.nbt；只把真正变化的方块写入记录。 */
+    private static void placePattern(Job job) {
+        var manager = job.level.getServer().getStructureManager();
+        var template = manager.get(new ResourceLocation("sukuna", "zhenyanxiangai"));
+        if (template.isEmpty()) return;
+        StructureTemplate t = template.get();
+        net.minecraft.core.Vec3i size = t.getSize();
+        BlockPos origin = job.center.offset(-size.getX() / 2, 0, -size.getZ() / 2);
+
+        // 先快照模板影响范围，再放置，最后只记录发生了变化的格子（避免上万个空气记录）。
+        Map<BlockPos, BlockState> before = new HashMap<>();
+        for (int x = 0; x < size.getX(); x++)
+            for (int y = 0; y < size.getY(); y++)
+                for (int z = 0; z < size.getZ(); z++) {
+                    BlockPos pos = origin.offset(x, y, z);
+                    before.put(pos, job.level.getBlockState(pos));
+                }
+        var settings = new StructurePlaceSettings().setIgnoreEntities(true).setKnownShape(true);
+        t.placeInWorld(job.level, origin, origin, settings, job.level.random, 3);
+        for (var e : before.entrySet()) {
+            BlockState now = job.level.getBlockState(e.getKey());
+            if (now != e.getValue()) job.saved.add(new Rec(e.getKey(), e.getValue()));
+        }
+    }
+
+    /** 按「已复制术式数量」在领域里摆坟头。 */
+    private static void placeGraves(Job job) {
+        ServerPlayer owner = job.level.getServer().getPlayerList().getPlayer(job.owner);
+        int count = owner == null ? 0 : YutaCopies.copies(owner).size();
+        if (count <= 0) return;
+        BlockState grave = cn.blockforge.generated.nnnnr1201forge2.Content.YUTA_GRAVE.get().defaultBlockState();
+        for (int i = 0; i < count; i++) {
+            double a = Math.PI * 2 * i / count;
+            BlockPos pos = job.center.offset((int) Math.round(Math.cos(a) * 12), 0, (int) Math.round(Math.sin(a) * 12));
+            apply(job, new Rec(pos, grave));
+        }
+    }
+
+    private static void apply(Job job, Rec e) {
+        BlockState now = job.level.getBlockState(e.pos());
+        if (now == e.state()) return;
+        job.saved.add(new Rec(e.pos(), now));
+        job.level.setBlock(e.pos(), e.state(), 3); // 3 = 更新邻居 + 同步客户端
+    }
+
     public static void restore(ServerPlayer p) {
         if (p == null) return;
         Job job = JOBS.remove(p.getUUID());
@@ -69,121 +185,12 @@ public final class YutaTerrain {
     }
 
     private static void restore(Job job) {
-        // 逆序回填：后写的先还原，避免同一格被多次覆盖时取错值。
         for (int i = job.saved.size() - 1; i >= 0; i--) {
             Rec r = job.saved.get(i);
-            job.level.setBlock(r.pos(), r.state(), 2);
+            job.level.setBlock(r.pos(), r.state(), 3);
         }
         job.saved.clear();
-    }
-
-    /** 每个服务器刻调用一次，按预算推进施工。 */
-    public static void tick(net.minecraft.server.MinecraftServer server) {
-        if (JOBS.isEmpty()) return;
-        for (Iterator<Job> it = JOBS.values().iterator(); it.hasNext(); ) {
-            Job job = it.next();
-            ServerPlayer p = server.getPlayerList().getPlayer(job.owner);
-            if (p == null || !p.isAlive()) {
-                // 掉线/死亡：直接还原，避免残留半成品领域。
-                restore(job);
-                it.remove();
-                continue;
-            }
-            if (job.level != p.level()) {
-                restore(job);
-                it.remove();
-                continue;
-            }
-            if (!job.floorDone) buildFloor(job);
-            else buildShell(job);
-        }
-    }
-
-    /** 第一阶段：地板逐环铺开（先原石，铺满后贴 nbt 图案）。 */
-    private static void buildFloor(Job job) {
-        int budget = BATCH;
-        for (int ring = 0; ring < FLOOR_RINGS_PER_TICK && job.floorR <= job.radius; ring++, job.floorR++) {
-            int r = job.floorR;
-            for (int x = -r; x <= r; x++) {
-                for (int z = -r; z <= r; z++) {
-                    if (x * x + z * z > r * r) continue;
-                    // 只处理当前这一环，避免重复写内圈
-                    if (r > 0 && x * x + z * z <= (r - 1) * (r - 1)) continue;
-                    if (budget-- <= 0) return;
-                    set(job, job.center.offset(x, -1, z), Blocks.STONE.defaultBlockState());
-                }
-            }
-        }
-        if (job.floorR > job.radius && !job.floorDone) {
-            job.floorDone = true;
-            placePattern(job);
-            placeGraves(job);
-        }
-    }
-
-    /** 把 resources/data/sukuna/structures/zhenyanxiangai.nbt 贴在地板中心。 */
-    private static void placePattern(Job job) {
-        var manager = job.level.getServer().getStructureManager();
-        var template = manager.get(new ResourceLocation("sukuna", "zhenyanxiangai"));
-        if (template.isEmpty()) return;
-        StructureTemplate t = template.get();
-        BlockPos origin = job.center.offset(-t.getSize().getX() / 2, 0, -t.getSize().getZ() / 2);
-        var settings = new StructurePlaceSettings().setIgnoreEntities(true).setKnownShape(true);
-        t.placeInWorld(job.level, origin, origin, settings, job.level.random, 2);
-    }
-
-    /** 按「已复制术式数量」在领域里摆对应数量的坟头，单次领域不刷新。 */
-    private static void placeGraves(Job job) {
-        ServerPlayer owner = job.level.getServer().getPlayerList().getPlayer(job.owner);
-        int count = owner == null ? 0 : YutaCopies.copies(owner).size();
-        if (count <= 0) return;
-        for (int i = 0; i < count; i++) {
-            double a = Math.PI * 2 * i / count;
-            int x = (int) Math.round(Math.cos(a) * 12);
-            int z = (int) Math.round(Math.sin(a) * 12);
-            set(job, job.center.offset(x, 0, z),
-                cn.blockforge.generated.nnnnr1201forge2.Content.YUTA_GRAVE.get().defaultBlockState());
-        }
-        if (owner != null) owner.displayClientMessage(
-            net.minecraft.network.chat.Component.literal("坟头已立：" + count + " 座（对应你已复制的术式）"), false);
-    }
-
-    /** 第二阶段：自下而上合球壳，并把内部清空（只处理非空气，减少记录量）。 */
-    private static void buildShell(Job job) {
-        if (job.y > job.radius) return;
-        int y = job.y;
-        int layerR = (int) Math.floor(Math.sqrt((double) job.radius * job.radius - (double) y * y));
-            int budget = BATCH;
-        for (int x = -layerR; x <= layerR; x++) {
-            for (int z = -layerR; z <= layerR; z++) {
-                int d2 = x * x + z * z;
-                if (d2 > layerR * layerR) continue;
-                // 最外环：黑混凝土球壳
-                boolean shell = d2 > (layerR - 1) * (layerR - 1);
-                if (shell) {
-                    if (budget-- <= 0) return;
-                    set(job, job.center.offset(x, y, z), Blocks.BLACK_CONCRETE.defaultBlockState());
-                } else {
-                    // 内部：只清非空气，且不做记录的话无法还原，所以同样走 set()
-                    if (budget <= 0) return;
-                    BlockPos pos = job.center.offset(x, y, z);
-                    BlockState now = job.level.getBlockState(pos);
-                    if (!now.isAir()) {
-                        budget--;
-                        set(job, pos, Blocks.AIR.defaultBlockState());
-                    }
-                }
-            }
-        }
-        job.y++;
-    }
-
-    /** 记录一次原方块（只记第一次），然后写入新状态。 */
-    private static void set(Job job, BlockPos pos, BlockState state) {
-        BlockState now = job.level.getBlockState(pos);
-        if (now == state) return;
-        job.saved.add(new Rec(pos.immutable(), now));
-        job.level.setBlock(pos, state, 2);
+        job.plan.clear();
     }
 
     private YutaTerrain() {}

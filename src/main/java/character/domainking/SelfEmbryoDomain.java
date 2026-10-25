@@ -88,7 +88,7 @@ public final class SelfEmbryoDomain {
         }
         works.sort(Comparator.<Work>comparingInt(Work::ring).thenComparingInt(Work::type));
         for (Work w : works) if (build.blocks.size() < MAX_BLOCKS) build.blocks.add(w.pos());
-        build.rate = Math.max(1, Math.min(PER_TICK, (build.blocks.size() + BUILD_TICKS - 1) / BUILD_TICKS));
+        build.rate = Math.max(1, (build.blocks.size() + BUILD_TICKS - 1) / BUILD_TICKS);   // 严格 3 秒铺完
     }
 
     private static BlockState shellState(BlockPos pos, BlockPos c) {
@@ -152,6 +152,7 @@ public final class SelfEmbryoDomain {
             int done = 0;
             while (build.cursor < build.blocks.size() && done < build.rate) {
                 BlockPos pos = build.blocks.get(build.cursor++);
+                done++;   // 跳过的方块也计入进度，保证整体仍是 3 秒
                 BlockState old = build.level.getBlockState(pos);
                 if (build.level.getBlockEntity(pos) != null) continue;
                 if (old.getDestroySpeed(build.level, pos) < 0) continue;   // 基岩等不可破坏方块
@@ -176,7 +177,6 @@ public final class SelfEmbryoDomain {
                 if (old == target) continue;
                 build.journal.add(new Edit(pos.immutable(), old));
                 build.level.setBlock(pos, target, 2);
-                done++;
             }
         }
     }

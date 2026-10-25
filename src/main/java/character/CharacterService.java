@@ -30,11 +30,40 @@ public final class CharacterService {
     public static int rank(Player p) {
         var d=selected(p);if(d==null||d.family()==CharacterDefinition.Family.SHRINE)return 0;
         if(p instanceof ServerPlayer sp){var r=RANKERS.get(d.id());if(r!=null)return Math.max(0,Math.min(d.story().size(),r.rank(sp)));}
+        // 事件型个人线（如乙骨忧太）按已写入的事件标记计数，不再看累计击杀。
+        if(d.hasEvents()){int done=0;var data=Curse.data(p);for(var c:d.events())if(data.getBoolean("ChapterDone_"+c.id()))done++;return done;}
         return d.rank(Curse.data(p).getInt("CharacterKills"));
     }
-    public static CharacterConfig.Stats stats(Player p) { var d=selected(p);return d==null?CharacterConfig.Stats.ZERO:d.stats(rank(p)); }
+    public static CharacterConfig.Stats stats(Player p) {
+        var d=selected(p);if(d==null)return CharacterConfig.Stats.ZERO;
+        return d.hasEvents()?d.eventStats(rank(p)):d.stats(rank(p));
+    }
+    /** 事件章节是否已完成（存于该角色的存档段，切角色/重登都保留）。 */
+    public static boolean chapterDone(Player p,String chapterId){return Curse.data(p).getBoolean("ChapterDone_"+chapterId);}
+    /**
+     * 事件监听器完成一章时调用：写标记 → 重算属性 → 立刻发该章奖励 → 提示。
+     * 重复调用是安全的（标记已存在时直接返回）。
+     */
+    public static void markChapter(ServerPlayer p,String chapterId) {
+        var d=selected(p);if(d==null||!d.hasEvents())return;
+        if(chapterDone(p,chapterId))return;
+        Curse.data(p).putBoolean("ChapterDone_"+chapterId,true);
+        Curse.apply(p);TojiCombat.attributes(p);CharacterRewards.grant(p);Curse.sync(p);CharacterPackets.sync(p,true);
+        for(var c:d.events())if(c.id().equals(chapterId)){p.sendSystemMessage(Component.literal("个人线推进："+c.title()+" 完成。"));break;}
+        p.sendSystemMessage(Component.literal(guide(p)));
+    }
+    /** 事件型个人线的 J 键说明：显示每章真实条件与当前进度。 */
+    private static String eventGuide(Player p,CharacterDefinition d) {
+        int done=rank(p);
+        if(done>=d.events().size())return d.name()+" · 个人线完成 · 阶段"+done+" · 术式与肉体成长已生效";
+        var c=d.events().get(done);
+        String reward=c.grants().summary();
+        return d.name()+" · "+c.title()+" · "+c.goal()+(reward.isBlank()?" · 奖励：属性成长":" · 奖励："+reward);
+    }
     public static boolean allowsSkill(Player p,int skill) {
         var d=selected(p);if(d==null)return !CharacterSkill.custom(skill);
+        // 乙骨掠夺来的旧术式不在角色静态技能表里，按复制记录单独授权（施放时还会校验里香与单次次数）。
+        for(int id:character.yuta.YutaCopies.array(p))if(id==skill)return true;
         if(CharacterSkill.custom(skill))return d.config().skill(skill)!=null&&d.unlocked(skill,rank(p));
         if(!d.hasWheel())return false;
         if(d.family()==CharacterDefinition.Family.SHRINE)return !(skill>=22&&skill<=23)&&!(skill>=34&&skill<=42);
@@ -105,6 +134,7 @@ public final class CharacterService {
     public static String guide(Player p) {
         var d=selected(p);if(d==null)return "";
         if(d.family()==CharacterDefinition.Family.SHRINE)return "";
+        if(d.hasEvents())return eventGuide(p,d);
         int kills=Curse.data(p).getInt("CharacterKills"),rank=rank(p);
         if(rank>=d.story().size())return d.name()+" · 个人线完成 · 阶段"+rank+" · "+(toji(p)?"体术上限"+(int)TojiCombat.maximum(p):"术式与肉体成长已生效");
         var chapter=d.story().get(rank);
@@ -115,6 +145,14 @@ public final class CharacterService {
         var d=selected(p);if(d==null)return;
         p.sendSystemMessage(Component.literal(guide(p)));
         int rank=rank(p);
+        if(d.hasEvents()){
+            for(int i=0;i<d.events().size();i++){
+                var c=d.events().get(i);
+                String reward=c.grants().summary();
+                p.sendSystemMessage(Component.literal((i<rank?"✓ ":"○ ")+c.title()+"："+c.goal()+(reward.isBlank()?"":" → "+reward)));
+            }
+            return;
+        }
         for(int i=0;i<d.story().size();i++){
             var chapter=d.story().get(i);
             p.sendSystemMessage(Component.literal((i<rank?"✓ ":"○ ")+chapter.title()+"："+chapter.goal()+"（累计"+chapter.kills()+"） → "+d.rewards(i)));

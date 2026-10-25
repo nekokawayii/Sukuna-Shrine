@@ -19,6 +19,7 @@ public final class CharacterRegistry {
         register(SukunaCharacter.create());
         register(TojiCharacter.create());
         register(character.jogo.JogoCharacter.create());   // 漏壶·灾厄火焰（自定义个人线：泡岩浆 30 秒）
+        register(character.yuta.YutaCharacter.create());
         // 启用完整示例：register(character.example.CharacterTemplate.create());
         // 复制到自己的文件夹后：register(character.my_ice.MyIceCharacter.create());
     }

@@ -7,24 +7,41 @@ import net.minecraft.network.chat.Component;
 
 /** 只由客户端启动器加载。服务端通用角色定义不引用此类。 */
 public final class CharacterClient {
-    private static CharacterPackets.State state=new CharacterPackets.State("",0,100,0,false);
+    private static CharacterPackets.State state=new CharacterPackets.State("",0,100,0,false,new int[0]);
     private static Object world;
     private static boolean physicalHeld;
+    /** 乙骨复制到的术式编号；服务端同步，客户端拼进轮盘。 */
+    private static int[] copies=new int[0];
     public static void install() {
         CharacterPackets.openReceiver=()->Minecraft.getInstance().setScreen(new CharacterSelectionScreen());
         CharacterPackets.receiver=CharacterClient::receive;
     }
     public static CharacterDefinition selected() { return CharacterRegistry.get(state.id()); }
+    /**
+     * 轮盘实际显示的技能：角色静态表 + 乙骨复制来的旧术式。
+     * <p>不能把这些编号拼进 {@link CharacterDefinition}——它的构造器会拒绝 CUSTOM 家族的旧术式编号
+     * （「技能编号与术式家族不匹配」），每帧 HUD 调用会把客户端打崩。
+     */
+    public static java.util.List<Integer> skills() {
+        CharacterDefinition base=CharacterRegistry.get(state.id());
+        if(base==null)return java.util.List.of();
+        if(copies.length==0)return base.skills();
+        var list=new java.util.ArrayList<Integer>(base.skills());
+        for(int id:copies)if(!list.contains(id))list.add(id);
+        return list;
+    }
     public static boolean toji() { var d=selected();return d!=null&&d.resource()==CharacterDefinition.Resource.STAMINA; }
     public static boolean customWheel() { var d=selected();return d!=null&&d.family()!=CharacterDefinition.Family.SHRINE&&d.hasWheel(); }
     public static boolean allows(int skill) {
         var d=selected();if(d==null)return !CharacterSkill.custom(skill);if(!d.hasWheel())return false;
+        for(int id:copies)if(id==skill)return true;
         if(CharacterSkill.custom(skill))return d.config().skill(skill)!=null&&d.unlocked(skill,state.rank());
         if(d.family()==CharacterDefinition.Family.SHRINE)return !(skill>=22&&skill<=23)&&!(skill>=34&&skill<=42);
         return d.unlocked(skill,state.rank())||d.family()==CharacterDefinition.Family.BLOOD&&skill==BloodRules.DEATH_STAR;
     }
     private static void receive(CharacterPackets.State message) {
-        var mc=Minecraft.getInstance();boolean changed=!state.id().equals(message.id())||message.changed();state=message;world=mc.level;
+        var mc=Minecraft.getInstance();boolean changed=!state.id().equals(message.id())||message.changed();state=message;
+        copies=message.copies()==null?new int[0]:message.copies();world=mc.level;
         if(changed){
             TechniqueInputClient.clear();var d=selected();
             Client.selected=d==null?0:Math.max(0,d.firstSkill());Client.wheelPage=d!=null&&d.family()==CharacterDefinition.Family.BLOOD?2:0;
@@ -32,7 +49,7 @@ public final class CharacterClient {
             if(mc.screen instanceof SkillWheel||mc.screen instanceof CharacterWheel||mc.screen instanceof CharacterSelectionScreen)mc.setScreen(null);
         }
     }
-    public static void clear() { state=new CharacterPackets.State("",0,100,0,false);world=null;physicalHeld=false; }
+    public static void clear() { state=new CharacterPackets.State("",0,100,0,false,new int[0]);copies=new int[0];world=null;physicalHeld=false; }
     public static void tick() {
         var mc=Minecraft.getInstance();if(world!=mc.level){clear();world=mc.level;}
         boolean down=ClientInput.held(Client.CAST);

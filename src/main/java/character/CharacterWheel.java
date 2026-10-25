@@ -11,15 +11,15 @@ public final class CharacterWheel extends Screen {
     private final CharacterDefinition definition;
     private int current;
     private boolean confirmed,starHover;
-    public CharacterWheel() { super(Component.literal("角色术式轮盘"));definition=CharacterClient.selected();current=definition!=null&&definition.skills().contains(Client.selected)?Client.selected:definition==null?0:definition.firstSkill(); }
+    public CharacterWheel() { super(Component.literal("角色术式轮盘"));definition=CharacterClient.selected();current=definition!=null&&CharacterClient.skills().contains(Client.selected)?Client.selected:definition==null?0:definition.firstSkill(); }
     private int radius() { return Math.max(42,Math.min(156,Math.min(width/2-12,(height-92)/2))); }
     private boolean blood() { return definition!=null&&definition.family()==CharacterDefinition.Family.BLOOD; }
     private boolean star() { return blood()&&BloodClient.ownDomain(); }
     private int skillAt(double x,double y) {
-        if(definition==null||definition.skills().isEmpty())return -1;
-        if(blood()&&definition.skills().size()==19)return definition.skills().get(BloodRules.wheelSlot(x,y,radius()));
-        int n=definition.skills().size();double angle=Math.atan2(y,x)+Math.PI/2+Math.PI/n;
-        return definition.skills().get(Math.floorMod((int)Math.floor(angle/(Math.PI*2)*n),n));
+        if(definition==null||CharacterClient.skills().isEmpty())return -1;
+        if(blood()&&CharacterClient.skills().size()==19)return CharacterClient.skills().get(BloodRules.wheelSlot(x,y,radius()));
+        int n=CharacterClient.skills().size();double angle=Math.atan2(y,x)+Math.PI/2+Math.PI/n;
+        return CharacterClient.skills().get(Math.floorMod((int)Math.floor(angle/(Math.PI*2)*n),n));
     }
     private int inner() { return (int)(radius()*(blood()?.31:.46)); }
     private void hover(double mx,double my) {
@@ -52,11 +52,11 @@ public final class CharacterWheel extends Screen {
                 if(s!=last){if(last>=0)g.fill(cx+start,cy+y,cx+x,cy+y+1,!CharacterClient.allows(last)?style.locked():last==current?style.selected():style.idle());start=x;last=s;}
             }
         }
-        int count=definition.skills().size();
+        int count=CharacterClient.skills().size();
         for(int i=0;i<count;i++){
             int n=blood()&&count==19?(i<8?8:11):count,index=blood()&&count==19?(i<8?i:i-8):i;
             double angle=-Math.PI/2+index*Math.PI*2/n,rr=r*(blood()&&count==19?(i<8?.48:.82):.74);
-            int skill=definition.skills().get(i),x=cx+(int)(Math.cos(angle)*rr),y=cy+(int)(Math.sin(angle)*rr);
+            int skill=CharacterClient.skills().get(i),x=cx+(int)(Math.cos(angle)*rr),y=cy+(int)(Math.sin(angle)*rr);
             String label=CharacterClient.label(skill);
             int textColor=CharacterClient.allows(skill)?CharacterClient.skillColor(skill):0xFF9299A5;
             float scale=Math.min(1f,r/135f);g.pose().pushPose();g.pose().translate(x,y,0);g.pose().scale(scale,scale,1);

@@ -27,6 +27,8 @@ import net.minecraftforge.registries.ForgeRegistries;
 @Mod.EventBusSubscriber(modid = "sukuna")
 public final class YutaDomain {
     public static final int SKILL = 1002;
+    /** 领域半径（方块）。 */
+    private static final int RADIUS = 50;
 
     /** 每秒消耗咒力。 */
     private static final int DRAIN_PER_SECOND = 30;
@@ -35,7 +37,11 @@ public final class YutaDomain {
     /** 里香在领域内不断续命，保证常驻。 */
     private static final int RIKA_KEEPALIVE = 40;
 
-    private record Active(long start) {}
+    private static final class Active {
+        final long start;
+        boolean mid, ost;
+        Active(long start) { this.start = start; }
+    }
     private static final Map<UUID, Active> ACTIVE = new HashMap<>();
 
     public static boolean active(net.minecraft.world.entity.player.Player p) {
@@ -47,7 +53,8 @@ public final class YutaDomain {
             p.displayClientMessage(Component.literal("领域已展开"), true);
             return;
         }
-        ACTIVE.put(p.getUUID(), new Active(p.serverLevel().getGameTime()));
+        ACTIVE.put(p.getUUID(), new Active(p.server.overworld().getGameTime()));
+        YutaTerrain.begin(p, RADIUS);
         play(p, "sukuna:yuta_domain_start");
         ensureRika(p);
         p.displayClientMessage(Component.literal("领域展开 · 真赝相爱"), false);
@@ -55,29 +62,55 @@ public final class YutaDomain {
 
     public static void close(ServerPlayer p, String reason) {
         if (ACTIVE.remove(p.getUUID()) == null) return;
+        YutaTerrain.restore(p);
         p.displayClientMessage(Component.literal("领域解除：" + reason), false);
     }
 
     @SubscribeEvent
     public static void tick(TickEvent.ServerTickEvent e) {
-        if (e.phase != TickEvent.Phase.END || ACTIVE.isEmpty()) return;
+        if (e.phase != TickEvent.Phase.END) return;
+        YutaTerrain.tick(e.getServer());
+        if (ACTIVE.isEmpty()) return;
         long now = e.getServer().overworld().getGameTime();
         for (var it = ACTIVE.entrySet().iterator(); it.hasNext(); ) {
             var entry = it.next();
             ServerPlayer p = e.getServer().getPlayerList().getPlayer(entry.getKey());
-            if (p == null || !p.isAlive() || p.level().isClientSide) { it.remove(); continue; }
-            long age = now - entry.getValue().start();
-            if (age == MID_TICK) play(p, "sukuna:yuta_domain_mid");
-            if (age == OST_TICK) play(p, "sukuna:yuta_domain_ost");
+            if (p == null || !p.isAlive() || p.level().isClientSide) {
+                YutaTerrain.restore(p);
+                it.remove(); continue;
+            }
+            long age = now - entry.getValue().start;
+            var state = entry.getValue();
+            if (!state.mid && age >= MID_TICK) { play(p, "sukuna:yuta_domain_mid"); state.mid = true; }
+            if (!state.ost && age >= OST_TICK) { play(p, "sukuna:yuta_domain_ost"); state.ost = true; }
 
             // 每秒扣一次咒力；不够就自动关闭。
             if (age > 0 && age % 20 == 0 && !Curse.spend(p, DRAIN_PER_SECOND)) {
                 it.remove();
+                YutaTerrain.restore(p);
                 p.displayClientMessage(Component.literal("咒力耗尽，领域解除"), false);
                 continue;
             }
             ensureRika(p);
         }
+    }
+
+    /** 扫描领域范围内的方块实体，返回第一个容器名字；没有则 null。 */
+    private static String containerNear(ServerPlayer p, int radius) {
+        if (!(p.level() instanceof ServerLevel level)) return null;
+        int minCx = (p.blockPosition().getX() - radius) >> 4, maxCx = (p.blockPosition().getX() + radius) >> 4;
+        int minCz = (p.blockPosition().getZ() - radius) >> 4, maxCz = (p.blockPosition().getZ() + radius) >> 4;
+        for (int cx = minCx; cx <= maxCx; cx++) {
+            for (int cz = minCz; cz <= maxCz; cz++) {
+                var chunk = level.getChunk(cx, cz);
+                for (var be : chunk.getBlockEntities().values()) {
+                    if (be instanceof net.minecraft.world.Container) {
+                        return be.getBlockState().getBlock().getName().getString();
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     /** 领域期间里香常驻：不在就召一只，在就不断续期。 */
@@ -97,8 +130,11 @@ public final class YutaDomain {
     }
 
     private static void play(ServerPlayer p, String id) {
-        var sound = ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation(id));
-        if (sound != null) p.serverLevel().playSound(null, p.blockPosition(), sound, SoundSource.PLAYERS, 1.6f, 1f);
+        // 不查 ForgeRegistries：sounds.json 的动态事件在某些环境里取不到，
+        // 直接用可变范围事件按 ResourceLocation 构造，客户端会按 sounds.json 的键解析。
+        var loc = new ResourceLocation(id);
+        var sound = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(loc);
+        p.serverLevel().playSound(null, p.blockPosition(), sound, SoundSource.PLAYERS, 1.6f, 1f);
     }
 
     private YutaDomain() {}

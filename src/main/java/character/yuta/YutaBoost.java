@@ -21,8 +21,13 @@ public final class YutaBoost {
 
     /** 释放一次复制术式后调用：按当前章节开一段增伤窗口。 */
     public static void activate(Player p, int rank) {
+        activate(p, rank, 0);
+    }
+
+    /** @param override 大于 0 时用该倍率替代「1.5 + 0.5×章节」（村正右键的 ×3）。 */
+    public static void activate(Player p, int rank, double override) {
         if (p == null) return;
-        double mult = 1.5 + 0.5 * Math.max(0, rank);
+        double mult = override > 0 ? override : 1.5 + 0.5 * Math.max(0, rank);
         ACTIVE.put(p.getUUID(), new Boost(p.level().getGameTime() + WINDOW_TICKS, mult));
     }
 

@@ -141,6 +141,13 @@ public final class Content {
                     sp.sendSystemMessage(net.minecraft.network.chat.Component.literal("作弊：还没有选择角色，先吃《咒术选择书》"));
                 }else if(d.id().equals("jogo")){
                     done=character.jogo.JogoCombat.completeNextChapter(sp);
+                }else if(d.hasEvents()){
+                    // 乙骨这类事件型个人线：直接写入下一章的事件标记（story 里的击杀数对它无效）。
+                    int eRank=character.CharacterService.rank(sp);
+                    if(eRank<d.events().size()){
+                        character.CharacterService.markChapter(sp,d.events().get(eRank).id());
+                        done=true;
+                    }
                 }else{
                     int rank=character.CharacterService.rank(sp);
                     var story=d.story();
@@ -186,11 +193,28 @@ public final class Content {
             return InteractionResultHolder.sidedSuccess(stack,level.isClientSide);}
     });
     public static final RegistryObject<Item> EGG=ITEMS.register("buddha_spawn_egg",()->new net.minecraftforge.common.ForgeSpawnEggItem(BUDDHA,0x493d2b,0x9a47b6,new Item.Properties()));
+    /** 领域内的坟头（插着鬼妖村正，右键拔出）。 */
+    public static final net.minecraftforge.registries.DeferredRegister<net.minecraft.world.level.block.Block> YUTA_BLOCKS=
+        net.minecraftforge.registries.DeferredRegister.create(net.minecraftforge.registries.ForgeRegistries.BLOCKS,"sukuna");
+    public static final RegistryObject<net.minecraft.world.level.block.Block> YUTA_GRAVE=YUTA_BLOCKS.register("yuta_grave",
+        ()->new character.yuta.YutaGraveBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()
+            .noCollission().strength(0.4f).noOcclusion().lightLevel(st->7)));
+    public static final net.minecraftforge.registries.DeferredRegister<net.minecraft.world.level.block.entity.BlockEntityType<?>> YUTA_BES=
+        net.minecraftforge.registries.DeferredRegister.create(net.minecraftforge.registries.ForgeRegistries.BLOCK_ENTITY_TYPES,"sukuna");
+    public static final RegistryObject<net.minecraft.world.level.block.entity.BlockEntityType<character.yuta.YutaGraveBlockEntity>> YUTA_GRAVE_BE=
+        YUTA_BES.register("yuta_grave",()->net.minecraft.world.level.block.entity.BlockEntityType.Builder
+            .of(character.yuta.YutaGraveBlockEntity::new,YUTA_GRAVE.get()).build(null));
+    public static final RegistryObject<Item> YUTA_GRAVE_ITEM=ITEMS.register("yuta_grave",
+        ()->new net.minecraft.world.item.BlockItem(YUTA_GRAVE.get(),new Item.Properties()));
+
+    /** 鬼妖村正：领域内从坟头拔出的刀（左键 20 无视护甲，右键放复制术式×3 后报废）。 */
+    public static final RegistryObject<Item> YUTA_KATANA=ITEMS.register("yuta_katana",()->new character.yuta.YutaKatanaItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
     public static final RegistryObject<Item> GETO_EGG=ITEMS.register("geto_spawn_egg",()->new net.minecraftforge.common.ForgeSpawnEggItem(GETO,0x2b2b3d,0x6b7fd7,new Item.Properties()));
     public static final RegistryObject<Item> LOW_CURSE_EGG=ITEMS.register("low_curse_spawn_egg",()->new net.minecraftforge.common.ForgeSpawnEggItem(LOW_CURSE,0x141414,0x4a4a55,new Item.Properties()));
-    public static void init(IEventBus bus){ITEMS.register(bus);ENTITIES.register(bus);bus.addListener(Content::attributes);}
+    public static void init(IEventBus bus){ITEMS.register(bus);ENTITIES.register(bus);YUTA_BLOCKS.register(bus);YUTA_BES.register(bus);bus.addListener(Content::attributes);}
     private static void attributes(EntityAttributeCreationEvent e){e.put(DAITIAN.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,200).add(Attributes.MOVEMENT_SPEED,0.26).add(Attributes.ATTACK_DAMAGE,5).add(Attributes.FOLLOW_RANGE,32).add(Attributes.KNOCKBACK_RESISTANCE,0.4).build());e.put(BUDDHA.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,5000).add(Attributes.MOVEMENT_SPEED,0.24).add(Attributes.ATTACK_DAMAGE,10).add(Attributes.FOLLOW_RANGE,64).add(Attributes.KNOCKBACK_RESISTANCE,0.9).build());e.put(PARASITE.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,12).add(Attributes.MOVEMENT_SPEED,0.32).add(Attributes.ATTACK_DAMAGE,2).add(Attributes.FOLLOW_RANGE,48).build());e.put(MOTHER.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,160).add(Attributes.MOVEMENT_SPEED,0.23).add(Attributes.ATTACK_DAMAGE,12).add(Attributes.FOLLOW_RANGE,48).add(Attributes.KNOCKBACK_RESISTANCE,0.8).build());e.put(BROKEN_MAHITO.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,20000).add(Attributes.MOVEMENT_SPEED,0.34).add(Attributes.ATTACK_DAMAGE,40).add(Attributes.FOLLOW_RANGE,64).add(Attributes.ARMOR,20).add(Attributes.KNOCKBACK_RESISTANCE,0.55).build());e.put(MAHITO_LIMB.get(),MahitoLimbEntity.createAttributes());e.put(CHOSO.get(),ChosoEntity.createAttributes().build());e.put(URAUME_NPC.get(),UraumeNpcEntity.createAttributes().build());e.put(JOGO_NPC.get(),JogoNpcEntity.createAttributes().build());e.put(GETO.get(),GetoEntity.createAttributes().build());e.put(LOW_CURSE.get(),LowCurseEntity.createAttributes().build());e.put(RIKA.get(),RikaEntity.createAttributes().build());e.put(OBSERVER.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,1).add(Attributes.MOVEMENT_SPEED,0).add(Attributes.FOLLOW_RANGE,64).add(Attributes.KNOCKBACK_RESISTANCE,1).build());}
     private static void tabs(BuildCreativeModeTabContentsEvent e){if(e.getTabKey()==CreativeModeTabs.COMBAT){e.accept(FINGER.get());e.accept(BODY.get());e.accept(ORB.get());e.accept(RELIC.get());e.accept(SEAL.get());e.accept(INCENSE.get());e.accept(EGG.get());e.accept(IDLE_TRANSFIGURATION_CURSE.get());e.accept(MAHITO_FINGER.get());e.accept(YUJI_FAMILY_PHOTO.get());e.accept(CHAPTER_CHEAT.get());e.accept(BLACK_ROPE.get());e.accept(SLAUGHTER_DEMON.get());e.accept(YUYUN.get());e.accept(CHOSO_EGG.get());e.accept(URAUME_NPC_EGG.get());e.accept(JOGO_NPC_EGG.get());e.accept(SOUL_SEPARATION_NEEDLE.get());e.accept(EternalLove.TRUE_FALSE.get());}}
+
     private static class GrowthFood extends Item {
         final boolean body;GrowthFood(boolean body){super(new Properties().stacksTo(16).rarity(Rarity.EPIC).fireResistant().food(new FoodProperties.Builder().nutrition(1).saturationMod(0).alwaysEat().build()));this.body=body;}
         private boolean allowed(Player p){return character.CharacterService.permits(p,character.CharacterDefinition.Family.SHRINE)&&!(Uraume.unlocked(p)&&!Journey.unlocked(p))&&(body?Curse.fingers(p)>=20&&!Curse.awakened(p):Curse.fingers(p)<20);}

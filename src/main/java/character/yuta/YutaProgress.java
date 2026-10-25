@@ -109,7 +109,10 @@ public final class YutaProgress {
                 killer.displayClientMessage(Component.literal(
                     "百鬼夜行 第 " + wave + "/" + (HYAKKI_NEEDED / WAVE_SIZE) + " 波完成（" + n + "/" + HYAKKI_NEEDED + "）· 咒力回补"), false);
             }
-            if (n >= HYAKKI_NEEDED) CharacterService.markChapter(killer, "hyakki_yagyo");
+            if (n >= HYAKKI_NEEDED) {
+                CharacterService.markChapter(killer, "hyakki_yagyo");
+                returnToOverworld(killer);
+            }
         }
     }
 
@@ -131,12 +134,49 @@ public final class YutaProgress {
         }
     }
 
+    /** 第三章完成：送回进入前的主世界坐标（没有记录则用世界出生点）。 */
+    private static void returnToOverworld(ServerPlayer p) {
+        var data = Curse.data(p);
+        ServerLevel overworld = p.server.overworld();
+        double x, y, z;
+        if (data.contains("YutaReturnX")) {
+            x = data.getDouble("YutaReturnX");
+            y = data.getDouble("YutaReturnY");
+            z = data.getDouble("YutaReturnZ");
+            data.remove("YutaReturnX");
+            data.remove("YutaReturnY");
+            data.remove("YutaReturnZ");
+        } else {
+            var spawn = overworld.getSharedSpawnPos();
+            x = spawn.getX() + 0.5;
+            y = spawn.getY();
+            z = spawn.getZ() + 0.5;
+        }
+        // 保险：用该列的地表高度校正 Y，避免回到实心方块里（会卡死客户端）。
+        int surfaceY = overworld.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+            net.minecraft.core.BlockPos.containing(x, 0, z).getX(),
+            net.minecraft.core.BlockPos.containing(x, 0, z).getZ());
+        if (y < surfaceY) y = surfaceY;
+        p.teleportTo(overworld, x, y, z, p.getYRot(), p.getXRot());
+        p.displayClientMessage(Component.literal("百鬼夜行结束，已返回主世界"), false);
+    }
+
     /** 完成第二章后把玩家送进百鬼夜行；首次进入时用方块搭一片废墟场地。 */
     public static void teleportHyakki(ServerPlayer p) {
         ServerLevel level = p.server.getLevel(HYAKKI);
         if (level == null) {
             p.displayClientMessage(Component.literal("百鬼夜行维度未注册（检查 data/sukuna/dimension/hyakki.json）"), false);
             return;
+        }
+        // 记录进入前的主世界坐标，章成后自动送回去。
+        // 只在主世界记录：若玩家已经在百鬼夜行里（重复触发），不能把维度内的坐标当成回程点，
+        // 否则会把人送回主世界地底（实测 y=-59.5 卡死）。
+        var data = Curse.data(p);
+        boolean inOverworld = p.level().dimension().equals(net.minecraft.world.level.Level.OVERWORLD);
+        if (inOverworld) {
+            data.putDouble("YutaReturnX", p.getX());
+            data.putDouble("YutaReturnY", p.getY());
+            data.putDouble("YutaReturnZ", p.getZ());
         }
         int surface = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, 0, 0);
         BlockPos base = new BlockPos(0, surface, 0);

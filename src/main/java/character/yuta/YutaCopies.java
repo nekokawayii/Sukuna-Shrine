@@ -56,6 +56,17 @@ public final class YutaCopies {
         if (set.add(skill)) store(p, set);
     }
 
+    /** 从已复制列表里移除一条（村正右键放完即失）。 */
+    public static void remove(Player p, int skill) {
+        Set<Integer> set = copies(p);
+        if (set.remove(skill)) store(p, set);
+    }
+
+    /** 复制列表变化后立刻推给客户端，轮盘才会同步少掉那一格。 */
+    public static void sync(Player p) {
+        if (p instanceof ServerPlayer sp) character.CharacterPackets.sync(sp, true);
+    }
+
     /** 里香召唤时重置「单次里香每招只能用一次」的记录。 */
     public static void resetUses(Player p) { cn.blockforge.generated.nnnnr1201forge2.Curse.data(p).remove(USED); }
 

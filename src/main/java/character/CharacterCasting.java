@@ -72,6 +72,12 @@ public final class CharacterCasting {
                 target=100+cn.blockforge.generated.nnnnr1201forge2.GojoPlayer.WHEEL[id-34];
             // 借用放行：各家族的 unlocked 会检查「是否开启了该家族」，乙骨永远不满足，
             // 会在 AuthoritySkills.cast 里被拒（例如「尚未睁开六眼」）。转调期间临时放行。
+            // 借用施法统一扣咒力（只加在剑上会漏掉「按 R 从轮盘放」这条路）。
+            int castCost = 300;
+            if (!Curse.spend(p, castCost)) {
+                p.displayClientMessage(Component.literal("咒力不足（需要 " + castCost + "）"), true);
+                return;
+            }
             character.yuta.CopyBorrow.begin(p);
             try { AuthoritySkills.cast(p,target); }
             finally { character.yuta.CopyBorrow.end(p); }
@@ -86,6 +92,11 @@ public final class CharacterCasting {
                 ||Shinbuke.holding(p)||(GojoEntity.mindLocked(p)&&!mindLockAllowed(definition,id))||GuardianPlayerSkills.locked(p)||SoulCombat.suppressed(p)
                 ||Skills.sealing(p)||Skills.sustaining(p)||GuardianPlayerSkills.sustaining(p)||FurnaceMax.active(p)
                 ||DismantleMotion.active(p)||CombatExpansion.chanting(p))return;
+        // 乙骨领域：展开中再次按下 = 主动收起（必须放在冷却判断之前，否则第二次按会被冷却吃掉）。
+        if("yuta".equals(definition.id())&&id==character.yuta.YutaDomain.SKILL&&character.yuta.YutaDomain.active(p)){
+            character.yuta.YutaDomain.close(p,"主动解除");
+            return;
+        }
         String cooldown="CharacterSkillCooldown_"+id;
         long nowTick=p.level().getGameTime();
         long remainSkill=Curse.data(p).getLong(cooldown)-nowTick;

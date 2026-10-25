@@ -31,7 +31,10 @@ public final class TechniqueInput {
     public static Input intent(ServerPlayer p){return intents.getOrDefault(p.getUUID(),new Input(0,0,false,false,false));}
     public static boolean holding(ServerPlayer p,int skill){Hold h=holds.get(p.getUUID());return h!=null&&h.skill==skill;}
     public static void receive(ServerPlayer p,Input input){
-        if(!character.CharacterService.allowsSkill(p,input.skill())){if(input.phase()==3)cancel(p);return;}
+        if(!character.CharacterService.allowsSkill(p,input.skill())){
+            if(input.phase()==0)p.sendSystemMessage(net.minecraft.network.chat.Component.literal("无法施放：技能"+input.skill()+" 不在当前角色的技能表里"));
+            if(input.phase()==3)cancel(p);return;
+        }
         // 乙骨掠夺来的术式沿用的是旧编号（34/60/…），下面会按「是否已拥有该术式」分流到
         // BloodArts.input / AuthoritySkills.input，那条路乙骨永远走不通。这里先截下来，
         // 统一交给 CharacterCasting（扣使用次数 + CopyBorrow 临时放行）。
@@ -40,6 +43,10 @@ public final class TechniqueInput {
             return;
         }
         if(character.CharacterSkill.custom(input.skill())){
+            // 领域王：再按同一领域=收起（在冷却/维持/扣费检查之前拦下）
+            if(input.phase()==0&&character.CharacterService.selected(p)!=null
+                    &&character.CharacterService.selected(p).id().equals("domainking")
+                    &&character.domainking.DomainKingCombat.toggleClose(p,input.skill()))return;
             // 盖棺铁围山：领域开着时再按一次=提前收起（要在冷却/扣费检查之前拦下）
             if(input.phase()==0&&input.skill()==character.jogo.JogoSkills.DOMAIN&&character.jogo.JogoCombat.inDomain(p)){
                 character.jogo.JogoCombat.closeDomain(p);return;

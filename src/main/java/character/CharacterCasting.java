@@ -27,6 +27,25 @@ public final class CharacterCasting {
     private static boolean mindLockAllowed(CharacterDefinition d,int skill) {
         return d!=null&&MIND_LOCK_CASTABLE.contains(d.id()+"#"+skill);
     }
+    /**
+     * NPC「借用玩家技能」的统一入口：把生物包装成施术者，交给注册的 provider 走**同一套技能分派**。
+     * 玩家仍然走 {@link #cast(ServerPlayer,int)}；生物走 provider（内部按角色 + 技能号查同一份数值表）。
+     */
+    @FunctionalInterface public interface NpcProvider { boolean cast(net.minecraft.world.entity.LivingEntity caster,int skill); }
+    private static final java.util.Map<Class<?>,NpcProvider> NPC_PROVIDERS=new java.util.HashMap<>();
+    public static void registerNpcProvider(Class<? extends net.minecraft.world.entity.LivingEntity> type,NpcProvider provider){
+        if(provider!=null)NPC_PROVIDERS.put(type,provider);
+    }
+    /** 把任意实体包装成施术者（玩家/生物通用）。 */
+    public static SkillCaster caster(net.minecraft.world.entity.LivingEntity entity){return SkillCaster.of(entity);}
+
+    /** 生物的施法入口：找不到对应 provider 时返回 false（不会悄悄扣费）。 */
+    public static boolean castFor(net.minecraft.world.entity.LivingEntity caster,int skill){
+        if(caster instanceof ServerPlayer p){cast(p,skill);return true;}
+        for(var e:NPC_PROVIDERS.entrySet())if(e.getKey().isInstance(caster))return e.getValue().cast(caster,skill);
+        return false;
+    }
+
     private record Key(String character,int skill) {}
     private static final java.util.Map<Key,Effect> EFFECTS=new java.util.HashMap<>();
     public static void registerEffect(String character,int skill,Effect effect) {
@@ -36,7 +55,11 @@ public final class CharacterCasting {
     }
     public static void cast(ServerPlayer p,int id) {
         var definition=CharacterService.selected(p);
-        if(definition==null||!CharacterService.allowsSkill(p,id))return;
+        if(definition==null)return;
+        if(!CharacterService.allowsSkill(p,id)){
+            p.sendSystemMessage(Component.literal("无法施放：技能"+id+" 未解锁（"+definition.name()+" 阶段"+CharacterService.rank(p)+"，需求"+definition.config().unlockChapter(id)+"，已注册"+(definition.config().skill(id)==null?"否":"是")+"）"));
+            return;
+        }
         // 乙骨忧太：释放掠夺来的旧术式。必须先召唤里香；不限次数，但冷却为原术式的两倍。
         if(definition.config().skill(id)==null&&character.yuta.YutaCopies.has(p,id)){
             if(!RikaRules.active(p)){p.displayClientMessage(Component.literal("未召唤里香，无法使用复制术式"),true);return;}

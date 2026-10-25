@@ -38,6 +38,7 @@ public final class CombatSettings {
     public static float domainSpellDamage(Player p,double base){ServerPlayer commander=Authority.damageOwner(p);if(commander!=null)return (float)(domainSpellDamage(commander,base)*Authority.damageScale(p));return BalanceRules.damage(CasterDamageRules.spell(base,multiplier(p),Curse.domainSpellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),true,MaidBridge.isCaster(p)));}
     public static float fixedSpellDamage(Player p,double base,boolean domain){ServerPlayer commander=Authority.damageOwner(p);if(commander!=null)return (float)(fixedSpellDamage(commander,base,domain)*Authority.damageScale(p));return BalanceRules.damage(CasterDamageRules.fixed(base,domain?Curse.domainSpellBonus(p):Curse.spellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),MaidBridge.isCaster(p)));}
     public static boolean canHit(ServerPlayer owner,LivingEntity target){
+        if(owner instanceof NpcBridge.NpcActor npc)return NpcBridge.canHit(npc,target);
         if(owner==null||target==null||target==owner||target.level()!=owner.level()||!target.isAlive()||target.isSpectator()||EternalLove.protects(owner,target))return false;
         // 先保护友方玩家的召唤物/宠物；敌友归属按主人判断，不能绕过 O 菜单。
         UUID targetOwner=CombatSafety.ownerId(target);

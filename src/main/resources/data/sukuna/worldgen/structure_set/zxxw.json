@@ -1,0 +1,13 @@
+{
+  "structures": [
+    { "structure": "sukuna:zxxw", "weight": 1 }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "salt": 6157421,
+    "spacing": 40,
+    "separation": 12,
+    "spread_type": "linear",
+    "frequency": 0.5
+  }
+}

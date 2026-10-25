@@ -118,7 +118,6 @@ public final class Network {
         CHANNEL.messageBuilder(Cast.class,0,NetworkDirection.PLAY_TO_SERVER).encoder((m,b)->b.writeUtf(m.action().name(),32)).decoder(b->new Cast(SkillAction.valueOf(b.readUtf(32)))).consumerMainThread((m,c)->{
             var p=c.get().getSender();
             if(p!=null&&!character.CharacterService.allowsAction(p,m.action())){c.get().setPacketHandled(true);return;}
-            if(p!=null&&m.action()==SkillAction.BLACK_ROPE){Content.blackRopeSweep(p);c.get().setPacketHandled(true);return;}
             if(p!=null&&m.action()!=SkillAction.CANCEL_CHARGE)MeleeCombo.cancel(p);
             if(p!=null&&(PrisonSystem.locked(p)||ObserverRitual.active(p)||TenShadows.locked(p)||DeathStar.charging(p))){c.get().setPacketHandled(true);return;}
             if(p!=null&&m.action()==SkillAction.CANCEL_CHARGE){Skills.cancelCharge(p);TechniqueInput.cancel(p);c.get().setPacketHandled(true);return;}

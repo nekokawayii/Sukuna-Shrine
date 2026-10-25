@@ -32,7 +32,8 @@ public final class Content {
     public static final RegistryObject<Item> YUJI_FAMILY_PHOTO=ITEMS.register("yuji_family_photo",()->new Item(new Item.Properties().rarity(Rarity.RARE).stacksTo(1)));
     /** 不属于这个世界的碎片：五条悟通关后从灵魂通道裂隙里掉出来的剧情道具，长得像一张网页截图/鼠标指针。 */
     /** 咒具第一条分支：黑绳。左键甩出，抽打 10 格内正前方的敌人。 */
-    public static final RegistryObject<Item> BLACK_ROPE=ITEMS.register("black_rope",()->new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)){
+    public static final RegistryObject<Item> BLACK_ROPE=ITEMS.register("black_rope",()->new net.minecraft.world.item.SwordItem(
+            net.minecraft.world.item.Tiers.NETHERITE,5,-2.4f,new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)){
         @Override public InteractionResultHolder<ItemStack> use(Level level,Player player,InteractionHand hand){
             if(!level.isClientSide&&player instanceof ServerPlayer sp)blackRopeSweep(sp);
             return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand),level.isClientSide);
@@ -53,7 +54,9 @@ public final class Content {
                 gojo.getPersistentData().putBoolean("GojoAmplified",true);
             }
             AttackTypes.mark(AttackTypes.MAGIC);
-            try{CombatSettings.hurt(sp,target,sp.damageSources().magic(),10f);}
+            // 视为武器：基础 10 + 玩家攻击力加成（力量、属性、附魔等都能吃到）
+            float dmg=10f+Math.max(0f,(float)sp.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)-1f);
+            try{CombatSettings.hurt(sp,target,sp.damageSources().playerAttack(sp),dmg);}
             finally{
                 AttackTypes.clear();
                 if(amplified&&target instanceof GojoEntity gojo)gojo.getPersistentData().remove("GojoAmplified");

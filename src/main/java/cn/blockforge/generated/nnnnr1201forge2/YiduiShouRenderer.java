@@ -10,6 +10,8 @@ import net.minecraft.resources.ResourceLocation;
 /** 「圆钝果实」渲染：直接读 Blockbench 模型 models/yiduishou.bbmodel（一堆手）。 */
 public final class YiduiShouRenderer extends EntityRenderer<YiduiShouEntity> {
     private static final BbModel MODEL = new BbModel("yiduishou", "yiduishou");
+    /** 用户指定：视觉放大到玩家的 5 倍。 */
+    public static final float SCALE = 5f;
 
     public YiduiShouRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -22,7 +24,8 @@ public final class YiduiShouRenderer extends EntityRenderer<YiduiShouEntity> {
 
     @Override public void render(YiduiShouEntity entity, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int light) {
         ps.pushPose();
-        ps.mulPose(Axis.YP.rotationDegrees(180f - yaw));
+        ps.scale(SCALE, SCALE, SCALE);
+        ps.mulPose(Axis.YP.rotationDegrees(-yaw));   // 反过来：背朝玩家
         MODEL.render(ps, buffers, light, "", (entity.tickCount + partial) / 20f, 1f, 1f, 1f, 1f);
         ps.popPose();
         super.render(entity, yaw, partial, ps, buffers, light);

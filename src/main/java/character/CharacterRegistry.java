@@ -18,6 +18,7 @@ public final class CharacterRegistry {
         register(YujiCharacter.create());
         register(SukunaCharacter.create());
         register(TojiCharacter.create());
+        register(character.mahito.MahitoCharacter.create());   // 真人：无为转变 / 自闭圆盾裹（功能待定）
         register(character.domainking.DomainKingCharacter.create());   // 领域王：万域（咒力无限）
         register(character.jogo.JogoCharacter.create());   // 漏壶·灾厄火焰（自定义个人线：泡岩浆 30 秒）
         register(character.yuta.YutaCharacter.create());

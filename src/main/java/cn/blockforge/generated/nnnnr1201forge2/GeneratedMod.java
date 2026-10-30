@@ -75,6 +75,10 @@ public final class GeneratedMod {
         character.CharacterService.registerRanker("jogo",character.jogo.JogoCombat::rank);
         character.CharacterCasting.registerCooldownScale("jogo",pl->character.jogo.JogoCombat.inDomain(pl)?0.5:1.0);
         MinecraftForge.EVENT_BUS.register(character.jogo.JogoCombat.class);
+        character.CharacterCasting.registerEffect("mahito",character.mahito.MahitoSkills.TRANSMUTE,
+            (p,skill,rank)->p.sendSystemMessage(net.minecraft.network.chat.Component.literal("无为转变：功能待定")));
+        character.CharacterCasting.registerEffect("mahito",character.mahito.MahitoSkills.SELF_EMBRYO,
+            (p,skill,rank)->p.sendSystemMessage(net.minecraft.network.chat.Component.literal("自闭圆盾裹：功能待定")));
         character.domainking.DomainKingCombat.register();
         MinecraftForge.EVENT_BUS.register(character.domainking.DomainKingCombat.class);
         MinecraftForge.EVENT_BUS.register(character.domainking.SelfEmbryoDomain.class);

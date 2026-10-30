@@ -81,6 +81,7 @@ public final class Network {
     /** 黑闪标记打击（客户端→服务端）：玩家瞄准红圈并左键。 */
     public record BlackFlashStrike(int targetId){}
     public record Transfigure(int action){}
+    public record OpenTransfigure(int mode){}
     public record DomainOptions(int radiusPts,int damagePts,int speedPts,boolean verticalKill){}
     /** 三击空格：请服务端把自己送上御厨子的神龛（无领域时服务端只提示）。 */
     public record ShrineLeap(){}
@@ -206,7 +207,10 @@ public final class Network {
         .encoder((m,b)->b.writeVarInt(m.targetId())).decoder(b->new BlackFlashStrike(b.readVarInt()))
         .consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null)BlackFlashMarks.strike(p,m.targetId());c.get().setPacketHandled(true);}).add();
     }
-    static { CHANNEL.messageBuilder(Transfigure.class,27,net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER)
+    static { CHANNEL.messageBuilder(OpenTransfigure.class,28,net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT)
+        .encoder((m,b)->b.writeVarInt(m.mode())).decoder(b->new OpenTransfigure(b.readVarInt()))
+        .consumerMainThread((m,c)->{net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT,()->()->character.mahito.TransfigureScreen.open(m.mode()));c.get().setPacketHandled(true);}).add();
+        CHANNEL.messageBuilder(Transfigure.class,27,net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER)
         .encoder((m,b)->b.writeVarInt(m.action())).decoder(b->new Transfigure(b.readVarInt()))
         .consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null)character.mahito.MahitoTransfigure.handle(p,m.action());c.get().setPacketHandled(true);}).add(); }
 

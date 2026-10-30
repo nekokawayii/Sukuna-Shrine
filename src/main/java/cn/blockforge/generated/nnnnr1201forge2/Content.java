@@ -139,7 +139,7 @@ public final class Content {
             @Override public net.minecraft.world.InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level level,
                     net.minecraft.world.entity.player.Player p, net.minecraft.world.InteractionHand hand){
                 if(level.isClientSide) net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(
-                    net.minecraftforge.api.distmarker.Dist.CLIENT, ()->character.mahito.TransfigureScreen::open);
+                    net.minecraftforge.api.distmarker.Dist.CLIENT, ()->()->character.mahito.TransfigureScreen.open(1));
                 return net.minecraft.world.InteractionResultHolder.success(p.getItemInHand(hand));
             }
         });

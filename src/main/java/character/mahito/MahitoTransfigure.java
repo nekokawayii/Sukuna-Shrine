@@ -26,6 +26,8 @@ public final class MahitoTransfigure {
     /** 预留的 NBT 根键：以后加新形态只需要往这个 tag 里加字段。 */
     public static final String BASE_TAG = "SukunaTransfigured";
     private static final int ARM_TICKS = 200;
+    /** 命中后暂存的待贮存快照（等轮盘选择）。 */
+    public static final String PENDING = "SukunaPendingTransfig";
 
     private record Armed(UUID target, long at) {}
     private static final Map<UUID, Armed> ARMED = new HashMap<>();
@@ -55,10 +57,11 @@ public final class MahitoTransfigure {
         if (p.distanceToSqr(e.getEntity()) > 9) return;
         ARMED.remove(p.getUUID());
         LivingEntity target = e.getEntity();
-        ItemStack body = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_BODY.get());
-        body.getOrCreateTag().put(BASE_TAG, snapshot(target));
-        if (!p.getInventory().add(body)) p.drop(body, false);
-        p.sendSystemMessage(Component.literal("无为转变·贮存完成：右键可打开菜单").withStyle(ChatFormatting.AQUA));
+        p.getPersistentData().put(PENDING, snapshot(target));
+        cn.blockforge.generated.nnnnr1201forge2.Network.CHANNEL.send(
+            net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> p),
+            new cn.blockforge.generated.nnnnr1201forge2.Network.OpenTransfigure(0));
+        p.sendSystemMessage(Component.literal("无为转变：选择要贮存的形态").withStyle(ChatFormatting.AQUA));
     }
 
     /** 生成形态快照（给后续形态/轮盘预留字段）。 */
@@ -74,8 +77,17 @@ public final class MahitoTransfigure {
         return tag;
     }
 
-    /** 贮存体 → 剑（菜单按钮 action=1）。 */
+    /** 轮盘回调：action 0 = 储存（生成贮存体），1 = 变成剑。 */
     public static void handle(ServerPlayer p, int action) {
+        if (action == 0) {
+            if (!p.getPersistentData().contains(PENDING)) return;
+            ItemStack body = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_BODY.get());
+            body.getOrCreateTag().put(BASE_TAG, p.getPersistentData().getCompound(PENDING).copy());
+            p.getPersistentData().remove(PENDING);
+            if (!p.getInventory().add(body)) p.drop(body, false);
+            p.sendSystemMessage(Component.literal("无为转变·贮存完成：右键贮存体可打开轮盘").withStyle(ChatFormatting.AQUA));
+            return;
+        }
         if (action != 1) return;
         ItemStack held = p.getMainHandItem();
         if (!held.is(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_BODY.get())) return;

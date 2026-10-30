@@ -20,8 +20,7 @@ public class TransfiguredSwordItem extends SwordItem {
         super.hurtEnemy(stack, target, attacker);
         if (!(attacker instanceof Player player) || target instanceof Player) return true;
         if (TransfiguredItem.stored(stack) == null) return true;
-        // 目标立刻消失，但不判定死亡（不触发掉落）
-        target.discard();
+        // 正常造成伤害；耐久 -1，归零时才判定贮存物死亡
         int next = stack.getDamageValue() + 1;
         int max = Math.max(1, getMaxDamage(stack));
         if (next >= max) {

@@ -58,7 +58,11 @@ public final class MahitoTransfigure {
         if (p.distanceToSqr(e.getEntity()) > 9) return;
         ARMED.remove(p.getUUID());
         LivingEntity target = e.getEntity();
-        p.getPersistentData().put(PENDING, snapshot(target));
+        CompoundTag snap = snapshot(target);
+        // 左键命中即让目标立刻消失：不判定死亡、不触发掉落
+        e.setCanceled(true);
+        target.discard();
+        p.getPersistentData().put(PENDING, snap);
         com.mojang.logging.LogUtils.getLogger().info("[无为] 命中 {}，发送轮盘包 28", target.getId());
         cn.blockforge.generated.nnnnr1201forge2.Network.send((net.minecraft.server.level.ServerLevel) p.level(),
             new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(300, p.getId(), p.position(),

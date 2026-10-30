@@ -72,7 +72,8 @@ public final class TransfigureScreen extends Screen {
         if (hovered(mx, my) == 0) {
             int action = mode == 0 ? 0 : 1;
             cn.blockforge.generated.nnnnr1201forge2.Network.CHANNEL.sendToServer(
-                new cn.blockforge.generated.nnnnr1201forge2.Network.Transfigure(action));
+                new cn.blockforge.generated.nnnnr1201forge2.TechniqueInput.Input(
+                    character.mahito.MahitoSkills.TRANSMUTE, 7, false, false, false, false, action, 0));
             onClose();
             return true;
         }

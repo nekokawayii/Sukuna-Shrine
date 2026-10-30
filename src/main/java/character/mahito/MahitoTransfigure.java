@@ -60,9 +60,9 @@ public final class MahitoTransfigure {
         LivingEntity target = e.getEntity();
         p.getPersistentData().put(PENDING, snapshot(target));
         com.mojang.logging.LogUtils.getLogger().info("[无为] 命中 {}，发送轮盘包 28", target.getId());
-        cn.blockforge.generated.nnnnr1201forge2.Network.CHANNEL.send(
-            net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> p),
-            new cn.blockforge.generated.nnnnr1201forge2.Network.OpenTransfigure(0));
+        cn.blockforge.generated.nnnnr1201forge2.Network.send((net.minecraft.server.level.ServerLevel) p.level(),
+            new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(300, p.getId(), p.position(),
+                net.minecraft.world.phys.Vec3.ZERO, 0f, 0, 0));
         p.sendSystemMessage(Component.literal("无为转变：选择要贮存的形态").withStyle(ChatFormatting.AQUA));
     }
 

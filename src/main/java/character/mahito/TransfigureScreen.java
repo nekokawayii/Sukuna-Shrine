@@ -23,6 +23,7 @@ public final class TransfigureScreen extends Screen {
     }
 
     public static void open(int mode) {
+        com.mojang.logging.LogUtils.getLogger().info("[无为] 客户端打开轮盘 mode={}", mode);
         if (Minecraft.getInstance().player == null) return;
         Minecraft.getInstance().setScreen(new TransfigureScreen(mode));
     }

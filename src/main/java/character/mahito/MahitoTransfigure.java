@@ -43,6 +43,7 @@ public final class MahitoTransfigure {
             return;
         }
         ARMED.put(p.getUUID(), new Armed(target.getUUID(), p.level().getGameTime()));
+        com.mojang.logging.LogUtils.getLogger().info("[无为] 锁定 {} ({})", target.getId(), target.getName().getString());
         p.sendSystemMessage(Component.literal("无为转变·锁定 " + target.getName().getString() + "：击中一次即可贮存")
             .withStyle(ChatFormatting.AQUA));
     }
@@ -58,6 +59,7 @@ public final class MahitoTransfigure {
         ARMED.remove(p.getUUID());
         LivingEntity target = e.getEntity();
         p.getPersistentData().put(PENDING, snapshot(target));
+        com.mojang.logging.LogUtils.getLogger().info("[无为] 命中 {}，发送轮盘包 28", target.getId());
         cn.blockforge.generated.nnnnr1201forge2.Network.CHANNEL.send(
             net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> p),
             new cn.blockforge.generated.nnnnr1201forge2.Network.OpenTransfigure(0));
@@ -79,6 +81,7 @@ public final class MahitoTransfigure {
 
     /** 轮盘回调：action 0 = 储存（生成贮存体），1 = 变成剑。 */
     public static void handle(ServerPlayer p, int action) {
+        com.mojang.logging.LogUtils.getLogger().info("[无为] 服务端收到 action={}", action);
         if (action == 0) {
             if (!p.getPersistentData().contains(PENDING)) return;
             ItemStack body = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_BODY.get());

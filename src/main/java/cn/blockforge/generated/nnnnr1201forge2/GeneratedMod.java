@@ -78,7 +78,7 @@ public final class GeneratedMod {
         character.CharacterCasting.registerEffect("mahito",character.mahito.MahitoSkills.TRANSMUTE,
             (p,skill,rank)->p.sendSystemMessage(net.minecraft.network.chat.Component.literal("无为转变：功能待定")));
         character.CharacterCasting.registerEffect("mahito",character.mahito.MahitoSkills.SELF_EMBRYO,
-            (p,skill,rank)->p.sendSystemMessage(net.minecraft.network.chat.Component.literal("自闭圆盾裹：功能待定")));
+            (p,skill,rank)->character.domainking.SelfEmbryoDomain.toggle(p));
         character.domainking.DomainKingCombat.register();
         MinecraftForge.EVENT_BUS.register(character.domainking.DomainKingCombat.class);
         MinecraftForge.EVENT_BUS.register(character.domainking.SelfEmbryoDomain.class);

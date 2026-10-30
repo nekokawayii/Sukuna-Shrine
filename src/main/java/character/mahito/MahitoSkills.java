@@ -14,7 +14,7 @@ public final class MahitoSkills {
                 "触碰灵魂的形态，任意改变生命与咒力的形状。（功能待定）", 0xFF9FD7E8, 0, 1,
                 CharacterSkill.Shape.BURST, 8, 1, 180, 0, 0, 32, 0, 0, 0),
             new CharacterSkill(SELF_EMBRYO, "自闭圆盾裹", "自闭圆盾裹",
-                "真人的领域：黑混凝土穹顶与肉色网格包裹四周。（功能待定）", 0xFF2A2A2E, 0, 1,
+                "与领域王同款：半径 30 的黑混凝土穹顶 + 肉色网格，身后立着圆钝果实。再按一次收起。", 0xFF2A2A2E, 0, 1,
                 CharacterSkill.Shape.BURST, 20, 1, 180, 0, 0, 32, 0, 0, 0)
         );
     }

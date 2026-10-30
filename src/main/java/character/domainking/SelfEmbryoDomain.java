@@ -62,6 +62,18 @@ public final class SelfEmbryoDomain {
             net.minecraft.sounds.SoundSource.HOSTILE, 1.8f, 0.4f);
     }
 
+    /** 开关式入口：已展开则收起，否则展开（供其它角色共用同一领域）。 */
+    public static boolean toggle(net.minecraft.server.level.ServerPlayer p) {
+        if (active(p)) {
+            close(p, "手动收起");
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域 · 自闭圆盾裹 已收起"));
+        } else {
+            open(p);
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域展开 · 自闭圆盾裹"));
+        }
+        return true;
+    }
+
     /** 收集所有需要改动的方块：按“环”排序（球壳 → 地板 → 光源），逐环在 3 秒内铺开；最外圈地板不放光源。 */
     private static void plan(ServerLevel level, BlockPos c, Build build) {
         double r2 = RADIUS * RADIUS, in2 = (RADIUS - 1) * (RADIUS - 1);

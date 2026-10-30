@@ -85,7 +85,10 @@ public final class MahitoTransfigure {
         if (action == 0) {
             if (!p.getPersistentData().contains(PENDING)) return;
             ItemStack body = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_BODY.get());
-            body.getOrCreateTag().put(BASE_TAG, p.getPersistentData().getCompound(PENDING).copy());
+            var snap = p.getPersistentData().getCompound(PENDING).copy();
+            body.getOrCreateTag().put(BASE_TAG, snap);
+            body.setHoverName(Component.literal("贮存体·" + snap.getString("name")).withStyle(ChatFormatting.AQUA));
+            body.setDamageValue(0);
             p.getPersistentData().remove(PENDING);
             if (!p.getInventory().add(body)) p.drop(body, false);
             p.sendSystemMessage(Component.literal("无为转变·贮存完成：右键贮存体可打开轮盘").withStyle(ChatFormatting.AQUA));
@@ -96,7 +99,12 @@ public final class MahitoTransfigure {
         if (!held.is(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_BODY.get())) return;
         CompoundTag tag = held.getTag();
         ItemStack sword = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_SWORD.get());
-        if (tag != null) sword.setTag(tag.copy());
+        if (tag != null) {
+            sword.setTag(tag.copy());
+            CompoundTag base = tag.getCompound(BASE_TAG);
+            sword.setHoverName(Component.literal("剑·" + base.getString("name")).withStyle(ChatFormatting.AQUA));
+            sword.setDamageValue(0);
+        }
         p.getInventory().setItem(p.getInventory().selected, sword);
         p.sendSystemMessage(Component.literal("无为转变：形态变为「剑」").withStyle(ChatFormatting.AQUA));
     }

@@ -135,7 +135,7 @@ public final class Content {
 
     /** 作弊道具：仅创造模式可得，右键立刻完成当前角色章节（漏壶按章节旗标推进，其他角色按击杀数推进）。 */
     public static final RegistryObject<Item> TRANSFIGURED_BODY=ITEMS.register("transfigured_body",
-        ()->new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)){
+        ()->new character.mahito.TransfiguredItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)){
             @Override public net.minecraft.world.InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level level,
                     net.minecraft.world.entity.player.Player p, net.minecraft.world.InteractionHand hand){
                 if(level.isClientSide) net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(
@@ -144,7 +144,7 @@ public final class Content {
             }
         });
     public static final RegistryObject<Item> TRANSFIGURED_SWORD=ITEMS.register("transfigured_sword",
-        ()->new net.minecraft.world.item.SwordItem(net.minecraft.world.item.Tiers.NETHERITE,5,-2.4f,
+        ()->new character.mahito.TransfiguredSwordItem(net.minecraft.world.item.Tiers.NETHERITE,5,-2.4f,
             new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
     public static final RegistryObject<Item> CHAPTER_CHEAT=ITEMS.register("chapter_cheat",()->new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)){
         @Override public InteractionResultHolder<ItemStack> use(Level level,Player player,InteractionHand hand){

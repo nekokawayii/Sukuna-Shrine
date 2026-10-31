@@ -79,6 +79,17 @@ public final class MahitoTransfigure {
             .withStyle(ChatFormatting.AQUA));
     }
 
+    /** 剑（及其它无为转变武器）：最终伤害改成贮存生物的攻击力。 */
+    @SubscribeEvent public static void swordDamage(LivingHurtEvent e) {
+        if (!(e.getSource().getEntity() instanceof ServerPlayer p)) return;
+        if (e.getAmount() <= 0) return;
+        ItemStack held = p.getMainHandItem();
+        if (!(held.getItem() instanceof TransfiguredSwordItem)) return;
+        CompoundTag tag = held.getTagElement(BASE_TAG);
+        if (tag == null || !tag.contains("attack")) return;
+        e.setAmount(Math.max(0.5f, tag.getFloat("attack")));
+    }
+
     @SubscribeEvent public static void hurt(LivingHurtEvent e) {
         if (!(e.getSource().getEntity() instanceof ServerPlayer p)) return;
         Armed armed = ARMED.get(p.getUUID());
@@ -107,6 +118,8 @@ public final class MahitoTransfigure {
         tag.putString("name", target.getName().getString());
         tag.putFloat("health", target.getHealth());
         tag.putFloat("maxHealth", target.getMaxHealth());
+        var atk = target.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        tag.putFloat("attack", atk == null ? 1f : (float) atk.getValue());
         tag.putFloat("width", target.getBbWidth());
         tag.putFloat("height", target.getBbHeight());
         tag.putString("form", "body");

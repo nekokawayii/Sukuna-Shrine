@@ -52,6 +52,7 @@ public class TransfiguredItem extends Item {
             return;
         }
         lines.add(Component.literal("贮存：" + tag.getString("name")).withStyle(ChatFormatting.AQUA));
+        if (tag.contains("attack")) lines.add(Component.literal("攻击：" + String.format("%.1f", tag.getFloat("attack"))).withStyle(ChatFormatting.GRAY));
         lines.add(Component.literal("生命：" + (int) tag.getFloat("health") + " / " + (int) tag.getFloat("maxHealth"))
             .withStyle(ChatFormatting.GRAY));
         lines.add(Component.literal("耐久：" + Math.max(0, getMaxDamage(stack) - stack.getDamageValue()) + " / " + getMaxDamage(stack))

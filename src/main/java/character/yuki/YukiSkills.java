@@ -28,7 +28,7 @@ public final class YukiSkills {
                 0xFFFFC46B, 500, 220, CharacterSkill.Shape.BURST, 1, 1, 180, 0, 0, 1, 0, 0, 0),
             new CharacterSkill(BLACK_HOLE, "星之怒·黑洞", "黑洞",
                 "把全部质量压成奇点：大范围牵引并造成毁灭性伤害，自身陷入虚弱。",
-                0xFF2B1B3D, 2500, 600, CharacterSkill.Shape.BURST, 14, 12, 180, 1200, 300, 40, 0, 60, 3)
+                0xFF2B1B3D, 2500, 600, CharacterSkill.Shape.BURST, 24, 8, 180, 1200, 300, 32, 0, 60, 3)
         );
     }
 

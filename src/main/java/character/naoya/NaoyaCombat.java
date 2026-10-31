@@ -53,6 +53,8 @@ public final class NaoyaCombat {
     static final String K_UNTIL = "NaoyaProjectUntil", K_NODES = "NaoyaNodes", K_NODES_AT = "NaoyaNodesAt",
         K_SELECTED = "NaoyaSelected", K_CHARGE = "NaoyaChargeAt", K_MUD = "NaoyaMudUntil",
         K_GHOST = "NaoyaGhostAt", K_GHOST_TICK = "NaoyaGhostNext",
+        K_SET = "NaoyaSetDone", K_BASE_X = "NaoyaBaseX", K_BASE_Y = "NaoyaBaseY",
+        K_BASE_Z = "NaoyaBaseZ", K_BASE_YAW = "NaoyaBaseYaw",
         K_TR_PATH = "NaoyaTravelPath", K_TR_START = "NaoyaTravelStart", K_TR_TICKS = "NaoyaTravelTicks",
         K_TR_END = "NaoyaTravelEnd", K_TR_TARGET = "NaoyaTravelTarget", K_TR_MUD = "NaoyaTravelMud",
         K_TR_DAMAGE = "NaoyaTravelDamage", K_TR_HIT = "NaoyaTravelHitAt", K_TR_DEALT = "NaoyaTravelDealt";
@@ -122,12 +124,12 @@ public final class NaoyaCombat {
             return;
         }
         // 投影跟着玩家走：把整条投影的形状平移，使起点＝玩家当前位置（不再把人拽回起点）
-        java.util.List<Vec3> route = new java.util.ArrayList<>();
-        Vec3 origin = p.position(), base = nodes.get(0);
-        for (Vec3 point : nodes) route.add(origin.add(point.subtract(base)));
+        java.util.List<Vec3> route = transformed(p, data);
+        if (route.size() < 2) route = nodes;             // 兜底：至少按原记录走
         startTravel(p, route, RELEASE_DAMAGE, true, END_NONE, -1);
         data.remove(K_UNTIL);
         data.remove(K_GHOST);
+        data.remove(K_SET);
         Network.send(p.serverLevel(), new Network.Effect(NaoyaFx.RELEASE, p.getId(), p.position(), Vec3.ZERO,
             nodes.size(), 20, 0));
     }
@@ -526,7 +528,10 @@ public final class NaoyaCombat {
         tickTravel(p, data, n);
         long until = data.getLong(K_UNTIL);
         if (until == 0) return;
-        if (n >= until) { data.remove(K_UNTIL); data.remove(K_GHOST); return; }
+        if (n >= until) {
+            if (data.getLong(K_SET) == 0) finalizeProjection(p, data);
+            return;
+        }
         var nodes = nodes(data);
         Vec3 last = nodes.isEmpty() ? p.position() : nodes.get(nodes.size() - 1);
         if (p.position().distanceTo(last) >= NODE_STEP) {
@@ -541,6 +546,49 @@ public final class NaoyaCombat {
             Network.send(p.serverLevel(), new Network.Effect(NaoyaFx.GHOST, p.getId(), p.position(),
                 p.getLookAngle(), 1f, 12, 0));
         }
+    }
+
+    /** 设定完成：记下基准位置与朝向，之后整条投影跟着玩家（并随准星旋转）。 */
+    private static void finalizeProjection(ServerPlayer p, CompoundTag data) {
+        long n = now(p);
+        data.remove(K_UNTIL);
+        data.putLong(K_SET, n);
+        data.putDouble(K_BASE_X, p.getX());
+        data.putDouble(K_BASE_Y, p.getY());
+        data.putDouble(K_BASE_Z, p.getZ());
+        data.putFloat(K_BASE_YAW, p.getYRot());
+        data.putLong(K_NODES_AT, n + NODE_LIFE);
+        ServerLevel level = p.serverLevel();
+        Network.send(level, new Network.Effect(NaoyaFx.ANCHOR, p.getId(),
+            new Vec3(p.getX(), p.getY(), p.getZ()), new Vec3(0, p.getYRot(), 0), 1f, NODE_LIFE, 0));
+        level.playSound(null, p.blockPosition(), SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.PLAYERS, 0.7f, 1.6f);
+        p.displayClientMessage(Component.literal("设定完成 · 投影开始跟随，释放键冲出去")
+            .withStyle(ChatFormatting.AQUA), true);
+    }
+
+    /** 把录制下来的世界坐标节点，按「设定时的基准」转成本地形状，再按玩家当前位置/朝向摆回去。 */
+    private static java.util.List<Vec3> transformed(ServerPlayer p, CompoundTag data) {
+        var nodes = nodes(data);
+        java.util.List<Vec3> result = new java.util.ArrayList<>();
+        if (nodes.isEmpty()) return result;
+        long set = data.getLong(K_SET);
+        if (set == 0) {                                  // 还没设定完成：原地不动
+            result.addAll(nodes);
+            return result;
+        }
+        Vec3 base = new Vec3(data.getDouble(K_BASE_X), data.getDouble(K_BASE_Y), data.getDouble(K_BASE_Z));
+        double baseYaw = Math.toRadians(data.getFloat(K_BASE_YAW)), yaw = Math.toRadians(p.getYRot());
+        Vec3 origin = p.position();
+        for (Vec3 node : nodes) {
+            Vec3 local = rotateY(node.subtract(base), -baseYaw);
+            result.add(origin.add(rotateY(local, yaw)));
+        }
+        return result;
+    }
+
+    private static Vec3 rotateY(Vec3 v, double radians) {
+        double cos = Math.cos(radians), sin = Math.sin(radians);
+        return new Vec3(v.x * cos + v.z * sin, v.y, -v.x * sin + v.z * cos);
     }
 
     // ── 节点读写 ─────────────────────────────────────────
@@ -610,6 +658,7 @@ public final class NaoyaCombat {
         data.remove(K_GHOST_TICK);
         data.remove(K_SELECTED);
         data.remove(K_CHARGE);
+        data.remove(K_SET);
         clearTravel(data);
         Network.sendTo(p, new Network.Effect(NaoyaFx.GHOST, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));
         Network.sendTo(p, new Network.Effect(NaoyaFx.PROJECT, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));

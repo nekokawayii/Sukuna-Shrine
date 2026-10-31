@@ -37,6 +37,9 @@ public final class NaoyaVisuals {
     private static Vec3 anchor;
     /** 这份投影属于哪个玩家（平移时按他自己的位置算，多人下不会跟着别人走）。 */
     private static int anchorOwner = -1;
+    /** 设定完成后的基准：位置 + 朝向（之后整条投影跟着玩家并随准星旋转）。 */
+    private static Vec3 base;
+    private static float baseYaw;
     private static final List<Trail> TRAILS = new ArrayList<>();
     private static final List<Plane> PLANES = new ArrayList<>();
     private static final List<Shards> SHARDS = new ArrayList<>();
@@ -61,13 +64,18 @@ public final class NaoyaVisuals {
                 GHOSTS.removeIf(g -> g.owner() == e.owner());
                 GHOSTS.add(new Ghost(e.owner(), e.position(), e.direction(), now + Math.max(1, e.life())));
             }
+            case NaoyaFx.ANCHOR -> {
+                base = e.position();
+                baseYaw = (float) e.direction().y;
+                anchorOwner = e.owner();
+            }
             case NaoyaFx.NODE -> {
                 if (anchor == null) anchor = e.position();
                 NODES.add(new Node(e.position(), now + Math.max(1, e.life())));
             }
             case NaoyaFx.TRAIL -> TRAILS.add(new Trail(e.position(), e.position().add(e.direction()),
                 now, Math.max(4, e.life())));
-            case NaoyaFx.RELEASE -> { NODES.clear(); anchor = null; anchorOwner = -1; }
+            case NaoyaFx.RELEASE -> { NODES.clear(); anchor = null; anchorOwner = -1; base = null; }
             case NaoyaFx.PLANE -> {
                 PLANES.removeIf(plane -> plane.entity() == e.owner());
                 PLANES.add(new Plane(e.owner(), now + Math.max(1, e.life()), Math.max(1.2, e.size())));
@@ -88,7 +96,8 @@ public final class NaoyaVisuals {
 
     public static void tick() {
         var mc = Minecraft.getInstance();
-        if (mc.level == null) { GHOSTS.clear(); NODES.clear(); TRAILS.clear(); projectUntil = 0; anchor = null; anchorOwner = -1; return; }
+        if (mc.level == null) { GHOSTS.clear(); NODES.clear(); TRAILS.clear(); projectUntil = 0;
+            anchor = null; anchorOwner = -1; base = null; return; }
         long now = mc.level.getGameTime();
         GHOSTS.removeIf(g -> now >= g.until() || mc.level.getEntity(g.owner()) == null);
         NODES.removeIf(n -> now >= n.until());
@@ -121,16 +130,22 @@ public final class NaoyaVisuals {
             Client.ribbon(builder, ps, trail.from(), trail.to(), 0.04, (alpha << 24) | 0xFFFFFF, cam);
         }
         // 节点环：整条投影按"玩家当前位置 − 锚点"平移 → 设定完成后地上的投影跟着玩家走
+        // 设定完成前：节点留在录制的世界坐标；设定完成后：整条投影跟着玩家、并随准星旋转
         Vec3 shift = Vec3.ZERO;
-        if (anchor != null) {
+        float yawDelta = 0;
+        boolean following = base != null;
+        if (following) {
             var entity = anchorOwner >= 0 ? mc.level.getEntity(anchorOwner) : mc.player;
-            if (entity != null) shift = entity.position().subtract(anchor);
+            if (entity != null) {
+                shift = entity.position().subtract(base);
+                yawDelta = (float) Math.toRadians(entity.getYRot() - baseYaw);
+            } else { following = false; }
         }
         Vec3 previous = null;
         for (Node node : NODES) {
             long left = node.until() - now;
             int alpha = (int) (210 * Math.min(1.0, left / 10.0));
-            Vec3 at = node.at().add(shift);
+            Vec3 at = following ? shift.add(rotateY(node.at().subtract(base), yawDelta)) : node.at().add(shift);
             Client.ring(builder, ps, at, 0.45, 0.07, (alpha << 24) | 0x7FD8FF, cam);
             Client.ring(builder, ps, at.add(0, 0.02, 0), 0.22, 0.04, (alpha << 24) | 0xEAF8FF, cam);
             if (previous != null) {                                  // 地面连线：整条路径一目了然
@@ -208,6 +223,11 @@ public final class NaoyaVisuals {
     }
 
     /** 简化人形：几块半透明方片拼出"玩家残影"。 */
+    private static Vec3 rotateY(Vec3 v, double radians) {
+        double cos = Math.cos(radians), sin = Math.sin(radians);
+        return new Vec3(v.x * cos + v.z * sin, v.y, -v.x * sin + v.z * cos);
+    }
+
     private static void drawGhost(BufferBuilder b, PoseStack ps, Ghost ghost, int color) {
         Vec3 look = ghost.look().multiply(1, 0, 1);
         if (look.lengthSqr() < 0.01) look = new Vec3(0, 0, 1);

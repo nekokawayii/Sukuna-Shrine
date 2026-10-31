@@ -216,6 +216,13 @@ public final class Network {
         CHANNEL.messageBuilder(DrawInput.class,13,NetworkDirection.PLAY_TO_SERVER).encoder(DrawInput::write).decoder(DrawInput::read).consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null)FreehandDrawing.input(p,m);c.get().setPacketHandled(true);}).add();
         CHANNEL.messageBuilder(DrawState.class,14,NetworkDirection.PLAY_TO_CLIENT).encoder((m,b)->{b.writeUUID(m.id());b.writeVarInt(m.state());b.writeDouble(m.pixels());}).decoder(b->new DrawState(b.readUUID(),b.readVarInt(),b.readDouble())).consumerMainThread((m,c)->{drawReceiver.accept(m);c.get().setPacketHandled(true);}).add();
     }
+    /**
+     * 只发给一名玩家：**开界面/弹面板这类"个人 UI"必须用这个**。
+     * 用 {@link #send(ServerLevel, Effect)} 广播的话，附近所有玩家的客户端都会打开同一块界面。
+     */
+    public static void sendTo(ServerPlayer p, Effect e) {
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> p), e);
+    }
     public static void send(ServerLevel level, Effect e) {
         // 东堂葵：登记这条特效的位置，之后"纯客户端特效"能被注入成实体（不义游戏换位用）
         character.todo.TodoMarks.anchor(level, e);

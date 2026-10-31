@@ -241,13 +241,14 @@ public final class Client {
     public static void receive(Network.Effect e){
         if(e.kind()>=character.kashimo.KashimoFx.FIRST&&e.kind()<=character.kashimo.KashimoFx.LAST){KashimoVisuals.receive(e);return;}
         if(e.kind()>=character.todo.TodoFx.FIRST&&e.kind()<=character.todo.TodoFx.LAST){TodoVisuals.receive(e);return;}
-        if(e.kind()==300){character.mahito.TransfigureScreen.open((int)e.size());return;}
+        boolean self=e.owner()==(Minecraft.getInstance().player==null?-1:Minecraft.getInstance().player.getId());
+        if(e.kind()==300){if(self)character.mahito.TransfigureScreen.open((int)e.size());return;}
         if(e.kind()==308){return;}
         if(e.kind()==306){character.mahito.MahitoArmsClient.addHeld(e.owner(),(int)e.size(),e.life());return;}
         if(e.kind()==307){character.mahito.MahitoArmsClient.clearHeld(e.owner());return;}
         if(e.kind()==305){character.mahito.LimbScreen.setArms((int)e.size());character.mahito.MahitoArmsClient.set(e.owner(),(int)e.size());return;}
         if(e.kind()==303){character.mahito.TransformedScaleClient.put(e.owner(),e.size(),e.life()/1000f);return;}
-        if(e.kind()==302){character.mahito.TransfigureModelScreen.open(
+        if(e.kind()==302){if(self)character.mahito.TransfigureModelScreen.open(
             (float)e.position().x,(float)e.position().y,(float)e.position().z);return;}
         if(e.kind()==301){
             int flesh=0xFF8E2334, bloom=0xFFC2415A;

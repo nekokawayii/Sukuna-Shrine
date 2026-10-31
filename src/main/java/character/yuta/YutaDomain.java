@@ -60,6 +60,11 @@ public final class YutaDomain {
         p.displayClientMessage(Component.literal("领域展开 · 真赝相爱"), false);
     }
 
+    /** 领域对拼获胜：乙骨领域按咒力维持，这里补一次咒力作为延长。 */
+    public static void extend(ServerPlayer p, int ticks) {
+        cn.blockforge.generated.nnnnr1201forge2.Curse.addRaw(p, ticks * 2.0);
+    }
+
     public static void close(ServerPlayer p, String reason) {
         if (ACTIVE.remove(p.getUUID()) == null) return;
         YutaTerrain.restore(p);

@@ -43,7 +43,10 @@ public final class DomainClash {
         LivingEntity e=f.owner;
         if(!e.isAlive()||e.isRemoved()||e.isSpectator()||e.level()!=f.level)return false;
         if(e instanceof MaidBridge.Actor a)return a.maid.level()==f.level&&!EternalLove.settling(a.maid)&&(Skills.clashDomainActive(a)||GuardianPlayerSkills.sustaining(a));
-        if(e instanceof ServerPlayer p)return !p.isCreative()&&p.server.getPlayerList().getPlayer(p.getUUID())==p&&(Skills.clashDomainActive(p)||GuardianPlayerSkills.sustaining(p)||GojoCombat.sustaining(p)||character.jogo.JogoCombat.inDomain(p));
+        if(e instanceof ServerPlayer p)return !p.isCreative()&&p.server.getPlayerList().getPlayer(p.getUUID())==p&&(Skills.clashDomainActive(p)||GuardianPlayerSkills.sustaining(p)||GojoCombat.sustaining(p)||character.jogo.JogoCombat.inDomain(p)
+            ||character.ryu.RyuDomain.active(p)||character.naoya.NaoyaDomain.active(p)
+            ||character.higuruma.HigurumaDomain.active(p)||character.domainking.SelfEmbryoDomain.active(p)
+            ||character.yuta.YutaDomain.active(p)||character.yuki.YukiDomain.active(p));
         if(e instanceof YujiEntity y)return y.clashDomainActive();
         return e instanceof GuardianEntity g&&g.clashDomainActive()||e instanceof GojoEntity gojo&&gojo.clashDomainActive();
     }
@@ -77,11 +80,20 @@ public final class DomainClash {
         else if(f.owner instanceof YujiEntity y)y.clashVisual(show);else if(f.owner instanceof GuardianEntity g)g.clashVisual(show);
     }
     private static void extend(Field f,int ticks){
-        if(f.owner instanceof ServerPlayer p){Skills.extendDomain(p,ticks);GuardianPlayerSkills.extendDomain(p,ticks);GojoCombat.extendDomain(p,ticks);character.jogo.JogoCombat.extendDomain(p,ticks);}
+        if(f.owner instanceof ServerPlayer p){Skills.extendDomain(p,ticks);GuardianPlayerSkills.extendDomain(p,ticks);GojoCombat.extendDomain(p,ticks);character.jogo.JogoCombat.extendDomain(p,ticks);
+            character.ryu.RyuDomain.extend(p,ticks);character.naoya.NaoyaDomain.extend(p,ticks);
+            character.higuruma.HigurumaDomain.extend(p,ticks);character.domainking.SelfEmbryoDomain.extend(p,ticks);
+            character.yuta.YutaDomain.extend(p,ticks);character.yuki.YukiDomain.extend(p,ticks);}
         else if(f.owner instanceof YujiEntity y)y.extendDomain(ticks);else if(f.owner instanceof GuardianEntity g)g.extendDomain(ticks);
     }
     private static void close(Field f){
-        if(f.owner instanceof ServerPlayer p){Skills.closeDomain(p);GuardianPlayerSkills.closeOwnedDomain(p,false);GojoCombat.closeDomain(p);character.jogo.JogoCombat.closeDomain(p);}
+        if(f.owner instanceof ServerPlayer p){Skills.closeDomain(p);GuardianPlayerSkills.closeOwnedDomain(p,false);GojoCombat.closeDomain(p);character.jogo.JogoCombat.closeDomain(p);
+            if(character.ryu.RyuDomain.isOwner(p))character.ryu.RyuDomain.close(p,"领域对拼落败");
+            if(character.naoya.NaoyaDomain.isOwner(p))character.naoya.NaoyaDomain.close(p,"领域对拼落败");
+            if(character.higuruma.HigurumaDomain.active(p))character.higuruma.HigurumaDomain.close(p,"领域对拼落败");
+            if(character.domainking.SelfEmbryoDomain.active(p))character.domainking.SelfEmbryoDomain.close(p,"领域对拼落败");
+            if(character.yuta.YutaDomain.active(p))character.yuta.YutaDomain.close(p,"领域对拼落败");
+            if(character.yuki.YukiDomain.active(p))character.yuki.YukiDomain.close(p,"领域对拼落败");}
         else if(f.owner instanceof YujiEntity y)y.clashCloseDomain();else if(f.owner instanceof GuardianEntity g)g.clashCloseDomain();
     }
     public static void press(ServerPlayer p,UUID id,boolean down){

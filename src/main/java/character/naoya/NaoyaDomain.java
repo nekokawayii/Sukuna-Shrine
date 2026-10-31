@@ -97,6 +97,12 @@ public final class NaoyaDomain {
             .withStyle(net.minecraft.ChatFormatting.AQUA));
     }
 
+    /** 领域对拼获胜：延长领域存在时间。 */
+    public static void extend(ServerPlayer p, int ticks) {
+        Realm realm = ACTIVE.get(p.getUUID());
+        if (realm != null && !realm.closing) realm.closeAt += ticks;
+    }
+
     public static void close(ServerPlayer p, String reason) {
         Realm realm = ACTIVE.get(p.getUUID());
         if (realm == null || realm.closing) return;

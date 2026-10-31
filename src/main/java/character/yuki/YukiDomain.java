@@ -47,6 +47,7 @@ public final class YukiDomain {
         final ServerLevel level;
         final BlockPos center;
         final List<Rec> saved = new ArrayList<>();
+        long extra;
         final List<Rec> plan = new ArrayList<>();
         int cursor;
         boolean built;
@@ -73,6 +74,12 @@ public final class YukiDomain {
         p.displayClientMessage(Component.literal("领域展开 · 星轨坠亡"), false);
         level.playSound(null, p.blockPosition(), net.minecraft.sounds.SoundEvents.END_PORTAL_SPAWN,
             net.minecraft.sounds.SoundSource.PLAYERS, 1.5f, 0.5f);
+    }
+
+    /** 领域对拼获胜：延长领域存在时间。 */
+    public static void extend(ServerPlayer p, int ticks) {
+        Job job = JOBS.get(p.getUUID());
+        if (job != null) job.extra += ticks;
     }
 
     public static void close(ServerPlayer p, String reason) {
@@ -148,7 +155,7 @@ public final class YukiDomain {
                 continue;
             }
 
-            if (age > MAX_TICKS) { close(p, "星轨散尽"); it.remove(); continue; }
+            if (age > MAX_TICKS + job.extra) { close(p, "星轨散尽"); it.remove(); continue; }
             if (age > 0 && age % 20 == 0
                 && !cn.blockforge.generated.nnnnr1201forge2.Curse.spend(p, DRAIN_PER_SECOND)) {
                 close(p, "咒力耗尽"); it.remove(); continue;

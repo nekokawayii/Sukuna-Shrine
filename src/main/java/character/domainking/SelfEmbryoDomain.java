@@ -37,7 +37,7 @@ public final class SelfEmbryoDomain {
     private static final class Build {
         final ServerLevel level;
         final BlockPos center;
-        final long end;
+        long end;
         final List<Edit> journal = new ArrayList<>();
         final List<BlockPos> blocks = new ArrayList<>();
         final List<UUID> fruits = new ArrayList<>();
@@ -123,6 +123,12 @@ public final class SelfEmbryoDomain {
         fruit.setCustomNameVisible(false);
         level.addFreshEntity(fruit);
         build.fruits.add(fruit.getUUID());
+    }
+
+    /** 领域对拼获胜：延长领域存在时间。 */
+    public static void extend(ServerPlayer p, int ticks) {
+        Build build = ACTIVE.get(p.getUUID());
+        if (build != null) build.end += ticks;
     }
 
     public static void close(ServerPlayer p, String reason) {

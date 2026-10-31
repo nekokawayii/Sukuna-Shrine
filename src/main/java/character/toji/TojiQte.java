@@ -125,7 +125,8 @@ public final class TojiQte {
             if (!(entity instanceof LivingEntity living)) continue;
             boolean hostile = living instanceof Monster
                 || (living instanceof Mob mob && mob.getTarget() == p)
-                || living.getLastHurtByMob() == p;
+                || living.getLastHurtByMob() == p
+                || (living instanceof Player other && other != p && CombatSettings.canHit(p, other));   // 被标敌的玩家也当敌人
             if (!hostile || !CombatSettings.canHit(p, living)) continue;
             double distance = living.distanceToSqr(p);
             if (distance < best) { best = distance; found = living; }

@@ -67,9 +67,8 @@ public final class CharacterClient {
         boolean down=ClientInput.held(Client.CAST);
         // 伏黑惠：释放键直接在本地打开十影界面（不依赖服务端回包，避免只闪一下）
         if (tenShadows() && down && !physicalHeld && mc.player != null && mc.player.isAlive()
-            && mc.screen == null && mc.level != null && mc.level.getGameTime() - tenShadowsOpenedAt > 10) {
-            tenShadowsOpenedAt = mc.level.getGameTime();
-            com.mojang.logging.LogUtils.getLogger().info("[十影] 本地打开十影界面");
+            && mc.screen == null) {
+            com.mojang.logging.LogUtils.getLogger().info("[十影] 本地打开十影界面（边沿）");
             mc.setScreen(new cn.blockforge.generated.nnnnr1201forge2.TenShadowsScreen());
             physicalHeld = true;
             return;

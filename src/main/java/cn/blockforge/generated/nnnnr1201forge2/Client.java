@@ -240,7 +240,7 @@ public final class Client {
     public static void slashShake(){shakeUntil=Math.max(shakeUntil,tick+3);}
     public static void receive(Network.Effect e){
         if(e.kind()==300){character.mahito.TransfigureScreen.open((int)e.size());return;}
-        if(e.kind()==308){var m=net.minecraft.client.Minecraft.getInstance();if(!(m.screen instanceof TenShadowsScreen))m.setScreen(new TenShadowsScreen());return;}
+        if(e.kind()==308){return;}
         if(e.kind()==306){character.mahito.MahitoArmsClient.addHeld(e.owner(),(int)e.size(),e.life());return;}
         if(e.kind()==307){character.mahito.MahitoArmsClient.clearHeld(e.owner());return;}
         if(e.kind()==305){character.mahito.LimbScreen.setArms((int)e.size());character.mahito.MahitoArmsClient.set(e.owner(),(int)e.size());return;}

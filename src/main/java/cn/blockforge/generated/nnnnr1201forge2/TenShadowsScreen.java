@@ -41,6 +41,14 @@ public final class TenShadowsScreen extends Screen {
         }
         button("全部收回",width-left()-82,bottom,82,b->ShadowClient.send(6,0,0));
     }
+    @Override public void onClose(){
+        com.mojang.logging.LogUtils.getLogger().info("[十影] 界面被关闭", new Throwable("close-trace"));
+        super.onClose();
+    }
+    @Override public void removed(){
+        com.mojang.logging.LogUtils.getLogger().info("[十影] 界面 removed（被替换/关闭）");
+        super.removed();
+    }
     @Override public boolean isPauseScreen(){return false;}
     @Override public void render(GuiGraphics g,int mx,int my,float partial){
         g.fill(0,0,width,height,0xE910101B);g.drawCenteredString(font,"十种影法术",width/2,9,0xFFFFE2A5);

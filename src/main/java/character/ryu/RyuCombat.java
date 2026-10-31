@@ -75,6 +75,9 @@ public final class RyuCombat {
         CompoundTag data = Curse.data(p);
         if (data.getLong(CHANNEL_START) != 0) return;
         data.putLong(CHANNEL_START, now(p));
+        // 起手立刻结算一发：这样"点一下"也一定看得到光（以前要等 4 刻的取模才发第一跳）
+        pulse(p, p, BLAST_BASE_WIDTH, BLAST_DAMAGE_BASE + BLAST_BASE_WIDTH * BLAST_DAMAGE_PER_WIDTH, true, true);
+        com.mojang.logging.LogUtils.getLogger().info("[石流龙] 冲击波开始 {}（起手已开火）", p.getScoreboardName());
         // 起手那一下后坐力（约退 2 格）
         Vec3 back = p.getLookAngle().normalize().scale(-1.25);
         p.setDeltaMovement(p.getDeltaMovement().add(back.x, 0.18, back.z));
@@ -89,8 +92,13 @@ public final class RyuCombat {
     }
 
     public static void releaseCharge(ServerPlayer p, boolean fire) {
+        boolean was = Curse.data(p).getLong(CHANNEL_START) != 0;
         Curse.data(p).remove(CHANNEL_START);
         Network.sendTo(p, new Network.Effect(RyuFx.CHARGE, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));
+        if (was) {
+            com.mojang.logging.LogUtils.getLogger().info("[石流龙] 冲击波结束 {}（{}）",
+                p.getScoreboardName(), fire ? "松手" : "取消");
+        }
     }
 
     /** 当前宽度：1 格起，每 2 秒 +1 格，无上限。 */
@@ -290,18 +298,19 @@ public final class RyuCombat {
         if (start != 0) {
             long elapsed = Math.max(0, now - start);
             double width = channelWidth(elapsed);
-            if (now % 20 == 0 && elapsed > 0 && !Curse.spend(p, BLAST_TICK_COST)) {
+            if (elapsed % 20 == 0 && elapsed > 0 && !Curse.spend(p, BLAST_TICK_COST)) {
                 data.remove(CHANNEL_START);
                 Network.sendTo(p, new Network.Effect(RyuFx.CHARGE, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));
+                com.mojang.logging.LogUtils.getLogger().info("[石流龙] 冲击波因咒力不足中断 {}", p.getScoreboardName());
                 p.sendSystemMessage(Component.literal("咒力不足：冰沙冲击波中断").withStyle(ChatFormatting.GRAY));
                 p.displayClientMessage(Component.literal("咒力不足 · 中断"), true);
             } else {
-                if (now % BLAST_DAMAGE_INTERVAL == 0) {
-                    pulse(p, p, width, BLAST_DAMAGE_BASE + width * BLAST_DAMAGE_PER_WIDTH, false,
-                        now % (BLAST_DAMAGE_INTERVAL * 2) == 0);
+                if (elapsed % BLAST_DAMAGE_INTERVAL == 0) {
+                    boolean effect = (elapsed / BLAST_DAMAGE_INTERVAL) % 2 == 0;
+                    pulse(p, p, width, BLAST_DAMAGE_BASE + width * BLAST_DAMAGE_PER_WIDTH, false, effect);
                 }
-                if (now % BLAST_PUSH_INTERVAL == 0) pulse(p, p, width, 0, true, false);
-                if (now % 10 == 0) {
+                if (elapsed % BLAST_PUSH_INTERVAL == 0) pulse(p, p, width, 0, true, false);
+                if (elapsed % 10 == 0) {
                     Network.sendTo(p, new Network.Effect(RyuFx.CHARGE, p.getId(), p.position(), Vec3.ZERO,
                         (float) width, 12, 0));
                 }
@@ -374,6 +383,7 @@ public final class RyuCombat {
         long now = now(mob);
         tag.putLong(NPC_CHANNEL_START, now);
         tag.putLong(NPC_CHANNEL_END, now + NPC_CHANNEL_TICKS);
+        pulse(mob, null, BLAST_BASE_WIDTH, BLAST_DAMAGE_BASE + BLAST_BASE_WIDTH * BLAST_DAMAGE_PER_WIDTH, true, true);
         if (mob.level() instanceof ServerLevel level) {
             level.playSound(null, mob.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 0.9f, 1.2f);
         }
@@ -402,8 +412,12 @@ public final class RyuCombat {
             tag.remove(NPC_CHANNEL_END);
             return;
         }
-        if (now % BLAST_DAMAGE_INTERVAL == 0) pulse(mob, null, width, BLAST_DAMAGE_BASE + width * BLAST_DAMAGE_PER_WIDTH, false, true);
-        if (now % BLAST_PUSH_INTERVAL == 0) pulse(mob, null, width, 0, true, false);
+        long elapsed = now - start;
+        if (elapsed % BLAST_DAMAGE_INTERVAL == 0) {
+            boolean effect = (elapsed / BLAST_DAMAGE_INTERVAL) % 2 == 0;
+            pulse(mob, null, width, BLAST_DAMAGE_BASE + width * BLAST_DAMAGE_PER_WIDTH, false, effect);
+        }
+        if (elapsed % BLAST_PUSH_INTERVAL == 0) pulse(mob, null, width, 0, true, false);
     }
 
     public static void npcBurst(Mob mob) {

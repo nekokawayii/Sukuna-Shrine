@@ -95,9 +95,16 @@ public final class GeneratedMod {
             @Override public String reason() { return "肉体崩溃中：无法使用任何术式"; }
         });
         MinecraftForge.EVENT_BUS.register(character.kashimo.KashimoCombat.class);
+        // 东堂葵 · 不义游戏：注入咒力 / 换位
+        character.CharacterCasting.registerEffect("todo", character.todo.TodoSkills.INJECT,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.todo.TodoCombat.inject(p));
+        character.CharacterCasting.registerEffect("todo", character.todo.TodoSkills.SWAP,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.todo.TodoCombat.swap(p));
+        MinecraftForge.EVENT_BUS.register(character.todo.TodoCombat.class);
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent event) -> {
             character.kashimo.KashimoCharges.reset();
             character.kashimo.KashimoZones.reset();
+            character.todo.TodoMarks.reset();
         });
         character.CharacterCasting.registerEffect("megumi", character.megumi.MegumiSkills.TEN_SHADOWS, (net.minecraft.server.level.ServerPlayer p, character.CharacterSkill skill, int rank) -> Network.send((net.minecraft.server.level.ServerLevel) p.level(), new Network.Effect(308, p.getId(), p.position(), net.minecraft.world.phys.Vec3.ZERO, 0f, 0, 0)));
         MinecraftForge.EVENT_BUS.register(character.CharacterService.class);

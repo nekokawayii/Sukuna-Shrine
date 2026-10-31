@@ -51,6 +51,20 @@ public final class SkillDestruction {
         ServerPlayer authority=p instanceof MaidBridge.Actor a?MaidBridge.owner(a):p;
         return authority!=null&&l.mayInteract(authority,pos)&&!MinecraftForge.EVENT_BUS.post(new BlockEvent.BreakEvent(l,pos,state,authority))&&ForgeEventFactory.onEntityDestroyBlock(MaidBridge.body(p),pos,state);
     }
+    /**
+     * 只移动、不破坏方块时的准入（东堂葵的方块换位用）：
+     * **不看全局 desblock 开关**（它不销毁方块，只是交换位置），但仍走领地、保护方块、方块实体、基岩这些检查。
+     */
+    public static boolean canMove(ServerPlayer p,BlockPos pos){
+        ServerLevel l=p.serverLevel();
+        if(!p.isAlive()||DomainClash.active(p)||!l.hasChunkAt(pos)||!l.getWorldBorder().isWithinBounds(pos))return false;
+        var state=l.getBlockState(pos);
+        if(state.isAir()||state.getDestroySpeed(l,pos)<0||state.hasBlockEntity()||SoulJourney.protectedBlock(l,pos))return false;
+        ServerPlayer authority=p instanceof MaidBridge.Actor a?MaidBridge.owner(a):p;
+        return authority!=null&&l.mayInteract(authority,pos)&&!MinecraftForge.EVENT_BUS.post(new BlockEvent.BreakEvent(l,pos,state,authority))
+            &&ForgeEventFactory.onEntityDestroyBlock(MaidBridge.body(p),pos,state);
+    }
+    public static boolean canChange(ServerPlayer p,BlockPos pos){return mayChange(p,pos);}
     public static boolean eraseFluid(ServerPlayer p,BlockPos pos){
         if(p.serverLevel().getFluidState(pos).isEmpty()||!mayChange(p,pos))return false;var state=p.serverLevel().getBlockState(pos);
         if(state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED))return p.serverLevel().setBlock(pos,state.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED,false),3);

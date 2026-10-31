@@ -240,6 +240,7 @@ public final class Client {
     public static void slashShake(){shakeUntil=Math.max(shakeUntil,tick+3);}
     public static void receive(Network.Effect e){
         if(e.kind()>=character.kashimo.KashimoFx.FIRST&&e.kind()<=character.kashimo.KashimoFx.LAST){KashimoVisuals.receive(e);return;}
+        if(e.kind()>=character.todo.TodoFx.FIRST&&e.kind()<=character.todo.TodoFx.LAST){TodoVisuals.receive(e);return;}
         if(e.kind()==300){character.mahito.TransfigureScreen.open((int)e.size());return;}
         if(e.kind()==308){return;}
         if(e.kind()==306){character.mahito.MahitoArmsClient.addHeld(e.owner(),(int)e.size(),e.life());return;}

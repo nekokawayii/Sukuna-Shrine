@@ -69,7 +69,7 @@ public final class NpcCombatCasting {
                 burn(player);
                 fire(mob, player, 0xFFFFA33C);
             }
-            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 26, NpcDomain.Style.LAVA);   // 盖棺铁围山
+            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 27, NpcDomain.Style.LAVA);   // 盖棺铁围山（与玩家同半径 27）
         } else if (id.contains("uraume_npc")) {
             if (distance <= 5 && ready(mob, K_ATK, 50)) {
                 hurtAround(mob, player, 4, 10);

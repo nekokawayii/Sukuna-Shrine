@@ -72,6 +72,7 @@ public final class NpcDomain {
                     if (shell || floor) job.plan.add(center.offset(dx, dy, dz));
                     else if (inside) job.plan.add(center.offset(dx, dy, dz).immutable());
                 }
+        job.plan.sort(java.util.Comparator.comparingDouble(pos -> pos.distSqr(center)));
         JOBS.put(mob.getUUID(), job);
         Network.send(level, new Network.Effect(character.ryu.RyuFx.DOMAIN, mob.getId(), Vec3.atCenterOf(center),
             Vec3.ZERO, r, TICKS, 0));
@@ -120,10 +121,28 @@ public final class NpcDomain {
                 var block = (isFloor || isShell)
                     ? (job.style == Style.FIREWORK && outer ? Blocks.BEDROCK.defaultBlockState() : shell)
                     : air;
+                if (job.style == Style.LAVA && isFloor) {
+                    double roll = job.level.random.nextDouble();
+                    block = roll < 0.26 ? Blocks.MAGMA_BLOCK.defaultBlockState()
+                        : roll < 0.38 ? Blocks.LAVA.defaultBlockState()
+                        : Blocks.STONE.defaultBlockState();
+                }
                 job.level.setBlock(pos, block, 2);
                 if (!isShell && !isFloor && (pos.getX() + pos.getY() + pos.getZ()) % 5 == 0)
                     job.level.setBlock(pos, light, 2);
                 done++;
+            }
+            // ── 漏壶·盖棺铁围山：敌人脚下 10 格火柱（每 8 刻节流）+ 高温 ──
+            if (job.style == Style.LAVA && job.level.getGameTime() % 8 == 0) {
+                ServerLevel level = job.level;
+                for (LivingEntity living : level.getEntitiesOfClass(LivingEntity.class,
+                        new AABB(job.center).inflate(RADIUS), t -> t != owner && t.isAlive()
+                            && !(t instanceof Mob m && m.getType() == owner.getType()))) {
+                    if (living.distanceToSqr(Vec3.atCenterOf(job.center)) > (double) RADIUS * RADIUS) continue;
+                    Network.send(level, new Network.Effect(character.ryu.RyuFx.BURST, living.getId(),
+                        living.position(), Vec3.ZERO, 1.2f, 10, 0));
+                    if (level.getGameTime() % 16 == 0) living.setSecondsOnFire(2);
+                }
             }
             // ── 石流龙·打上花火：每 1 秒两枚火箭炸出追踪弹幕（与玩家同款机制：必中） ──
             if (job.style == Style.FIREWORK && job.level.getGameTime() % 20 == 0) {

@@ -69,7 +69,14 @@ public final class CharacterClient {
         }
         physicalHeld=down;
     }
-    public static void openWheel() { var mc=Minecraft.getInstance();if(toji())return;mc.setScreen(customWheel()?new CharacterWheel():new SkillWheel()); }
+    /** 伏黑惠：不走角色轮盘，直接打开宿傩线的十影界面。 */
+    public static boolean tenShadows() { var d=selected();return d!=null&&"megumi".equals(d.id()); }
+    public static void openWheel() {
+        var mc=Minecraft.getInstance();
+        if(toji())return;
+        if(tenShadows()){mc.setScreen(new cn.blockforge.generated.nnnnr1201forge2.TenShadowsScreen());return;}
+        mc.setScreen(customWheel()?new CharacterWheel():new SkillWheel());
+    }
     public static int rank() { return state.rank(); }
     public static CharacterSkill custom(int skill) { var d=selected();return d==null?null:d.config().skill(skill); }
 

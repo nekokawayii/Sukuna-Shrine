@@ -78,9 +78,27 @@ public final class NanamiRatio {
     }
 
     // ------------------------------------------------------------ 弱点几何
-    /** 弱点分割线的高度：从脚底往上 70% 身高。 */
+    /** 弱点分割线的高度：碰撞箱最下端 + 70% 碰撞箱高度（上端就是碰撞箱最上端）。 */
     public static double weakY(LivingEntity target) {
-        return target.getY() + target.getBbHeight() * RATIO;
+        var box = target.getBoundingBox();
+        return box.minY + box.getYsize() * RATIO;
+    }
+
+    /**
+     * 玩家看到的"那条分割线"在世界里的线段：横向、垂直于视线（所以画面上是水平一条），
+     * 长度取碰撞箱投影到该方向的宽度。命中判定用的是"准星射线到这条线段的最短距离"，
+     * 所以准星压在刻度线上就直接算命中，不需要射线真的插进碰撞箱。
+     */
+    public static Vec3[] weakSegment(ServerPlayer p, LivingEntity target) {
+        var box = target.getBoundingBox();
+        Vec3 look = p.getLookAngle();
+        Vec3 right = look.cross(new Vec3(0, 1, 0));
+        if (right.lengthSqr() < 1e-6) right = new Vec3(1, 0, 0);
+        right = right.normalize();
+        double half = (box.getXsize() / 2) * Math.abs(right.x) + (box.getZsize() / 2) * Math.abs(right.z);
+        half = Math.max(0.12, half);
+        Vec3 center = new Vec3(box.getCenter().x, weakY(target), box.getCenter().z);
+        return new Vec3[]{center.subtract(right.scale(half)), center.add(right.scale(half))};
     }
 
     public static double tolerance(ServerPlayer p, LivingEntity target) {
@@ -101,9 +119,41 @@ public final class NanamiRatio {
         return eye.add(dir.scale(t)).y;
     }
 
-    /** 是否精确命中那条分割线。 */
+    /** 是否精确命中那条分割线：准星射线到"刻度线线段"的最短距离落在容差内。 */
     public static boolean onWeakLine(ServerPlayer p, LivingEntity target) {
-        return Math.abs(aimY(p, target) - weakY(target)) <= tolerance(p, target);
+        Vec3 eye = p.getEyePosition(), look = p.getLookAngle();
+        Vec3[] line = weakSegment(p, target);
+        double distance = segmentDistance(eye, eye.add(look.scale(64)), line[0], line[1]);
+        return distance <= tolerance(p, target);
+    }
+
+    /** 两条线段之间的最短距离（准星射线当成一条 64 格长的线段）。 */
+    private static double segmentDistance(Vec3 p1, Vec3 q1, Vec3 p2, Vec3 q2) {
+        Vec3 d1 = q1.subtract(p1), d2 = q2.subtract(p2), r = p1.subtract(p2);
+        double a = d1.dot(d1), e = d2.dot(d2), f = d2.dot(r);
+        double s, t;
+        if (a <= 1e-8 && e <= 1e-8) return r.length();
+        if (a <= 1e-8) {
+            s = 0;
+            t = clamp(f / e);
+        } else {
+            double c = d1.dot(r);
+            if (e <= 1e-8) {
+                t = 0;
+                s = clamp(-c / a);
+            } else {
+                double b = d1.dot(d2), denominator = a * e - b * b;
+                s = denominator != 0 ? clamp((b * f - c * e) / denominator) : 0;
+                t = (b * s + f) / e;
+                if (t < 0) { t = 0; s = clamp(-c / a); }
+                else if (t > 1) { t = 1; s = clamp((b - c) / a); }
+            }
+        }
+        return p1.add(d1.scale(s)).distanceTo(p2.add(d2.scale(t)));
+    }
+
+    private static double clamp(double value) {
+        return value < 0 ? 0 : value > 1 ? 1 : value;
     }
 
     // ------------------------------------------------------------ 暴击

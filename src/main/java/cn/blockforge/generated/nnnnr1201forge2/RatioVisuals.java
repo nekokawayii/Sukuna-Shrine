@@ -9,6 +9,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiEvent;
@@ -137,12 +138,19 @@ public final class RatioVisuals {
         RenderSystem.setShaderColor(1, 1, 1, 1);
         BufferBuilder b = Tesselator.getInstance().getBuilder();
         b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        for (Axis axis : AXES.values()) drawAxis(b, ps, mc, axis, cam, partial, now);
         for (Arc arc : ARCS) drawArc(b, ps, arc, cam, now);
         for (Line line : LINES) drawLine(b, ps, line, cam, now);
         for (Clock clock : CLOCKS) drawClock(b, ps, clock, cam, now);
         for (Crit crit : CRITS) drawCrit(b, ps, crit, cam, now);
         BufferUploader.drawWithShader(b.end());
+        // 7:3 数轴：画在最上层（关深度测试），直接盖过生物与地形，永远不会被身体挡掉
+        if (!AXES.isEmpty()) {
+            RenderSystem.disableDepthTest();
+            b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+            for (Axis axis : AXES.values()) drawAxis(b, ps, mc, axis, cam, partial, now);
+            BufferUploader.drawWithShader(b.end());
+            RenderSystem.enableDepthTest();
+        }
         RenderSystem.depthMask(true);
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
@@ -155,18 +163,22 @@ public final class RatioVisuals {
         Entity entity = mc.level.getEntity(axis.entityId());
         if (!(entity instanceof LivingEntity living)) return;
         Vec3 feet = living.getPosition(partial);
-        double height = living.getBbHeight();
         if (feet.distanceToSqr(cam) > 48 * 48) return;
+        // 上下端严格取碰撞箱：最上端就是碰撞箱最上端，下端同理
+        AABB box = living.getBoundingBox();
+        Vec3 shift = feet.subtract(living.position());
+        double bottom = box.minY + shift.y, top = box.maxY + shift.y;
+        double height = Math.max(0.2, top - bottom);
         float appear = Math.min(1f, (now - axis.since() + partial) / 12f);   // 缓慢浮现
         int baseAlpha = (int) (200 * appear);
         // 朝向镜头：把整条轴往镜头方向推 0.55 格，避免埋进身体里
         Vec3 toward = cam.subtract(feet);
         Vec3 flat = new Vec3(toward.x, 0, toward.z);
         if (flat.lengthSqr() < 1e-4) flat = new Vec3(0, 0, 1);
-        Vec3 center = feet.add(flat.normalize().scale(0.55));
+        Vec3 center = new Vec3(box.getCenter().x + shift.x, bottom, box.getCenter().z + shift.z)
+            .add(flat.normalize().scale(0.5));
         Vec3 right = new Vec3(-flat.z, 0, flat.x).normalize();
         if (right.lengthSqr() < 1e-4) right = new Vec3(1, 0, 0);
-        double top = height;
         // 主竖线
         Client.ribbon(b, ps, center, center.add(0, top, 0), 0.035, argb(GOLD, baseAlpha), cam);
         // 第 7 段（60%~70%）金色区

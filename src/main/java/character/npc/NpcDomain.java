@@ -87,8 +87,6 @@ public final class NpcDomain {
         job.plan.sort(java.util.Comparator.comparingDouble(pos -> pos.distSqr(center)));
         if (style == Style.HIGURUMA) judge(mob, level, center, (int) Math.round(radiusOverride));
         JOBS.put(mob.getUUID(), job);
-        Network.send(level, new Network.Effect(character.ryu.RyuFx.DOMAIN, mob.getId(), Vec3.atCenterOf(center),
-            Vec3.ZERO, r, TICKS, 0));
     }
 
     public static void close(Mob mob, String reason) {
@@ -101,9 +99,6 @@ public final class NpcDomain {
             int id = net.minecraft.world.level.block.Block.getId(job.states.get(i));
             level.setBlock(pos, net.minecraft.world.level.block.Block.stateById(id), 2);
         }
-        if (mob != null && !mob.level().isClientSide())
-            Network.send(level, new Network.Effect(character.ryu.RyuFx.DOMAIN, mob.getId(), mob.position(),
-                Vec3.ZERO, 0f, 0, 0));
     }
 
     /** 诛伏赐死·判决：随机 无罪 / 有罪·没收（60 秒不能用术式）/ 有罪·死刑（日车下一次伤害直接处刑）。 */

@@ -131,6 +131,12 @@ public final class GeneratedMod {
         MinecraftForge.EVENT_BUS.register(character.ryu.RyuCombat.class);
         MinecraftForge.EVENT_BUS.register(character.ryu.RyuDomain.class);
         MinecraftForge.EVENT_BUS.register(character.toji.TojiQte.class);
+        // 禅院直哉·投射咒法：八个技能全部走自己的服务端逻辑
+        for (int naoyaSkill : character.naoya.NaoyaSkills.wheel()) {
+            character.CharacterCasting.registerEffect("naoya", naoyaSkill,
+                (character.CharacterCasting.Effect) (p2, s3, r3) -> character.naoya.NaoyaCombat.cast(p2, s3.id()));
+        }
+        MinecraftForge.EVENT_BUS.register(character.naoya.NaoyaCombat.class);
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent event) -> {
             character.kashimo.KashimoCharges.reset();
             character.kashimo.KashimoZones.reset();

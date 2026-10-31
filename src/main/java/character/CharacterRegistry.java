@@ -25,7 +25,8 @@ public final class CharacterRegistry {
         register(character.kashimo.KashimoCharacter.create());   // 鹿紫云一：幻兽琥珀（电荷与必中）
         register(character.todo.TodoCharacter.create());   // 东堂葵：不义游戏（注入咒力 / 换位）
         register(character.nanami.NanamiCharacter.create());   // 七海建人：十划咒法（7:3 弱点）
-        register(character.ryu.RyuCharacter.create());   // 石流龙：咒力强化/放出（超载、冰沙冲击波）
+        register(character.ryu.RyuCharacter.create());
+        register(character.naoya.NaoyaCharacter.create());   // 禅院直哉：投射咒法（设定投影 / 释放 / 五个投射技）   // 石流龙：咒力强化/放出（超载、冰沙冲击波）
         register(character.domainking.DomainKingCharacter.create());   // 领域王：万域（咒力无限）
         register(character.jogo.JogoCharacter.create());   // 漏壶·灾厄火焰（自定义个人线：泡岩浆 30 秒）
         register(character.yuta.YutaCharacter.create());

@@ -130,6 +130,7 @@ public final class GeneratedMod {
         });
         MinecraftForge.EVENT_BUS.register(character.ryu.RyuCombat.class);
         MinecraftForge.EVENT_BUS.register(character.ryu.RyuDomain.class);
+        MinecraftForge.EVENT_BUS.register(character.toji.TojiQte.class);
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent event) -> {
             character.kashimo.KashimoCharges.reset();
             character.kashimo.KashimoZones.reset();

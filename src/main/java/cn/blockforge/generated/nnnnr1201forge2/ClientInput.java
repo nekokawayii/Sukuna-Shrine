@@ -42,12 +42,13 @@ public final class ClientInput {
         cast.event(binding(Client.CAST),kind,code,down,available(Client.CAST),mods);
     }
     public static void key(int key,int scan,int action,int mods){
+        if(TojiQteClient.key(key,action,mods))return;
         event(HeldInput.Kind.KEYSYM,key,action,mods);
         event(HeldInput.Kind.SCANCODE,scan,action,mods);
         // 不等下一游戏刻：同一刻内按下又松开也必须完整送出施术起手/松手。
         if(action!=GLFW.GLFW_REPEAT)TechniqueInputClient.inputChanged();
     }
-    public static void mouse(int button,int action,int mods){event(HeldInput.Kind.MOUSE,button,action,mods);TechniqueInputClient.inputChanged();}
+    public static void mouse(int button,int action,int mods){if(TojiQteClient.mouse(button,action,mods))return;event(HeldInput.Kind.MOUSE,button,action,mods);TechniqueInputClient.inputChanged();}
     public static void mouse(int button,int action){mouse(button,action,modifiers);}
     @SubscribeEvent public static void key(InputEvent.Key e){key(e.getKey(),e.getScanCode(),e.getAction(),e.getModifiers());}
     @SubscribeEvent public static void mouse(InputEvent.MouseButton.Post e){mouse(e.getButton(),e.getAction(),e.getModifiers());}

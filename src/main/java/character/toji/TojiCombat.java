@@ -29,6 +29,11 @@ public final class TojiCombat {
         if(old!=null&&Math.abs(old.getAmount()-value)<0.000001)return;
         a.removeModifier(id);if(value!=0)a.addTransientModifier(new AttributeModifier(id,"天宇暴君肉体",value,AttributeModifier.Operation.ADDITION));
     }
+    /** 每刻维护：闪身速度加成到期清理。 */
+    public static void tickBuffs(ServerPlayer p) {
+        TojiQte.clearExpired(p, p.level().getGameTime());
+    }
+
     public static void attributes(Player p) {
         boolean active=CharacterService.toji(p);int r=TojiRules.rank(CharacterService.rank(p));
         modifier(p,Attributes.MAX_HEALTH,HEALTH,active?20+10*r:0);
@@ -38,6 +43,7 @@ public final class TojiCombat {
         if(p.getHealth()>p.getMaxHealth())p.setHealth(p.getMaxHealth());
     }
     public static void cast(ServerPlayer p,int kind) {
+        if(kind>=100){TojiQte.input(p,kind-100);return;}
         if(!CharacterService.toji(p)||kind<0||kind>2||!p.isAlive()||p.isSpectator()||p.isPassenger()||p.isSleeping()||p.isUsingItem())return;
         if(PrisonSystem.locked(p)||ObserverRitual.active(p)||GojoEntity.mindLocked(p)||GuardianPlayerSkills.locked(p)||SixfoldFinale.controlled(p)||DomainClash.active(p)||Uraume.locked(p)||NetBranches.locked(p)||CombatExpansion.controlled(p)||DismantleMotion.active(p))return;
         if(Curse.active(p,"TojiCooldown")){p.displayClientMessage(Component.literal("体术尚未收招"),true);return;}

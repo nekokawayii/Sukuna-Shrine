@@ -112,6 +112,7 @@ public final class GeneratedMod {
         // 九十九由基·星之怒：四招全部原版伤害实现
         character.CharacterCasting.registerEffect("yuki", character.yuki.YukiSkills.MASS_FIST, character.yuki.YukiCombat::massFist);
         character.CharacterCasting.registerEffect("yuki", character.yuki.YukiSkills.GARUDA, character.yuki.YukiCombat::garuda);
+        character.CharacterCasting.registerEffect("yuki", character.yuki.YukiSkills.COMBO, character.yuki.YukiCombat::comboFist);
         character.CharacterCasting.registerEffect("yuki", character.yuki.YukiSkills.STAR_RAGE, character.yuki.YukiCombat::starRage);
         MinecraftForge.EVENT_BUS.register(character.CharacterService.class);
         MinecraftForge.EVENT_BUS.register(character.CharacterRewards.class);

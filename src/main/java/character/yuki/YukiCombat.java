@@ -49,24 +49,45 @@ public final class YukiCombat {
 
     /** 质量拳：前方锥形，重击 + 强击退，吃加重层数。 */
     public static void massFist(ServerPlayer p, CharacterSkill skill, int rank) {
+        punchOnce(p, skill, rank, 1.0);
+    }
+
+    /** 连拳：1 秒内（0/4/8/12/16 刻）挥出五记质量拳。 */
+    public static void comboFist(ServerPlayer p, CharacterSkill skill, int rank) {
+        for (int i = 0; i < 5; i++) {
+            final int index = i;   // lambda 只能捕获 final 变量
+            p.server.tell(new net.minecraft.server.TickTask(index * 4, () -> {
+                if (!p.isAlive()) return;
+                punchOnce(p, skill, rank, 0.7);
+                if (p.level() instanceof ServerLevel level) {
+                    level.playSound(null, p.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG,
+                        SoundSource.PLAYERS, 1f, 0.7f + index * 0.05f);
+                }
+            }));
+        }
+        p.displayClientMessage(Component.literal("连拳·质量拳：五连击"), true);
+    }
+
+    /** 单次质量拳判定；multiplier 用于连拳把每拳调弱一点。 */
+    private static void punchOnce(ServerPlayer p, CharacterSkill skill, int rank, double multiplier) {
         Vec3 eye = p.getEyePosition(), dir = p.getLookAngle();
         double range = skill.range();
-        float damage = (float) (skill.damageAt(rank) * rageMultiplier(p));
+        float damage = (float) (skill.damageAt(rank) * rageMultiplier(p) * multiplier);
         for (LivingEntity e : around(p, eye.add(dir.scale(range * 0.5)), range * 0.6 + skill.radius())) {
             Vec3 to = e.getBoundingBox().getCenter().subtract(eye);
             if (to.length() > range) continue;
             if (to.normalize().dot(dir) < Math.cos(Math.toRadians(skill.halfAngle()))) continue;
             e.hurt(p.damageSources().playerAttack(p), damage);
-            Vec3 kb = to.normalize().scale(2.2);
-            e.push(kb.x, 0.7, kb.z);
+            Vec3 kb = to.normalize().scale(2.0);
+            e.push(kb.x, 0.6, kb.z);
             e.hurtMarked = true;
         }
         if (p.level() instanceof ServerLevel level) {
-            for (int i = 1; i <= 12; i++) {
-                Vec3 at = eye.add(dir.scale(range * i / 12.0));
+            for (int i = 1; i <= 8; i++) {
+                Vec3 at = eye.add(dir.scale(range * i / 8.0));
                 level.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y, at.z, 1, 0, 0, 0, 0);
             }
-            level.playSound(null, p.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.2f, 0.6f);
+            level.playSound(null, p.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.0f, 0.7f);
         }
     }
 

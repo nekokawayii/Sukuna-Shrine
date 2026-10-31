@@ -28,6 +28,8 @@ public final class YukiCombat {
     public static final int RAGE_MAX = 10;
     /** 每层加伤倍率（层数 n → 1 + 0.5n，满层 ×6）。 */
     private static final double RAGE_STEP = 0.5;
+    /** 标记：当前缓慢效果是「加重」施加的，层数清零时要移除。 */
+    private static final String SLOW_MARK = "YukiRageSlow";
 
     public static int rage(Player p) {
         return p == null ? 0 : cn.blockforge.generated.nnnnr1201forge2.Curse.data(p).getInt(RAGE_KEY);
@@ -149,6 +151,7 @@ public final class YukiCombat {
         // 视觉反馈：层数越高越沉
         p.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 200, Math.min(3, next / 3), false, false, true));
         p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 200, Math.min(2, next / 4), false, false, true));
+        p.getPersistentData().putBoolean(SLOW_MARK, true);   // 标记：缓慢由加重提供，层数清零时移除
         p.displayClientMessage(Component.literal(
             "加重 " + next + "/" + RAGE_MAX + " · 伤害 ×" + String.format(java.util.Locale.ROOT, "%.1f", 1 + RAGE_STEP * next)
             + (next >= RAGE_MAX ? " · 下次将压成黑洞" : "")), true);
@@ -255,6 +258,16 @@ public final class YukiCombat {
         if (p.tickCount % 20 != 0) return;
         var def = character.CharacterService.selected(p);
         if (def == null || !"yuki".equals(def.id())) return;
+        // 加重的缓慢：不是 200 刻的临时效果，只要层数还在就一直生效
+        int stacks = rage(p);
+        if (stacks > 0) {
+            p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, Math.min(2, stacks / 4), false, false, true));
+            p.getPersistentData().putBoolean(SLOW_MARK, true);
+        } else if (p.getPersistentData().getBoolean(SLOW_MARK)) {
+            p.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
+            p.getPersistentData().remove(SLOW_MARK);
+        }
+
         if (p.getHealth() <= 0 || p.getHealth() >= p.getMaxHealth()) return;
         p.heal(regenPerSecond(p));
     }

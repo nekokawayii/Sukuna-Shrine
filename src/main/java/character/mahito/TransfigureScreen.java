@@ -28,10 +28,16 @@ public final class TransfigureScreen extends Screen {
         Minecraft.getInstance().setScreen(new TransfigureScreen(mode));
     }
 
+    private static final String[] FORMS = {"剑", "斧", "镐", "锄", "铲", "咒具"};
+
     private String label(int i) {
-        if (i == 0) return mode == 0 ? "1 储存" : "1 变成剑";
-        return "？";
+        if (mode == 0) return i == 0 ? "1 储存" : "？";
+        return (i + 1) + " " + FORMS[i];
     }
+
+    private boolean selectable(int i) { return mode == 1 || i == 0; }
+
+    private int actionFor(int i) { return mode == 0 ? 0 : i + 1; }
 
     private int nodeX(int i) {
         return (int) (width / 2.0 + Math.cos(-Math.PI / 2 + i * Math.PI * 2 / SLOTS) * RADIUS);
@@ -56,12 +62,12 @@ public final class TransfigureScreen extends Screen {
         g.drawCenteredString(font, "无为转变", cx, cy - 6, 0xFF9FD7E8);
         for (int i = 0; i < SLOTS; i++) {
             int x = nodeX(i), y = nodeY(i);
-            boolean hot = hovered(mouseX, mouseY) == i && i == 0;
+            boolean hot = hovered(mouseX, mouseY) == i && selectable(i);
             int fill = hot ? 0xEE2C5661 : 0xCC1C2228;
-            int border = i == 0 ? 0xFF9FD7E8 : 0xFF3A434B;
+            int border = selectable(i) ? 0xFF9FD7E8 : 0xFF3A434B;
             g.fill(x - NODE / 2 - 1, y - NODE / 2 - 1, x + NODE / 2 + 1, y + NODE / 2 + 1, border);
             g.fill(x - NODE / 2, y - NODE / 2, x + NODE / 2, y + NODE / 2, fill);
-            g.drawCenteredString(font, label(i), x, y - 4, i == 0 ? 0xFFE8F0F5 : 0xFF5D686F);
+            g.drawCenteredString(font, label(i), x, y - 4, selectable(i) ? 0xFFE8F0F5 : 0xFF5D686F);
         }
         g.drawCenteredString(font, mode == 0 ? "选择要贮存的形态" : "选择要变化的形态", cx, cy + 120, 0xFFB9C6CF);
         super.render(g, mouseX, mouseY, partial);
@@ -69,8 +75,9 @@ public final class TransfigureScreen extends Screen {
 
     @Override public boolean mouseClicked(double mx, double my, int button) {
         if (button != 0) return super.mouseClicked(mx, my, button);
-        if (hovered(mx, my) == 0) {
-            int action = mode == 0 ? 0 : 1;
+        int hit = hovered(mx, my);
+        if (hit >= 0 && selectable(hit)) {
+            int action = actionFor(hit);
             cn.blockforge.generated.nnnnr1201forge2.Network.CHANNEL.sendToServer(
                 new cn.blockforge.generated.nnnnr1201forge2.TechniqueInput.Input(
                     character.mahito.MahitoSkills.TRANSMUTE, 7, false, false, false, false, action, 0));

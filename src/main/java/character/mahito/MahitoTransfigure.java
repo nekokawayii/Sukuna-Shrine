@@ -28,6 +28,9 @@ public final class MahitoTransfigure {
     private static final int ARM_TICKS = 200;
     /** 命中后暂存的待贮存快照（等轮盘选择）。 */
     public static final String PENDING = "SukunaPendingTransfig";
+    public static final int FORM_SWORD=1, FORM_AXE=2, FORM_PICKAXE=3, FORM_HOE=4, FORM_SHOVEL=5, FORM_CURSED=6;
+    private static final String[] TIER_NAMES={"木","石","金","铁","钻石","下界合金"};
+    private static final String[] TOOL_NAMES={"剑","斧","镐","锄","铲","咒具"};
 
     private record Armed(UUID target, long at) {}
     private static final Map<UUID, Armed> ARMED = new HashMap<>();
@@ -98,19 +101,70 @@ public final class MahitoTransfigure {
             p.sendSystemMessage(Component.literal("无为转变·贮存完成：右键贮存体可打开轮盘").withStyle(ChatFormatting.AQUA));
             return;
         }
-        if (action != 1) return;
-        ItemStack held = p.getMainHandItem();
-        if (!held.is(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_BODY.get())) return;
-        CompoundTag tag = held.getTag();
-        ItemStack sword = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_SWORD.get());
-        if (tag != null) {
-            sword.setTag(tag.copy());
-            CompoundTag base = tag.getCompound(BASE_TAG);
-            sword.setHoverName(Component.literal("剑·" + base.getString("name")).withStyle(ChatFormatting.AQUA));
-            sword.setDamageValue(0);
+        if (action < FORM_SWORD || action > FORM_CURSED) return;
+        transform(p, action);
+    }
+
+    /** 血量决定材质：<5 木 / <10 石 / <20 金 / <40 铁 / <60 与 <110 钻石 / ≥110 下界合金。 */
+    private static int tierIndex(float hp) {
+        if (hp < 5) return 0;
+        if (hp < 10) return 1;
+        if (hp < 20) return 2;
+        if (hp < 40) return 3;
+        if (hp < 110) return 4;
+        return 5;
+    }
+
+    public static boolean isTransfigured(ItemStack stack) {
+        net.minecraft.world.item.Item item = stack.getItem();
+        if (item == cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_BODY.get()
+            || item == cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_SWORD.get()) return true;
+        for (int i = 0; i < 6; i++) {
+            if (item == cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_AXES[i].get()
+                || item == cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_PICKAXES[i].get()
+                || item == cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_HOES[i].get()
+                || item == cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_SHOVELS[i].get()) return true;
         }
-        p.getInventory().setItem(p.getInventory().selected, sword);
-        p.sendSystemMessage(Component.literal("无为转变：形态变为「剑」").withStyle(ChatFormatting.AQUA));
+        return false;
+    }
+
+    /** 按当前贮存数据换成指定形态（保留 NBT；工具耐久按材质满耐，其他咒具只留 1%）。 */
+    private static void transform(ServerPlayer p, int form) {
+        ItemStack held = p.getMainHandItem();
+        CompoundTag base = held.getTagElement(BASE_TAG);
+        if (base == null) return;
+        float hp = base.getFloat("maxHealth");
+        int tier = tierIndex(hp);
+        ItemStack out;
+        String label;
+        switch (form) {
+            case FORM_SWORD -> { out = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_SWORD.get()); label = "剑"; }
+            case FORM_AXE -> { out = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_AXES[tier].get()); label = TIER_NAMES[tier] + "斧"; }
+            case FORM_PICKAXE -> { out = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_PICKAXES[tier].get()); label = TIER_NAMES[tier] + "镐"; }
+            case FORM_HOE -> { out = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_HOES[tier].get()); label = TIER_NAMES[tier] + "锄"; }
+            case FORM_SHOVEL -> { out = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_SHOVELS[tier].get()); label = TIER_NAMES[tier] + "铲"; }
+            default -> { out = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.YUYUN.get()); label = "咒具·游云"; }
+        }
+        out.getOrCreateTag().put(BASE_TAG, base.copy());
+        out.setHoverName(Component.literal(label + "·" + base.getString("name")).withStyle(ChatFormatting.AQUA));
+        if (form == FORM_CURSED) {
+            int max = out.getMaxDamage();
+            out.setDamageValue(Math.max(0, max - Math.max(1, max / 100)));
+        } else {
+            out.setDamageValue(0);
+        }
+        p.getInventory().setItem(p.getInventory().selected, out);
+        p.sendSystemMessage(Component.literal("无为转变：形态变为「" + label + "」").withStyle(ChatFormatting.AQUA));
+    }
+
+    /** 右键任意「无为转变」物品 → 打开变化轮盘（mode=1）。 */
+    @SubscribeEvent public static void rightClick(net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem e) {
+        if (!isTransfigured(e.getItemStack()) || e.getItemStack().getTagElement(BASE_TAG) == null) return;
+        e.setCanceled(true);
+        if (e.getLevel().isClientSide) {
+            net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT,
+                () -> () -> TransfigureScreen.open(1));
+        }
     }
 
     private MahitoTransfigure() {}

@@ -143,6 +143,33 @@ public final class Content {
                 return net.minecraft.world.InteractionResultHolder.success(p.getItemInHand(hand));
             }
         });
+    /** 无为转变工具：4 种工具 × 6 个材质，材质由贮存生物血量决定。 */
+    public static final String[] TRANSFIGURE_TIERS={"wood","stone","gold","iron","diamond","netherite"};
+    public static final net.minecraft.world.item.Tier[] TRANSFIGURE_TIER_OBJ={
+        net.minecraft.world.item.Tiers.WOOD, net.minecraft.world.item.Tiers.STONE,
+        net.minecraft.world.item.Tiers.GOLD, net.minecraft.world.item.Tiers.IRON,
+        net.minecraft.world.item.Tiers.DIAMOND, net.minecraft.world.item.Tiers.NETHERITE};
+    @SuppressWarnings("unchecked")
+    public static final RegistryObject<Item>[] TRANSFIGURED_AXES=new RegistryObject[6];
+    @SuppressWarnings("unchecked")
+    public static final RegistryObject<Item>[] TRANSFIGURED_PICKAXES=new RegistryObject[6];
+    @SuppressWarnings("unchecked")
+    public static final RegistryObject<Item>[] TRANSFIGURED_HOES=new RegistryObject[6];
+    @SuppressWarnings("unchecked")
+    public static final RegistryObject<Item>[] TRANSFIGURED_SHOVELS=new RegistryObject[6];
+    static {
+        for(int i=0;i<6;i++){
+            final int k=i;
+            TRANSFIGURED_AXES[i]=ITEMS.register("transfigured_axe_"+TRANSFIGURE_TIERS[i],
+                ()->new net.minecraft.world.item.AxeItem(TRANSFIGURE_TIER_OBJ[k],6.0f,-3.0f,new Item.Properties().rarity(Rarity.EPIC)));
+            TRANSFIGURED_PICKAXES[i]=ITEMS.register("transfigured_pickaxe_"+TRANSFIGURE_TIERS[i],
+                ()->new net.minecraft.world.item.PickaxeItem(TRANSFIGURE_TIER_OBJ[k],1,-2.8f,new Item.Properties().rarity(Rarity.EPIC)));
+            TRANSFIGURED_HOES[i]=ITEMS.register("transfigured_hoe_"+TRANSFIGURE_TIERS[i],
+                ()->new net.minecraft.world.item.HoeItem(TRANSFIGURE_TIER_OBJ[k],-2,-3.0f,new Item.Properties().rarity(Rarity.EPIC)));
+            TRANSFIGURED_SHOVELS[i]=ITEMS.register("transfigured_shovel_"+TRANSFIGURE_TIERS[i],
+                ()->new net.minecraft.world.item.ShovelItem(TRANSFIGURE_TIER_OBJ[k],1.5f,-3.0f,new Item.Properties().rarity(Rarity.EPIC)));
+        }
+    }
     public static final RegistryObject<Item> TRANSFIGURED_SWORD=ITEMS.register("transfigured_sword",
         ()->new character.mahito.TransfiguredSwordItem(net.minecraft.world.item.Tiers.NETHERITE,5,-2.4f,
             new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));

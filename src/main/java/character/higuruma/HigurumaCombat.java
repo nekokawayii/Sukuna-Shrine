@@ -29,12 +29,13 @@ public final class HigurumaCombat {
         if (e.phase != TickEvent.Phase.END || !(e.player instanceof ServerPlayer p) || p.tickCount % 20 != 0) return;
         boolean higuruma = character.CharacterService.selected(p) != null
             && "higuruma".equals(character.CharacterService.selected(p).id());
-        if (higuruma) {
-            if (!hasGavel(p)) giveGavel(p);
-        } else if (hasGavel(p)) {
-            for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
-                if (p.getInventory().getItem(i).getItem() == GAVEL.get()) p.getInventory().setItem(i, ItemStack.EMPTY);
-            }
+        // 只在「角色切换」时授予/移除一次；不再每 20 刻补发（否则法槌掷出会复制）
+        String last = cn.blockforge.generated.nnnnr1201forge2.Curse.data(p).getString("HigurumaChar");
+        String now = higuruma ? "higuruma" : "";
+        if (!now.equals(last)) {
+            cn.blockforge.generated.nnnnr1201forge2.Curse.data(p).putString("HigurumaChar", now);
+            if (higuruma) { if (!hasGavel(p)) giveGavel(p); }
+            else removeGavels(p);
         }
     }
 
@@ -47,8 +48,19 @@ public final class HigurumaCombat {
     public static void giveGavel(ServerPlayer p) {
         ItemStack gavel = new ItemStack(GAVEL.get());
         gavel.setHoverName(Component.literal("法槌").withStyle(ChatFormatting.GOLD));
+        // NBT 绑定：该法槌属于这名玩家，不可丢弃、不可被清除/复制
+        gavel.getOrCreateTag().putBoolean("GavelLock", true);
+        gavel.getOrCreateTag().putString("GavelOwner", p.getUUID().toString());
         if (!p.getInventory().add(gavel)) p.drop(gavel, false);
         p.sendSystemMessage(Component.literal("诛伏赐死：法槌已授予（不可丢弃）").withStyle(ChatFormatting.GOLD));
+    }
+
+    private static void removeGavels(ServerPlayer p) {
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+            ItemStack st = p.getInventory().getItem(i);
+            if (st.getItem() == GAVEL.get() && st.getTag() != null && st.getTag().getBoolean("GavelLock"))
+                p.getInventory().setItem(i, ItemStack.EMPTY);
+        }
     }
 
     /** 1 刻印：把副手武器的伤害/攻速/特殊 NBT 刻进法槌。 */

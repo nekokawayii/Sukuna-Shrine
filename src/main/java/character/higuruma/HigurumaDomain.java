@@ -62,6 +62,7 @@ public final class HigurumaDomain {
         final Set<UUID> pinned = new HashSet<>();
         final Map<UUID, Long> confiscated = new HashMap<>();
         UUID judge;
+        BlockPos judgeSpot;
         Built(ServerLevel level, long end) { this.level = level; this.end = end; }
     }
     private static final Map<UUID, Built> ACTIVE = new HashMap<>();
@@ -117,6 +118,20 @@ public final class HigurumaDomain {
                 built.amethyst = origin.offset(cell.x(), cell.y(), cell.z());
             else if (cell.state().is(net.minecraft.world.level.block.Blocks.BUDDING_AMETHYST))
                 built.budding = origin.offset(cell.x(), cell.y(), cell.z());
+        }
+        // 审判者出生点：紫水晶后方（z 更小一侧）最高的深色橡木木块堆
+        if (built.amethyst != null) {
+            BlockPos best = null;
+            for (Cell cell : layout()) {
+                if (!cell.state().is(net.minecraft.world.level.block.Blocks.DARK_OAK_PLANKS)) continue;
+                BlockPos pos = origin.offset(cell.x(), cell.y(), cell.z());
+                int dz = pos.getZ() - built.amethyst.getZ();
+                if (dz > -2 || dz < -12) continue;
+                if (Math.abs(pos.getX() - built.amethyst.getX()) > 8) continue;
+                if (best == null || pos.getY() > best.getY()
+                    || (pos.getY() == best.getY() && Math.abs(dz) < Math.abs(best.getZ() - built.amethyst.getZ()))) best = pos;
+            }
+            built.judgeSpot = best != null ? best : built.amethyst.offset(0, 1, -3);
         }
         ACTIVE.put(p.getUUID(), built);
         p.sendSystemMessage(Component.literal("领域展开·诛伏赐死（再按收回）").withStyle(ChatFormatting.DARK_PURPLE));
@@ -183,13 +198,14 @@ public final class HigurumaDomain {
         ServerPlayer owner = b.level.getServer().getPlayerList().getPlayer(ownerId);
         if (owner != null) owner.teleportTo(b.amethyst.getX() + 0.5, b.amethyst.getY() + 1.0, b.amethyst.getZ() + 0.5);
         var center = Vec3.atCenterOf(b.budding != null ? b.budding : b.amethyst);
-        // 审判者：玩家背后
-        if (owner != null) {
+        // 审判者：紫水晶后面的木块堆上，朝向玩家
+        if (b.judgeSpot != null) {
             var judge = cn.blockforge.generated.nnnnr1201forge2.Content.HIGURUMA_JUDGE.get().create(b.level);
             if (judge != null) {
-                Vec3 back = new Vec3(-Math.sin(Math.toRadians(owner.getYRot())), 0, Math.cos(Math.toRadians(owner.getYRot()))).normalize().scale(3.0);
-                Vec3 at = owner.position().add(back);
-                judge.moveTo(at.x, owner.getY(), at.z, owner.getYRot() + 180f, 0f);
+                float yaw = owner != null
+                    ? (float) Math.toDegrees(Math.atan2(owner.getZ() - b.judgeSpot.getZ(), owner.getX() - b.judgeSpot.getX())) - 90f
+                    : 0f;
+                judge.moveTo(b.judgeSpot.getX() + 0.5, b.judgeSpot.getY() + 1.0, b.judgeSpot.getZ() + 0.5, yaw, 0f);
                 b.level.addFreshEntity(judge);
                 b.judge = judge.getUUID();
             }

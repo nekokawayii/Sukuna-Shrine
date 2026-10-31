@@ -119,19 +119,16 @@ public final class HigurumaDomain {
             else if (cell.state().is(net.minecraft.world.level.block.Blocks.BUDDING_AMETHYST))
                 built.budding = origin.offset(cell.x(), cell.y(), cell.z());
         }
-        // 审判者出生点：紫水晶后方（z 更小一侧）最高的深色橡木木块堆
+        // 审判者出生点：以「紫水晶块」为准，往后 4 格找最高的木块堆，站在其顶部
         if (built.amethyst != null) {
-            BlockPos best = null;
-            for (Cell cell : layout()) {
-                if (!cell.state().is(net.minecraft.world.level.block.Blocks.DARK_OAK_PLANKS)) continue;
-                BlockPos pos = origin.offset(cell.x(), cell.y(), cell.z());
-                int dz = pos.getZ() - built.amethyst.getZ();
-                if (dz > -2 || dz < -12) continue;
-                if (Math.abs(pos.getX() - built.amethyst.getX()) > 8) continue;
-                if (best == null || pos.getY() > best.getY()
-                    || (pos.getY() == best.getY() && Math.abs(dz) < Math.abs(best.getZ() - built.amethyst.getZ()))) best = pos;
+            BlockPos column = built.amethyst.offset(0, 0, -4);
+            int topY = built.amethyst.getY() - 2;
+            for (int dy = -2; dy <= 6; dy++) {
+                BlockPos pos = column.offset(0, dy, 0);
+                BlockState st = level.getBlockState(pos);
+                if (!st.isAir() && !st.canBeReplaced()) topY = pos.getY();
             }
-            built.judgeSpot = best != null ? best : built.amethyst.offset(0, 1, -3);
+            built.judgeSpot = new BlockPos(column.getX(), topY + 1, column.getZ());
         }
         ACTIVE.put(p.getUUID(), built);
         p.sendSystemMessage(Component.literal("领域展开·诛伏赐死（再按收回）").withStyle(ChatFormatting.DARK_PURPLE));

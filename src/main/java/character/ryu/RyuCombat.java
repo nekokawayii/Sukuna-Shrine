@@ -71,9 +71,21 @@ public final class RyuCombat {
     private static long now(LivingEntity e) { return e.level().getGameTime(); }
 
     // ------------------------------------------------------------ 冰沙冲击波：持续放出
+    /**
+     * 冰沙冲击波：**按一下开、再按一下关**（咒力见底也会自动关）。
+     * <p>做成开关而不是"按住"是因为输入侧的按住心跳在某些情况下会丢，
+     * 表现成"只喷一下"。开关模式下哪怕只收到一次 phase 0 也能一直喷。
+     */
     public static void startCharge(ServerPlayer p) {
         CompoundTag data = Curse.data(p);
-        if (data.getLong(CHANNEL_START) != 0) return;
+        if (data.getLong(CHANNEL_START) != 0) {
+            // 已经开着 → 这一次按下当作"关"
+            data.remove(CHANNEL_START);
+            Network.sendTo(p, new Network.Effect(RyuFx.CHARGE, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));
+            com.mojang.logging.LogUtils.getLogger().info("[石流龙] 冲击波关闭 {}", p.getScoreboardName());
+            p.displayClientMessage(Component.literal("冰沙冲击波 · 关闭"), true);
+            return;
+        }
         data.putLong(CHANNEL_START, now(p));
         // 起手立刻结算一发：这样"点一下"也一定看得到光（以前要等 4 刻的取模才发第一跳）
         pulse(p, p, BLAST_BASE_WIDTH, BLAST_DAMAGE_BASE + BLAST_BASE_WIDTH * BLAST_DAMAGE_PER_WIDTH, true, true);
@@ -91,14 +103,9 @@ public final class RyuCombat {
         if (Curse.data(p).getLong(CHANNEL_START) == 0) startCharge(p);
     }
 
+    /** 松手/取消：**不关**冲击波（开关模式下靠再按一次开关键关闭）。只把蓄力提示收掉。 */
     public static void releaseCharge(ServerPlayer p, boolean fire) {
-        boolean was = Curse.data(p).getLong(CHANNEL_START) != 0;
-        Curse.data(p).remove(CHANNEL_START);
         Network.sendTo(p, new Network.Effect(RyuFx.CHARGE, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));
-        if (was) {
-            com.mojang.logging.LogUtils.getLogger().info("[石流龙] 冲击波结束 {}（{}）",
-                p.getScoreboardName(), fire ? "松手" : "取消");
-        }
     }
 
     /** 当前宽度：1 格起，每 2 秒 +1 格，无上限。 */
@@ -298,6 +305,14 @@ public final class RyuCombat {
         if (start != 0) {
             long elapsed = Math.max(0, now - start);
             double width = channelWidth(elapsed);
+            if (elapsed > 20 * 120) {
+                // 兜底：切角色/长时间挂着回来不会变成无限宽的怪东西
+                data.remove(CHANNEL_START);
+                Network.sendTo(p, new Network.Effect(RyuFx.CHARGE, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));
+                com.mojang.logging.LogUtils.getLogger().info("[石流龙] 冲击波超时自动关闭 {}", p.getScoreboardName());
+                p.displayClientMessage(Component.literal("冰沙冲击波 · 超时自动关闭"), true);
+                return;
+            }
             if (elapsed % 20 == 0 && elapsed > 0 && !Curse.spend(p, BLAST_TICK_COST)) {
                 data.remove(CHANNEL_START);
                 Network.sendTo(p, new Network.Effect(RyuFx.CHARGE, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));

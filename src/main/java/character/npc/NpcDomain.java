@@ -43,6 +43,7 @@ public final class NpcDomain {
         final List<long[]> saved = new ArrayList<>();     // 编码：pos | (stateId << 64) 分两段存
         final List<BlockState> states = new ArrayList<>();
         final List<BlockPos> plan = new ArrayList<>();
+        final Map<Long, Integer> decor = new HashMap<>();
         int cursor;
 
         Job(UUID owner, ServerLevel level, BlockPos center, long end, Style style) {
@@ -74,6 +75,15 @@ public final class NpcDomain {
                     if (shell || floor) job.plan.add(center.offset(dx, dy, dz));
                     else if (inside) job.plan.add(center.offset(dx, dy, dz).immutable());
                 }
+        if (style == Style.NAOYA) {
+            // 1:1 铺玩家那套烘焙布局（白环/紫水晶/眼球）；地板层只去黑地板、保留白路与紫水晶
+            character.naoya.NaoyaDomainLayout.forEach((rel, state) -> {
+                if (rel.getY() == -1 && state == 0) return;
+                BlockPos pos = center.offset(rel.getX(), rel.getY() + 1, rel.getZ());
+                job.decor.put(pos.asLong(), state);
+                if (!job.plan.contains(pos)) job.plan.add(pos);
+            });
+        }
         job.plan.sort(java.util.Comparator.comparingDouble(pos -> pos.distSqr(center)));
         JOBS.put(mob.getUUID(), job);
         Network.send(level, new Network.Effect(character.ryu.RyuFx.DOMAIN, mob.getId(), Vec3.atCenterOf(center),
@@ -125,9 +135,13 @@ public final class NpcDomain {
                     : air;
                 if (job.style == Style.PACHINKO && isFloor) block = Blocks.GOLD_BLOCK.defaultBlockState();
                 if (job.style == Style.BLOOD && isFloor) block = Blocks.RED_CONCRETE.defaultBlockState();
-                if (job.style == Style.NAOYA && isFloor)
-                    block = (Math.abs(pos.getX() - job.center.getX()) + Math.abs(pos.getZ() - job.center.getZ())) % 6 == 0
-                        ? Blocks.WHITE_CONCRETE.defaultBlockState() : Blocks.BLACK_CONCRETE.defaultBlockState();
+                Integer decor = job.decor.get(pos.asLong());
+                if (decor != null)
+                    block = switch (decor) {
+                        case 1 -> Blocks.WHITE_CONCRETE.defaultBlockState();
+                        case 2 -> Blocks.AMETHYST_BLOCK.defaultBlockState();
+                        default -> Blocks.BLACK_CONCRETE.defaultBlockState();
+                    };
                 if (job.style == Style.LAVA && isFloor) {
                     double roll = job.level.random.nextDouble();
                     block = roll < 0.26 ? Blocks.MAGMA_BLOCK.defaultBlockState()

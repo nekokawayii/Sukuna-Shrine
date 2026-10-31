@@ -54,7 +54,7 @@ public final class HigurumaDomain {
     }
 
     private static final class Built {
-        final ServerLevel level; final long end;
+        final ServerLevel level; long end;
         final Map<BlockPos, BlockState> originals = new LinkedHashMap<>();
         final Map<BlockPos, BlockState> todo = new LinkedHashMap<>();
         boolean expanded;
@@ -181,6 +181,12 @@ public final class HigurumaDomain {
     public static void serverStopped(net.minecraftforge.event.server.ServerStoppedEvent event) {
         for (Built b : ACTIVE.values()) restore(b.level, b);
         ACTIVE.clear();
+    }
+
+    /** 领域对拼获胜：延长领域存在时间。 */
+    public static void extend(ServerPlayer p, int ticks) {
+        Built built = ACTIVE.get(p.getUUID());
+        if (built != null) built.end += ticks;
     }
 
     public static void close(ServerPlayer p, String msg) {

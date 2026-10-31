@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/cube_all",
   "textures": {
-    "all": "sukuna:effect/void_rift"
+    "all": "sukuna:block/domain_screen_5"
   }
 }

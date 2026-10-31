@@ -46,6 +46,8 @@ public final class CreativeRestorer extends Item {
         character.nanami.NanamiCombat.testReset(p);     // 七海建人：弱点/加班/格挡状态与属性
         character.ryu.RyuCombat.testReset(p);           // 石流龙：蓄力 / 甜品时间
         character.ryu.RyuDomain.forceClose(p);          // 石流龙：领域（整批还原地形）
+        character.naoya.NaoyaCombat.testReset(p);       // 禅院直哉：投影节点与模式
+        character.naoya.NaoyaDomain.forceClose(p);      // 禅院直哉：领域（整批还原地形）
         var progress=Curse.data(p);for(String key:List.copyOf(progress.getAllKeys()))if(RecoveryRules.progressKey(key))progress.remove(key);
         var data=p.getPersistentData();for(String key:List.copyOf(data.getAllKeys()))if(RecoveryRules.entityKey(key))data.remove(key);
         SoulCombat.testReset(p);

@@ -172,9 +172,10 @@ public final class KashimoCombat {
             applyCrashModifiers(p);
             if (p.getHealth() > 1f) p.setHealth(1f);
         }
-        // ④ 低血量自动触发终奥
-        if (!ultimate(p) && !crashing(p) && p.getHealth() <= p.getMaxHealth() * ULT_TRIGGER_HP
-            && usableOnce(p)) {
+        // ④ 低血量自动触发终奥：**每条命只自动触发一次**，创造模式也不例外
+        //（崩溃结束时会强制把血锁在 1 点，若这里走 usableOnce 的创造无限次，就会一结束立刻又自动开一次）
+        if (!ultimate(p) && !crashing(p) && !data.getBoolean(ULT_USED)
+            && p.getHealth() <= p.getMaxHealth() * ULT_TRIGGER_HP) {
             startUltimate(p, false);
         }
         // ④' 琥珀的电磁波形态：每次普攻（含挥空）把前方扇形里的敌人各劈一道雷
@@ -408,6 +409,7 @@ public final class KashimoCombat {
     }
 
     public static void startUltimate(ServerPlayer p, boolean payEnergy) {
+        if (ultimate(p)) return;   // 已经在形态中：不重复扣除、不重置计时
         if (payEnergy) Curse.add(p, -Curse.energy(p));
         CompoundTag data = data(p);
         data.putLong(ULT_UNTIL, p.level().getGameTime() + ULT_TICKS);

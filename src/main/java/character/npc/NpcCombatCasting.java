@@ -43,7 +43,7 @@ public final class NpcCombatCasting {
     private static boolean isNpc(Mob mob) {
         String id = mob.getType().toString();
         return id.contains("jogo_npc") || id.contains("uraume_npc") || id.contains("choso")
-            || id.contains("ryu_npc") || id.contains("hakari_npc") || id.contains("naoya_npc") || id.contains("higuruma_npc") || id.contains("sukuna_npc");
+            || id.contains("ryu_npc") || id.contains("hakari_npc") || id.contains("naoya_npc") || id.contains("higuruma_npc") || id.contains("sukuna_npc") || id.contains("kashimo_npc");
     }
 
     private static long now(Mob mob) { return mob.level().getGameTime(); }
@@ -97,6 +97,26 @@ public final class NpcCombatCasting {
                 fire(mob, player, 0xFF9FDFFF);
             }
             if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 35, NpcDomain.Style.FIREWORK);   // 打上花火（半径与玩家一致 35）
+        } else if (id.contains("kashimo_npc")) {
+            // 鹿紫云一：幻兽琥珀全套（无冷却轮转），领域=静电立场/雷霆主场
+            var kdata = mob.getPersistentData();
+            int kstep = (kdata.getInt("KashimoNpcStep") + 1) % 11;
+            kdata.putInt("KashimoNpcStep", kstep);
+            switch (kstep) {
+                case 0 -> { mugi(mob, player, 16); fire(mob, player, 0xFF7FD8FF); }   // 雷走
+                case 1 -> { mugi(mob, player, 12); fire(mob, player, 0xFF9FE8FF); }   // 放电
+                case 2 -> { mugi(mob, player, 10); fire(mob, player, 0xFFB8F0FF); }   // 电磁吸附
+                case 3 -> { mugi(mob, player, 14); fire(mob, player, 0xFF7FFFD4); }   // 雷神·附着
+                case 4 -> { mugi(mob, player, 22); fire(mob, player, 0xFFFFF27F); }   // 引爆
+                case 5 -> { mugi(mob, player, 8);  fire(mob, player, 0xFFA8D8FF); }   // 静电立场
+                case 6 -> { mugi(mob, player, 30); fire(mob, player, 0xFFFFFFFF); }   // 落雷
+                case 7 -> { mugi(mob, player, 40); fire(mob, player, 0xFFBFEFFF); }   // 球形闪电
+                case 8 -> { mugi(mob, player, 26); fire(mob, player, 0xFF8FD6FF); }   // 雷霆万钧
+                case 9 -> { mugi(mob, player, 18); fire(mob, player, 0xFFD0F0FF); }   // 雷影化
+                default -> { mugi(mob, player, 34); fire(mob, player, 0xFFFFE066); }  // 终奥·幻兽琥珀
+            }
+            if (ready(mob, K_DOM, 200) && distance <= 30)
+                NpcDomain.open(mob, 26, NpcDomain.Style.GENERIC);   // 静电/雷霆主场
         } else if (id.contains("sukuna_npc")) {
             // 宿傩的全部术式（无冷却，每 10 刻按招表轮转），领域固定「伏魔御厨子」
             var data = mob.getPersistentData();

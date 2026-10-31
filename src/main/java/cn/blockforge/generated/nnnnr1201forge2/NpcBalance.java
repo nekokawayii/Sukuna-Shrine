@@ -31,6 +31,7 @@ public final class NpcBalance {
         BASE.put("sukuna:naoya_npc", 800.0);
         BASE.put("sukuna:higuruma_npc", 900.0);
         BASE.put("sukuna:sukuna_npc", 2000.0);
+        BASE.put("sukuna:kashimo_npc", 1200.0);
     }
     public static final double MODPACK_MULTIPLIER = 30.0;
 

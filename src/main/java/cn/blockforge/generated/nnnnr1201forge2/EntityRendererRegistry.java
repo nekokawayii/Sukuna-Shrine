@@ -51,6 +51,7 @@ public final class EntityRendererRegistry {
         entry(Content.NAOYA_NPC,NaoyaNpcRenderer.class,NaoyaNpcRenderer::new),
         entry(Content.HIGURUMA_NPC,HigurumaNpcRenderer.class,HigurumaNpcRenderer::new),
         entry(Content.SUKUNA_NPC,SukunaNpcRenderer.class,SukunaNpcRenderer::new),
+        entry(Content.KASHIMO_NPC,KashimoNpcRenderer.class,KashimoNpcRenderer::new),
         entry(Content.TODO_ANCHOR,TodoAnchorRenderer.class,TodoAnchorRenderer::new),
         entry(Content.URAUME_NPC,UraumeNpcRenderer.class,UraumeNpcRenderer::new),
         entry(Content.JOGO_NPC,JogoNpcRenderer.class,JogoNpcRenderer::new),

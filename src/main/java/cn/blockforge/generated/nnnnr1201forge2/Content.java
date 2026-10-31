@@ -175,6 +175,9 @@ public final class Content {
                 ()->new net.minecraft.world.item.ShovelItem(TRANSFIGURE_TIER_OBJ[k],1.5f,-3.0f,new Item.Properties().rarity(Rarity.EPIC)));
         }
     }
+    /** 日车宽见的法槌：不可丢弃、无限耐久。 */
+    public static final RegistryObject<Item> GAVEL=ITEMS.register("gavel",
+        ()->new character.higuruma.GavelItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
     public static final RegistryObject<Item> TRANSFIGURED_SWORD=ITEMS.register("transfigured_sword",
         ()->new character.mahito.TransfiguredSwordItem(net.minecraft.world.item.Tiers.NETHERITE,5,-2.4f,
             new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));

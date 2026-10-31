@@ -6,7 +6,7 @@ package character.naoya;
  * <p>尺寸 45×9×47；非空气方块 1915 个；状态 0=黑混凝土 1=白混凝土 2=紫水晶块。
  * <p>坐标换算（相对领域圆心）：世界 = 圆心 + (x − 22, y − 1, z − 22)。
  */
-final class NaoyaDomainLayout {
+public final class NaoyaDomainLayout {
     static final int SIZE_X = 45, SIZE_Y = 9, SIZE_Z = 47;
     static final int OFFSET_X = 22, OFFSET_Y = -1, OFFSET_Z = 22;
     static final int COUNT = 1915;
@@ -80,4 +80,14 @@ final class NaoyaDomainLayout {
     }
 
     private NaoyaDomainLayout() {}
+
+    /** 只读遍历：把烘焙布局（相对圆心的坐标 + 方块类型 0黑/1白/2紫水晶）交给调用方。 */
+    public static void forEach(java.util.function.BiConsumer<net.minecraft.core.BlockPos, Integer> out) {
+        var center = net.minecraft.core.BlockPos.ZERO;
+        byte[] data = bytes();
+        for (int i = 0; i + 3 < data.length; i += 4) {
+            int x = data[i] & 0xFF, y = data[i + 1] & 0xFF, z = data[i + 2] & 0xFF, state = data[i + 3] & 0xFF;
+            out.accept(new net.minecraft.core.BlockPos(x - OFFSET_X, y + OFFSET_Y, z - OFFSET_Z), state);
+        }
+    }
 }

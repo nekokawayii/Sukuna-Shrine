@@ -42,6 +42,17 @@ public final class ClientInput {
         cast.event(binding(Client.CAST),kind,code,down,available(Client.CAST),mods);
     }
     public static void key(int key,int scan,int action,int mods){
+        // L 键：共同主线成就面板（在按键事件里开，比轮询可靠）
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_L&&action==org.lwjgl.glfw.GLFW.GLFW_PRESS
+            &&net.minecraft.client.Minecraft.getInstance().screen==null){
+            net.minecraft.client.Minecraft.getInstance().setScreen(new character.mainline.MainlineScreen());
+            return;
+        }
+        // G 键：领域展延（共同主线成就解锁后）
+        if(key==org.lwjgl.glfw.GLFW.GLFW_KEY_G&&action==org.lwjgl.glfw.GLFW.GLFW_PRESS){
+            Network.CHANNEL.sendToServer(new TechniqueInput.Input(character.mainline.Mainline.SKILL_AMPLIFY,7,false,false,false,false,0,0));
+            return;
+        }
         if(TojiQteClient.key(key,action,mods))return;
         event(HeldInput.Kind.KEYSYM,key,action,mods);
         event(HeldInput.Kind.SCANCODE,scan,action,mods);

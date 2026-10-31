@@ -54,6 +54,7 @@ public final class YutaDomain {
             return;
         }
         ACTIVE.put(p.getUUID(), new Active(p.server.overworld().getGameTime()));
+        cn.blockforge.generated.nnnnr1201forge2.DomainClash.opened(p, p.position(), RADIUS);
         YutaTerrain.begin(p, RADIUS);
         play(p, "sukuna:yuta_domain_start");
         ensureRika(p);

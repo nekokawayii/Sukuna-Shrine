@@ -71,6 +71,7 @@ public final class YukiDomain {
         buildPlan(job);
         job.start = level.getGameTime();
         JOBS.put(p.getUUID(), job);
+        cn.blockforge.generated.nnnnr1201forge2.DomainClash.opened(p, net.minecraft.world.phys.Vec3.atCenterOf(job.center), RADIUS);
         p.displayClientMessage(Component.literal("领域展开 · 星轨坠亡"), false);
         level.playSound(null, p.blockPosition(), net.minecraft.sounds.SoundEvents.END_PORTAL_SPAWN,
             net.minecraft.sounds.SoundSource.PLAYERS, 1.5f, 0.5f);

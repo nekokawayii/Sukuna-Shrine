@@ -37,11 +37,62 @@ public final class Client {
         if (Minecraft.getInstance().screen != null) return;
         Network.CHANNEL.sendToServer(new TechniqueInput.Input(2100, 7, false, false, false, false, 522 + index, 0));
     }
-    private static boolean castHeld,charging,cleaveHeld;
+    private static boolean castHeld,charging,cleaveHeld,mainlineKeyHeld;
     private static long chargeBorn;
     public static int selected;
     public static Network.Progress progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false,false,false,DomainOptions.DEFAULT_RADIUS,DomainOptions.DEFAULT_DAMAGE,DomainOptions.DEFAULT_SPEED,true);
     public static String energyText(double amount){return BalanceRules.number(amount);}
+
+    /**
+     * 咒力液面颜色：**跟随当前角色的主题色**（里梅蓝、漏壶橙……），
+     * 低于 30% 时统一变成红色警示；没选角色（宿傩主线）保持原来的觉醒红/紫。
+     */
+    public static int curseLiquidColor(float ratio) {
+        if (ratio <= 0.3f) return 0xFFE00000;
+        var definition = character.CharacterClient.selected();
+        if (definition != null) return definition.color();
+        return progress.awakened() ? 0xFFE23455 : 0xFFAF66EB;
+    }
+
+    /**
+     * 圆形咒力表：**完全自绘**（不用贴图）——逐行扫描线画出圆形描边，圆内按比例填液面。
+     *
+     * <p>这样 0~100% 都完整显示：满咒力时整个圆被填满、低咒力时只剩底部一截，
+     * 描边始终是最后画的一层，所以永远闭合、不会被液面盖住。
+     */
+    public static void drawCurseRing(net.minecraft.client.gui.GuiGraphics g, net.minecraft.client.Minecraft mc,
+                                     float ratio, int liquidColor, int x, int y, int size) {
+        ratio = Math.max(0f, Math.min(1f, ratio));
+        int radius = Math.max(6, size / 2);
+        int cx = x + radius, cy = y + radius;
+        int outline = 0xFF1B2440;                                   // 深蓝黑描边
+        int liquid = liquidColor;
+        int surface = 0xFFFFF4B8;                                   // 液面高光
+        int liquidTop = y + size - Math.round(size * ratio);
+        for (int dy = 0; dy < size; dy++) {
+            int row = y + dy;
+            double offset = dy - radius + 0.5;
+            int half = (int) Math.round(Math.sqrt(Math.max(0.0, (double) radius * radius - offset * offset)));
+            if (half <= 0) continue;
+            // ① 圆内液面（描边内缩 2px）
+            if (row >= liquidTop) {
+                int inner = half - 2;
+                if (inner > 0) g.fill(cx - inner, row, cx + inner, row + 1, liquid);
+            }
+            // ② 描边：每行左右各 2px（最后一步画，保证轮廓完整）
+            g.fill(cx - half, row, cx - half + 2, row + 1, outline);
+            g.fill(cx + half - 2, row, cx + half, row + 1, outline);
+        }
+        // ③ 液面高光线
+        if (ratio > 0.04f) {
+            int half = (int) Math.round(Math.sqrt(Math.max(0.0,
+                (double) radius * radius - Math.pow(liquidTop - y - radius + 0.5, 2))));
+            int inner = half - 2;
+            if (inner > 0) g.fill(cx - inner, Math.max(y, liquidTop - 1), cx + inner, Math.max(y, liquidTop), surface);
+        }
+        // ④ 一点高光（右上角）
+        g.fill(cx + radius / 3, cy - radius / 2, cx + radius / 3 + 2, cy - radius / 2 + 2, 0xFFBFD0FF);
+    }
     public static int wallSize(){return BranchRules.wallSize(progress.nine(),progress.soulShrine(),progress.voidShrine(),progress.pureLandVictory());}
     public static boolean voidStage(){return progress.voidShrine();}
     public static boolean soulStage(){return progress.soulShrine()&&!progress.voidShrine();}
@@ -155,7 +206,8 @@ public final class Client {
         if(mc.level==null||mc.player==null||mc.isPaused())return;if(progress.unlocked()&&!availableSkill(selected))selected=fallbackSkill();
         // 轮盘里刚选中御厨子(5) → 弹出点数分配界面；确定后按释放键正常释放
         if(!AuthorityClient.enabled()&&selected==5&&lastShrineSel!=5&&mc.screen==null&&!shrineDomainOpen()&&availableSkill(5))mc.setScreen(new DomainOptionsScreen());
-        lastShrineSel=selected;tick++;TojiQteVisuals.tick();TojiQteClient.tick();NaoyaVisuals.tick();NaoyaClient.tick();tripleJump(mc);DismantleMotionClient.tick();SlashTerrainClient.tick();SlashFormVisuals.tick();FreehandClient.tick(selected==SlashFormRules.FREEHAND&&FreehandClient.keyDown());BranchVisuals.tick();NetBranchVisuals.tick();VoidTechniqueClient.tick();VoidBossClient.tick();FurnaceMaxClient.tick();GojoFx.tick();MahoragaWheelClient.tick();ShinbukeVisuals.tick();SoulClient.tick();FistFlameClient.tick();BlackFlashMarks.clientTick();VoidVisuals.tick();if(charging&&tick-chargeBorn>200)charging=false;
+        // 共同主线：L 键在 ClientInput.key 里开面板（这里不再轮询 GLFW）
+        lastShrineSel=selected;tick++;TojiQteVisuals.tick();TojiQteClient.tick();NaoyaVisuals.tick();NaoyaClient.tick();HakariClient.tick();tripleJump(mc);DismantleMotionClient.tick();SlashTerrainClient.tick();SlashFormVisuals.tick();FreehandClient.tick(selected==SlashFormRules.FREEHAND&&FreehandClient.keyDown());BranchVisuals.tick();NetBranchVisuals.tick();VoidTechniqueClient.tick();VoidBossClient.tick();FurnaceMaxClient.tick();GojoFx.tick();MahoragaWheelClient.tick();ShinbukeVisuals.tick();SoulClient.tick();FistFlameClient.tick();BlackFlashMarks.clientTick();VoidVisuals.tick();if(charging&&tick-chargeBorn>200)charging=false;
         if(tick-window>=20){window=tick;generated=0;}
         if(ObserverClient.active()||FinaleClient.local()||DomainClashClient.active()||NetBranchVisuals.locked()||DismantleMotionClient.locked()){
             charging=cleaveHeld=false;castHeld=ClientInput.held(CAST);heldLast=wheelHeld();
@@ -245,6 +297,7 @@ public final class Client {
         if(e.kind()>=character.ryu.RyuFx.FIRST&&e.kind()<=character.ryu.RyuFx.LAST){RyuVisuals.receive(e);return;}
         if(e.kind()>=character.toji.TojiFx.FIRST&&e.kind()<=character.toji.TojiFx.LAST){TojiQteVisuals.receive(e);return;}
         if(e.kind()>=character.naoya.NaoyaFx.FIRST&&e.kind()<=character.naoya.NaoyaFx.LAST){NaoyaVisuals.receive(e);return;}
+        if(e.kind()>=character.hakari.HakariFx.FIRST&&e.kind()<=character.hakari.HakariFx.LAST){HakariClient.receive(e);return;}
         boolean self=e.owner()==(Minecraft.getInstance().player==null?-1:Minecraft.getInstance().player.getId());
         if(e.kind()==300){if(self)character.mahito.TransfigureScreen.open((int)e.size());return;}
         if(e.kind()==308){return;}
@@ -366,13 +419,22 @@ public final class Client {
         if(progress.nine())g.drawString(mc.font,progress.rotation()?"九相轮转进行中 · 每秒20次斩击判定":"九相轮转 · "+ROTATE.getTranslatedKeyMessage().getString()+" 开启15秒",12,h-128,0xFFD48AFF);
         if(charging&&tick-chargeBorn>=Skills.CHARGE_DELAY){int elapsed=(int)(tick-chargeBorn)-Skills.CHARGE_DELAY;g.fill(w/2-70,h/2+28,w/2+70,h/2+34,0xB022122D);g.fill(w/2-70,h/2+28,w/2-70+(int)(140*Math.min(1,elapsed/(float)Skills.CHARGE_TIME)),h/2+34,elapsed>=Skills.CHARGE_TIME?0xFFFFDDEE:0xFFAF397B);g.drawCenteredString(mc.font,elapsed>=Skills.CHARGE_TIME?"空间斩就绪 · 松开释放 · "+energyText(2000)+"咒力":"空间正在崩裂……",w/2,h/2+40,0xFFFFD7EE);}
 
-        g.fill(7,h-49,215,h-11,0xB0181019);g.fill(7,h-49,10,h-11,0xFFBD283D);
-        g.drawString(mc.font,skillName(selected),16,h-42,0xFFF3D3CB);
-        g.drawString(mc.font,"长按 "+WHEEL.getTranslatedKeyMessage().getString()+" 选择 · "+CAST.getTranslatedKeyMessage().getString()+" 释放",16,h-26,0xFFB8A4AE);
-        g.fill(7,h-102,215,h-78,0xCC140E20);
-        g.fill(10,h-84,212,h-80,0xFF342639);
-        g.fill(10,h-84,10+(int)(202*progress.energy()/Math.max(1,progress.maximum())),h-80,progress.awakened()?0xFFE23455:0xFFAF66EB);
-        g.drawString(mc.font,(AuthorityClient.enabled()?"军团咒力池 ":"咒力 ")+(progress.maximum()>=999999.0?"∞":(int)progress.energy()+" / "+(int)progress.maximum())+(progress.sukuna()?"  手指 "+progress.fingers()+"/20":"  冰鱼 "+progress.iceFish()),12,h-97,0xFFEED5FF);
+
+        // 咒力：圆形液面仪表（放最右下角），技能名显示在圆表左边
+        int ringSize = 44, ringX = w - ringSize - 8, ringY = h - ringSize - 8;
+        float curseRatio=(float)(progress.energy()/Math.max(1.0,progress.maximum()));
+        drawCurseRing(g,mc,curseRatio,curseLiquidColor(curseRatio),ringX,ringY,ringSize);
+        String curseText=(AuthorityClient.enabled()?"军团咒力池 ":"咒力 ")+(progress.maximum()>=999999.0?"∞":(int)progress.energy()+" / "+(int)progress.maximum());
+        int curseWidth=mc.font.width(curseText);
+        g.drawString(mc.font,curseText,ringX-curseWidth-6,ringY+ringSize-26,0xFFEED5FF);
+        String sub=progress.sukuna()?"手指 "+progress.fingers()+"/20":"冰鱼 "+progress.iceFish();
+        g.drawString(mc.font,sub,ringX-mc.font.width(sub)-6,ringY+ringSize-14,0xFFEED5FF);
+        String name=skillName(selected);
+        int nameWidth=mc.font.width(name);
+        g.drawString(mc.font,name,ringX-nameWidth-6,ringY-14,0xFFF3D3CB);
+        String hint="长按 "+WHEEL.getTranslatedKeyMessage().getString()+" · "+CAST.getTranslatedKeyMessage().getString()+" 释放";
+        int hintWidth=mc.font.width(hint);
+        g.drawString(mc.font,hint,ringX-hintWidth-6,ringY-24,0xFF8C7C88);
         if(voidStage())g.drawString(mc.font,progress.pureLandVictory()?"蓝色虚空术式 · 生命+200 · 普攻+20 · 术式+200":"虚空术式 · 解/捌造裂隙 → 灶点燃 → 开引爆",12,h-115,progress.pureLandVictory()?0xFF53CFFF:0xFFBE7CEF);
         else if(progress.awakened())g.drawString(mc.font,"肉体融合 · 解长按连发 · 世界斩在分支中选择",12,h-115,0xFFFF5774);
         if(progress.amplification())g.drawString(mc.font,"领域展延 · 每秒 "+BalanceRules.number(DomainAmplification.COST_PER_SECOND)+" 咒力 · 术式穿透无下限 · "+AMPLIFY.getTranslatedKeyMessage().getString()+" 关闭",12,h-160,0xFF9FE8FF);

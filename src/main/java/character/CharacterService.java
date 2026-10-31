@@ -20,6 +20,8 @@ public final class CharacterService {
     public static CharacterDefinition selected(Player p) { return p instanceof FakePlayer?null:CharacterRegistry.get(Curse.data(p).getString(ID)); }
     public static boolean active(Player p) { return selected(p)!=null; }
     public static boolean family(Player p,CharacterDefinition.Family f) { var d=selected(p);return d!=null&&d.family()==f; }
+    /** 秤金次：坐杀博徒。 */
+    public static boolean hakari(Player p) { var d=selected(p);return d!=null&&"hakari".equals(d.id()); }
     /** 禅院直哉：投射咒法。 */
     public static boolean naoya(Player p) { var d=selected(p);return d!=null&&"naoya".equals(d.id()); }
     public static boolean toji(Player p) { var d=selected(p);return d!=null&&d.resource()==CharacterDefinition.Resource.STAMINA; }

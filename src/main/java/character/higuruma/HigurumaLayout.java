@@ -1,10 +1,10 @@
 package character.higuruma;
 
 /** 由用户结构文件烘焙的法庭布局（48x48x48，非空气 12172 块）。数据 = zlib+base64。 */
-final class HigurumaLayout {
-    static final int SIZE_X = 48, SIZE_Y = 48, SIZE_Z = 48;
-    static final String[] PALETTE = {"minecraft:black_concrete", "minecraft:birch_planks", "minecraft:dark_oak_planks", "minecraft:polished_andesite", "minecraft:amethyst_block", "minecraft:budding_amethyst", "minecraft:stripped_dark_oak_log", "minecraft:pearlescent_froglight", "minecraft:iron_bars"};
-    static final String DATA =
+public final class HigurumaLayout {
+    public static final int SIZE_X = 48, SIZE_Y = 48, SIZE_Z = 48;
+    public static final String[] PALETTE = {"minecraft:black_concrete", "minecraft:birch_planks", "minecraft:dark_oak_planks", "minecraft:polished_andesite", "minecraft:amethyst_block", "minecraft:budding_amethyst", "minecraft:stripped_dark_oak_log", "minecraft:pearlescent_froglight", "minecraft:iron_bars"};
+    public static final String DATA =
         "eNok3Od260quRWFqy8qJYs5BVHa///P1Z54faxALQKmmSBRtn9t3p0EaXBYRxZTQn88opyIIF1eKKKaEUsoop796GVwXIV0popgSSimjnAr666uCaHGhkK4U" +
         "UUwJpZRRTgWV9NdfB7E1sTWxNbE1sTWxNbE1sTWxNbE1sTWxNbE1iTWJNYk1iTWJNYk1iTWJNYk1iTWJNYk1iTWpNak1qTWpNak1qTWpNak1qTWpNak1qTWp" +
         "NZk1mTWZNZk1mTWZNZk1mTWZNZk1mTWZNZk1uTW5Nbk1uTW5Nbk1uTW5Nbk1uTW5Nbk1uTWFNYU1hTWFNYU1hTWFNYU1hTWFNYU1hTWFNaX+Un+pv9Rf6i/1" +

@@ -1,0 +1,332 @@
+package character.npc;
+
+import cn.blockforge.generated.nnnnr1201forge2.Network;
+import cn.blockforge.generated.nnnnr1201forge2.NpcCombat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+
+/**
+ * **NPC 的"真领域"**（r384，用户选 A：跟玩家一样真改地形）。
+ *
+ * <p>玩家的领域类全部吃 `ServerPlayer`，NPC 传不进去；这里抽出一套给 `Mob` 用的：
+ * 逐块记录原始方块 → 施工（黑混凝土球壳 + 内部清空 + 地板）→ 持续伤害 → 到期/死亡/关服整批还原。
+ */
+public final class NpcDomain {
+    /** 各角色自己的领域风格（r387 用户要求：石流龙=烟花、秤金次=赌场…）。 */
+    public enum Style { FIREWORK, PACHINKO, LAVA, ICE, BLOOD, NAOYA, HIGURUMA, SUKUNA_OPEN, GENERIC }
+
+    public static final int RADIUS = 26;
+    public static final int TICKS = 400;          // 20 秒
+    private static final int BATCH = 2000;
+    private static final double DAMAGE = 6;
+
+    private static final class Job {
+        final UUID owner;
+        final ServerLevel level;
+        final BlockPos center;
+        final long end;
+        final Style style;
+        final List<long[]> saved = new ArrayList<>();     // 编码：pos | (stateId << 64) 分两段存
+        final List<BlockState> states = new ArrayList<>();
+        final List<BlockPos> plan = new ArrayList<>();
+        final Map<Long, Integer> decor = new HashMap<>();
+        final Map<Long, BlockState> decorBlock = new HashMap<>();
+        int cursor;
+
+        Job(UUID owner, ServerLevel level, BlockPos center, long end, Style style) {
+            this.owner = owner; this.level = level; this.center = center; this.end = end; this.style = style;
+        }
+    }
+
+    private static final Map<UUID, Job> JOBS = new HashMap<>();
+    /** 石流龙追踪弹：{level, owner, target, 命中刻}（r390：领域伤害来自被弹打到，不是固定 tick 掉血）。 */
+    private static final List<Object[]> SHELLS = new ArrayList<>();
+
+    public static boolean active(Mob mob) { return mob != null && JOBS.containsKey(mob.getUUID()); }
+
+    public static void open(Mob mob, double radiusOverride) { open(mob, radiusOverride, Style.GENERIC); }
+
+    public static void open(Mob mob, double radiusOverride, Style style) {
+        if (!(mob.level() instanceof ServerLevel level) || active(mob)) return;
+        BlockPos center = mob.blockPosition();
+        Job job = new Job(mob.getUUID(), level, center, level.getGameTime() + TICKS, style);
+        int r = (int) Math.round(radiusOverride);
+        // 施工计划：外壳球壳 + 地板（内部先清空气，保证是空地）
+        for (int dx = -r; dx <= r; dx++)
+            for (int dy = -r; dy <= r; dy++)
+                for (int dz = -r; dz <= r; dz++) {
+                    double d2 = (double) dx * dx + dy * dy + dz * dz;
+                    boolean shell = d2 <= (double) r * r && d2 > (double) (r - 1) * (r - 1);
+                    boolean floor = dy == -1 && d2 <= (double) r * r;
+                    boolean inside = d2 <= (double) (r - 1) * (r - 1) && dy >= 0;
+                    if (style == Style.SUKUNA_OPEN) continue;                 // 开放领域：不改任何地形
+                    boolean keep = style == Style.HIGURUMA;                   // 日车：只铺壳与地板，不挖内部
+                    if (shell || floor) job.plan.add(center.offset(dx, dy, dz));
+                    else if (inside && !keep) job.plan.add(center.offset(dx, dy, dz).immutable());
+                }
+        if (style == Style.HIGURUMA) {
+            // 1:1 铺玩家那套法庭结构（黑混凝土/桦木/深色橡木/安山岩/紫水晶/铁栏/珠光蛙明灯）
+            BlockPos origin = center.offset(-character.higuruma.HigurumaLayout.SIZE_X / 2, -23,
+                -character.higuruma.HigurumaLayout.SIZE_Z / 2);
+            try {
+                byte[] raw = java.util.Base64.getDecoder().decode(character.higuruma.HigurumaLayout.DATA);
+                var inflater = new java.util.zip.Inflater();
+                inflater.setInput(raw);
+                byte[] out = new byte[character.higuruma.HigurumaLayout.SIZE_X
+                    * character.higuruma.HigurumaLayout.SIZE_Y * character.higuruma.HigurumaLayout.SIZE_Z * 4];
+                int n = inflater.inflate(out);
+                for (int i = 0; i + 3 < n; i += 4) {
+                    int x = out[i] & 0xFF, y = out[i + 1] & 0xFF, z = out[i + 2] & 0xFF, pal = out[i + 3] & 0xFF;
+                    if (pal >= character.higuruma.HigurumaLayout.PALETTE.length) continue;
+                    var block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(
+                        net.minecraft.resources.ResourceLocation.tryParse(
+                            character.higuruma.HigurumaLayout.PALETTE[pal]));
+                    BlockPos pos = origin.offset(x, y, z);
+                    job.decorBlock.put(pos.asLong(), block.defaultBlockState());
+                    if (!job.plan.contains(pos)) job.plan.add(pos);
+                }
+            } catch (Exception ignored) { }
+        }
+        if (style == Style.NAOYA) {
+            // 1:1 铺玩家那套烘焙布局（白环/紫水晶/眼球）；地板层只去黑地板、保留白路与紫水晶
+            character.naoya.NaoyaDomainLayout.forEach((rel, state) -> {
+                if (rel.getY() == -1 && state == 0) return;
+                BlockPos pos = center.offset(rel.getX(), rel.getY() + 1, rel.getZ());
+                job.decor.put(pos.asLong(), state);
+                if (!job.plan.contains(pos)) job.plan.add(pos);
+            });
+        }
+        job.plan.sort(java.util.Comparator.comparingDouble(pos -> pos.distSqr(center)));
+        if (style == Style.HIGURUMA) judge(mob, level, center, (int) Math.round(radiusOverride));
+        JOBS.put(mob.getUUID(), job);
+    }
+
+    public static void close(Mob mob, String reason) {
+        Job job = JOBS.remove(mob.getUUID());
+        if (job == null) return;
+        // 还原
+        ServerLevel level = job.level;
+        for (int i = job.saved.size() - 1; i >= 0; i--) {
+            BlockPos pos = BlockPos.of(job.saved.get(i)[0]);
+            int id = net.minecraft.world.level.block.Block.getId(job.states.get(i));
+            level.setBlock(pos, net.minecraft.world.level.block.Block.stateById(id), 2);
+        }
+    }
+
+    /** 诛伏赐死·判决：随机 无罪 / 有罪·没收（60 秒不能用术式）/ 有罪·死刑（日车下一次伤害直接处刑）。 */
+    private static void judge(Mob owner, ServerLevel level, BlockPos center, int radius) {
+        var rand = level.random;
+        for (var p : level.getEntitiesOfClass(net.minecraft.server.level.ServerPlayer.class,
+                new AABB(center).inflate(radius), t -> t.isAlive())) {
+            int roll = rand.nextInt(3);
+            if (roll == 1) {
+                cn.blockforge.generated.nnnnr1201forge2.Curse.data(p).putLong("HigSealedUntil", level.getGameTime() + 1200);   // 60 秒
+                p.sendSystemMessage(net.minecraft.network.chat.Component.literal("判决：有罪 · 没收 —— 60 秒内无法使用术式")
+                    .withStyle(net.minecraft.ChatFormatting.RED));
+            } else if (roll == 2) {
+                owner.getPersistentData().putUUID("HigDeathMark", p.getUUID());
+                p.sendSystemMessage(net.minecraft.network.chat.Component.literal("判决：有罪 · 死刑 —— 日车的下一次伤害将直接处刑")
+                    .withStyle(net.minecraft.ChatFormatting.DARK_RED));
+            } else {
+                p.sendSystemMessage(net.minecraft.network.chat.Component.literal("判决：无罪")
+                    .withStyle(net.minecraft.ChatFormatting.GREEN));
+            }
+        }
+    }
+
+    /** 死刑：日车下一次伤害把目标 setHealth(0)。 */
+    public static boolean deathMark(Mob owner, LivingEntity target) {
+        var data = owner.getPersistentData();
+        if (!data.hasUUID("HigDeathMark")) return false;
+        if (!data.getUUID("HigDeathMark").equals(target.getUUID())) return false;
+        data.remove("HigDeathMark");
+        return true;
+    }
+
+    @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e) {
+        if (e.phase != TickEvent.Phase.END || JOBS.isEmpty()) return;
+        // 遍历副本：close() 自己会从 JOBS 里移除，边遍历边 remove 会 ConcurrentModificationException（r385 崩服）
+        var shell = Blocks.BLACK_CONCRETE.defaultBlockState();
+        var air = Blocks.AIR.defaultBlockState();
+        var light = Blocks.LIGHT.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 13);
+        for (var entry : new ArrayList<>(JOBS.entrySet())) {
+            Job job = entry.getValue();
+            Mob owner = job.level.getEntity(entry.getKey()) instanceof Mob mob ? mob : null;
+            if (owner == null || !owner.isAlive() || job.level.getGameTime() >= job.end) {
+                close(owner, "结束");
+                continue;
+            }
+            int done = 0;
+            while (job.cursor < job.plan.size() && done < BATCH) {
+                BlockPos pos = job.plan.get(job.cursor++);
+                BlockState old = job.level.getBlockState(pos);
+                if (old.getBlock() == Blocks.BEDROCK) continue;
+                job.saved.add(new long[]{pos.asLong()});
+                job.states.add(old);
+                double dd = pos.distSqr(job.center);
+                boolean isShell = dd <= (double) RADIUS * RADIUS && dd > (double) (RADIUS - 1) * (RADIUS - 1);
+                boolean isFloor = pos.getY() == job.center.getY() - 1 && dd <= (double) RADIUS * RADIUS;
+                boolean outer = dd > (double) (RADIUS - 1) * (RADIUS - 1) && dd <= (double) RADIUS * RADIUS;
+                var block = (isFloor || isShell)
+                    ? (job.style == Style.FIREWORK && outer ? Blocks.BEDROCK.defaultBlockState() : shell)
+                    : air;
+                if (job.style == Style.PACHINKO && isFloor) block = Blocks.GOLD_BLOCK.defaultBlockState();
+                if (job.style == Style.BLOOD && isFloor) block = Blocks.RED_CONCRETE.defaultBlockState();
+                BlockState courtBlock = job.decorBlock.get(pos.asLong());
+                if (courtBlock != null) { job.level.setBlock(pos, courtBlock, 2); done++; continue; }
+                Integer decor = job.decor.get(pos.asLong());
+                if (decor != null)
+                    block = switch (decor) {
+                        case 1 -> Blocks.WHITE_CONCRETE.defaultBlockState();
+                        case 2 -> Blocks.AMETHYST_BLOCK.defaultBlockState();
+                        default -> Blocks.BLACK_CONCRETE.defaultBlockState();
+                    };
+                if (job.style == Style.LAVA && isFloor) {
+                    double roll = job.level.random.nextDouble();
+                    block = roll < 0.26 ? Blocks.MAGMA_BLOCK.defaultBlockState()
+                        : roll < 0.38 ? Blocks.LAVA.defaultBlockState()
+                        : Blocks.STONE.defaultBlockState();
+                }
+                job.level.setBlock(pos, block, 2);
+                if (!isShell && !isFloor && (pos.getX() + pos.getY() + pos.getZ()) % 5 == 0)
+                    job.level.setBlock(pos, light, 2);
+                done++;
+            }
+            // ── 直哉·时胞月宫殿：千手乱舞（领域内每 0.5 秒压制 5 格内目标，无视无敌帧） ──
+            if (job.style == Style.NAOYA && job.level.getGameTime() % 10 == 0) {
+                ServerLevel level = job.level;
+                for (LivingEntity living : level.getEntitiesOfClass(LivingEntity.class,
+                        new AABB(owner.position(), owner.position()).inflate(6), t -> t != owner && t.isAlive())) {
+                    living.invulnerableTime = 0;
+                    living.hurt(living.damageSources().magic(), 6f);
+                }
+            }
+            // ── 秤金次：中奖期间每秒回 20% 最大生命 ──
+            if (job.style == Style.PACHINKO) {
+                long until = owner.getPersistentData().getLong("HakariNpcJackpot");
+                if (until > job.level.getGameTime() && job.level.getGameTime() % 20 == 0)
+                    owner.heal(owner.getMaxHealth() * 0.2f);
+            }
+            // ── 漏壶·盖棺铁围山：敌人脚下 10 格火柱（每 8 刻节流）+ 高温 ──
+            if (job.style == Style.LAVA && job.level.getGameTime() % 8 == 0) {
+                ServerLevel level = job.level;
+                for (LivingEntity living : level.getEntitiesOfClass(LivingEntity.class,
+                        new AABB(job.center).inflate(RADIUS), t -> t != owner && t.isAlive()
+                            && !(t instanceof Mob m && m.getType() == owner.getType()))) {
+                    if (living.distanceToSqr(Vec3.atCenterOf(job.center)) > (double) RADIUS * RADIUS) continue;
+                    Network.send(level, new Network.Effect(character.ryu.RyuFx.BURST, living.getId(),
+                        living.position(), Vec3.ZERO, 1.2f, 10, 0));
+                    if (level.getGameTime() % 16 == 0) living.setSecondsOnFire(2);
+                }
+            }
+            // ── 石流龙·打上花火：每 1 秒两枚火箭炸出追踪弹幕（与玩家同款机制：必中） ──
+            if (job.style == Style.FIREWORK && job.level.getGameTime() % 20 == 0) {
+                ServerLevel level = job.level;
+                var rand = level.random;
+                for (int i = 0; i < 2; i++) {
+                    Vec3 rise = Vec3.atCenterOf(job.center)
+                        .add((rand.nextDouble() - 0.5) * 40, 20 + rand.nextDouble() * 14,
+                             (rand.nextDouble() - 0.5) * 40);
+                    Network.send(level, new Network.Effect(character.ryu.RyuFx.FIREWORK_RISE,
+                        owner.getId(), rise, Vec3.ZERO, 1f, 20, 0));
+                    Network.send(level, new Network.Effect(character.ryu.RyuFx.FIREWORK_BURST,
+                        owner.getId(), rise, Vec3.ZERO, 3f, 25, 0));
+                    int shells = 15 + rand.nextInt(31);
+                    var candidates = level.getEntitiesOfClass(LivingEntity.class,
+                        new AABB(job.center).inflate(RADIUS),
+                        t -> t != owner && t.isAlive() && t instanceof net.minecraft.world.entity.player.Player);
+                    for (int s = 0; s < shells; s++) {
+                        Vec3 target = rise.add((rand.nextDouble() - 0.5) * 36,
+                            -14 - rand.nextDouble() * 10, (rand.nextDouble() - 0.5) * 36);
+                        Network.send(level, new Network.Effect(character.ryu.RyuFx.FIREWORK_SHELL,
+                            owner.getId(), target, Vec3.ZERO, 0.6f, 30, 0));
+                        if (!candidates.isEmpty() && rand.nextDouble() < 0.35)
+                            SHELLS.add(new Object[]{level, owner, candidates.get(rand.nextInt(candidates.size())),
+                                level.getGameTime() + 6 + rand.nextInt(9)});
+                    }
+                }
+            }
+            boolean sureHit = job.style == Style.SUKUNA_OPEN || job.style == Style.GENERIC;
+            if (job.level.getGameTime() % 10 == 0 && job.style != Style.FIREWORK && job.style != Style.PACHINKO
+                && (sureHit || !job.plan.isEmpty())) {
+                double r2 = (double) RADIUS * RADIUS;
+                for (LivingEntity living : job.level.getEntitiesOfClass(LivingEntity.class,
+                        new AABB(job.center).inflate(RADIUS), t -> t != owner && t.isAlive()
+                            && !(t instanceof Mob m && m.getType() == owner.getType()))) {
+                    if (living.distanceToSqr(Vec3.atCenterOf(job.center)) > r2) continue;
+                    if (job.style == Style.HIGURUMA && deathMark(owner, living)) {
+                        living.setHealth(0);
+                        continue;
+                    }
+                    switch (job.style) {
+                        case FIREWORK -> {                       // 石流龙：打上花火 · 追踪烟花
+                            living.hurt(living.damageSources().magic(), (float) DAMAGE);
+                            if (living.level() instanceof ServerLevel sl)
+                                Network.send(sl, new Network.Effect(character.ryu.RyuFx.FIREWORK_BURST,
+                                    living.getId(), living.position(), Vec3.ZERO, 2f, 20, 0));
+                        }
+                        case LAVA -> {                           // 漏壶：盖棺铁围山 · 点燃
+                            living.hurt(living.damageSources().magic(), (float) DAMAGE);
+                            living.setSecondsOnFire(2);
+                        }
+                        case ICE -> {                            // 里梅：冰冻减速
+                            living.hurt(living.damageSources().magic(), (float) DAMAGE);
+                            living.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                                net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 40, 2));
+                        }
+                        case BLOOD -> {                          // 胀相：胎海 · 流血 + 施术者命中回血
+                            living.hurt(living.damageSources().magic(), (float) DAMAGE);
+                            owner.heal(2f);
+                            living.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                                net.minecraft.world.effect.MobEffects.WITHER, 40, 0));
+                        }
+                        case GENERIC -> {                        // 宿傩·伏魔御厨子：必中斩击（无视无敌帧）
+                            living.invulnerableTime = 0;
+                            living.hurt(living.damageSources().magic(), 12f);
+                        }
+                        default -> living.hurt(living.damageSources().magic(), (float) DAMAGE);
+                    }
+                }
+            }
+        }
+    }
+
+    /** 追踪弹命中：被打到才掉 6 血。 */
+    @SubscribeEvent public static void shells(TickEvent.ServerTickEvent e) {
+        if (e.phase != TickEvent.Phase.END || SHELLS.isEmpty()) return;
+        for (var it = SHELLS.iterator(); it.hasNext(); ) {
+            Object[] shell = it.next();
+            ServerLevel level = (ServerLevel) shell[0];
+            Mob owner = (Mob) shell[1];
+            LivingEntity victim = (LivingEntity) shell[2];
+            long at = (Long) shell[3];
+            if (level.getGameTime() < at) continue;
+            it.remove();
+            if (victim == null || !victim.isAlive() || owner == null || !owner.isAlive()) continue;
+            if (victim.level() != level) continue;
+            victim.hurt(victim.damageSources().magic(), 6);
+        }
+    }
+
+    @SubscribeEvent public static void stop(ServerStoppingEvent e) {
+        for (var entry : new ArrayList<>(JOBS.entrySet()))
+            close(entry.getValue().level.getEntity(entry.getKey()) instanceof Mob mob ? mob : null, "关服");
+    }
+
+    private NpcDomain() {}
+}

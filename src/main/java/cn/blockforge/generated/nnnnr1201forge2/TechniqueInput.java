@@ -33,6 +33,12 @@ public final class TechniqueInput {
     public static void receive(ServerPlayer p,Input input){
         if(input.skill()==character.mahito.MahitoSkills.TRANSMUTE&&input.phase()==7){character.mahito.MahitoTransfigure.handle(p,input.motion());return;}
         // 鹿紫云一：轮盘中心「幻兽·琥珀」用 phase=7 直接请求（终奥不在轮盘技能表里，不走 CharacterCasting 的扣费/冷却）
+        // 日车判决「没收」：60 秒内禁用术式
+        if(cn.blockforge.generated.nnnnr1201forge2.Curse.data(p).getLong("HigSealedUntil")>p.level().getGameTime()){
+            p.displayClientMessage(net.minecraft.network.chat.Component.literal("判决·没收：60 秒内无法使用术式"),true);return;}
+        // 共同主线（r382）：轮盘外方形格 / G 键 → Mainline.cast
+        if(input.skill()>=character.mainline.Mainline.SKILL_REVERSE
+            &&input.skill()<=character.mainline.Mainline.SKILL_AMPLIFY){character.mainline.Mainline.cast(p,input.skill());return;}
         if(input.skill()==character.kashimo.KashimoCombat.ULT&&input.phase()==7){character.kashimo.KashimoCombat.requestUltimate(p);return;}
         // 石流龙：冰沙冲击波可蓄力（按住越久越粗、伤害越高），走 phase 0/1/2 而不是立刻施法
         if(input.skill()==character.ryu.RyuSkills.BLAST&&character.CharacterService.selected(p)!=null

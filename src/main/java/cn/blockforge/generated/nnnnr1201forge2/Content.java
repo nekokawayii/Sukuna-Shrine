@@ -72,6 +72,10 @@ public final class Content {
         ()->EntityType.Builder.of(TodoNpcEntity::new,MobCategory.CREATURE).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("sukuna:todo_npc"));
     public static final RegistryObject<Item> TODO_NPC_EGG=ITEMS.register("todo_npc_spawn_egg",
         ()->new net.minecraftforge.common.ForgeSpawnEggItem(TODO_NPC,0x2A2038,0xB58CFF,new Item.Properties()));
+    /** 不义游戏：纯客户端特效被注入的一瞬间就地生成的锚点实体（不渲染、不可攻击）。 */
+    public static final RegistryObject<EntityType<TodoAnchorEntity>> TODO_ANCHOR=ENTITIES.register("todo_anchor",
+        ()->EntityType.Builder.of(TodoAnchorEntity::new,MobCategory.MISC).sized(0.25f,0.25f)
+            .clientTrackingRange(10).updateInterval(20).build("sukuna:todo_anchor"));
     /** 咒具·游云：三节棍，伤害 18，右键横扫 10 格。 */
     public static final RegistryObject<Item> YUYUN=ITEMS.register("yuyun",()->new net.minecraft.world.item.SwordItem(
             net.minecraft.world.item.Tiers.IRON,15,-2.4f,new Item.Properties().stacksTo(1).rarity(Rarity.RARE)){

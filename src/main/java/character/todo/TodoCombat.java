@@ -20,7 +20,7 @@ public final class TodoCombat {
     /** 换位规避：前后各 0.3 秒 = 共 12 刻。 */
     public static final int DODGE_TICKS = 12;
     /** NPC 的换位/注入间隔（刻）。 */
-    public static final int NPC_INJECT_INTERVAL = 40, NPC_SWAP_INTERVAL = 60;
+    public static final int NPC_INJECT_INTERVAL = 40, NPC_SWAP_INTERVAL = 20;
 
     public static boolean isTodo(Player p) {
         var d = character.CharacterService.selected(p);

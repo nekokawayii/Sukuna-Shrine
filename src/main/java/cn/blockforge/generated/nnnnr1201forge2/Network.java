@@ -217,6 +217,8 @@ public final class Network {
         CHANNEL.messageBuilder(DrawState.class,14,NetworkDirection.PLAY_TO_CLIENT).encoder((m,b)->{b.writeUUID(m.id());b.writeVarInt(m.state());b.writeDouble(m.pixels());}).decoder(b->new DrawState(b.readUUID(),b.readVarInt(),b.readDouble())).consumerMainThread((m,c)->{drawReceiver.accept(m);c.get().setPacketHandled(true);}).add();
     }
     public static void send(ServerLevel level, Effect e) {
+        // 东堂葵：登记这条特效的位置，之后"纯客户端特效"能被注入成实体（不义游戏换位用）
+        character.todo.TodoMarks.anchor(level, e);
         SkillDestruction.effect(level,e);
         var entity=level.getEntity(e.owner());ServerPlayer caster=entity instanceof ServerPlayer p?p:MaidBridge.caster(entity);
         // 定位在受击者身上的消息必须由发送点明确提供施术者，不在这里猜测。

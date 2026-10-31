@@ -36,6 +36,10 @@ public final class Mainline {
     public static final int DOMAIN = 5;            // 领域展开
     public static final int AMPLIFY = 6;           // 领域展延
 
+    // ── 术式编号（轮盘外的方形格 / G 键用） ──
+    public static final int SKILL_REVERSE = 3100, SKILL_REVERSE_OUT = 3101, SKILL_BARRIER = 3102,
+        SKILL_SIMPLE = 3103, SKILL_DOMAIN = 3104, SKILL_AMPLIFY = 3105;
+
     public static final String[] NAMES = {"咒术师", "反转术式", "反转术式外放", "结界术", "简易领域",
         "领域展开", "领域展延"};
     public static final String[] REQUIREMENTS = {
@@ -73,6 +77,7 @@ public final class Mainline {
             .withStyle(ChatFormatting.GOLD));
         p.displayClientMessage(Component.literal("成就解锁：" + NAMES[id]).withStyle(ChatFormatting.GOLD), true);
         if (id == DOMAIN) unlockAllDomains(p);
+        sync(p);
     }
 
     private static void addCount(ServerPlayer p, int id, int amount) {
@@ -210,6 +215,32 @@ public final class Mainline {
 
     /** 击败有领域的敌人 → 简易领域。 */
     public static void onKillDomainOwner(ServerPlayer p) { unlock(p, SIMPLE); }
+
+    /** 统一入口：轮盘外方形格 / G 键都发这个编号。 */
+    public static void cast(ServerPlayer p, int skill) {
+        switch (skill) {
+            case SKILL_REVERSE -> reverse(p);
+            case SKILL_REVERSE_OUT -> reverseOut(p);
+            case SKILL_BARRIER -> barrier(p);
+            case SKILL_SIMPLE -> simple(p);
+            case SKILL_DOMAIN -> {
+                p.displayClientMessage(Component.literal(domainUnlocked(p)
+                    ? "领域展开已解锁：在角色轮盘里使用各角色自己的领域"
+                    : "先用简易领域 15 次解锁领域展开").withStyle(ChatFormatting.GRAY), true);
+            }
+            case SKILL_AMPLIFY -> p.displayClientMessage(Component.literal(unlocked(p, AMPLIFY)
+                ? "领域展延 · 罩已展开（对拼/领域内必中）" : "先解锁领域展延：累计用领域展开 10 次")
+                .withStyle(ChatFormatting.AQUA), true);
+            default -> { }
+        }
+        sync(p);
+    }
+
+    /** 把成就状态同步给客户端（L 面板显示用）。 */
+    public static void sync(ServerPlayer p) {
+        Network.sendTo(p, new Network.Effect(character.ryu.RyuFx.DESSERT, p.getId(), p.position(),
+            Vec3.ZERO, mask(p), 0, 0));
+    }
 
     /** 成就面板数据（客户端只读）。 */
     public static Map<String, Object> snapshot(Player p) {

@@ -45,9 +45,9 @@ public final class RyuVisuals {
     private static final List<Spark> SPARKS = new ArrayList<>();
     /** 烟花颜色表（特效的 size 里存的就是这个下标）。 */
     private static final int[] COLORS = {0xFFFFFF, 0xFF5A5A, 0xFFD24A, 0x7CFF6B, 0x6BE8FF, 0x6B8CFF, 0xFF6BE8, 0xFFA24A};
-    /** 内部天空用无量空处同款云图（黑底不透明，所以走加法层）。 */
+    /** 内部天际图（用户给的落日晚霞，原图原分辨率）。 */
     private static final net.minecraft.resources.ResourceLocation SKY_TEXTURE =
-        new net.minecraft.resources.ResourceLocation("sukuna", "textures/effect/unlimited_void_sky.png");
+        new net.minecraft.resources.ResourceLocation("sukuna", "textures/effect/domain_sunset.png");
     private static Sky SKY;
     private static Object world;
 
@@ -101,8 +101,7 @@ public final class RyuVisuals {
                 TRAILS.add(new Trail(e.position().subtract(e.direction().normalize().scale(0.7)), e.position(), now, 4));
             }
             case RyuFx.DOMAIN -> {
-                // 内壳改成显示图片的领域方块后，穹顶本身就是那张图，不再叠天空层
-                SKY = null;
+                SKY = e.size() > 0 ? new Sky(e.position(), Math.max(2, e.size()), now + Math.max(1, e.life())) : null;
                 if (e.size() <= 0) break;
                 DOMAINS.add(new Domain(e.position(), Math.max(2, e.size()), now, 20));
                 if (PhotonFx.ready()) {
@@ -388,15 +387,14 @@ public final class RyuVisuals {
         b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
         sphereQuads(b, ps, center, radius, 0xEE0C0716, 0f, 1f, false);
         BufferUploader.drawWithShader(b.end());
-        // ② 云层：加法混合 + UV 漂移 + 呼吸
-        float pulse = (float) (0.70 + 0.30 * Math.sin(now(mc) * 0.012));
+        // ② 图片层：正常 alpha 混合（照片才不会被加法冲白）+ UV 横向叠 3 次并随时间漂移
+        float pulse = (float) (0.92 + 0.08 * Math.sin(now(mc) * 0.012));
         RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
         RenderSystem.setShaderTexture(0, SKY_TEXTURE);
-        RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
-            com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
+        RenderSystem.defaultBlendFunc();
         b = Tesselator.getInstance().getBuilder();
         b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-        sphereQuads(b, ps, center, radius * 0.985, ((int) (150 * pulse) << 24) | 0xFFFFFF, time, 3f, true);
+        sphereQuads(b, ps, center, radius * 0.985, ((int) (255 * pulse) << 24) | 0xFFFFFF, time, 3f, true);
         BufferUploader.drawWithShader(b.end());
         RenderSystem.defaultBlendFunc();
         RenderSystem.depthMask(true);

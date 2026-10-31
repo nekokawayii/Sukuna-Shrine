@@ -42,7 +42,7 @@ public final class TodoCombat {
     /** 1 注入咒力。 */
     public static void inject(ServerPlayer p) {
         if (!TodoMarks.inject(p, TodoMarks.INJECT_RANGE)) {
-            p.displayClientMessage(Component.literal("注入咒力：准星 24 格内没有可注入的东西"), true);
+            p.displayClientMessage(Component.literal("注入咒力：准星 24 格内没有可注入的东西（生物本来就自带咒力）"), true);
             p.sendSystemMessage(Component.literal("注入咒力：准星 24 格内没有可注入的东西").withStyle(ChatFormatting.GRAY));
             return;
         }
@@ -52,7 +52,7 @@ public final class TodoCombat {
     /** 2 换位：无 CD，与准星最近的有咒力的东西互换位置。 */
     public static void swap(ServerPlayer p) {
         if (!TodoMarks.swap(p)) {
-            p.displayClientMessage(Component.literal("换位：准星方向没有带咒力标记的东西"), true);
+            p.displayClientMessage(Component.literal("换位：准星方向 32 格内没有可以换位的东西"), true);
             return;
         }
         p.displayClientMessage(Component.literal("不义游戏！"), true);

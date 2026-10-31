@@ -25,6 +25,8 @@ public final class TodoMarks {
     public static final double SWAP_RANGE = 32;
     /** 准星前方向量夹角门槛（约 ±70° 内才算"准星附近"）。 */
     public static final double AIM_DOT = 0.35;
+    /** 优先目标的加分（NPC 用：优先和自己的攻击目标换位）。 */
+    public static final double PREFER_BONUS = 60;
 
     private record Ent(ServerLevel level, UUID mark, UUID owner, long at) {}
     private record Blk(ServerLevel level, BlockPos pos, UUID owner, long at) {}
@@ -35,8 +37,12 @@ public final class TodoMarks {
     /** 方块标记：键是维度 + BlockPos.asLong。 */
     private static final Map<Key, Blk> BLOCKS = new LinkedHashMap<>();
 
-    /** 换位候选：实体（含弹幕）或方块二选一。 */
-    public record Swap(Entity entity, BlockPos block, Vec3 pos) {}
+    /**
+     * 换位候选：实体（含弹幕）或方块二选一。
+     * <p>{@code marked}=这个目标身上有"注入咒力"的标记，换位后要把它消耗掉；
+     * 生物默认自带咒力，所以没被注入过的生物也能换位（marked=false）。
+     */
+    public record Swap(Entity entity, BlockPos block, Vec3 pos, boolean marked) {}
 
     // ------------------------------------------------------------ 注入
     /** 沿着施术者的准星注入：先看实体（含弹幕），再看方块。返回是否命中。 */
@@ -81,8 +87,13 @@ public final class TodoMarks {
         return true;
     }
 
-    // ------------------------------------------------------------ 找最近的标记
-    public static Swap nearest(LivingEntity caster) {
+    // ------------------------------------------------------------ 找准星最近的有咒力的东西
+    public static Swap nearest(LivingEntity caster) { return nearest(caster, null); }
+
+    /**
+     * @param prefer 优先考虑的目标（NPC 换位时传自己的攻击目标；玩家传 null）
+     */
+    public static Swap nearest(LivingEntity caster, Entity prefer) {
         if (!(caster.level() instanceof ServerLevel level)) return null;
         Vec3 eye = caster.getEyePosition(), look = caster.getLookAngle().normalize();
         double bestScore = Double.NEGATIVE_INFINITY;
@@ -92,14 +103,24 @@ public final class TodoMarks {
             Entity entity = level.getEntity(mark.mark());
             if (entity == null || !entity.isAlive() || entity == caster) { it.remove(); continue; }
             double score = score(eye, look, entity.getBoundingBox().getCenter(), SWAP_RANGE);
-            if (score > bestScore) { bestScore = score; best = new Swap(entity, null, entity.getBoundingBox().getCenter()); }
+            if (score > bestScore) { bestScore = score; best = new Swap(entity, null, entity.getBoundingBox().getCenter(), true); }
         }
         for (Iterator<Map.Entry<Key, Blk>> it = BLOCKS.entrySet().iterator(); it.hasNext(); ) {
             Blk mark = it.next().getValue();
             if (mark.level() != level) continue;
             if (!mark.level().hasChunkAt(mark.pos())) continue;
             double score = score(eye, look, Vec3.atCenterOf(mark.pos()), SWAP_RANGE);
-            if (score > bestScore) { bestScore = score; best = new Swap(null, mark.pos(), Vec3.atCenterOf(mark.pos())); }
+            if (score > bestScore) { bestScore = score; best = new Swap(null, mark.pos(), Vec3.atCenterOf(mark.pos()), true); }
+        }
+        // 生物默认有咒力：没被注入过的生物也能直接换位
+        for (var living : level.getEntitiesOfClass(LivingEntity.class, caster.getBoundingBox().inflate(SWAP_RANGE),
+                e -> e != caster && e.isAlive() && !e.isSpectator())) {
+            double score = score(eye, look, living.getBoundingBox().getCenter(), SWAP_RANGE);
+            if (living == prefer) score += PREFER_BONUS;
+            if (score > bestScore) {
+                bestScore = score;
+                best = new Swap(living, null, living.getBoundingBox().getCenter(), ENTITIES.containsKey(living.getUUID()));
+            }
         }
         return best;
     }
@@ -115,15 +136,19 @@ public final class TodoMarks {
 
     // ------------------------------------------------------------ 换位
     /** 与准星最近的有咒力的东西换位；换位前后各 0.3 秒（共 12 刻）免疫伤害。 */
-    public static boolean swap(LivingEntity caster) {
+    public static boolean swap(LivingEntity caster) { return swap(caster, null); }
+
+    public static boolean swap(LivingEntity caster, Entity prefer) {
         if (!(caster.level() instanceof ServerLevel level)) return false;
-        Swap target = nearest(caster);
+        Swap target = nearest(caster, prefer);
         if (target == null) return false;
         Vec3 from = caster.position();
         if (target.entity() != null) {
             Entity other = target.entity();
-            ENTITIES.remove(other.getUUID());
-            unmark(level, other.getId(), other.position(), 2f, other.getId());
+            if (target.marked()) {
+                ENTITIES.remove(other.getUUID());
+                unmark(level, other.getId(), other.position(), 2f, other.getId());
+            }
             Vec3 to = other.position();
             other.teleportTo(from.x, from.y, from.z);
             other.setDeltaMovement(Vec3.ZERO);

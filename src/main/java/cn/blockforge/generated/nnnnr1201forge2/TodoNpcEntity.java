@@ -71,7 +71,7 @@ public class TodoNpcEntity extends PathfinderMob {
         // ② 换位：距离拉开时用术式贴脸
         if (now >= getPersistentData().getLong(SWAP_READY) && distanceToSqr(target) > 9) {
             getPersistentData().putLong(SWAP_READY, now + TodoCombat.NPC_SWAP_INTERVAL);
-            if (TodoMarks.swap(this)) {
+            if (TodoMarks.swap(this, target)) {
                 level().playSound(null, blockPosition(), net.minecraft.sounds.SoundEvents.ENDERMAN_TELEPORT,
                     net.minecraft.sounds.SoundSource.HOSTILE, 0.8f, 1.6f);
                 getNavigation().stop();
@@ -84,7 +84,7 @@ public class TodoNpcEntity extends PathfinderMob {
         if (level().isClientSide()) return false;
         long now = level().getGameTime();
         if (now < getPersistentData().getLong(SWAP_READY)) return false;
-        if (!TodoMarks.swap(this)) return false;
+        if (!TodoMarks.swap(this, getTarget())) return false;
         getPersistentData().putLong(SWAP_READY, now + TodoCombat.NPC_SWAP_INTERVAL);
         level().playSound(null, blockPosition(), net.minecraft.sounds.SoundEvents.ENDERMAN_TELEPORT,
             net.minecraft.sounds.SoundSource.HOSTILE, 0.9f, 1.4f);

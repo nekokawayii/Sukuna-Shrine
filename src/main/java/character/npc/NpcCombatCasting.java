@@ -43,7 +43,7 @@ public final class NpcCombatCasting {
     private static boolean isNpc(Mob mob) {
         String id = mob.getType().toString();
         return id.contains("jogo_npc") || id.contains("uraume_npc") || id.contains("choso")
-            || id.contains("ryu_npc") || id.contains("hakari_npc") || id.contains("naoya_npc") || id.contains("higuruma_npc");
+            || id.contains("ryu_npc") || id.contains("hakari_npc") || id.contains("naoya_npc") || id.contains("higuruma_npc") || id.contains("sukuna_npc");
     }
 
     private static long now(Mob mob) { return mob.level().getGameTime(); }
@@ -97,6 +97,21 @@ public final class NpcCombatCasting {
                 fire(mob, player, 0xFF9FDFFF);
             }
             if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 35, NpcDomain.Style.FIREWORK);   // 打上花火（半径与玩家一致 35）
+        } else if (id.contains("sukuna_npc")) {
+            // 无冷却：每 10 刻就能放一轮（解 / 捌 / 灶 / 斩击）
+            hurtAround(mob, player, 8, 20);
+            fire(mob, player, 0xFFE34D65);
+            if (distance <= 12) {
+                hurtAround(mob, player, 4, 16);                        // 近身捌
+                player.setSecondsOnFire(2);
+            }
+            // 领域轮换（无冷却：每 200 刻换一个风格）
+            if (ready(mob, K_DOM, 200) && distance <= 32) {
+                var styles = new NpcDomain.Style[]{NpcDomain.Style.GENERIC, NpcDomain.Style.HIGURUMA,
+                    NpcDomain.Style.NAOYA, NpcDomain.Style.FIREWORK, NpcDomain.Style.LAVA};
+                int idx = ownerCounter(mob) % styles.length;
+                NpcDomain.open(mob, 30, styles[idx]);
+            }
         } else if (id.contains("higuruma_npc")) {
             if (distance <= 6 && ready(mob, K_ATK, 50)) {
                 if (NpcDomain.deathMark(mob, player)) { player.setHealth(0); }
@@ -141,6 +156,13 @@ public final class NpcCombatCasting {
                 mob.position(), Vec3.ZERO, 1f, 5020, 0));
         }
         data.putInt("HakariNpcLuck", luck);
+    }
+
+    private static int ownerCounter(Mob mob) {
+        var data = mob.getPersistentData();
+        int c = data.getInt("SukunaNpcDomainIdx") + 1;
+        data.putInt("SukunaNpcDomainIdx", c);
+        return c;
     }
 
     private static void hurtAround(Mob mob, ServerPlayer player, double radius, int damage) {

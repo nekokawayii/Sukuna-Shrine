@@ -4,6 +4,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
@@ -30,6 +31,8 @@ public final class MahitoSelf {
 
     public static final String SPIRIT_FLAG = "MahitoSpirit";
     public static final String ARMS = "MahitoArms";
+    public static final String LIMB_ITEMS = "MahitoLimbItems";
+    public static final int LIMB_USE = 520, LIMB_STORE = 521;
     public static final String BURST_USED = "MahitoBurstUsed";
 
     /** 治疗：把生命恢复到上限（冷却 200 秒）。目标优先给自己或 8 格内最近的玩家。 */
@@ -217,6 +220,39 @@ public final class MahitoSelf {
                 p.sendSystemMessage(Component.literal("分身已消失：生命上限恢复（当前生命不回复）").withStyle(ChatFormatting.GRAY));
             }
         }
+    }
+
+    /** 手臂独立持物：把主手物品放进空闲手臂槽。 */
+    public static void limbStore(ServerPlayer p) {
+        CompoundTag data = cn.blockforge.generated.nnnnr1201forge2.Curse.data(p);
+        int arms = Math.min(4, data.getInt(ARMS));
+        if (arms <= 0) { p.sendSystemMessage(Component.literal("肢体：还没有手臂").withStyle(ChatFormatting.GRAY)); return; }
+        net.minecraft.nbt.ListTag list = data.getList(LIMB_ITEMS, 10);
+        if (list.size() >= arms) { p.sendSystemMessage(Component.literal("肢体：手臂都拿着东西了").withStyle(ChatFormatting.GRAY)); return; }
+        ItemStack main = p.getMainHandItem();
+        if (main.isEmpty()) { p.sendSystemMessage(Component.literal("肢体：主手是空的").withStyle(ChatFormatting.GRAY)); return; }
+        list.add(main.copy().save(new CompoundTag()));
+        data.put(LIMB_ITEMS, list);
+        p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        p.sendSystemMessage(Component.literal("肢体：已放入手臂（" + list.size() + " / " + arms + "）").withStyle(ChatFormatting.AQUA));
+    }
+
+    /** 手臂独立使用：依次使用下一个手臂槽里的物品。 */
+    public static void limbUse(ServerPlayer p) {
+        CompoundTag data = cn.blockforge.generated.nnnnr1201forge2.Curse.data(p);
+        net.minecraft.nbt.ListTag list = data.getList(LIMB_ITEMS, 10);
+        if (list.isEmpty()) { p.sendSystemMessage(Component.literal("肢体：手里没有东西").withStyle(ChatFormatting.GRAY)); return; }
+        ItemStack stack = ItemStack.of(list.getCompound(0));
+        list.remove(0);
+        data.put(LIMB_ITEMS, list);
+        var result = stack.use(p.level(), p, net.minecraft.world.InteractionHand.MAIN_HAND);
+        if (result.getResult().consumesAction() && !stack.isEmpty()) {
+            if (!p.getInventory().add(stack)) p.drop(stack, false);
+        } else if (!stack.isEmpty()) {
+            list.add(stack.save(new CompoundTag()));
+            data.put(LIMB_ITEMS, list);
+        }
+        p.sendSystemMessage(Component.literal("肢体：使用了一只手臂的物品").withStyle(ChatFormatting.AQUA));
     }
 
     /** 治疗减伤：遍杀灵体期间受到伤害减半。 */

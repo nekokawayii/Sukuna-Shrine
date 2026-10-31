@@ -1,6 +1,7 @@
 package character.mahito;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -10,6 +11,21 @@ public final class LimbScreen extends Screen {
     public LimbScreen() { super(Component.literal("肢体")); }
     public static void setArms(int n) { arms = n; }
     public static int arms() { return arms; }
+
+    @Override protected void init() {
+        int cx = width / 2;
+        addRenderableWidget(Button.builder(Component.literal("使用下一只手臂"), b -> send(520))
+            .bounds(cx - 120, height / 2 - 30, 110, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("主手放入手臂"), b -> send(521))
+            .bounds(cx + 10, height / 2 - 30, 110, 20).build());
+    }
+
+    private void send(int action) {
+        cn.blockforge.generated.nnnnr1201forge2.Network.CHANNEL.sendToServer(
+            new cn.blockforge.generated.nnnnr1201forge2.TechniqueInput.Input(
+                MahitoSkills.TRANSMUTE, 7, false, false, false, false, action, 0));
+        onClose();
+    }
 
     @Override public void render(GuiGraphics g, int mouseX, int mouseY, float partial) {
         renderBackground(g);

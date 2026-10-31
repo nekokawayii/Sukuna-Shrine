@@ -50,6 +50,8 @@ public final class NaoyaDomain {
         final BlockPos center;
         final List<BlockPos> outer = new ArrayList<>(), inner = new ArrayList<>(),
             light = new ArrayList<>(), decor = new ArrayList<>();
+        /** 与 decor 一一对应的方块状态（来自用户改好的结构）。 */
+        final List<BlockState> decorStates = new ArrayList<>();
         final Map<BlockPos, BlockState> before = new LinkedHashMap<>();
         int cursor, total;
         boolean closing;
@@ -129,38 +131,19 @@ public final class NaoyaDomain {
                 realm.inner.add(pos);
             }
         }
-        // 子宫：三圈白色褶皱（球内的同心弧）
-        for (int i = 0; i < 3; i++) {
-            double ringRadius = 8 + i * 6;
-            int samples = (int) (ringRadius * 8);
-            for (int s = 0; s < samples; s++) {
-                double angle = s * Math.PI * 2 / samples;
-                double y = Math.sin(angle * 3) * 3.0;
-                realm.decor.add(new BlockPos((int) Math.round(center.x + Math.cos(angle) * ringRadius),
-                    (int) Math.round(center.y + 2 + y),
-                    (int) Math.round(center.z + Math.sin(angle) * ringRadius)));
-            }
-        }
-        // 中央的眼睛：白色眼球 + 黑色瞳孔（黑色混凝土球壁内唯一的白结构）
-        for (int dy = -4; dy <= 4; dy++) {
-            for (int dx = -4; dx <= 4; dx++) {
-                for (int dz = -4; dz <= 4; dz++) {
-                    int d = dx * dx + dy * dy + dz * dz;
-                    if (d > 16 || d < 9) continue;
-                    realm.decor.add(realm.center.offset(dx, dy + 3, dz));
-                }
-            }
-        }
-        for (int dy = -1; dy <= 1; dy++) {
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dz = 2; dz <= 3; dz++) realm.decor.add(realm.center.offset(dx, dy + 3, dz));
-            }
-        }
-        // 路：从眼睛前方一直铺到球壁
-        for (int step = 4; step <= r - 2; step++) {
-            for (int width = -1; width <= 1; width++) {
-                realm.decor.add(new BlockPos(realm.center.getX() + width, floorY, realm.center.getZ() + step));
-            }
+        // 内部装饰：用户改好的结构（黑/白混凝土 + 紫水晶），施工时最后铺
+        byte[] layout = NaoyaDomainLayout.bytes();
+        for (int i = 0; i + 3 < layout.length; i += 4) {
+            int x = layout[i] & 0xFF, y = layout[i + 1] & 0xFF, z = layout[i + 2] & 0xFF, state = layout[i + 3] & 0xFF;
+            BlockPos pos = new BlockPos(realm.center.getX() + x - NaoyaDomainLayout.OFFSET_X,
+                realm.center.getY() + y + NaoyaDomainLayout.OFFSET_Y,
+                realm.center.getZ() + z - NaoyaDomainLayout.OFFSET_Z);
+            realm.decor.add(pos);
+            realm.decorStates.add(switch (state) {
+                case 1 -> Blocks.WHITE_CONCRETE.defaultBlockState();
+                case 2 -> Blocks.AMETHYST_BLOCK.defaultBlockState();
+                default -> Blocks.BLACK_CONCRETE.defaultBlockState();
+            });
         }
     }
 
@@ -201,9 +184,10 @@ public final class NaoyaDomain {
                 pos = realm.light.get(index - innerEnd);
                 target = Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 15);
             } else {
-                // 子宫/眼睛/路最后铺：否则会被内部光源方块整个盖掉（r360 内部全空的根因）
-                pos = realm.decor.get(index - lightEnd);
-                target = Blocks.WHITE_CONCRETE.defaultBlockState();
+                // 用户结构最后铺：否则会被内部光源方块整个盖掉（r360 内部全空的根因）
+                int decorIndex = index - lightEnd;
+                pos = realm.decor.get(decorIndex);
+                target = realm.decorStates.get(decorIndex);
             }
             if (!realm.level.hasChunkAt(pos)) continue;
             realm.before.putIfAbsent(pos, realm.level.getBlockState(pos));

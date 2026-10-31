@@ -15,10 +15,11 @@ public final class KashimoCharacter {
         return new CharacterDefinition(
             "kashimo", "鹿紫云一", "幻兽琥珀",
             "雷电系的格斗家。任何攻击命中都给敌人挂正电荷（最多3层·10秒），自身积累负电荷（移速提升、屏幕电弧变亮）。"
-                + "轮盘：雷走 / 放电 / 电磁吸附 / 雷神·附着 / 引爆；轮盘中心：幻兽·琥珀。",
+                + "轮盘 10 格：雷走 / 放电 / 电磁吸附 / 雷神·附着 / 引爆 / 静电立场 / 落雷 / 球形闪电 / 雷霆万钧 / 雷影化；轮盘中心：幻兽·琥珀；右键：同极相斥。",
             Family.CUSTOM, Resource.CURSED_ENERGY, 0xFF7FD8FF,
             List.of(KashimoSkills.DASH, KashimoSkills.DISCHARGE, KashimoSkills.ATTRACT,
-                    KashimoSkills.ATTACH, KashimoSkills.DETONATE),
+                    KashimoSkills.ATTACH, KashimoSkills.DETONATE, KashimoSkills.FIELD,
+                    KashimoSkills.BOLT, KashimoSkills.ORB, KashimoSkills.CHAIN, KashimoSkills.SHADOW),
             KashimoStory.chapters(), KashimoStyle.config());
     }
     private KashimoCharacter() {}

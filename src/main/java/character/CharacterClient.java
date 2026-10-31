@@ -10,6 +10,8 @@ public final class CharacterClient {
     private static CharacterPackets.State state=new CharacterPackets.State("",0,100,0,false,new int[0]);
     private static Object world;
     private static boolean physicalHeld;
+    /** 鹿紫云一的防御键（右键）边沿。 */
+    private static boolean useHeld;
     /** 乙骨复制到的术式编号；服务端同步，客户端拼进轮盘。 */
     private static int[] copies=new int[0];
     /** skills() 的缓存：轮盘每帧会多次调用，原来是每次都 new 一个 ArrayList，复制多了就卡。 */
@@ -77,10 +79,19 @@ public final class CharacterClient {
             int kind=mc.options.keyShift.isDown()?1:mc.options.keyJump.isDown()?2:0;
             Network.CHANNEL.sendToServer(new CharacterPackets.Physical(kind));
         }
+        // 鹿紫云一：右键 = 防御键「同极相斥」；负电荷够了才发，免得影响普通右键交互
+        boolean use=ClientInput.held(mc.options.keyUse);
+        if(kashimo()&&use&&!useHeld&&mc.player!=null&&mc.player.isAlive()&&mc.screen==null
+            && KashimoVisuals.negativeStacks()>=character.kashimo.KashimoCombat.GUARD_MIN_NEG){
+            Network.CHANNEL.sendToServer(new TechniqueInput.Input(
+                character.kashimo.KashimoCombat.GUARD,7,false,false,false,false,0,0));
+        }
+        useHeld=use;
         physicalHeld=down;
     }
     /** 伏黑惠：不走角色轮盘，直接打开宿傩线的十影界面。 */
     public static boolean tenShadows() { var d=selected();return d!=null&&"megumi".equals(d.id()); }
+    private static boolean kashimo() { var d=selected();return d!=null&&"kashimo".equals(d.id()); }
     public static void openWheel() {
         var mc=Minecraft.getInstance();
         if(toji())return;

@@ -20,6 +20,30 @@ public final class KashimoFx {
     public static final int ULT = 357;
     /** 肉体崩溃开/关：owner=玩家 id，size=1 开 / 0 关，life=剩余刻。 */
     public static final int CRASH = 358;
-    public static final int FIRST = POS_CHARGE, LAST = CRASH;
+    /** 磁化（3 层满电）：owner=玩家 id，size=1 开 / 0 关，life=剩余刻。 */
+    public static final int MAGNET = 359;
+    /** 静电立场：position=中心，size=半径，life=剩余刻。 */
+    public static final int FIELD = 360;
+    /** 同极相斥：position=玩家，size=半径，life=刻。 */
+    public static final int GUARD = 361;
+    /** 雷光连打上挑：position=落点，life=刻。 */
+    public static final int UPPERCUT = 362;
+    /** 电磁吸附·极：owner=被甩的实体 id，position=当前位置，life=剩余刻。 */
+    public static final int ENVELOPE = 363;
+    /** 落雷预警：position=目标点，size=半径，life=延迟刻。 */
+    public static final int BOLT_WARN = 364;
+    /** 球形闪电本体：position=当前位置，size=半径，life=剩余刻。 */
+    public static final int ORB = 365;
+    /** 球形闪电爆炸：position=中心，size=半径，life=刻。 */
+    public static final int ORB_BLAST = 366;
+    /** 雷霆万钧蓄力：owner=玩家 id，life=蓄力刻。 */
+    public static final int CHAIN_DARK = 367;
+    /** 连锁闪电的一段：position=起点，direction=终点。 */
+    public static final int CHAIN_LINK = 368;
+    /** 雷影化折返：position=起点，direction=终点。 */
+    public static final int SHADOW = 369;
+    /** 闪电反射：position=玩家，size=半径，life=刻。 */
+    public static final int REFLECT = 370;
+    public static final int FIRST = POS_CHARGE, LAST = REFLECT;
     private KashimoFx() {}
 }

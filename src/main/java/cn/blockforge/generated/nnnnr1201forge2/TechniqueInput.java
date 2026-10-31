@@ -34,6 +34,8 @@ public final class TechniqueInput {
         if(input.skill()==character.mahito.MahitoSkills.TRANSMUTE&&input.phase()==7){character.mahito.MahitoTransfigure.handle(p,input.motion());return;}
         // 鹿紫云一：轮盘中心「幻兽·琥珀」用 phase=7 直接请求（终奥不在轮盘技能表里，不走 CharacterCasting 的扣费/冷却）
         if(input.skill()==character.kashimo.KashimoCombat.ULT&&input.phase()==7){character.kashimo.KashimoCombat.requestUltimate(p);return;}
+        // 鹿紫云一：防御键（右键）→ 同极相斥
+        if(input.skill()==character.kashimo.KashimoCombat.GUARD&&input.phase()==7){character.kashimo.KashimoCombat.guard(p);return;}
         if(!character.CharacterService.allowsSkill(p,input.skill())){
             if(input.phase()==0)p.sendSystemMessage(net.minecraft.network.chat.Component.literal("无法施放：技能"+input.skill()+" 不在当前角色的技能表里"));
             if(input.phase()==3)cancel(p);return;

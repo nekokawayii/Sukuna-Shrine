@@ -32,6 +32,8 @@ public final class TojiQteVisuals {
     private static final List<Mark> MARKS = new ArrayList<>();
     private static final List<Burst> BURSTS = new ArrayList<>();
     private static long windowUntil;
+    /** 本次窗口里玩家已经按过的键（用于筛选提示）。 */
+    private static final java.util.List<Integer> PRESSED = new ArrayList<>();
     private static int markedEntity = -1;
 
     public static void receive(Network.Effect e) {
@@ -42,6 +44,7 @@ public final class TojiQteVisuals {
                 windowUntil = Math.max(windowUntil, now + Math.max(1, e.life()));
                 TojiQteClient.extend(Math.max(1, e.life()));
                 markedEntity = (int) e.size();
+                if (markedEntity != -1) PRESSED.clear();               // 新的红光窗口：重新开始筛选
                 if (markedEntity == -1) { Client.shake(1); break; }   // 只延长连招输入窗口
                 if (mc.level != null && mc.level.getEntity(markedEntity) != null) {
                     MARKS.add(new Mark(markedEntity, now + Math.max(1, e.life())));
@@ -68,6 +71,19 @@ public final class TojiQteVisuals {
         }
     }
 
+    /** 客户端记录自己发出去的连招键，屏幕提示据此逐步筛选。 */
+    static void noteToken(int token) {
+        if (PRESSED.size() < 16) PRESSED.add(token);
+    }
+
+    /** 收到服务端的窗口/连招窗口包时延长本地接管时间。 */
+    static void extend(long ticks) {
+        var level = Minecraft.getInstance().level;
+        if (level != null) windowUntil = Math.max(windowUntil, level.getGameTime() + ticks);
+    }
+
+    static void reset() { windowUntil = 0; PRESSED.clear(); }
+
     public static void tick() {
         var mc = Minecraft.getInstance();
         if (mc.level == null) { MARKS.clear(); BURSTS.clear(); windowUntil = 0; return; }
@@ -92,7 +108,55 @@ public final class TojiQteVisuals {
             graphics.fillGradient(0, height - vertical, width, height, 0x00000000, color);
             graphics.fillGradient(0, 0, edge, height, color, 0x00FF2020);
             graphics.fillGradient(width - edge, 0, width, height, 0x00FF2020, color);
+            hints(graphics, width, height);
         });
+    }
+
+    /**
+     * 连招提示面板：**红框 + 黑底**，按键序列 + 招式名；已按过的键会筛选掉不可能连招，
+     * 下一键用红色标出来。
+     */
+    private static void hints(net.minecraft.client.gui.GuiGraphics graphics, int width, int height) {
+        var mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+        long now = mc.level.getGameTime();
+        if (now >= windowUntil) { if (!PRESSED.isEmpty()) PRESSED.clear(); return; }
+        var hints = new java.util.ArrayList<character.toji.TojiHints.Hint>();
+        for (var hint : character.toji.TojiHints.ALL) {
+            if (matches(hint.keys())) hints.add(hint);
+        }
+        if (hints.isEmpty()) return;
+        var font = mc.font;
+        int lineHeight = 10;
+        int shown = Math.min(hints.size(), 14);
+        int boxWidth = 150;
+        int boxHeight = 18 + shown * lineHeight;
+        int x = width - boxWidth - 10;
+        int y = (height - boxHeight) / 2;
+        graphics.fill(x, y, x + boxWidth, y + boxHeight, 0xE6000000);            // 黑底
+        int red = 0xFFFF3B3B;
+        graphics.fill(x, y, x + boxWidth, y + 1, red);                           // 红框（四边）
+        graphics.fill(x, y + boxHeight - 1, x + boxWidth, y + boxHeight, red);
+        graphics.fill(x, y, x + 1, y + boxHeight, red);
+        graphics.fill(x + boxWidth - 1, y, x + boxWidth, y + boxHeight, red);
+        graphics.drawString(font, "完美闪避 · 连招（点键筛选）", x + 5, y + 4, 0xFFFF8080, false);
+        for (int i = 0; i < shown; i++) {
+            var hint = hints.get(i);
+            int rowY = y + 15 + i * lineHeight;
+            String keys = hint.keyText();
+            graphics.drawString(font, keys, x + 5, rowY, 0xFFFFD0D0, false);
+            graphics.drawString(font, hint.name(), x + 5 + Math.max(34, font.width(keys) + 6), rowY,
+                0xFFE0E0E0, false);
+        }
+    }
+
+    /** 已按过的键必须是这一招按键序列的子序列（按顺序出现过即可）。 */
+    private static boolean matches(int[] keys) {
+        int index = 0;
+        for (int pressed : PRESSED) {
+            if (index < keys.length && pressed == keys[index]) index++;
+        }
+        return index == PRESSED.size();
     }
 
     /** 红环 + 连招冲击波（世界内，画在粒子之后）。 */

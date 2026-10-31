@@ -81,6 +81,7 @@ public final class TojiQteClient {
     }
 
     private static void send(int token) {
+        TojiQteVisuals.noteToken(token);
         Network.CHANNEL.sendToServer(new CharacterPackets.Physical(100 + token));
     }
 

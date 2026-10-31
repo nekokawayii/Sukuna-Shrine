@@ -186,10 +186,10 @@ public final class NaoyaVisuals {
 
     /** 简化人形：几块半透明方片拼出"玩家残影"。 */
     private static void drawGhost(BufferBuilder b, PoseStack ps, Ghost ghost, int color) {
-        Vec3 at = ghost.at();
         Vec3 look = ghost.look().multiply(1, 0, 1);
         if (look.lengthSqr() < 0.01) look = new Vec3(0, 0, 1);
         look = look.normalize();
+        Vec3 at = ghost.at().add(look.scale(1.2));   // 画在身前，朝准星方向，不糊在玩家身上
         Vec3 side = new Vec3(-look.z, 0, look.x);
         // 躯干（两层交叉面片，保证从任何角度看都有体积）
         box(b, ps, at.add(0, 0.55, 0), 0.34, 0.62, side, look, color);

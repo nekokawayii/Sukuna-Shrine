@@ -125,6 +125,10 @@ public final class NaoyaCombat {
         java.util.List<Vec3> route = new java.util.ArrayList<>();
         Vec3 origin = p.position(), base = nodes.get(0);
         for (Vec3 point : nodes) route.add(origin.add(point.subtract(base)));
+        // 录下来的轨迹如果落在身后（与准星方向相反），就倒着跑——始终朝准星方向冲出去
+        Vec3 look = flatLook(p);
+        Vec3 first = route.get(0), tail = route.get(route.size() - 1);
+        if (tail.subtract(first).dot(look) < 0) java.util.Collections.reverse(route);
         startTravel(p, route, RELEASE_DAMAGE, true, END_NONE, -1);
         data.remove(K_UNTIL);
         data.remove(K_GHOST);
@@ -466,25 +470,26 @@ public final class NaoyaCombat {
 
     /** 被碰到（任何生物贴到 1.2 格内）。 */
     private static void tickPlanes(net.minecraft.server.MinecraftServer server) {
-        if (PLANES.isEmpty()) return;
-        PLANES.removeIf(plane -> {
+        if (PLANES.isEmpty() || server == null) return;
+        // 注意：shatter() 自己会动 PLANES，这里必须遍历副本，否则 ConcurrentModificationException 直接崩服
+        for (Plane plane : new java.util.ArrayList<>(PLANES)) {
             LivingEntity target = plane.target();
             if (target == null || !target.isAlive() || now(target) >= plane.until()) {
                 if (target != null) {
                     target.setInvisible(false);
                     if (target.getPersistentData().getLong(K_PLANE) > 0) target.getPersistentData().remove(K_PLANE);
                 }
-                return true;
+                PLANES.remove(plane);
+                continue;
             }
-            LivingEntity frozen = target;
+            final LivingEntity frozen = target;
             if (!frozen.level().getEntitiesOfClass(LivingEntity.class, frozen.getBoundingBox().inflate(0.35),
                     e -> e != frozen && e.isAlive() && !e.isSpectator()).isEmpty()) {
                 ServerPlayer source = server.getPlayerList().getPlayer(plane.owner());
                 if (source != null) shatter(frozen, source);
-                return true;
+                else PLANES.remove(plane);
             }
-            return false;
-        });
+        }
     }
 
     /** 锁帧：定身（禁 AI + 清速度），到期自动恢复。 */

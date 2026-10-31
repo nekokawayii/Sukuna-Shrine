@@ -121,7 +121,11 @@ public final class NaoyaCombat {
             p.displayClientMessage(Component.literal("没有足够的投影：先放「设定投影」并移动").withStyle(ChatFormatting.GRAY), true);
             return;
         }
-        startTravel(p, nodes, RELEASE_DAMAGE, true, END_NONE, -1);
+        // 投影跟着玩家走：把整条投影的形状平移，使起点＝玩家当前位置（不再把人拽回起点）
+        java.util.List<Vec3> route = new java.util.ArrayList<>();
+        Vec3 origin = p.position(), base = nodes.get(0);
+        for (Vec3 point : nodes) route.add(origin.add(point.subtract(base)));
+        startTravel(p, route, RELEASE_DAMAGE, true, END_NONE, -1);
         data.remove(K_UNTIL);
         data.remove(K_GHOST);
         Network.send(p.serverLevel(), new Network.Effect(NaoyaFx.RELEASE, p.getId(), p.position(), Vec3.ZERO,
@@ -308,6 +312,7 @@ public final class NaoyaCombat {
             if (d < distance) { distance = d; best = living; }
         }
         if (best == null) return;
+        freeze(p, best);
         CombatSettings.hurt(p, best, p.damageSources().playerAttack(p), (float) damage);
         if (mud) mud(p, best);
         Network.send(p.serverLevel(), new Network.Effect(NaoyaFx.HIT, best.getId(), best.position(),
@@ -352,6 +357,7 @@ public final class NaoyaCombat {
                 new AABB(at, at).inflate(1.6),
                 e -> e != p && e.isAlive() && !e.isSpectator() && CombatSettings.canHit(p, e)
                     && e.getBoundingBox().inflate(0.7).contains(at))) {
+            freeze(p, target);
             CombatSettings.hurt(p, target, p.damageSources().playerAttack(p), (float) damage);
             if (mud) mud(p, target);
             if (travel != null) travel.putInt(K_TR_DEALT, travel.getInt(K_TR_DEALT) + 1);
@@ -399,6 +405,88 @@ public final class NaoyaCombat {
         return best;
     }
 
+    // ── 二次元平面（帧定身） ─────────────────────────────
+    public static final int PLANE_TICKS = 100;          // 平面定身 5 秒
+    public static final int PLANE_ROOT_TICKS = 20;      // 被打破后再定身 1 秒
+    public static final double SHATTER_DAMAGE = 45;     // 打破时的一次高额伤害
+    static final String K_PLANE = "NaoyaPlaneUntil", K_PLANE_OWNER = "NaoyaPlaneOwner",
+        K_PLANE_SHATTER = "NaoyaPlaneShattered";
+
+    private record Plane(LivingEntity target, long until, java.util.UUID owner) {}
+    private static final java.util.List<Plane> PLANES = new java.util.ArrayList<>();
+
+    /** 把目标压成「二次元平面」：隐形 + 定身 5 秒，四周由客户端画玻璃。 */
+    public static void freeze(ServerPlayer p, LivingEntity target) {
+        CompoundTag data = target.getPersistentData();
+        long n = now(target);
+        if (data.getLong(K_PLANE) > n) return;
+        data.putLong(K_PLANE, n + PLANE_TICKS);
+        data.putInt(K_PLANE_OWNER, p.getId());
+        data.putBoolean(K_PLANE_SHATTER, false);
+        target.setInvisible(true);
+        lock(target, PLANE_TICKS);
+        PLANES.removeIf(plane -> plane.target() == target);
+        PLANES.add(new Plane(target, n + PLANE_TICKS, p.getUUID()));
+        ServerLevel level = p.serverLevel();
+        Network.send(level, new Network.Effect(NaoyaFx.PLANE, target.getId(), target.position(),
+            new Vec3(0, p.getYRot(), 0), target.getBbHeight(), PLANE_TICKS, 0));
+        level.playSound(null, target.blockPosition(), SoundEvents.GLASS_PLACE, SoundSource.PLAYERS, 0.9f, 1.5f);
+    }
+
+    /** 打破平面：一次高额伤害 + 再定身 1 秒。 */
+    public static void shatter(LivingEntity target, ServerPlayer source) {
+        CompoundTag data = target.getPersistentData();
+        long n = now(target);
+        if (data.getLong(K_PLANE) == 0 || data.getLong(K_PLANE) <= n || data.getBoolean(K_PLANE_SHATTER)) return;
+        data.putBoolean(K_PLANE_SHATTER, true);
+        data.putLong(K_PLANE, 0);
+        target.setInvisible(false);
+        lock(target, PLANE_ROOT_TICKS);
+        PLANES.removeIf(plane -> plane.target() == target);
+        if (source == null) return;
+        CombatSettings.hurt(source, target, source.damageSources().playerAttack(source), (float) SHATTER_DAMAGE);
+        Network.send(source.serverLevel(), new Network.Effect(NaoyaFx.SHATTER, target.getId(),
+            target.position(), Vec3.ZERO, 1f, 14, 0));
+        source.serverLevel().playSound(null, target.blockPosition(), SoundEvents.GLASS_BREAK,
+            SoundSource.PLAYERS, 1f, 1.2f);
+    }
+
+    /** 被击打：平面状态直接被打破（伤害由 shatter 结算）。 */
+    @SubscribeEvent public static void planeHurt(net.minecraftforge.event.entity.living.LivingHurtEvent e) {
+        if (!(e.getEntity() instanceof LivingEntity)) return;
+        LivingEntity target = (LivingEntity) e.getEntity();
+        long plane = target.getPersistentData().getLong(K_PLANE);
+        if (plane == 0 || plane <= now(target)) return;
+        ServerPlayer source = e.getSource().getEntity() instanceof ServerPlayer player
+            && CharacterService.naoya(player) ? player : null;
+        if (source == null) return;
+        e.setCanceled(true);
+        shatter(target, source);
+    }
+
+    /** 被碰到（任何生物贴到 1.2 格内）。 */
+    private static void tickPlanes(net.minecraft.server.MinecraftServer server) {
+        if (PLANES.isEmpty()) return;
+        PLANES.removeIf(plane -> {
+            LivingEntity target = plane.target();
+            if (target == null || !target.isAlive() || now(target) >= plane.until()) {
+                if (target != null) {
+                    target.setInvisible(false);
+                    if (target.getPersistentData().getLong(K_PLANE) > 0) target.getPersistentData().remove(K_PLANE);
+                }
+                return true;
+            }
+            LivingEntity frozen = target;
+            if (!frozen.level().getEntitiesOfClass(LivingEntity.class, frozen.getBoundingBox().inflate(0.35),
+                    e -> e != frozen && e.isAlive() && !e.isSpectator()).isEmpty()) {
+                ServerPlayer source = server.getPlayerList().getPlayer(plane.owner());
+                if (source != null) shatter(frozen, source);
+                return true;
+            }
+            return false;
+        });
+    }
+
     /** 锁帧：定身（禁 AI + 清速度），到期自动恢复。 */
     public static void lock(LivingEntity target, int ticks) {
         target.setDeltaMovement(0, target.getDeltaMovement().y, 0);
@@ -416,7 +504,9 @@ public final class NaoyaCombat {
     private static final java.util.List<Lock> LOCKS = new java.util.ArrayList<>();
 
     @SubscribeEvent public static void serverTick(TickEvent.ServerTickEvent e) {
-        if (e.phase != TickEvent.Phase.END || LOCKS.isEmpty()) return;
+        if (e.phase != TickEvent.Phase.END) return;
+        tickPlanes(e.getServer());
+        if (LOCKS.isEmpty()) return;
         LOCKS.removeIf(lock -> {
             if (!lock.target().isAlive() || now(lock.target()) >= lock.until()) {
                 if (lock.target().isAlive()) lock.target().setNoAi(false);

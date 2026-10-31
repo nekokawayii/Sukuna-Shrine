@@ -16,6 +16,10 @@ public final class NaoyaFx {
     public static final int RELEASE = 525;
     /** 截断弹幕。 */
     public static final int INTERCEPT = 526;
+    /** 被压成二次元平面：owner=目标 id，position=目标位置，size=身高，life=定身刻数。 */
+    public static final int PLANE = 528;
+    /** 平面破碎：一次高额伤害的玻璃炸裂。 */
+    public static final int SHATTER = 529;
     /** 领域占位起手。 */
     public static final int DOMAIN = 527;
     public static final int FIRST = PROJECT, LAST = 529;

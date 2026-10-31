@@ -56,6 +56,16 @@ public final class MahitoTransfigure {
             store(p, inDomain);
             return;
         }
+        boolean noneAround = p.level().getEntitiesOfClass(LivingEntity.class,
+                new AABB(p.position(), p.position()).inflate(16),
+                e -> e != p && e.isAlive() && !(e instanceof Player)).isEmpty();
+        if (noneAround) {
+            cn.blockforge.generated.nnnnr1201forge2.Network.send((net.minecraft.server.level.ServerLevel) p.level(),
+                new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(300, p.getId(), p.position(),
+                    Vec3.ZERO, 3f, 0, 0));
+            p.sendSystemMessage(Component.literal("无为转变：周围没有生物 → 自我改变").withStyle(ChatFormatting.AQUA));
+            return;
+        }
         LivingEntity target = p.level().getEntitiesOfClass(LivingEntity.class,
                 p.getBoundingBox().inflate(1.0),
                 e -> e != p && e.isAlive() && !(e instanceof Player))
@@ -111,10 +121,27 @@ public final class MahitoTransfigure {
         if (action == 201) { MahitoPowers.bridge(p); return; }
         if (action == 300) { MahitoPowers.potential(p); return; }
         if (action == 400) { sendModelData(p); return; }
+        if (action == MahitoSelf.STORAGE_HEAL || action == MahitoSelf.HEAL) { MahitoSelf.heal(p); return; }
+        if (action == MahitoSelf.STORAGE_BURST) { MahitoSelf.burst(p, pendingTarget(p)); return; }
+        if (action == MahitoSelf.CLONE) { p.sendSystemMessage(Component.literal("分身：下一版实现").withStyle(ChatFormatting.GRAY)); return; }
+        if (action == MahitoSelf.SPIRIT) { MahitoSelf.spirit(p); return; }
+        if (action == MahitoSelf.LIMBS) { MahitoSelf.limbs(p); return; }
         if (action >= 401 && action <= 406) { adjust(p, action); return; }
         if (action == 410) { applyToMonster(p); return; }
         if (action >= FORM_CURSED_BASE && action <= FORM_CURSED_BASE + 4) { transformCursed(p, action - FORM_CURSED_BASE); return; }
         if (action >= FORM_SWORD && action <= FORM_SHOVEL) transform(p, action);
+    }
+
+    private static LivingEntity pendingTarget(ServerPlayer p) {
+        if (p.level() instanceof net.minecraft.server.level.ServerLevel level
+            && p.getPersistentData().hasUUID(PENDING_TARGET)) {
+            var e = level.getEntity(p.getPersistentData().getUUID(PENDING_TARGET));
+            if (e instanceof LivingEntity living && living.isAlive()) return living;
+        }
+        return p.level().getEntitiesOfClass(LivingEntity.class,
+                new AABB(p.position(), p.position()).inflate(8),
+                e -> e != p && e.isAlive()).stream()
+            .min(java.util.Comparator.comparingDouble(p::distanceToSqr)).orElse(null);
     }
 
     private static void sendModelData(ServerPlayer p) {

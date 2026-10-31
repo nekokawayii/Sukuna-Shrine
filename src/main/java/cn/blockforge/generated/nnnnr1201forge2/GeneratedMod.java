@@ -78,6 +78,7 @@ public final class GeneratedMod {
         character.CharacterCasting.registerEffect("mahito",character.mahito.MahitoSkills.TRANSMUTE,
             (p,skill,rank)->character.mahito.MahitoTransfigure.arm(p));
         MinecraftForge.EVENT_BUS.register(character.mahito.MahitoTransfigure.class);
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.living.LivingHurtEvent ev)->{if(ev.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp&&character.mahito.MahitoSelf.damageScale(sp)<1f)ev.setAmount(ev.getAmount()*character.mahito.MahitoSelf.damageScale(sp));});
         MinecraftForge.EVENT_BUS.register(character.mahito.MahitoPowers.class);
         character.CharacterCasting.registerEffect("mahito",character.mahito.MahitoSkills.SELF_EMBRYO,
             (p,skill,rank)->character.domainking.SelfEmbryoDomain.toggle(p));

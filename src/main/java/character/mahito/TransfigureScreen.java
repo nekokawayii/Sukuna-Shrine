@@ -39,7 +39,8 @@ public final class TransfigureScreen extends Screen {
     }
 
     private String label(int i) {
-        if (mode == 0) return i == 0 ? "1 储存" : i == 1 ? "2 改变" : "？";
+        if (mode == 0) return i == 0 ? "1 储存" : i == 1 ? "2 改变" : i == 2 ? "3 治疗" : i == 3 ? "4 爆裂" : "？";
+        if (mode == 3) return new String[]{"1 治疗", "2 分身", "3 遍杀即灵体", "4 肢体", "？", "？"}[i];
         return switch (page) {
             case 1 -> TOOLS[i];
             case 2 -> CURSED[i];
@@ -58,7 +59,8 @@ public final class TransfigureScreen extends Screen {
     }
 
     private boolean selectable(int i) {
-        if (mode == 0) return i <= 1;
+        if (mode == 0) return i <= 3;
+        if (mode == 3) return i <= 3;
         return switch (page) {
             case 1, 2 -> true;
             case 3 -> i < 3;
@@ -110,6 +112,8 @@ public final class TransfigureScreen extends Screen {
             g.drawCenteredString(font, "左右箭头翻页", cx, cy + 120, 0xFFB9C6CF);
         } else if (mode == 0) {
             g.drawCenteredString(font, "选择要贮存的形态", cx, cy + 120, 0xFFB9C6CF);
+        } else if (mode == 3) {
+            g.drawCenteredString(font, "自我改变", cx, cy + 120, 0xFFB9C6CF);
         } else if (page == 0) {
             g.drawCenteredString(font, "点格子进入子轮盘", cx, cy + 120, 0xFFB9C6CF);
         } else {
@@ -128,7 +132,8 @@ public final class TransfigureScreen extends Screen {
         }
         int hit = hovered(mx, my);
         if (hit < 0 || !selectable(hit)) return super.mouseClicked(mx, my, button);
-        if (mode == 0) { send(hit == 0 ? 0 : 400); return true; }
+        if (mode == 0) { send(hit == 0 ? 0 : hit == 1 ? 400 : hit == 2 ? 500 : 501); return true; }
+        if (mode == 3) { send(510 + hit); return true; }
         switch (page) {
             case 1 -> { if (hit == 5) { page = 0; return true; } send(hit + 1); return true; }
             case 2 -> { if (hit == 5) { page = 0; return true; } send(MahitoTransfigure.FORM_CURSED_BASE + hit); return true; }

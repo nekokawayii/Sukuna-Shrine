@@ -44,18 +44,29 @@ public final class Client {
     public static String energyText(double amount){return BalanceRules.number(amount);}
 
     /**
+     * 咒力液面颜色：**跟随当前角色的主题色**（里梅蓝、漏壶橙……），
+     * 低于 30% 时统一变成红色警示；没选角色（宿傩主线）保持原来的觉醒红/紫。
+     */
+    public static int curseLiquidColor(float ratio) {
+        if (ratio <= 0.3f) return 0xFFE00000;
+        var definition = character.CharacterClient.selected();
+        if (definition != null) return definition.color();
+        return progress.awakened() ? 0xFFE23455 : 0xFFAF66EB;
+    }
+
+    /**
      * 圆形咒力表：**完全自绘**（不用贴图）——逐行扫描线画出圆形描边，圆内按比例填液面。
      *
      * <p>这样 0~100% 都完整显示：满咒力时整个圆被填满、低咒力时只剩底部一截，
      * 描边始终是最后画的一层，所以永远闭合、不会被液面盖住。
      */
     public static void drawCurseRing(net.minecraft.client.gui.GuiGraphics g, net.minecraft.client.Minecraft mc,
-                                     float ratio, boolean awakened, int x, int y, int size) {
+                                     float ratio, int liquidColor, int x, int y, int size) {
         ratio = Math.max(0f, Math.min(1f, ratio));
         int radius = Math.max(6, size / 2);
         int cx = x + radius, cy = y + radius;
         int outline = 0xFF1B2440;                                   // 深蓝黑描边
-        int liquid = (awakened || ratio <= 0.3f) ? 0xFFE00000 : 0xFFFFDD00;
+        int liquid = liquidColor;
         int surface = 0xFFFFF4B8;                                   // 液面高光
         int liquidTop = y + size - Math.round(size * ratio);
         for (int dy = 0; dy < size; dy++) {
@@ -410,7 +421,8 @@ public final class Client {
 
         // 咒力：圆形液面仪表（放最右下角），技能名显示在圆表左边
         int ringSize = 44, ringX = w - ringSize - 8, ringY = h - ringSize - 8;
-        drawCurseRing(g,mc,(float)(progress.energy()/Math.max(1.0,progress.maximum())),progress.awakened(),ringX,ringY,ringSize);
+        float curseRatio=(float)(progress.energy()/Math.max(1.0,progress.maximum()));
+        drawCurseRing(g,mc,curseRatio,curseLiquidColor(curseRatio),ringX,ringY,ringSize);
         String curseText=(AuthorityClient.enabled()?"军团咒力池 ":"咒力 ")+(progress.maximum()>=999999.0?"∞":(int)progress.energy()+" / "+(int)progress.maximum());
         int curseWidth=mc.font.width(curseText);
         g.drawString(mc.font,curseText,ringX-curseWidth-6,ringY+ringSize-26,0xFFEED5FF);

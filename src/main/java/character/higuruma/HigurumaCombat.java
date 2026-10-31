@@ -88,45 +88,8 @@ public final class HigurumaCombat {
         p.sendSystemMessage(Component.literal("强化：法槌已掷出（忠诚 III，自动飞回）").withStyle(ChatFormatting.GOLD));
     }
 
-    /** 3 领域展开·诛伏赐死：外壳黑色混凝土、内部法庭、四周一圈 15 格断头台。 */
-    public static void domain(ServerPlayer p) {
-        if (!(p.level() instanceof ServerLevel level)) return;
-        BlockPos base = p.blockPosition();
-        var shell = Blocks.BLACK_CONCRETE.defaultBlockState();
-        var floor = Blocks.BIRCH_PLANKS.defaultBlockState();
-        var bench = Blocks.DARK_OAK_PLANKS.defaultBlockState();
-        var bar = Blocks.IRON_BARS.defaultBlockState();
-        int r = RADIUS, h = HEIGHT * 2;
-        for (int dx = -r; dx <= r; dx++) for (int dy = -1; dy <= h; dy++) for (int dz = -r; dz <= r; dz++) {
-            double d = Math.sqrt(dx * dx + dz * dz);
-            BlockPos pos = base.offset(dx, dy, dz);
-            if (d > r) continue;
-            if (d > r - 1 || dy == h || dy == -1) { level.setBlockAndUpdate(pos, shell); continue; }
-            if (dy == 0 && d <= r - 1) { level.setBlockAndUpdate(pos, floor); }
-            else if (dy > 0 && dy < h) level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
-        }
-        // 法庭：法官席 + 两排长椅
-        for (int dx = -6; dx <= 6; dx++) for (int dz = -3; dz <= -1; dz++) {
-            level.setBlockAndUpdate(base.offset(dx, 1, dz), bench);
-            if (dz == -3) level.setBlockAndUpdate(base.offset(dx, 2, dz), bench);
-        }
-        for (int row = 0; row < 4; row++) for (int dx = -7; dx <= 7; dx++) {
-            int dz = 2 + row * 3;
-            level.setBlockAndUpdate(base.offset(dx, 1, dz), bench);
-        }
-        // 断头台：一圈 8 座，高 15 格
-        for (int i = 0; i < 8; i++) {
-            double a = Math.PI * 2 * i / 8;
-            BlockPos at = base.offset((int) Math.round(Math.cos(a) * (r - 4)), 1, (int) Math.round(Math.sin(a) * (r - 4)));
-            for (int y = 0; y < HEIGHT; y++) {
-                level.setBlockAndUpdate(at.offset(0, y, 0), y == HEIGHT - 1 ? bar : bench);
-                level.setBlockAndUpdate(at.offset(1, y, 0), y == HEIGHT - 1 ? bar : bench);
-            }
-            level.setBlockAndUpdate(at.above(HEIGHT), bar);
-        }
-        cn.blockforge.generated.nnnnr1201forge2.Curse.data(p).putLong("HigurumaDomainEnd", level.getGameTime() + DOMAIN_TICKS);
-        p.sendSystemMessage(Component.literal("领域展开·诛伏赐死").withStyle(ChatFormatting.DARK_PURPLE));
-    }
+    /** 3 领域展开·诛伏赐死：再按一次收回。 */
+    public static void domain(ServerPlayer p) { HigurumaDomain.toggle(p); }
 
     @SubscribeEvent public static void hit(LivingHurtEvent e) {
         if (!(e.getSource().getEntity() instanceof ServerPlayer p) || e.getAmount() <= 0) return;

@@ -112,6 +112,7 @@ public final class MahitoTransfigure {
         if (action == 300) { MahitoPowers.potential(p); return; }
         if (action == 400) { sendModelData(p); return; }
         if (action >= 401 && action <= 406) { adjust(p, action); return; }
+        if (action == 410) { applyToMonster(p); return; }
         if (action >= FORM_CURSED_BASE && action <= FORM_CURSED_BASE + 4) { transformCursed(p, action - FORM_CURSED_BASE); return; }
         if (action >= FORM_SWORD && action <= FORM_SHOVEL) transform(p, action);
     }
@@ -147,6 +148,30 @@ public final class MahitoTransfigure {
         snap.putFloat("maxHealth", hp);
         p.getPersistentData().put(PENDING, snap);
         sendModel(p, snap);
+    }
+
+    /** 「完成」：把调整直接应用到那只怪物身上（生命与渲染体型），不储存。 */
+    private static void applyToMonster(ServerPlayer p) {
+        CompoundTag snap = p.getPersistentData().getCompound(PENDING);
+        if (snap.isEmpty() || !(p.level() instanceof net.minecraft.server.level.ServerLevel level)) return;
+        if (p.getPersistentData().hasUUID(PENDING_TARGET)) {
+            var e = level.getEntity(p.getPersistentData().getUUID(PENDING_TARGET));
+            if (e instanceof LivingEntity living) {
+                float hp = Math.max(1f, snap.getFloat("health"));
+                if (living.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH) != null) {
+                    living.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(hp);
+                }
+                living.setHealth(hp);
+                float baseW = Math.max(0.1f, living.getBbWidth());
+                float baseH = Math.max(0.2f, living.getBbHeight());
+                living.getPersistentData().putFloat(TransformedScaleClient.SCALE_W, snap.getFloat("width") / baseW);
+                living.getPersistentData().putFloat(TransformedScaleClient.SCALE_H, snap.getFloat("height") / baseH);
+                p.sendSystemMessage(Component.literal("无为转变·改变：" + living.getName().getString()
+                    + " 的形态已被改写（生命 " + (int) hp + "）").withStyle(ChatFormatting.AQUA));
+            }
+        }
+        p.getPersistentData().remove(PENDING);
+        p.getPersistentData().remove(PENDING_TARGET);
     }
 
     private static void storePending(ServerPlayer p) {

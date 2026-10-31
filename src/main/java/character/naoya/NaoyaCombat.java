@@ -125,10 +125,6 @@ public final class NaoyaCombat {
         java.util.List<Vec3> route = new java.util.ArrayList<>();
         Vec3 origin = p.position(), base = nodes.get(0);
         for (Vec3 point : nodes) route.add(origin.add(point.subtract(base)));
-        // 录下来的轨迹如果落在身后（与准星方向相反），就倒着跑——始终朝准星方向冲出去
-        Vec3 look = flatLook(p);
-        Vec3 first = route.get(0), tail = route.get(route.size() - 1);
-        if (tail.subtract(first).dot(look) < 0) java.util.Collections.reverse(route);
         startTravel(p, route, RELEASE_DAMAGE, true, END_NONE, -1);
         data.remove(K_UNTIL);
         data.remove(K_GHOST);

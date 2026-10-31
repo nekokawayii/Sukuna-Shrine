@@ -33,6 +33,8 @@ public final class NaoyaVisuals {
     private record Shards(Vec3 at, long born, int life) {}
     private static final List<Ghost> GHOSTS = new ArrayList<>();
     private static final List<Node> NODES = new ArrayList<>();
+    /** 设定投影的起点（节点的局部坐标参考点）。 */
+    private static Vec3 anchor;
     private static final List<Trail> TRAILS = new ArrayList<>();
     private static final List<Plane> PLANES = new ArrayList<>();
     private static final List<Shards> SHARDS = new ArrayList<>();
@@ -48,14 +50,22 @@ public final class NaoyaVisuals {
         if (mc.level == null) return;
         long now = mc.level.getGameTime();
         switch (e.kind()) {
-            case NaoyaFx.PROJECT -> projectUntil = Math.max(projectUntil, now + Math.max(1, e.life()));
+            case NaoyaFx.PROJECT -> {
+                if (e.size() <= 0 && e.life() <= 0) { NODES.clear(); anchor = null; projectUntil = 0; break; }
+                projectUntil = Math.max(projectUntil, now + Math.max(1, e.life()));
+                if (anchor == null) { anchor = e.position(); NODES.clear(); }
+            }
             case NaoyaFx.GHOST -> {
                 GHOSTS.removeIf(g -> g.owner() == e.owner());
                 GHOSTS.add(new Ghost(e.owner(), e.position(), e.direction(), now + Math.max(1, e.life())));
             }
-            case NaoyaFx.NODE -> NODES.add(new Node(e.position(), now + Math.max(1, e.life())));
+            case NaoyaFx.NODE -> {
+                if (anchor == null) anchor = e.position();
+                NODES.add(new Node(e.position(), now + Math.max(1, e.life())));
+            }
             case NaoyaFx.TRAIL -> TRAILS.add(new Trail(e.position(), e.position().add(e.direction()),
                 now, Math.max(4, e.life())));
+            case NaoyaFx.RELEASE -> { NODES.clear(); anchor = null; }
             case NaoyaFx.PLANE -> {
                 PLANES.removeIf(plane -> plane.entity() == e.owner());
                 PLANES.add(new Plane(e.owner(), now + Math.max(1, e.life()), Math.max(1.2, e.size())));
@@ -76,7 +86,7 @@ public final class NaoyaVisuals {
 
     public static void tick() {
         var mc = Minecraft.getInstance();
-        if (mc.level == null) { GHOSTS.clear(); NODES.clear(); TRAILS.clear(); projectUntil = 0; return; }
+        if (mc.level == null) { GHOSTS.clear(); NODES.clear(); TRAILS.clear(); projectUntil = 0; anchor = null; return; }
         long now = mc.level.getGameTime();
         GHOSTS.removeIf(g -> now >= g.until() || mc.level.getEntity(g.owner()) == null);
         NODES.removeIf(n -> now >= n.until());
@@ -108,12 +118,23 @@ public final class NaoyaVisuals {
             Client.ribbon(builder, ps, trail.from(), trail.to(), 0.10, (alpha << 24) | 0x9FF0FF, cam);
             Client.ribbon(builder, ps, trail.from(), trail.to(), 0.04, (alpha << 24) | 0xFFFFFF, cam);
         }
-        // 节点环
+        // 节点环：整条投影按"玩家当前位置 − 锚点"平移 → 设定完成后地上的投影跟着玩家走
+        Vec3 shift = Vec3.ZERO;
+        if (anchor != null) {
+            var local = mc.player;
+            if (local != null) shift = local.position().subtract(anchor);
+        }
+        Vec3 previous = null;
         for (Node node : NODES) {
             long left = node.until() - now;
             int alpha = (int) (210 * Math.min(1.0, left / 10.0));
-            Client.ring(builder, ps, node.at(), 0.45, 0.07, (alpha << 24) | 0x7FD8FF, cam);
-            Client.ring(builder, ps, node.at().add(0, 0.02, 0), 0.22, 0.04, (alpha << 24) | 0xEAF8FF, cam);
+            Vec3 at = node.at().add(shift);
+            Client.ring(builder, ps, at, 0.45, 0.07, (alpha << 24) | 0x7FD8FF, cam);
+            Client.ring(builder, ps, at.add(0, 0.02, 0), 0.22, 0.04, (alpha << 24) | 0xEAF8FF, cam);
+            if (previous != null) {                                  // 地面连线：整条路径一目了然
+                Client.ribbon(builder, ps, previous, at, 0.06, (alpha << 24) | 0x9FF0FF, cam);
+            }
+            previous = at;
         }
         // 半透明残影：起点处的简化人形（头 + 躯干 + 双臂），朝准星方向
         for (Ghost ghost : GHOSTS) {

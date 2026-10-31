@@ -46,6 +46,7 @@ public final class EntityRendererRegistry {
         entry(VoidContent.GOJO,GojoRenderer.class,GojoRenderer::new),
         entry(Content.CHOSO,ChosoRenderer.class,ChosoRenderer::new),
         entry(Content.TODO_NPC,TodoNpcRenderer.class,TodoNpcRenderer::new),
+        entry(Content.RYU_NPC,RyuNpcRenderer.class,RyuNpcRenderer::new),
         entry(Content.TODO_ANCHOR,TodoAnchorRenderer.class,TodoAnchorRenderer::new),
         entry(Content.URAUME_NPC,UraumeNpcRenderer.class,UraumeNpcRenderer::new),
         entry(Content.JOGO_NPC,JogoNpcRenderer.class,JogoNpcRenderer::new),

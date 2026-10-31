@@ -113,11 +113,28 @@ public final class GeneratedMod {
         character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.OVERTIME,
             (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiCombat.overtime(p));
         MinecraftForge.EVENT_BUS.register(character.nanami.NanamiCombat.class);
+        // 石流龙 · 咒力强化/放出：冰沙冲击波（蓄力在 TechniqueInput 里拦截）/ 追踪弹 / 咒力喷涌 / 甜品 / 领域占位
+        character.CharacterCasting.registerEffect("ryu", character.ryu.RyuSkills.SCATTER,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.ryu.RyuCombat.scatter(p));
+        character.CharacterCasting.registerEffect("ryu", character.ryu.RyuSkills.BURST,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.ryu.RyuCombat.burst(p));
+        character.CharacterCasting.registerEffect("ryu", character.ryu.RyuSkills.DESSERT,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.ryu.RyuCombat.dessert(p));
+        character.CharacterCasting.registerEffect("ryu", character.ryu.RyuSkills.DOMAIN,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.ryu.RyuCombat.domain(p));
+        character.CharacterCasting.registerLock("ryu", new character.CharacterCasting.Lock() {
+            @Override public boolean locked(net.minecraft.server.level.ServerPlayer player) {
+                return character.ryu.RyuCombat.dessertActive(player);
+            }
+            @Override public String reason() { return "甜品时间：正在吃，2 秒内不能施术"; }
+        });
+        MinecraftForge.EVENT_BUS.register(character.ryu.RyuCombat.class);
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent event) -> {
             character.kashimo.KashimoCharges.reset();
             character.kashimo.KashimoZones.reset();
             character.todo.TodoMarks.reset();
             character.nanami.NanamiRatio.reset();
+            character.ryu.RyuCombat.reset();
         });
         character.CharacterCasting.registerEffect("megumi", character.megumi.MegumiSkills.TEN_SHADOWS, (net.minecraft.server.level.ServerPlayer p, character.CharacterSkill skill, int rank) -> Network.sendTo(p, new Network.Effect(308, p.getId(), p.position(), net.minecraft.world.phys.Vec3.ZERO, 0f, 0, 0)));
         MinecraftForge.EVENT_BUS.register(character.CharacterService.class);

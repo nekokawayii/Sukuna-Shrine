@@ -242,6 +242,7 @@ public final class Client {
         if(e.kind()>=character.kashimo.KashimoFx.FIRST&&e.kind()<=character.kashimo.KashimoFx.LAST){KashimoVisuals.receive(e);return;}
         if(e.kind()>=character.todo.TodoFx.FIRST&&e.kind()<=character.todo.TodoFx.LAST){TodoVisuals.receive(e);return;}
         if(e.kind()>=character.nanami.NanamiFx.FIRST&&e.kind()<=character.nanami.NanamiFx.LAST){RatioVisuals.receive(e);return;}
+        if(e.kind()>=character.ryu.RyuFx.FIRST&&e.kind()<=character.ryu.RyuFx.LAST){RyuVisuals.receive(e);return;}
         boolean self=e.owner()==(Minecraft.getInstance().player==null?-1:Minecraft.getInstance().player.getId());
         if(e.kind()==300){if(self)character.mahito.TransfigureScreen.open((int)e.size());return;}
         if(e.kind()==308){return;}

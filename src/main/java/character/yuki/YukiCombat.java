@@ -66,21 +66,10 @@ public final class YukiCombat {
             float floor = e.getMaxHealth() * 0.10f;                    // 保底 10% 目标生命上限
             float before = e.getHealth();
             e.hurt(p.damageSources().magic(), Math.max(base, floor));
-            // 保底优先级最高：不足 10% 就分段补足。
-            // 注意「净土守护者」这类 BOSS 有 HitCap（单次限伤），会夹住每一次 setHealth，
-            // 所以这里循环写血，每段最多掉 HitCap，多段累计到 10% 为止。
+            // 保底优先级最高：不足 10% 就用「真伤」补足，绕过一切限伤/防御/减伤。
             float lost = before - e.getHealth();
-            int guard = 0;
-            while (e.isAlive() && lost < floor && guard++ < 64) {
-                float remaining = floor - lost;
-                float target = Math.max(0f, e.getHealth() - remaining);
-                if (target >= e.getHealth()) break;          // 已经打不动了，避免死循环
-                e.setHealth(target);
-                e.hurtMarked = true;
-                float nowLost = before - e.getHealth();
-                if (nowLost <= lost + 0.01f) break;          // 本次没有任何进展 → 放弃
-                lost = nowLost;
-                if (e.getHealth() <= 0f) { e.die(p.damageSources().magic()); break; }
+            if (e.isAlive() && lost < floor) {
+                trueDamage(p, e, floor - lost);
             }
             Vec3 kb = to.normalize().scale(2.6);
             e.push(kb.x, 0.9, kb.z);
@@ -204,6 +193,47 @@ public final class YukiCombat {
             level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, center.x, center.y + 1, center.z, 1, 0, 0, 0, 0);
             level.playSound(null, p.blockPosition(), SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 2f, 0.4f);
         }
+    }
+
+    /**
+     * 真伤：无视限伤、护甲、减伤、伤害事件。
+     * <p>净土守护者这类 BOSS 在 setHealth 里用 private 的 internalHealth 开关做兜底，
+     * 普通写血会被夹到 HitCap；这里用反射临时把开关打开再写，写完整回原值。
+     */
+    public static void trueDamage(ServerPlayer p, LivingEntity e, double amount) {
+        if (e == null || amount <= 0) return;
+        float want = (float) Math.max(0.0, e.getHealth() - amount);
+        try {
+            var field = findField(e.getClass(), "internalHealth");
+            if (field != null) {
+                field.setAccessible(true);
+                boolean previous = field.getBoolean(e);
+                field.setBoolean(e, true);
+                try {
+                    e.setHealth(want);
+                } finally {
+                    field.setBoolean(e, previous);
+                }
+            } else {
+                e.setHealth(want);
+            }
+        } catch (ReflectiveOperationException ex) {
+            e.setHealth(want);
+        }
+        e.hurtMarked = true;
+        if (e.getHealth() <= 0f) e.die(p.damageSources().magic());
+    }
+
+    /** 在类继承链上找字段（守护者的开关就在它自己类里）。 */
+    private static java.lang.reflect.Field findField(Class<?> type, String name) {
+        for (Class<?> c = type; c != null && c != Object.class; c = c.getSuperclass()) {
+            try {
+                return c.getDeclaredField(name);
+            } catch (NoSuchFieldException ignored) {
+                // 继续往父类找
+            }
+        }
+        return null;
     }
 
     private YukiCombat() {}

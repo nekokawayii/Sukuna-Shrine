@@ -27,7 +27,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  */
 public final class NpcDomain {
     /** 各角色自己的领域风格（r387 用户要求：石流龙=烟花、秤金次=赌场…）。 */
-    public enum Style { FIREWORK, PACHINKO, LAVA, ICE, BLOOD, NAOYA, GENERIC }
+    public enum Style { FIREWORK, PACHINKO, LAVA, ICE, BLOOD, NAOYA, HIGURUMA, GENERIC }
 
     public static final int RADIUS = 26;
     public static final int TICKS = 400;          // 20 秒
@@ -85,6 +85,7 @@ public final class NpcDomain {
             });
         }
         job.plan.sort(java.util.Comparator.comparingDouble(pos -> pos.distSqr(center)));
+        if (style == Style.HIGURUMA) judge(mob, level, center, (int) Math.round(radiusOverride));
         JOBS.put(mob.getUUID(), job);
         Network.send(level, new Network.Effect(character.ryu.RyuFx.DOMAIN, mob.getId(), Vec3.atCenterOf(center),
             Vec3.ZERO, r, TICKS, 0));
@@ -103,6 +104,36 @@ public final class NpcDomain {
         if (mob != null && !mob.level().isClientSide())
             Network.send(level, new Network.Effect(character.ryu.RyuFx.DOMAIN, mob.getId(), mob.position(),
                 Vec3.ZERO, 0f, 0, 0));
+    }
+
+    /** 诛伏赐死·判决：随机 无罪 / 有罪·没收（60 秒不能用术式）/ 有罪·死刑（日车下一次伤害直接处刑）。 */
+    private static void judge(Mob owner, ServerLevel level, BlockPos center, int radius) {
+        var rand = level.random;
+        for (var p : level.getEntitiesOfClass(net.minecraft.server.level.ServerPlayer.class,
+                new AABB(center).inflate(radius), t -> t.isAlive())) {
+            int roll = rand.nextInt(3);
+            if (roll == 1) {
+                cn.blockforge.generated.nnnnr1201forge2.Curse.data(p).putLong("HigSealedUntil", level.getGameTime() + 1200);   // 60 秒
+                p.sendSystemMessage(net.minecraft.network.chat.Component.literal("判决：有罪 · 没收 —— 60 秒内无法使用术式")
+                    .withStyle(net.minecraft.ChatFormatting.RED));
+            } else if (roll == 2) {
+                owner.getPersistentData().putUUID("HigDeathMark", p.getUUID());
+                p.sendSystemMessage(net.minecraft.network.chat.Component.literal("判决：有罪 · 死刑 —— 日车的下一次伤害将直接处刑")
+                    .withStyle(net.minecraft.ChatFormatting.DARK_RED));
+            } else {
+                p.sendSystemMessage(net.minecraft.network.chat.Component.literal("判决：无罪")
+                    .withStyle(net.minecraft.ChatFormatting.GREEN));
+            }
+        }
+    }
+
+    /** 死刑：日车下一次伤害把目标 setHealth(0)。 */
+    public static boolean deathMark(Mob owner, LivingEntity target) {
+        var data = owner.getPersistentData();
+        if (!data.hasUUID("HigDeathMark")) return false;
+        if (!data.getUUID("HigDeathMark").equals(target.getUUID())) return false;
+        data.remove("HigDeathMark");
+        return true;
     }
 
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e) {
@@ -213,6 +244,10 @@ public final class NpcDomain {
                         new AABB(job.center).inflate(RADIUS), t -> t != owner && t.isAlive()
                             && !(t instanceof Mob m && m.getType() == owner.getType()))) {
                     if (living.distanceToSqr(Vec3.atCenterOf(job.center)) > r2) continue;
+                    if (job.style == Style.HIGURUMA && deathMark(owner, living)) {
+                        living.setHealth(0);
+                        continue;
+                    }
                     switch (job.style) {
                         case FIREWORK -> {                       // 石流龙：打上花火 · 追踪烟花
                             living.hurt(living.damageSources().magic(), (float) DAMAGE);

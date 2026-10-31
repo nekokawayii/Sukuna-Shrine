@@ -43,7 +43,7 @@ public final class NpcCombatCasting {
     private static boolean isNpc(Mob mob) {
         String id = mob.getType().toString();
         return id.contains("jogo_npc") || id.contains("uraume_npc") || id.contains("choso")
-            || id.contains("ryu_npc") || id.contains("hakari_npc") || id.contains("naoya_npc");
+            || id.contains("ryu_npc") || id.contains("hakari_npc") || id.contains("naoya_npc") || id.contains("higuruma_npc");
     }
 
     private static long now(Mob mob) { return mob.level().getGameTime(); }
@@ -97,6 +97,14 @@ public final class NpcCombatCasting {
                 fire(mob, player, 0xFF9FDFFF);
             }
             if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 35, NpcDomain.Style.FIREWORK);   // 打上花火（半径与玩家一致 35）
+        } else if (id.contains("higuruma_npc")) {
+            if (distance <= 6 && ready(mob, K_ATK, 50)) {
+                if (NpcDomain.deathMark(mob, player)) { player.setHealth(0); }
+                else hurtAround(mob, player, 4, 14);
+                fire(mob, player, 0xFFC9A227);
+            }
+            if (ready(mob, K_DOM, 1200) && distance <= 24)
+                NpcDomain.open(mob, 30, NpcDomain.Style.HIGURUMA);   // 诛伏赐死
         } else if (id.contains("naoya_npc")) {
             if (distance <= 6 && ready(mob, K_ATK, 45)) {
                 hurtAround(mob, player, 4, 16);                        // 直线投射

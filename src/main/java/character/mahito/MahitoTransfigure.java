@@ -29,6 +29,8 @@ public final class MahitoTransfigure {
     /** 命中后暂存的待贮存快照（等轮盘选择）。 */
     public static final String PENDING = "SukunaPendingTransfig";
     public static final int FORM_SWORD=1, FORM_AXE=2, FORM_PICKAXE=3, FORM_HOE=4, FORM_SHOVEL=5, FORM_CURSED=6;
+    /** 咒具子页：100 黑绳 / 101 屠坐魔 / 102 游云 / 103 神武解 / 104 飞天。 */
+    public static final int FORM_CURSED_BASE=100;
     private static final String[] TIER_NAMES={"木","石","金","铁","钻石","下界合金"};
     private static final String[] TOOL_NAMES={"剑","斧","镐","锄","铲","咒具"};
 
@@ -101,6 +103,7 @@ public final class MahitoTransfigure {
             p.sendSystemMessage(Component.literal("无为转变·贮存完成：右键贮存体可打开轮盘").withStyle(ChatFormatting.AQUA));
             return;
         }
+        if (action >= FORM_CURSED_BASE && action <= FORM_CURSED_BASE + 4) { transformCursed(p, action - FORM_CURSED_BASE); return; }
         if (action < FORM_SWORD || action > FORM_CURSED) return;
         transform(p, action);
     }
@@ -155,6 +158,28 @@ public final class MahitoTransfigure {
         }
         p.getInventory().setItem(p.getInventory().selected, out);
         p.sendSystemMessage(Component.literal("无为转变：形态变为「" + label + "」").withStyle(ChatFormatting.AQUA));
+    }
+
+    private static final String[] CURSED_NAMES={"黑绳","屠坐魔","游云","神武解","飞天"};
+
+    /** 咒具子页：全部咒具，耐久只保留 1%。 */
+    private static void transformCursed(ServerPlayer p, int index) {
+        ItemStack held = p.getMainHandItem();
+        CompoundTag base = held.getTagElement(BASE_TAG);
+        if (base == null || index < 0 || index > 4) return;
+        ItemStack out = switch (index) {
+            case 0 -> new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.BLACK_ROPE.get());
+            case 1 -> new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.SLAUGHTER_DEMON.get());
+            case 2 -> new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.YUYUN.get());
+            case 3 -> new ItemStack(cn.blockforge.generated.nnnnr1201forge2.VoidContent.SHINBUKE.get());
+            default -> new ItemStack(cn.blockforge.generated.nnnnr1201forge2.VoidContent.HITEN.get());
+        };
+        out.getOrCreateTag().put(BASE_TAG, base.copy());
+        out.setHoverName(Component.literal(CURSED_NAMES[index] + "·" + base.getString("name")).withStyle(ChatFormatting.AQUA));
+        int max = out.getMaxDamage();
+        out.setDamageValue(Math.max(0, max - Math.max(1, max / 100)));
+        p.getInventory().setItem(p.getInventory().selected, out);
+        p.sendSystemMessage(Component.literal("无为转变：形态变为「" + CURSED_NAMES[index] + "」（耐久 1%）").withStyle(ChatFormatting.AQUA));
     }
 
     /** 右键任意「无为转变」物品 → 打开变化轮盘（mode=1）。 */

@@ -29,15 +29,25 @@ public final class TransfigureScreen extends Screen {
     }
 
     private static final String[] FORMS = {"剑", "斧", "镐", "锄", "铲", "咒具"};
+    private static final String[] CURSED = {"黑绳", "屠坐魔", "游云", "神武解", "飞天", "？"};
 
     private String label(int i) {
         if (mode == 0) return i == 0 ? "1 储存" : "？";
+        if (mode == 2) return CURSED[i];
         return (i + 1) + " " + FORMS[i];
     }
 
-    private boolean selectable(int i) { return mode == 1 || i == 0; }
+    private boolean selectable(int i) {
+        if (mode == 0) return i == 0;
+        if (mode == 2) return i < 5;
+        return true;
+    }
 
-    private int actionFor(int i) { return mode == 0 ? 0 : i + 1; }
+    private int actionFor(int i) {
+        if (mode == 0) return 0;
+        if (mode == 2) return MahitoTransfigure.FORM_CURSED_BASE + i;
+        return i + 1;
+    }
 
     private int nodeX(int i) {
         return (int) (width / 2.0 + Math.cos(-Math.PI / 2 + i * Math.PI * 2 / SLOTS) * RADIUS);
@@ -69,13 +79,17 @@ public final class TransfigureScreen extends Screen {
             g.fill(x - NODE / 2, y - NODE / 2, x + NODE / 2, y + NODE / 2, fill);
             g.drawCenteredString(font, label(i), x, y - 4, selectable(i) ? 0xFFE8F0F5 : 0xFF5D686F);
         }
-        g.drawCenteredString(font, mode == 0 ? "选择要贮存的形态" : "选择要变化的形态", cx, cy + 120, 0xFFB9C6CF);
+        g.drawCenteredString(font, mode == 0 ? "选择要贮存的形态" : mode == 1 ? "选择要变化的形态" : "选择咒具（耐久 1%）", cx, cy + 120, 0xFFB9C6CF);
         super.render(g, mouseX, mouseY, partial);
     }
 
     @Override public boolean mouseClicked(double mx, double my, int button) {
         if (button != 0) return super.mouseClicked(mx, my, button);
         int hit = hovered(mx, my);
+        if (mode == 1 && hit == 5) {   // 「咒具」→ 本机打开子页
+            Minecraft.getInstance().setScreen(new TransfigureScreen(2));
+            return true;
+        }
         if (hit >= 0 && selectable(hit)) {
             int action = actionFor(hit);
             cn.blockforge.generated.nnnnr1201forge2.Network.CHANNEL.sendToServer(

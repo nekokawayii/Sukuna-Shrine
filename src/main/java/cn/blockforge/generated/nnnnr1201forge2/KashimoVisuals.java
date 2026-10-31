@@ -141,6 +141,8 @@ public final class KashimoVisuals {
         if (crashUntil != 0 && now >= crashUntil) crashUntil = 0;
         var p = mc.player;
         if (p == null || !PhotonFx.ready()) return;
+        // 身上的电弧只在第三人称画：第一人称相机就在自己身体里，光斑会糊满整个屏幕。
+        if (mc.options.getCameraType().isFirstPerson()) return;
         boolean ult = ultUntil > now;
         if (ult && now % 5 == 0) {
             Vec3 pos = p.position().add(0, p.getBbHeight() * 0.5, 0);

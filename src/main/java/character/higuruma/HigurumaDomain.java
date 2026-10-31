@@ -34,35 +34,28 @@ public final class HigurumaDomain {
         if (active(p)) { close(p, "领域展开·诛伏赐死：收回"); return; }
         BlockPos anchor = p.blockPosition();
         Built built = new Built(level, anchor, level.getGameTime() + LIFE);
-        List<BlockPos> positions = new ArrayList<>();
-        int cx = anchor.getX(), cy = anchor.getY(), cz = anchor.getZ();
-        // 球形球壳（半径 25，一格外壳），内部清成空气
-        for (int dx = -RADIUS; dx <= RADIUS; dx++)
-            for (int dy = -RADIUS; dy <= RADIUS; dy++)
-                for (int dz = -RADIUS; dz <= RADIUS; dz++) {
-                    double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-                    if (dist > RADIUS) continue;
-                    BlockPos pos = new BlockPos(cx + dx, cy + dy, cz + dz);
-                    positions.add(pos);
-                }
-        positions.sort(Comparator.comparingDouble(p0 -> p0.distSqr(anchor)));
-        for (BlockPos pos : positions) {
-            if (level.getBlockState(pos).hasBlockEntity()) continue;   // 保守：容器/机器一律不动
-            built.originals.put(pos.immutable(), level.getBlockState(pos));
-            built.openQueue.add(pos.immutable());
+        // 直接加载结构 NBT（用户可自行调整 data/sukuna/structures/higuruma_domain/main.nbt）
+        var template = level.getStructureManager()
+            .get(new net.minecraft.resources.ResourceLocation("sukuna", "higuruma_domain/main")).orElse(null);
+        if (template == null) {
+            p.sendSystemMessage(Component.literal("领域结构缺失：sukuna:higuruma_domain/main").withStyle(ChatFormatting.RED));
+            return;
         }
-        // 断头台：8 座 15 格高
-        for (int i = 0; i < 8; i++) {
-            double a = Math.PI * 2 * i / 8;
-            BlockPos at = anchor.offset((int) Math.round(Math.cos(a) * (RADIUS - 5)), 1, (int) Math.round(Math.sin(a) * (RADIUS - 5)));
-            for (int y = 0; y < HEIGHT; y++)
-                for (int k = 0; k < 2; k++) {
-                    BlockPos pos = at.offset(k, y, 0);
+        var size = template.getSize();
+        BlockPos origin = anchor.offset(-size.getX() / 2, -size.getY() / 2, -size.getZ() / 2);
+        var settings = new net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings()
+            .setRotation(net.minecraft.world.level.block.Rotation.NONE)
+            .setMirror(net.minecraft.world.level.block.Mirror.NONE);
+        // 先记录将被覆盖位置的原始方块（跳过错方块实体的位置）
+        for (var info : template.filterBlocks(origin, settings, Blocks.BLACK_CONCRETE, false)) { }
+        for (int x = 0; x < size.getX(); x++)
+            for (int y = 0; y < size.getY(); y++)
+                for (int z = 0; z < size.getZ(); z++) {
+                    BlockPos pos = origin.offset(x, y, z);
                     if (level.getBlockState(pos).hasBlockEntity()) continue;
                     built.originals.putIfAbsent(pos.immutable(), level.getBlockState(pos));
-                    built.openQueue.add(pos.immutable());
                 }
-        }
+        template.placeInWorld(level, origin, origin, settings, level.getRandom(), 2);
         ACTIVE.put(p.getUUID(), built);
         p.sendSystemMessage(Component.literal("领域展开·诛伏赐死（再按收回）").withStyle(ChatFormatting.DARK_PURPLE));
     }

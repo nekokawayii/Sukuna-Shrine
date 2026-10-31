@@ -20,6 +20,10 @@ public final class CharacterCasting {
     @FunctionalInterface public interface CooldownScale { double scale(ServerPlayer player); }
     private static final java.util.Map<String,CooldownScale> COOLDOWN_SCALES=new java.util.HashMap<>();
     public static void registerCooldownScale(String character,CooldownScale scale) { if(scale!=null)COOLDOWN_SCALES.put(character,scale); }
+    /** 角色专属的「禁用施法」状态（例：鹿紫云一的肉体崩溃）。reason 会原样提示给玩家。 */
+    public interface Lock { boolean locked(ServerPlayer player); String reason(); }
+    private static final java.util.Map<String,Lock> LOCKS=new java.util.HashMap<>();
+    public static void registerLock(String character,Lock lock){ if(lock!=null)LOCKS.put(character,lock); }
 
     /** 允许在「无量空处」压制下仍然能施放的角色技能（漏壶的盖棺铁围山要在对方领域里展开打对拼）。 */
     private static final java.util.Set<String> MIND_LOCK_CASTABLE=new java.util.HashSet<>();
@@ -105,6 +109,12 @@ public final class CharacterCasting {
             return;
         }
         var skill=definition.config().skill(id);if(skill==null)return;
+        Lock lock=LOCKS.get(definition.id());
+        if(lock!=null&&lock.locked(p)){
+            String reason=lock.reason();
+            p.sendSystemMessage(Component.literal(reason));p.displayClientMessage(Component.literal(reason),true);
+            return;
+        }
         if(!p.isAlive()||p.isSpectator()||p.isPassenger()||p.isSleeping()||p.isUsingItem()||!Curse.canUseTechnique(p)
                 ||PrisonSystem.locked(p)||ObserverRitual.active(p)||TenShadows.locked(p)||DeathStar.charging(p)||DeathStar.anemic(p)
                 ||Shinbuke.holding(p)||(GojoEntity.mindLocked(p)&&!mindLockAllowed(definition,id))||GuardianPlayerSkills.locked(p)||SoulCombat.suppressed(p)

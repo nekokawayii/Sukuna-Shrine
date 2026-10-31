@@ -13,7 +13,6 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
@@ -28,34 +27,39 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  * 石流龙 · 咒力强化/放出。
  *
  * <p>被动「咒力超载」：上限 10000、每秒只回 5（写在 {@link RyuStyle} 的 Stats 里）。
- * 轮盘：1 冰沙冲击波（可蓄力光炮）/ 2 追踪弹 / 3 咒力喷涌 / 4 甜品时间 / 5 领域展开（占位）。
+ * 轮盘：1 冰沙冲击波（持续放出的 3D 冲击波）/ 2 追踪弹 / 3 咒力喷涌 / 4 甜品时间 / 5 领域展开（占位）。
+ *
+ * <p>冰沙冲击波：按住就持续喷，**每秒扣 100 咒力**；宽度从 1 格起、**每 2 秒 +1 格、无上限**；
+ * 判定是圆锥体积（枪口半径 = 宽度/2，随距离缓慢扩张）→ 真正有体积的 3D 冲击波。
  */
 public final class RyuCombat {
-    // 冰沙冲击波
-    public static final int BLAST_CHARGE_TICKS = 40;       // 最多蓄 2 秒
-    public static final double BLAST_LENGTH = 30;          // 贯穿 30 格
-    public static final double BLAST_MIN_WIDTH = 1.2, BLAST_MAX_WIDTH = 3.0;
-    public static final double BLAST_MIN_DAMAGE = 45, BLAST_MAX_DAMAGE = 120;
-    public static final double BLAST_RECOIL = 1.25;        // 后坐力（约退 2 格）
-    public static final int BLAST_COOLDOWN = 100;          // 5 秒
+    // 冰沙冲击波（持续型）
+    public static final double BLAST_LENGTH = 30;
+    public static final double BLAST_BASE_WIDTH = 1.0;      // 起手 1 格宽
+    public static final double BLAST_WIDTH_PER_2S = 1.0;    // 每 2 秒 +1 格，无上限
+    public static final double BLAST_SPREAD = 0.06;         // 每格距离再扩张的半径
+    public static final double BLAST_TICK_COST = 100;       // 每秒扣 100 咒力
+    public static final double BLAST_DAMAGE_BASE = 8, BLAST_DAMAGE_PER_WIDTH = 2;
+    public static final double BLAST_KNOCKBACK = 1.2;
+    public static final int BLAST_DAMAGE_INTERVAL = 4, BLAST_PUSH_INTERVAL = 12, BLAST_EFFECT_INTERVAL = 4;
     // 追踪弹
     public static final int SCATTER_MIN = 3, SCATTER_MAX = 5, SCATTER_LIFE = 70;
     public static final double SCATTER_SPEED = 0.62, SCATTER_TURN = 0.30;
-    public static final double SCATTER_RANGE = 24, SCATTER_DAMAGE = 18, SCATTER_TRACK = 20;
-    public static final int SCATTER_COOLDOWN = 80;
+    public static final double SCATTER_DAMAGE = 18, SCATTER_TRACK = 20;
     // 咒力喷涌
     public static final double BURST_RADIUS = 3, BURST_DAMAGE = 20, BURST_KNOCKBACK = 1.7;
     // 甜品时间
-    public static final int DESSERT_TICKS = 40;            // 2 秒
+    public static final int DESSERT_TICKS = 40;
     // 领域占位
     public static final double DOMAIN_RADIUS = 8;
 
-    private static final String CHARGE_START = "RyuChargeStart", DESSERT_UNTIL = "RyuDessertUntil";
-    private static final String NPC_ENERGY = "RyuNpcEnergy";
+    private static final String CHANNEL_START = "RyuBlastStart", DESSERT_UNTIL = "RyuDessertUntil";
+    private static final String NPC_ENERGY = "RyuNpcEnergy", NPC_CHANNEL_START = "RyuNpcBlastStart";
+    private static final String NPC_CHANNEL_END = "RyuNpcBlastEnd";
     public static final double NPC_MAX_ENERGY = 10000, NPC_REGEN = 5;
-    public static final double NPC_BLAST_COST = 1200, NPC_SCATTER_COST = 300;
+    public static final int NPC_CHANNEL_TICKS = 80;
 
-    /** 追踪弹：玩家/ NPC 共用（owner 与 caster 二选一）。 */
+    /** 追踪弹：玩家 / NPC 共用（owner 与 caster 二选一）。 */
     private record Missile(ServerLevel level, ServerPlayer owner, Mob caster, Vec3 pos, Vec3 dir, long born, double damage) {}
     private static final List<Missile> MISSILES = new ArrayList<>();
 
@@ -66,83 +70,69 @@ public final class RyuCombat {
 
     private static long now(LivingEntity e) { return e.level().getGameTime(); }
 
-    // ------------------------------------------------------------ 蓄力（冰沙冲击波）
+    // ------------------------------------------------------------ 冰沙冲击波：持续放出
     public static void startCharge(ServerPlayer p) {
-        Curse.data(p).putLong(CHARGE_START, now(p));
+        CompoundTag data = Curse.data(p);
+        if (data.getLong(CHANNEL_START) != 0) return;
+        data.putLong(CHANNEL_START, now(p));
+        // 起手那一下后坐力（约退 2 格）
+        Vec3 back = p.getLookAngle().normalize().scale(-1.25);
+        p.setDeltaMovement(p.getDeltaMovement().add(back.x, 0.18, back.z));
+        p.hurtMarked = true;
+        if (p.level() instanceof ServerLevel level) {
+            level.playSound(null, p.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 0.9f, 1.3f);
+        }
     }
 
-    /** 客户端心跳：只用来刷新"正在蓄力"的表现，蓄力时长以服务端记录的开始刻为准。 */
     public static void holdCharge(ServerPlayer p) {
-        long start = Curse.data(p).getLong(CHARGE_START);
-        if (start == 0) { startCharge(p); start = Curse.data(p).getLong(CHARGE_START); }
-        int ticks = (int) Math.min(BLAST_CHARGE_TICKS, Math.max(0, now(p) - start));
-        double ratio = ticks / (double) BLAST_CHARGE_TICKS;
-        Network.sendTo(p, new Network.Effect(RyuFx.CHARGE, p.getId(), p.position(), Vec3.ZERO,
-            (float) ratio, 12, 0));
+        if (Curse.data(p).getLong(CHANNEL_START) == 0) startCharge(p);
     }
 
     public static void releaseCharge(ServerPlayer p, boolean fire) {
-        CompoundTag data = Curse.data(p);
-        long start = data.getLong(CHARGE_START);
-        data.remove(CHARGE_START);
+        Curse.data(p).remove(CHANNEL_START);
         Network.sendTo(p, new Network.Effect(RyuFx.CHARGE, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));
-        if (!fire || start == 0) return;
-        int ticks = (int) Math.min(BLAST_CHARGE_TICKS, Math.max(0, now(p) - start));
-        double ratio = ticks / (double) BLAST_CHARGE_TICKS;
-        var skill = character.CharacterService.selected(p) == null ? null
-            : character.CharacterService.selected(p).config().skill(RyuSkills.BLAST);
-        int cost = skill == null ? 1200 : skill.cost();
-        if (!Curse.spend(p, cost)) {
-            p.sendSystemMessage(Component.literal("咒力不足：冰沙冲击波需要 " + cost).withStyle(ChatFormatting.GRAY));
-            p.displayClientMessage(Component.literal("咒力不足"), true);
-            return;
-        }
-        data.putLong("CharacterSkillCooldown_" + RyuSkills.BLAST, now(p) + BLAST_COOLDOWN);
-        data.putLong("CharacterGlobalCooldown", now(p) + 4);
-        blast(p, ratio);
     }
 
-    /** 光炮本体：宽度/伤害随蓄力 0~1 成长，贯穿 30 格、沿途全部击飞。 */
-    private static void blast(ServerPlayer p, double ratio) {
-        if (!(p.level() instanceof ServerLevel level)) return;
-        double width = BLAST_MIN_WIDTH + (BLAST_MAX_WIDTH - BLAST_MIN_WIDTH) * ratio;
-        double damage = BLAST_MIN_DAMAGE + (BLAST_MAX_DAMAGE - BLAST_MIN_DAMAGE) * ratio;
-        Vec3 origin = origin(p), dir = p.getLookAngle().normalize();
-        beam(level, p, origin, dir, width, damage, 2.2, p);
-        // 后坐力：整个人往后退
-        Vec3 back = dir.scale(-BLAST_RECOIL);
-        p.setDeltaMovement(p.getDeltaMovement().add(back.x, 0.18, back.z));
-        p.hurtMarked = true;
-        level.playSound(null, p.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 1f,
-            (float) (1.4 - ratio * 0.3));
-        p.displayClientMessage(Component.literal("冰沙冲击波 · 蓄力 " + (int) Math.round(ratio * 100) + "%"), true);
+    /** 当前宽度：1 格起，每 2 秒 +1 格，无上限。 */
+    public static double channelWidth(long elapsedTicks) {
+        return BLAST_BASE_WIDTH + (elapsedTicks / 20.0) / 2.0 * BLAST_WIDTH_PER_2S;
     }
 
-    /** 飞机头前端：眼睛高度再往前 0.8 格。 */
-    private static Vec3 origin(LivingEntity caster) {
-        return caster.getEyePosition().add(caster.getLookAngle().scale(0.8));
-    }
-
-    /** 一条贯穿光束：命中判定 = 垂直于轴线的距离在光束半径内。 */
-    private static void beam(ServerLevel level, LivingEntity caster, Vec3 origin, Vec3 dir, double width,
-                             double damage, double knockback, ServerPlayer owner) {
+    /**
+     * 一次冲击波结算：圆锥体积（枪口半径 = 宽度/2，随距离扩张），
+     * 伤害与击退都按"是否在体积内"判定。
+     */
+    private static void pulse(LivingEntity caster, ServerPlayer owner, double width, double damage,
+                              boolean knockback, boolean effect) {
+        if (!(caster.level() instanceof ServerLevel level)) return;
+        Vec3 origin = origin(caster), dir = caster.getLookAngle().normalize();
         Vec3 end = origin.add(dir.scale(BLAST_LENGTH));
         var blockHit = level.clip(new ClipContext(origin, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, caster));
         if (blockHit.getType() != HitResult.Type.MISS) end = blockHit.getLocation();
-        Network.send(level, new Network.Effect(RyuFx.BEAM, caster.getId(), origin, end, (float) width, 8, 0));
+        if (effect) {
+            Network.send(level, new Network.Effect(RyuFx.BEAM, caster.getId(), origin, end, (float) width, 8, 0));
+        }
         double length = end.distanceTo(origin);
         for (var target : level.getEntitiesOfClass(LivingEntity.class, new AABB(origin, end).inflate(width + 2),
                 t -> t != caster && t.isAlive() && !t.isSpectator())) {
             Vec3 delta = target.getBoundingBox().getCenter().subtract(origin);
             double along = delta.dot(dir);
             if (along < -0.5 || along > length + 1) continue;
+            double radius = width * 0.5 + Math.max(0, along) * BLAST_SPREAD;
             double perpendicular = delta.subtract(dir.scale(along)).length();
-            if (perpendicular > width * 0.5 + Math.max(target.getBbWidth(), 0.6) * 0.5) continue;
-            hurt(level, caster, owner, target, damage);
-            Vec3 push = dir.scale(knockback).add(0, 0.35, 0);
-            target.setDeltaMovement(target.getDeltaMovement().add(push));
-            target.hurtMarked = true;
+            if (perpendicular > radius + Math.max(target.getBbWidth(), 0.6) * 0.5) continue;
+            if (damage > 0) hurt(level, caster, owner, target, damage);
+            if (knockback) {
+                Vec3 push = dir.scale(BLAST_KNOCKBACK).add(0, 0.3, 0);
+                target.setDeltaMovement(target.getDeltaMovement().add(push));
+                target.hurtMarked = true;
+            }
         }
+    }
+
+    /** 飞机头前端：眼睛高度再往前 0.8 格。 */
+    private static Vec3 origin(LivingEntity caster) {
+        return caster.getEyePosition().add(caster.getLookAngle().scale(0.8));
     }
 
     private static void hurt(ServerLevel level, LivingEntity caster, ServerPlayer owner, LivingEntity target, double damage) {
@@ -184,6 +174,11 @@ public final class RyuCombat {
         level.playSound(null, mob.blockPosition(), SoundEvents.TRIDENT_THROW, SoundSource.HOSTILE, 0.9f, 1.4f);
     }
 
+    public static void npcScatter(Mob mob, LivingEntity target) {
+        if (!(mob.level() instanceof ServerLevel level) || !npcSpend(mob, 300)) return;
+        npcScatterInternal(mob, target);
+    }
+
     /** 追踪弹每刻推进（服务端 tick 调）：朝最近敌人转向，撞到就炸。 */
     public static void tickMissiles(long now) {
         if (MISSILES.isEmpty()) return;
@@ -212,8 +207,8 @@ public final class RyuCombat {
                 level.playSound(null, hit.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 0.4f, 1.8f);
                 continue;
             }
-            if (!level.getBlockState(net.minecraft.core.BlockPos.containing(pos)).getCollisionShape(level,
-                net.minecraft.core.BlockPos.containing(pos)).isEmpty()) continue;
+            var pos0 = net.minecraft.core.BlockPos.containing(pos);
+            if (!level.getBlockState(pos0).getCollisionShape(level, pos0).isEmpty()) continue;
             keep.add(new Missile(level, missile.owner(), missile.caster(), pos, dir, missile.born(), missile.damage()));
         }
         MISSILES.clear();
@@ -289,6 +284,31 @@ public final class RyuCombat {
         if (!isRyu(p)) return;
         long now = now(p);
         CompoundTag data = Curse.data(p);
+
+        // ① 冰沙冲击波：持续喷，每秒 100 咒力，宽度每 2 秒 +1 格
+        long start = data.getLong(CHANNEL_START);
+        if (start != 0) {
+            long elapsed = Math.max(0, now - start);
+            double width = channelWidth(elapsed);
+            if (now % 20 == 0 && elapsed > 0 && !Curse.spend(p, BLAST_TICK_COST)) {
+                data.remove(CHANNEL_START);
+                Network.sendTo(p, new Network.Effect(RyuFx.CHARGE, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));
+                p.sendSystemMessage(Component.literal("咒力不足：冰沙冲击波中断").withStyle(ChatFormatting.GRAY));
+                p.displayClientMessage(Component.literal("咒力不足 · 中断"), true);
+            } else {
+                if (now % BLAST_DAMAGE_INTERVAL == 0) {
+                    pulse(p, p, width, BLAST_DAMAGE_BASE + width * BLAST_DAMAGE_PER_WIDTH, false,
+                        now % (BLAST_DAMAGE_INTERVAL * 2) == 0);
+                }
+                if (now % BLAST_PUSH_INTERVAL == 0) pulse(p, p, width, 0, true, false);
+                if (now % 10 == 0) {
+                    Network.sendTo(p, new Network.Effect(RyuFx.CHARGE, p.getId(), p.position(), Vec3.ZERO,
+                        (float) width, 12, 0));
+                }
+            }
+        }
+
+        // ② 甜品时间：回蓝翻倍
         long dessertUntil = data.getLong(DESSERT_UNTIL);
         if (dessertUntil != 0) {
             if (now >= dessertUntil) {
@@ -296,7 +316,6 @@ public final class RyuCombat {
                 Network.send(p.serverLevel(), new Network.Effect(RyuFx.DESSERT, p.getId(), p.position(),
                     Vec3.ZERO, 0f, 0, 0));
             } else if (now % 20 == 0) {
-                // 回复翻倍：基础每秒 5，这里再补同样一份
                 Curse.addRaw(p, Math.max(1, character.CharacterService.stats(p).recovery()));
                 p.displayClientMessage(Component.literal("甜品时间：咒力回复 ×2"), true);
             }
@@ -319,14 +338,14 @@ public final class RyuCombat {
     @SubscribeEvent public static void death(LivingDeathEvent e) {
         if (e.getEntity() instanceof ServerPlayer p && isRyu(p)) {
             Curse.data(p).remove(DESSERT_UNTIL);
-            Curse.data(p).remove(CHARGE_START);
+            Curse.data(p).remove(CHANNEL_START);
         }
     }
 
     /** 创造恢复符：清蓄力/甜品状态。 */
     public static void testReset(ServerPlayer p) {
         CompoundTag data = Curse.data(p);
-        data.remove(CHARGE_START);
+        data.remove(CHANNEL_START);
         data.remove(DESSERT_UNTIL);
     }
 
@@ -349,18 +368,42 @@ public final class RyuCombat {
         tag.putDouble(NPC_ENERGY, Math.min(NPC_MAX_ENERGY, npcEnergy(mob) + NPC_REGEN * multiplier));
     }
 
-    public static void npcBlast(Mob mob, LivingEntity target) {
-        if (!(mob.level() instanceof ServerLevel level) || !npcSpend(mob, NPC_BLAST_COST)) return;
-        Vec3 dir = target.getBoundingBox().getCenter().subtract(origin(mob)).normalize();
-        beam(level, mob, origin(mob), dir, 2.4, 70, 2.0, null);
-        level.playSound(null, mob.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 1f, 1.2f);
-        Vec3 back = dir.scale(-BLAST_RECOIL);
-        mob.setDeltaMovement(mob.getDeltaMovement().add(back.x, 0.1, back.z));
+    /** NPC 开始喷冲击波：持续 4 秒、每秒 100 咒力、宽度同样每 2 秒 +1。 */
+    public static void npcStartBlast(Mob mob) {
+        CompoundTag tag = mob.getPersistentData();
+        long now = now(mob);
+        tag.putLong(NPC_CHANNEL_START, now);
+        tag.putLong(NPC_CHANNEL_END, now + NPC_CHANNEL_TICKS);
+        if (mob.level() instanceof ServerLevel level) {
+            level.playSound(null, mob.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 0.9f, 1.2f);
+        }
     }
 
-    public static void npcScatter(Mob mob, LivingEntity target) {
-        if (target == null || !npcSpend(mob, NPC_SCATTER_COST)) return;
-        npcScatterInternal(mob, target);
+    public static boolean npcBlastActive(Mob mob) {
+        CompoundTag tag = mob.getPersistentData();
+        long start = tag.getLong(NPC_CHANNEL_START);
+        return start != 0 && tag.getLong(NPC_CHANNEL_END) > now(mob);
+    }
+
+    /** NPC 的持续冲击波推进（每刻由实体调）。 */
+    public static void npcBlastTick(Mob mob) {
+        CompoundTag tag = mob.getPersistentData();
+        long start = tag.getLong(NPC_CHANNEL_START);
+        if (start == 0) return;
+        long now = now(mob);
+        if (now >= tag.getLong(NPC_CHANNEL_END) || npcEnergy(mob) < 5) {
+            tag.remove(NPC_CHANNEL_START);
+            tag.remove(NPC_CHANNEL_END);
+            return;
+        }
+        double width = channelWidth(now - start);
+        if (!npcSpend(mob, 5)) {
+            tag.remove(NPC_CHANNEL_START);
+            tag.remove(NPC_CHANNEL_END);
+            return;
+        }
+        if (now % BLAST_DAMAGE_INTERVAL == 0) pulse(mob, null, width, BLAST_DAMAGE_BASE + width * BLAST_DAMAGE_PER_WIDTH, false, true);
+        if (now % BLAST_PUSH_INTERVAL == 0) pulse(mob, null, width, 0, true, false);
     }
 
     public static void npcBurst(Mob mob) {

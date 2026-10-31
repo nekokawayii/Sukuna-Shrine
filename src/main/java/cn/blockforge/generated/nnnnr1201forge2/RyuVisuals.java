@@ -29,7 +29,8 @@ public final class RyuVisuals {
     private record Dessert(int owner, long until) {}
     private record Domain(Vec3 pos, double radius, long born, int life) {}
 
-    private static final List<Beam> BEAMS = new ArrayList<>();
+    /** 一条光束只保留最新的一条（施术者 id → 光束），持续喷的时候不会叠成一堆。 */
+    private static final Map<Integer, Beam> BEAMS = new LinkedHashMap<>();
     private static final List<Trail> TRAILS = new ArrayList<>();
     private static final List<Burst> BURSTS = new ArrayList<>();
     private static final Map<Integer, Charge> CHARGES = new HashMap<>();
@@ -42,7 +43,7 @@ public final class RyuVisuals {
         long now = now(mc);
         switch (e.kind()) {
             case RyuFx.BEAM -> {
-                BEAMS.add(new Beam(e.position(), e.direction(), Math.max(0.6, e.size()), now, 12));
+                BEAMS.put(e.owner(), new Beam(e.position(), e.direction(), Math.max(0.5, e.size()), now, 8));
                 if (PhotonFx.ready()) {
                     Vec3 mid = e.position().lerp(e.direction(), 0.5);
                     PhotonFx.beam(e.position(), e.direction(), Math.max(0.8, e.size() * 0.9), 8);
@@ -96,7 +97,7 @@ public final class RyuVisuals {
             return;
         }
         long now = now(mc);
-        BEAMS.removeIf(b -> now - b.born() > b.life());
+        BEAMS.values().removeIf(b -> now - b.born() > b.life());
         TRAILS.removeIf(t -> now - t.born() > t.life());
         BURSTS.removeIf(b -> now - b.born() > b.life());
         CHARGES.values().removeIf(c -> c.until() <= now);
@@ -140,7 +141,7 @@ public final class RyuVisuals {
         RenderSystem.setShaderColor(1, 1, 1, 1);
         BufferBuilder b = Tesselator.getInstance().getBuilder();
         b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        for (Beam beam : BEAMS) drawBeam(b, ps, beam, cam, now);
+        for (Beam beam : BEAMS.values()) drawBeam(b, ps, beam, cam, now);
         for (Trail trail : TRAILS) drawTrail(b, ps, trail, cam, now);
         for (Burst burst : BURSTS) drawBurst(b, ps, burst, cam, now);
         for (Domain domain : DOMAINS) drawDomain(b, ps, domain, cam, now);
@@ -153,18 +154,70 @@ public final class RyuVisuals {
         ps.popPose();
     }
 
-    /** 光炮：外晕 / 主体 / 白芯三层，越粗越亮。 */
+    /**
+     * 3D 冲击波：沿轴线一圈圈环 + 多股偏移光束 + 枪口/末端球壳，
+     * 从任何角度看都是"有体积的一团"，而不是一张贴在屏幕上的面片。
+     */
     private static void drawBeam(BufferBuilder b, PoseStack ps, Beam beam, Vec3 cam, long now) {
         float t = (now - beam.born()) / (float) beam.life();
         if (t < 0 || t > 1) return;
-        int alpha = (int) (230 * (1 - t));
+        int alpha = (int) (235 * (1 - t * 0.6));
         double width = beam.width();
-        Client.ribbon(b, ps, beam.from(), beam.to(), width * 1.6, argb(DEEP, (int) (alpha * 0.45)), cam);
-        Client.ribbon(b, ps, beam.from(), beam.to(), width, argb(GLOW, (int) (alpha * 0.8)), cam);
-        Client.ribbon(b, ps, beam.from(), beam.to(), width * 0.55, argb(CORE, alpha), cam);
-        // 端点的爆闪
-        Client.ribbon(b, ps, beam.to().subtract(0, width * 0.5, 0), beam.to().add(0, width * 0.5, 0),
-            width * 1.2, argb(CORE, (int) (alpha * 0.7)), cam);
+        Vec3 from = beam.from(), to = beam.to();
+        Vec3 axis = to.subtract(from);
+        double length = axis.length();
+        if (length < 0.3) return;
+        axis = axis.normalize();
+        Vec3 u = axis.cross(new Vec3(0, 1, 0));
+        if (u.lengthSqr() < 1e-4) u = new Vec3(1, 0, 0);
+        u = u.normalize();
+        Vec3 v = axis.cross(u).normalize();
+        // ① 中心的粗芯（billboard 面片，负责亮度）
+        Client.ribbon(b, ps, from, to, width * 1.5, argb(DEEP, (int) (alpha * 0.40)), cam);
+        Client.ribbon(b, ps, from, to, width * 0.95, argb(GLOW, (int) (alpha * 0.75)), cam);
+        Client.ribbon(b, ps, from, to, width * 0.45, argb(CORE, alpha), cam);
+        // ② 四股绕轴偏置的光束：给出体积感
+        for (int k = 0; k < 4; k++) {
+            double a = k * Math.PI / 2 + now * 0.15;
+            Vec3 offset = u.scale(Math.cos(a) * width * 0.32).add(v.scale(Math.sin(a) * width * 0.32));
+            double w = width * (0.22 + 0.06 * Math.sin(now * 0.3 + k));
+            Client.ribbon(b, ps, from.add(offset), to.add(offset), w, argb(GLOW, (int) (alpha * 0.55)), cam);
+        }
+        // ③ 一圈圈横截面（真正让它看起来是 3D 的关键）
+        int rings = 7;
+        for (int i = 0; i <= rings; i++) {
+            double f = i / (double) rings;
+            Vec3 center = from.add(axis.scale(length * f));
+            double radius = width * 0.5 * (1 + f * 0.9);
+            double spin = now * 0.05 + i;
+            circle(b, ps, center, u, v, radius, 0.05 + width * 0.02, spin,
+                argb(i % 2 == 0 ? CORE : GLOW, (int) (alpha * (0.35 + 0.4 * (1 - f)))), cam);
+        }
+        // ④ 枪口与末端的球壳
+        shells(b, ps, from, axis, width * 0.62, u, v, (int) (alpha * 0.9), cam);
+        shells(b, ps, to, axis, width * 0.95, u, v, (int) (alpha * 0.75), cam);
+    }
+
+    /** 平面上的一个圆（横截面）。 */
+    private static void circle(BufferBuilder b, PoseStack ps, Vec3 center, Vec3 u, Vec3 v, double radius,
+                               double width, double phase, int color, Vec3 cam) {
+        int segments = 20;
+        Vec3 prev = center.add(u.scale(Math.cos(phase) * radius)).add(v.scale(Math.sin(phase) * radius));
+        for (int i = 1; i <= segments; i++) {
+            double a = phase + i * Math.PI * 2 / segments;
+            Vec3 next = center.add(u.scale(Math.cos(a) * radius)).add(v.scale(Math.sin(a) * radius));
+            Client.ribbon(b, ps, prev, next, width, color, cam);
+            prev = next;
+        }
+    }
+
+    /** 三圈互相垂直的环，拼出一个"球壳"的轮廓。 */
+    private static void shells(BufferBuilder b, PoseStack ps, Vec3 center, Vec3 axis, double radius,
+                               Vec3 u, Vec3 v, int alpha, Vec3 cam) {
+        int color = argb(CORE, alpha);
+        circle(b, ps, center, u, v, radius, 0.06, 0, color, cam);
+        circle(b, ps, center, u, axis, radius, 0.06, 0, color, cam);
+        circle(b, ps, center, v, axis, radius, 0.06, 0, color, cam);
     }
 
     private static void drawTrail(BufferBuilder b, PoseStack ps, Trail trail, Vec3 cam, long now) {
@@ -199,7 +252,8 @@ public final class RyuVisuals {
         Entity entity = mc.level.getEntity(charge.owner());
         if (!(entity instanceof LivingEntity living)) return;
         Vec3 at = living.getEyePosition().add(living.getLookAngle().scale(1.0));
-        double ratio = Math.max(0, Math.min(1, charge.ratio()));
+        // 传进来的是当前宽度（1 格起、无上限），前 4 格宽度换算成 0~1 的蓄力表现
+        double ratio = Math.max(0, Math.min(1, (charge.ratio() - 1) / 4));
         double radius = 0.25 + ratio * 0.8;
         int alpha = (int) (120 + 120 * ratio);
         for (int i = 0; i < 8; i++) {

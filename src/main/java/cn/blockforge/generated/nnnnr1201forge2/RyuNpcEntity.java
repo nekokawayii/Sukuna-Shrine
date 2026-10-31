@@ -58,7 +58,10 @@ public class RyuNpcEntity extends PathfinderMob {
         long now = level().getGameTime();
         // 咒力：每秒 +5；吃甜品时翻倍
         if (now % 20 == 0) RyuCombat.npcRegen(this, RyuCombat.npcDessertActive(this) ? 2 : 1);
+        // 冲击波持续期间每刻推进（不吃甜品、也不换招）
+        RyuCombat.npcBlastTick(this);
         if (RyuCombat.npcDessertActive(this)) return;
+        if (RyuCombat.npcBlastActive(this)) return;
         LivingEntity target = getTarget();
         if (target == null || !target.isAlive()) return;
         double distance = distanceToSqr(target);
@@ -78,13 +81,14 @@ public class RyuNpcEntity extends PathfinderMob {
         // ③ 中距离：追踪弹
         if (distance <= 400 && now >= getPersistentData().getLong(SCATTER_READY)) {
             getPersistentData().putLong(SCATTER_READY, now + 80);
-            if (RyuCombat.npcEnergy(this) >= RyuCombat.NPC_SCATTER_COST) RyuCombat.npcScatter(this, target);
+            RyuCombat.npcScatter(this, target);
             return;
         }
-        // ④ 远距离：蓄力光炮
-        if (distance > 36 && now >= getPersistentData().getLong(BLAST_READY)) {
-            getPersistentData().putLong(BLAST_READY, now + 100);
-            RyuCombat.npcBlast(this, target);
+        // ④ 远距离：持续喷 3D 冲击波（4 秒、每秒 100 咒力、宽度每 2 秒 +1 格）
+        if (distance > 36 && now >= getPersistentData().getLong(BLAST_READY)
+            && RyuCombat.npcEnergy(this) >= 500) {
+            getPersistentData().putLong(BLAST_READY, now + 140);
+            RyuCombat.npcStartBlast(this);
         }
     }
 

@@ -10,8 +10,8 @@ public final class RyuSkills {
     public static List<CharacterSkill> all() {
         return List.of(
             new CharacterSkill(BLAST, "冰沙冲击波", "冲击波",
-                "从飞机头前端射出极粗的咒力光炮，贯穿前方 30 格；可蓄力，蓄得越久光束越粗、伤害越高。",
-                0xFF9FDFFF, 1200, 100, CharacterSkill.Shape.RAY,
+                "按住持续喷出 3D 咒力冲击波：宽度从 1 格起、每 2 秒 +1 格（无上限），持续期间每秒消耗 100 咒力。",
+                0xFF9FDFFF, 0, 1, CharacterSkill.Shape.RAY,
                 30, 1.5, 15, 45, 8, 32, 0, 0, 0),
             new CharacterSkill(SCATTER, "追踪弹", "追踪弹",
                 "连续射出 3~5 发小型咒力弹，自动追踪附近敌人；单发伤害低但几乎不会落空。",

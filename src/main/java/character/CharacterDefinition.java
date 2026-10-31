@@ -57,7 +57,7 @@ public record CharacterDefinition(String id, String name, String technique, Stri
         skills=List.copyOf(skills);story=List.copyOf(story);events=List.copyOf(events);
         if(family==null||resource==null||name==null||name.isBlank()||technique==null||description==null||config==null)throw new IllegalArgumentException("角色信息不能为空");
         if(name.length()>64||technique.length()>64||description.length()>1024)throw new IllegalArgumentException("角色名和术式名限64字，选择说明限1024字");
-        if(story.isEmpty()||story.size()>32)throw new IllegalArgumentException("个人线需定义1至32章");
+        if(story.isEmpty()||story.size()>128)throw new IllegalArgumentException("个人线需定义1至128章");
         if(skills.size()>24||new HashSet<>(skills).size()!=skills.size())throw new IllegalArgumentException("轮盘最多24招且编号不能重复");
         if((family==Family.HEAVENLY)!=(resource==Resource.STAMINA))throw new IllegalArgumentException("天宇暴君使用体术，其余角色使用咒力");
         if(resource==Resource.STAMINA&&!skills.isEmpty())throw new IllegalArgumentException("纯体术角色不使用咒术轮盘");
@@ -79,8 +79,8 @@ public record CharacterDefinition(String id, String name, String technique, Stri
         if(family==Family.SHRINE&&(!config.customSkills().isEmpty()||!config.unlockChapters().isEmpty()||story.stream().anyMatch(c->!c.grants().equals(CharacterReward.NONE))))throw new IllegalArgumentException("宿傩继续使用原个人线，不接通用章节奖励");
         // 提前检查整条成长线是否超出数值上限。
         Stats total=config.base();for(Chapter chapter:story)total=total.plus(config.perChapter()).plus(chapter.grants().stats());
-        // 事件型章节：最多 32 章、编号不重复；有事件章节的角色以事件进度为准（story 仍保留以满足通用校验）。
-        if(events.size()>32)throw new IllegalArgumentException("事件章节最多32章");
+        // 事件型章节：最多 128 章、编号不重复；有事件章节的角色以事件进度为准（story 仍保留以满足通用校验）。
+        if(events.size()>128)throw new IllegalArgumentException("事件章节最多128章");
         var eventIds=new HashSet<String>();
         for(EventChapter chapter:events)if(!eventIds.add(chapter.id()))throw new IllegalArgumentException("事件章节编号不能重复");
     }

@@ -23,6 +23,6 @@ public record CharacterSkill(int id, String name, String label, String descripti
         if (!Double.isFinite(value) || value < min || value > max) throw new IllegalArgumentException(name+"超出模板范围");
     }
     public static boolean custom(int id) { return id >= FIRST && id <= LAST; }
-    public double damageAt(int chapter) { return damage + damagePerChapter * Math.max(0, Math.min(32, chapter)); }
-    public int targetsAt(int chapter) { return Math.min(32, targets + targetsPerChapter * Math.max(0, Math.min(32, chapter))); }
+    public double damageAt(int chapter) { return damage + damagePerChapter * Math.max(0, Math.min(128, chapter)); }
+    public int targetsAt(int chapter) { return Math.min(32, targets + targetsPerChapter * Math.max(0, Math.min(128, chapter))); }
 }

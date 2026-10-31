@@ -14,7 +14,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -92,24 +91,25 @@ public final class TojiQteVisuals {
         BURSTS.removeIf(burst -> now - burst.born() > burst.life());
     }
 
-    /** 屏幕边缘红光：窗口内才画，用四段渐变条。 */
-    @SubscribeEvent public static void overlay(RegisterGuiOverlaysEvent event) {
-        event.registerAboveAll("sukuna_toji_qte", (gui, graphics, partialTick, width, height) -> {
-            var mc = Minecraft.getInstance();
-            if (mc.level == null || mc.player == null) return;
-            long now = mc.level.getGameTime();
-            if (now >= windowUntil) return;
-            float pulse = 0.55f + 0.45f * (float) Math.sin(now * 0.9);
-            int alpha = (int) (120 * pulse);
-            int color = (alpha << 24) | 0xFF2020;
-            int edge = Math.max(8, width / 14);
-            int vertical = Math.max(8, height / 9);
-            graphics.fillGradient(0, 0, width, vertical, color, 0x00000000);
-            graphics.fillGradient(0, height - vertical, width, height, 0x00000000, color);
-            graphics.fillGradient(0, 0, edge, height, color, 0x00FF2020);
-            graphics.fillGradient(width - edge, 0, width, height, 0x00FF2020, color);
-            hints(graphics, width, height);
-        });
+    /**
+     * HUD 主入口（由 {@link TojiOverlay} 在模组总线上注册后调用）：
+     * 屏幕边缘红光 + 连招提示面板。
+     */
+    public static void drawOverlay(net.minecraft.client.gui.GuiGraphics graphics, int width, int height) {
+        var mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) return;
+        long now = mc.level.getGameTime();
+        if (now >= windowUntil) return;
+        float pulse = 0.55f + 0.45f * (float) Math.sin(now * 0.9);
+        int alpha = (int) (120 * pulse);
+        int color = (alpha << 24) | 0xFF2020;
+        int edge = Math.max(8, width / 14);
+        int vertical = Math.max(8, height / 9);
+        graphics.fillGradient(0, 0, width, vertical, color, 0x00000000);
+        graphics.fillGradient(0, height - vertical, width, height, 0x00000000, color);
+        graphics.fillGradient(0, 0, edge, height, color, 0x00FF2020);
+        graphics.fillGradient(width - edge, 0, width, height, 0x00FF2020, color);
+        hints(graphics, width, height);
     }
 
     /**

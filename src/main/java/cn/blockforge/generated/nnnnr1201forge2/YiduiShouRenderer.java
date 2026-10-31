@@ -11,7 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 public final class YiduiShouRenderer extends EntityRenderer<YiduiShouEntity> {
     private static final BbModel MODEL = new BbModel("yiduishou", "yiduishou");
     /** 用户指定：视觉放大到玩家的 5 倍。 */
-    public static final float SCALE = 5f;
+    public static final float SCALE = 3f;
 
     public YiduiShouRenderer(EntityRendererProvider.Context context) {
         super(context);

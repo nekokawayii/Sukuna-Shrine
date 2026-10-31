@@ -135,6 +135,9 @@ public final class MahitoPowers {
                 if (to.lengthSqr() < 0.01) continue;
                 if (to.normalize().dot(wall.dir()) > 0.5) {
                     enemy.hurt(wall.level().damageSources().magic(), 6f);
+                    cn.blockforge.generated.nnnnr1201forge2.Network.send(wall.level(),
+                        new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(301, wall.level().getRandom().nextInt(),
+                            enemy.position(), to.normalize(), 3f, 8, 0));
                 }
             }
         }

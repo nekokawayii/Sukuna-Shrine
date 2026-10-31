@@ -226,6 +226,12 @@ public final class Client {
     public static void slashShake(){shakeUntil=Math.max(shakeUntil,tick+3);}
     public static void receive(Network.Effect e){
         if(e.kind()==300){character.mahito.TransfigureScreen.open((int)e.size());return;}
+        if(e.kind()==301){
+            int flesh=0xFF8E2334, bloom=0xFFC2415A;
+            PhotonFx.spark(e.position(),1.6,0.6,flesh,bloom,"textures/effect/glow.png",true,1,10,28,0.35);
+            PhotonFx.ring(e.position(),1.6,0.5,flesh,bloom,20,2,8);
+            return;
+        }
         if(DeathStarClient.receive(e)||BloodClient.receive(e))return;
         if(Minecraft.getInstance().level==null)return;
         if(e.kind()==SlashTerrain.SCAR){SlashTerrainClient.scar(e);return;}

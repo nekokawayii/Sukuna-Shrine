@@ -115,7 +115,7 @@ public final class SelfEmbryoDomain {
         // 玩家身后球壳内侧 5 格，只放 1 只「圆钝果实」（一堆手模型，不可移动）
         var look = p.getLookAngle();
         var back = new net.minecraft.world.phys.Vec3(-look.x, 0, -look.z).normalize();
-        var at = p.position().add(back.scale(RADIUS - 5)).add(0, 0.2, 0);
+        var at = p.position().add(back.scale(RADIUS - 15)).add(0, 0.2, 0);
         var fruit = cn.blockforge.generated.nnnnr1201forge2.Content.YIDUI.get().create(level);
         if (fruit == null) return;
         fruit.moveTo(at.x, at.y, at.z, p.getYRot() + 180f, 0f);

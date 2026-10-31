@@ -65,6 +65,25 @@ public final class HigurumaDomain {
         BlockPos anchor = p.blockPosition();
         BlockPos origin = anchor.offset(-HigurumaLayout.SIZE_X / 2, -23, -HigurumaLayout.SIZE_Z / 2);
         Built built = new Built(level, level.getGameTime() + LIFE);
+        var light13 = Blocks.LIGHT.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 13);
+        Set<Long> filled = new HashSet<>();
+        for (Cell cell : layout()) {
+            filled.add(BlockPos.asLong(origin.getX() + cell.x(), origin.getY() + cell.y(), origin.getZ() + cell.z()));
+        }
+        // 结构内部剩余空位补 13 级光源方块（球半径 21 以内）
+        double cx = HigurumaLayout.SIZE_X / 2.0, cy = 23.0, cz = HigurumaLayout.SIZE_Z / 2.0;
+        for (int x = 0; x < HigurumaLayout.SIZE_X; x++)
+            for (int y = 0; y < HigurumaLayout.SIZE_Y; y++)
+                for (int z = 0; z < HigurumaLayout.SIZE_Z; z++) {
+                    double d = Math.sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy) + (z - cz) * (z - cz));
+                    if (d > 21.0) continue;
+                    BlockPos pos = origin.offset(x, y, z);
+                    if (filled.contains(pos.asLong())) continue;
+                    if (level.getBlockState(pos).hasBlockEntity()) continue;
+                    built.originals.putIfAbsent(pos.immutable(), level.getBlockState(pos));
+                    built.todo.put(pos.immutable(), light13);
+                }
         for (Cell cell : layout()) {
             BlockPos pos = origin.offset(cell.x(), cell.y(), cell.z());
             if (level.getBlockState(pos).hasBlockEntity()) continue;   // 保守：容器/机器不动

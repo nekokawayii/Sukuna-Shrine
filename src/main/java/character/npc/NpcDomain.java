@@ -51,6 +51,8 @@ public final class NpcDomain {
     }
 
     private static final Map<UUID, Job> JOBS = new HashMap<>();
+    /** 石流龙追踪弹：{level, owner, target, 命中刻}（r390：领域伤害来自被弹打到，不是固定 tick 掉血）。 */
+    private static final List<Object[]> SHELLS = new ArrayList<>();
 
     public static boolean active(Mob mob) { return mob != null && JOBS.containsKey(mob.getUUID()); }
 
@@ -157,20 +159,21 @@ public final class NpcDomain {
                     Network.send(level, new Network.Effect(character.ryu.RyuFx.FIREWORK_BURST,
                         owner.getId(), rise, Vec3.ZERO, 3f, 25, 0));
                     int shells = 15 + rand.nextInt(31);
+                    var candidates = level.getEntitiesOfClass(LivingEntity.class,
+                        new AABB(job.center).inflate(RADIUS),
+                        t -> t != owner && t.isAlive() && t instanceof net.minecraft.world.entity.player.Player);
                     for (int s = 0; s < shells; s++) {
                         Vec3 target = rise.add((rand.nextDouble() - 0.5) * 36,
                             -14 - rand.nextDouble() * 10, (rand.nextDouble() - 0.5) * 36);
                         Network.send(level, new Network.Effect(character.ryu.RyuFx.FIREWORK_SHELL,
                             owner.getId(), target, Vec3.ZERO, 0.6f, 30, 0));
+                        if (!candidates.isEmpty() && rand.nextDouble() < 0.35)
+                            SHELLS.add(new Object[]{level, owner, candidates.get(rand.nextInt(candidates.size())),
+                                level.getGameTime() + 6 + rand.nextInt(9)});
                     }
                 }
-                // 必中：领域内所有玩家吃一波烟花伤害
-                for (var pl : level.getEntitiesOfClass(LivingEntity.class,
-                        new AABB(job.center).inflate(RADIUS), t -> t != owner && t instanceof net.minecraft.world.entity.player.Player)) {
-                    pl.hurt(pl.damageSources().magic(), (float) DAMAGE);
-                }
             }
-            if (job.level.getGameTime() % 10 == 0) {
+            if (job.style != Style.FIREWORK && job.level.getGameTime() % 10 == 0) {
                 double r2 = (double) RADIUS * RADIUS;
                 for (LivingEntity living : job.level.getEntitiesOfClass(LivingEntity.class,
                         new AABB(job.center).inflate(RADIUS), t -> t != owner && t.isAlive()
@@ -204,6 +207,23 @@ public final class NpcDomain {
                     }
                 }
             }
+        }
+    }
+
+    /** 追踪弹命中：被打到才掉 6 血。 */
+    @SubscribeEvent public static void shells(TickEvent.ServerTickEvent e) {
+        if (e.phase != TickEvent.Phase.END || SHELLS.isEmpty()) return;
+        for (var it = SHELLS.iterator(); it.hasNext(); ) {
+            Object[] shell = it.next();
+            ServerLevel level = (ServerLevel) shell[0];
+            Mob owner = (Mob) shell[1];
+            LivingEntity victim = (LivingEntity) shell[2];
+            long at = (Long) shell[3];
+            if (level.getGameTime() < at) continue;
+            it.remove();
+            if (victim == null || !victim.isAlive() || owner == null || !owner.isAlive()) continue;
+            if (victim.level() != level) continue;
+            victim.hurt(victim.damageSources().magic(), 6);
         }
     }
 

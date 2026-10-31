@@ -21,6 +21,7 @@ public final class CharacterRegistry {
         register(character.mahito.MahitoCharacter.create());
         register(character.megumi.MegumiCharacter.create());
         register(character.yuki.YukiCharacter.create());
+        register(character.hakari.HakariCharacter.create());
         register(character.higuruma.HigurumaCharacter.create());   // 真人：无为转变 / 自闭圆盾裹（功能待定）
         register(character.kashimo.KashimoCharacter.create());   // 鹿紫云一：幻兽琥珀（电荷与必中）
         register(character.todo.TodoCharacter.create());   // 东堂葵：不义游戏（注入咒力 / 换位）

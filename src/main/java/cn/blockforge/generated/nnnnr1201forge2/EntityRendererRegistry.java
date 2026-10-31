@@ -49,6 +49,7 @@ public final class EntityRendererRegistry {
         entry(Content.JOGO_NPC,JogoNpcRenderer.class,JogoNpcRenderer::new),
         entry(Content.YIDUI,YiduiShouRenderer.class,YiduiShouRenderer::new),
         entry(Content.MAHITO_CLONE,character.mahito.MahitoCloneRenderer.class,character.mahito.MahitoCloneRenderer::new),
+        entry(Content.HIGURUMA_JUDGE,HigurumaJudgeRenderer.class,HigurumaJudgeRenderer::new),
         entry(VoidContent.MAHORAGA,MahoragaRenderer.class,MahoragaRenderer::new),
         entry(SoulContent.YUJI,YujiRenderer.class,YujiRenderer::new),
         entry(SoulContent.GUARDIAN,GuardianRenderer.class,GuardianRenderer::new),

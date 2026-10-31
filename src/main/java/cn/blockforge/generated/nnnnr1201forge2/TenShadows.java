@@ -32,6 +32,11 @@ public final class TenShadows {
     public record Summon(int mode){}
     public static java.util.function.Consumer<State> receiver=s->{};
     public static boolean incarnated(Player p){return !character.CharacterService.toji(p)&&Curse.data(p).getBoolean("MegumiIncarnated");}
+    /** 能否使用十影操作（召唤/调服/收回）：受肉伏黑，或直接选了伏黑惠角色。外观仍只看 incarnated。 */
+    public static boolean canUse(Player p){
+        var d=character.CharacterService.selected(p);
+        return incarnated(p)||d!=null&&"megumi".equals(d.id());
+    }
     public static boolean tamed(Player p){return Curse.data(p).getBoolean("TenShadowsMahoragaTamed");}
     /** 不完全显现是十影状态，不占头盔栏；服务端据此给予法轮适应。 */
     public static boolean partial(Player p){return tamed(p)&&Curse.data(p).getBoolean(PARTIAL);}

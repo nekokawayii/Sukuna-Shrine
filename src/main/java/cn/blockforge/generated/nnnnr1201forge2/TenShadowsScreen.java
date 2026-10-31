@@ -41,6 +41,10 @@ public final class TenShadowsScreen extends Screen {
         }
         button("全部收回",width-left()-82,bottom,82,b->ShadowClient.send(6,0,0));
     }
+    @Override public void onClose(){
+        com.mojang.logging.LogUtils.getLogger().info("[十影] 界面关闭");
+        super.onClose();
+    }
     @Override public boolean isPauseScreen(){return false;}
     @Override public void render(GuiGraphics g,int mx,int my,float partial){
         g.fill(0,0,width,height,0xE910101B);g.drawCenteredString(font,"十种影法术",width/2,9,0xFFFFE2A5);
@@ -62,5 +66,10 @@ public final class TenShadowsScreen extends Screen {
         }
         g.drawCenteredString(font,"L 收回准星式神 · 调服可反复挑战 · 普通式神到时化为黑水",width/2,height-18,0xFFADB3C8);
     }
-    @Override public void tick(){if(!TenShadowsClient.has()||minecraft.level==null||minecraft.player==null||!minecraft.player.isAlive()){onClose();return;}if(wasFused!=ShadowClient.fused())init();}
+    @Override public void tick(){
+        // 伏黑惠角色没有「受肉」状态，但同样要用这个界面：只对宿傩线玩家要求 has()
+        boolean megumi = character.CharacterClient.tenShadows();
+        if((!megumi && !TenShadowsClient.has()) || minecraft.level==null || minecraft.player==null || !minecraft.player.isAlive()){onClose();return;}
+        if(wasFused!=ShadowClient.fused())init();
+    }
 }

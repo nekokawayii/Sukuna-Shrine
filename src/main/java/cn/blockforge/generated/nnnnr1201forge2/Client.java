@@ -240,6 +240,7 @@ public final class Client {
     public static void slashShake(){shakeUntil=Math.max(shakeUntil,tick+3);}
     public static void receive(Network.Effect e){
         if(e.kind()==300){character.mahito.TransfigureScreen.open((int)e.size());return;}
+        if(e.kind()==308){return;}
         if(e.kind()==306){character.mahito.MahitoArmsClient.addHeld(e.owner(),(int)e.size(),e.life());return;}
         if(e.kind()==307){character.mahito.MahitoArmsClient.clearHeld(e.owner());return;}
         if(e.kind()==305){character.mahito.LimbScreen.setArms((int)e.size());character.mahito.MahitoArmsClient.set(e.owner(),(int)e.size());return;}
@@ -345,7 +346,7 @@ public final class Client {
         if(!heat)FistAura.clear();
     }
     @SubscribeEvent public static void hud(RenderGuiEvent.Post e){
-        Minecraft mc=Minecraft.getInstance();if(mc.player==null||mc.options.hideGui||ObserverClient.active()||(mc.screen instanceof SkillWheel||mc.screen instanceof character.CharacterWheel||mc.screen instanceof character.CharacterSelectionScreen||mc.screen instanceof WallOptionsScreen||mc.screen instanceof DomainOptionsScreen||mc.screen instanceof RelationsScreen))return;
+        Minecraft mc=Minecraft.getInstance();if(mc.player==null||mc.options.hideGui||ObserverClient.active()||(mc.screen instanceof SkillWheel||mc.screen instanceof character.CharacterWheel||mc.screen instanceof character.CharacterSelectionScreen||mc.screen instanceof WallOptionsScreen||mc.screen instanceof TenShadowsScreen||mc.screen instanceof DomainOptionsScreen||mc.screen instanceof RelationsScreen))return;
         int h=mc.getWindow().getGuiScaledHeight(),w=mc.getWindow().getGuiScaledWidth();var g=e.getGuiGraphics();if(character.CharacterClient.hud(g))return;FreehandClient.hud(g);
         if(!progress.unlocked()){
             boolean holding=mc.player.getMainHandItem().is(ProgressionContent.MEMORY.get())||mc.player.getOffhandItem().is(ProgressionContent.MEMORY.get());

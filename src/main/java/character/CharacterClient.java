@@ -60,16 +60,33 @@ public final class CharacterClient {
         }
     }
     public static void clear() { state=new CharacterPackets.State("",0,100,0,false,new int[0]);copies=new int[0];skillsCache=null;world=null;physicalHeld=false; }
+    private static long tenShadowsOpenedAt = -100;
+
     public static void tick() {
         var mc=Minecraft.getInstance();if(world!=mc.level){clear();world=mc.level;}
         boolean down=ClientInput.held(Client.CAST);
+        // 伏黑惠：释放键直接在本地打开十影界面（不依赖服务端回包，避免只闪一下）
+        if (tenShadows() && down && !physicalHeld && mc.player != null && mc.player.isAlive()
+            && mc.screen == null) {
+            com.mojang.logging.LogUtils.getLogger().info("[十影] 本地打开十影界面（边沿）");
+            mc.setScreen(new cn.blockforge.generated.nnnnr1201forge2.TenShadowsScreen());
+            physicalHeld = true;
+            return;
+        }
         if(toji()&&down&&!physicalHeld&&mc.player!=null&&mc.player.isAlive()&&!mc.player.isSpectator()&&mc.screen==null&&mc.isWindowActive()&&mc.mouseHandler.isMouseGrabbed()) {
             int kind=mc.options.keyShift.isDown()?1:mc.options.keyJump.isDown()?2:0;
             Network.CHANNEL.sendToServer(new CharacterPackets.Physical(kind));
         }
         physicalHeld=down;
     }
-    public static void openWheel() { var mc=Minecraft.getInstance();if(toji())return;mc.setScreen(customWheel()?new CharacterWheel():new SkillWheel()); }
+    /** 伏黑惠：不走角色轮盘，直接打开宿傩线的十影界面。 */
+    public static boolean tenShadows() { var d=selected();return d!=null&&"megumi".equals(d.id()); }
+    public static void openWheel() {
+        var mc=Minecraft.getInstance();
+        if(toji())return;
+        if(tenShadows()){if(!(mc.screen instanceof cn.blockforge.generated.nnnnr1201forge2.TenShadowsScreen))mc.setScreen(new cn.blockforge.generated.nnnnr1201forge2.TenShadowsScreen());return;}
+        mc.setScreen(customWheel()?new CharacterWheel():new SkillWheel());
+    }
     public static int rank() { return state.rank(); }
     public static CharacterSkill custom(int skill) { var d=selected();return d==null?null:d.config().skill(skill); }
 

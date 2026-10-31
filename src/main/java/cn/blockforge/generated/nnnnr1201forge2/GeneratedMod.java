@@ -63,6 +63,13 @@ public final class GeneratedMod {
         character.CharacterCasting.registerEffect("yuta", character.yuta.YutaSkills.DOMAIN, character.yuta.YutaEffects::domain);
         character.CharacterCasting.registerEffect("yuta", character.yuta.YutaSkills.SURGERY, character.yuta.YutaEffects::surgery);
         character.CharacterCasting.registerEffect("yuta", character.yuta.YutaSkills.RCT_OUT, character.yuta.YutaEffects::rctOut);
+        character.CharacterCasting.registerEffect("higuruma", character.higuruma.HigurumaSkills.SEAL, (character.CharacterCasting.Effect) (p, s2, r) -> character.higuruma.HigurumaCombat.seal(p));
+        character.CharacterCasting.registerEffect("higuruma", character.higuruma.HigurumaSkills.ENHANCE, (character.CharacterCasting.Effect) (p, s2, r) -> character.higuruma.HigurumaCombat.enhanceThrow(p));
+        character.CharacterCasting.registerEffect("higuruma", character.higuruma.HigurumaSkills.DOMAIN, (character.CharacterCasting.Effect) (p, s2, r) -> character.higuruma.HigurumaCombat.domain(p));
+        MinecraftForge.EVENT_BUS.register(character.higuruma.HigurumaCombat.class);
+        MinecraftForge.EVENT_BUS.addListener(character.higuruma.HigurumaDomain::serverTick);
+        MinecraftForge.EVENT_BUS.addListener(character.higuruma.HigurumaDomain::serverStopped);
+        character.CharacterCasting.registerEffect("megumi", character.megumi.MegumiSkills.TEN_SHADOWS, (net.minecraft.server.level.ServerPlayer p, character.CharacterSkill skill, int rank) -> Network.send((net.minecraft.server.level.ServerLevel) p.level(), new Network.Effect(308, p.getId(), p.position(), net.minecraft.world.phys.Vec3.ZERO, 0f, 0, 0)));
         MinecraftForge.EVENT_BUS.register(character.CharacterService.class);
         MinecraftForge.EVENT_BUS.register(character.CharacterRewards.class);
         // 漏壶·灾厄火焰：三招自定义效果 + 被动免疫 + 第一章泡岩浆进度

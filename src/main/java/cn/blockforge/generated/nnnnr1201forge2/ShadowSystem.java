@@ -50,7 +50,7 @@ public final class ShadowSystem {
     }
     private static void tell(ServerPlayer p,String message){p.displayClientMessage(Component.literal(message),true);}
     public static void request(ServerPlayer p,Request request){
-        if(PrisonSystem.locked(p)||!TenShadows.incarnated(p)||!p.isAlive()||p.isSpectator())return;
+        if(PrisonSystem.locked(p)||!TenShadows.canUse(p)||!p.isAlive()||p.isSpectator())return;
         int op=request.operation,k=request.kind;
         if(op<0||op>6)return;
         long now=p.level().getGameTime();String rate=op==0?"ShadowSyncAfter":"ShadowActionAfter";
@@ -142,9 +142,9 @@ public final class ShadowSystem {
     }
     @SubscribeEvent public static void inheritAttack(net.minecraftforge.event.entity.living.LivingDamageEvent event){
         ServerPlayer p=CombatSettings.caster(event.getSource());
-        if(event.getAmount()>0&&p!=null&&TenShadows.incarnated(p)&&!friendly(p,event.getEntity()))p.setLastHurtMob(event.getEntity());
+        if(event.getAmount()>0&&p!=null&&TenShadows.canUse(p)&&!friendly(p,event.getEntity()))p.setLastHurtMob(event.getEntity());
     }
-    @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent event){if(event.phase==TickEvent.Phase.END&&event.player instanceof ServerPlayer p&&TenShadows.incarnated(p)&&p.tickCount%20==0)sync(p);}
+    @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent event){if(event.phase==TickEvent.Phase.END&&event.player instanceof ServerPlayer p&&TenShadows.canUse(p)&&p.tickCount%20==0)sync(p);}
     @SubscribeEvent public static void login(PlayerEvent.PlayerLoggedInEvent event){if(event.getEntity() instanceof ServerPlayer p)sync(p);}
     @SubscribeEvent public static void logout(PlayerEvent.PlayerLoggedOutEvent event){if(event.getEntity() instanceof ServerPlayer p)recall(p,-1);}
     @SubscribeEvent public static void dimension(PlayerEvent.PlayerChangedDimensionEvent event){if(event.getEntity() instanceof ServerPlayer p){recall(p,-1);sync(p);}}

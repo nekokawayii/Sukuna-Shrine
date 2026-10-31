@@ -39,7 +39,7 @@ public final class TojiQte {
     public static final double THREAT_RADIUS = 2.0;
     public static final int WINDOW_TICKS = 16;          // 红光窗口 0.8 秒
     public static final int PERFECT_TICKS = 20;         // 完美闪避后翻倍/加速持续 1 秒
-    public static final int COMBO_TICKS = 30;           // 闪避后连招输入窗口 1.5 秒
+    public static final int COMBO_TICKS = 100;          // 完美闪避后连招窗口 5 秒
     public static final double DODGE_DISTANCE = 5.0;    // 闪身 5 格
     public static final double BACKSTEP_DISTANCE = 2.0; // 后撤步 2 格
     public static final int IFRAMES = 12;               // 闪避无敌帧 0.6 秒
@@ -93,7 +93,10 @@ public final class TojiQte {
         long pending = d.getLong(K_PENDING);
         if (pending != 0 && n - pending >= COMMIT_TICKS) {
             d.remove(K_PENDING);
-            TojiCombos.tryMatch(p);
+            if (!TojiCombos.tryMatch(p)) {
+                com.mojang.logging.LogUtils.getLogger().info("[甚尔] 序列 {} 没有匹配到连招",
+                    Curse.data(p).getString(K_SEQ));
+            }
         }
         if (n < d.getLong(K_WINDOW)) return;                       // 窗口未结束
         Entity threat = findThreat(p);
@@ -162,6 +165,8 @@ public final class TojiQte {
             case WEAPON_TENKA -> equipWeapon(p, false);
             default -> { }
         }
+        com.mojang.logging.LogUtils.getLogger().info("[甚尔] 输入 token={} 窗口={} 连招窗口={}",
+            token, n < d.getLong(K_WINDOW), n < d.getLong(K_COMBO));
         if (token != JUMP) push(p, token, n);
     }
 
@@ -176,7 +181,7 @@ public final class TojiQte {
         double distance = backstep ? BACKSTEP_DISTANCE : DODGE_DISTANCE;
         teleportAlong(p, away, distance);
         d.putLong(K_WINDOW, 0);
-        d.remove(K_TARGET);
+        // 保留 K_TARGET：闪身 5 格后目标可能在 4 格外，连招要靠这条记忆追回去
         if (backstep) {
             d.putLong(K_IFRAME, n + IFRAMES);
             p.displayClientMessage(Component.literal("后撤步").withStyle(net.minecraft.ChatFormatting.GRAY), true);
@@ -318,6 +323,29 @@ public final class TojiQte {
         d.remove(K_NEXT);
         d.remove(K_MULT);
         return mult <= 0 ? 1 : mult;
+    }
+
+    /** QTE 记住的目标（闪避前锁定那一个），12 格内仍有效。 */
+    public static LivingEntity remembered(ServerPlayer p) {
+        int id = Curse.data(p).getInt(K_TARGET);
+        if (id == 0) return null;
+        if (!(p.serverLevel().getEntity(id) instanceof LivingEntity living) || !living.isAlive()) return null;
+        return living.distanceToSqr(p) <= 144 ? living : null;
+    }
+
+    /** 连招出手前把施术者拉到目标身边（闪身 5 格后够不着的问题）。 */
+    public static LivingEntity approach(ServerPlayer p, double reach) {
+        LivingEntity found = target(p, reach);
+        if (found != null) return found;
+        LivingEntity remembered = remembered(p);
+        if (remembered == null) return null;
+        Vec3 to = remembered.position().subtract(p.position()).multiply(1, 0, 1);
+        double distance = to.length();
+        if (distance > reach) {
+            Vec3 step = to.normalize().scale(Math.max(0, distance - reach * 0.6));
+            teleportAlong(p, step, step.length());
+        }
+        return remembered;
     }
 
     /** 连招要打的目标：先看准星前方 4 格，其次用 QTE 标记过的目标。 */

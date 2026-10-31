@@ -62,7 +62,7 @@ public final class TojiCombos {
         }
         // 7 / 18：闪避 → 游云 → 左键（目标在冲刺 → 18，否则 7）
         if (size >= 3 && ends(seq, TojiQte.DODGE, TojiQte.WEAPON_YUYUN, TojiQte.ATTACK)) {
-            LivingEntity target = TojiQte.target(p, 4.5);
+            LivingEntity target = TojiQte.approach(p, 4.5);
             boolean charging = target != null && target.getDeltaMovement().horizontalDistanceSqr() > 0.06
                 && target.getDeltaMovement().multiply(1, 0, 1).normalize()
                 .dot(p.position().subtract(target.position()).multiply(1, 0, 1).normalize()) > 0.6;
@@ -89,7 +89,7 @@ public final class TojiCombos {
         if (size >= 3 && ends(seq, TojiQte.DODGE, TojiQte.ATTACK, TojiQte.ATTACK)) return done(p, 2) && boneKnee(p);
         // 14：闪避 → 左键，且目标背后 2 格是墙
         if (size >= 2 && ends(seq, TojiQte.DODGE, TojiQte.ATTACK)) {
-            LivingEntity target = TojiQte.target(p, 4.0);
+            LivingEntity target = TojiQte.approach(p, 4.0);
             if (target != null && wallBehind(p, target)) return done(p, 14) && wallSlam(p, target);
             return done(p, 1) && counter(p);
         }
@@ -100,8 +100,8 @@ public final class TojiCombos {
 
     // ── 1~5 入门 ─────────────────────────────────────────
     private static boolean counter(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 4.0);
-        if (target == null) return false;
+        LivingEntity target = TojiQte.approach(p, 4.5);
+        if (target == null) { miss(p, 1); return false; }
         hit(p, target, C1, 1.2, 0, 0);
         fx(p, 1, target.position());
         say(p, "闪避反击");
@@ -109,7 +109,7 @@ public final class TojiCombos {
     }
 
     private static boolean boneKnee(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 4.0);
+        LivingEntity target = TojiQte.approach(p, 4.0);
         if (target == null) return false;
         hit(p, target, C2A, 0.3, 0, 6);
         hit(p, target, C2B, 0.8, 0.2, 10);   // 第二段破甲 20%
@@ -119,7 +119,7 @@ public final class TojiCombos {
     }
 
     private static boolean flyingKick(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 4.5);
+        LivingEntity target = TojiQte.approach(p, 4.5);
         if (target == null) return false;
         hit(p, target, C3, 2.4, 0, 10);
         TojiQte.stun(target, 10);
@@ -129,7 +129,7 @@ public final class TojiCombos {
     }
 
     private static boolean suplex(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 2.6);
+        LivingEntity target = TojiQte.approach(p, 2.6);
         if (target == null) return false;
         if (target.getBbWidth() > p.getBbWidth() + 0.35) {
             p.displayClientMessage(Component.literal("体型太大，摔不动").withStyle(ChatFormatting.GRAY), true);
@@ -145,7 +145,7 @@ public final class TojiCombos {
     }
 
     private static boolean slideKick(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 3.5);
+        LivingEntity target = TojiQte.approach(p, 3.5);
         if (target == null) return false;
         hit(p, target, C5, 0.4, 0, 30);
         TojiQte.stun(target, 30);
@@ -156,7 +156,7 @@ public final class TojiCombos {
 
     // ── 6~10 进阶 ────────────────────────────────────────
     private static boolean breakMagic(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 4.5);
+        LivingEntity target = TojiQte.approach(p, 4.5);
         if (target == null) return false;
         target.getActiveEffects().stream().filter(effect -> effect.getEffect().isBeneficial()).toList()
             .forEach(effect -> target.removeEffect(effect.getEffect()));
@@ -188,7 +188,7 @@ public final class TojiCombos {
         Curse.data(p).putLong(TojiQte.K_IFRAME, TojiQte.now(p) + 20);
         Curse.data(p).putLong(TojiQte.K_NEXT, TojiQte.now(p) + 40);
         Curse.data(p).putDouble(TojiQte.K_MULT, 2.0);
-        LivingEntity target = TojiQte.target(p, 4.0);
+        LivingEntity target = TojiQte.approach(p, 4.0);
         if (target != null) hit(p, target, C8, 1.0, 0, 8);
         fx(p, 8, p.position());
         say(p, shield != null ? "夺命挡箭牌 · 替死鬼就位" : "夺命挡箭牌（附近没有可抓的东西）");
@@ -196,7 +196,7 @@ public final class TojiCombos {
     }
 
     private static boolean stomp(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 4.0);
+        LivingEntity target = TojiQte.approach(p, 4.0);
         if (target == null) return false;
         hit(p, target, C9, 0.6, 0, 40);
         target.setDeltaMovement(0, -0.4, 0);
@@ -208,7 +208,7 @@ public final class TojiCombos {
     }
 
     private static boolean chargedSmash(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 4.5);
+        LivingEntity target = TojiQte.approach(p, 4.5);
         if (target == null) return false;
         hit(p, target, C10, 1.4, 0.5, 20);
         for (LivingEntity near : p.serverLevel().getEntitiesOfClass(LivingEntity.class,
@@ -224,7 +224,7 @@ public final class TojiCombos {
 
     // ── 11~15 精通 ────────────────────────────────────────
     private static boolean tripleExecute(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 4.5);
+        LivingEntity target = TojiQte.approach(p, 4.5);
         if (target == null) return false;
         Curse.data(p).putLong(TojiQte.K_IFRAME, TojiQte.now(p) + 30);
         hit(p, target, C11A, 0.2, 0.4, 10);
@@ -236,7 +236,7 @@ public final class TojiCombos {
     }
 
     private static boolean intercept(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 12.0);
+        LivingEntity target = TojiQte.approach(p, 12.0);
         if (target == null) return false;
         hit(p, target, C12, 1.2, 0, 20);
         TojiQte.stun(target, 20);
@@ -246,7 +246,7 @@ public final class TojiCombos {
     }
 
     private static boolean flurry(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 4.0);
+        LivingEntity target = TojiQte.approach(p, 4.0);
         if (target == null) return false;
         for (int i = 0; i < 8; i++) hit(p, target, C13, 0.05, 0, 2);
         hit(p, target, C13_LAST, 1.6, 0, 14);
@@ -266,7 +266,7 @@ public final class TojiCombos {
     }
 
     private static boolean parkourKick(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 10.0);
+        LivingEntity target = TojiQte.approach(p, 10.0);
         if (target == null) return false;
         Vec3 behind = target.position().subtract(target.getLookAngle().multiply(1.2, 0, 1.2));
         p.teleportTo(behind.x, p.position().y, behind.z);
@@ -298,7 +298,7 @@ public final class TojiCombos {
     }
 
     private static boolean disarm(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 3.0);
+        LivingEntity target = TojiQte.approach(p, 3.0);
         if (target == null) return false;
         var hand = target.getMainHandItem();
         if (!hand.isEmpty()) {
@@ -323,7 +323,7 @@ public final class TojiCombos {
     }
 
     private static boolean aerialCombo(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 4.5);
+        LivingEntity target = TojiQte.approach(p, 4.5);
         if (target == null) return false;
         hit(p, target, C19A, 0.4, 0, 6);
         hit(p, target, C19B, 0.6, 0, 12);
@@ -335,7 +335,7 @@ public final class TojiCombos {
     }
 
     private static boolean execute(ServerPlayer p) {
-        LivingEntity target = TojiQte.target(p, 3.5);
+        LivingEntity target = TojiQte.approach(p, 3.5);
         if (target == null) return false;
         double amount = Math.max(1, target.getMaxHealth() * C20);
         Curse.data(p).putInt(TojiQte.K_COUNT, 0);
@@ -348,7 +348,15 @@ public final class TojiCombos {
     }
 
     // ── 结算/特效工具 ────────────────────────────────────
+    /** 没目标时也给反馈，避免"按了没反应"。 */
+    private static void miss(ServerPlayer p, int combo) {
+        p.displayClientMessage(Component.literal("连招 " + combo + "：附近没有可打的目标")
+            .withStyle(ChatFormatting.GRAY), true);
+        com.mojang.logging.LogUtils.getLogger().info("[甚尔] 连招 {} 没找到目标", combo);
+    }
+
     private static boolean done(ServerPlayer p, int combo) {
+        com.mojang.logging.LogUtils.getLogger().info("[甚尔] 触发连招 {}", combo);
         TojiQte.resetSequence(p);
         return true;
     }

@@ -30,10 +30,11 @@ public final class HigurumaCombat {
         boolean higuruma = character.CharacterService.selected(p) != null
             && "higuruma".equals(character.CharacterService.selected(p).id());
         // 只在「角色切换」时授予/移除一次；不再每 20 刻补发（否则法槌掷出会复制）
-        String last = cn.blockforge.generated.nnnnr1201forge2.Curse.data(p).getString("HigurumaChar");
+        // 记录放在玩家持久数据里（Curse.data 是分角色存档，切角色会被快照覆盖，导致切回来判不出变化）
+        String last = p.getPersistentData().getString("HigurumaChar");
         String now = higuruma ? "higuruma" : "";
         if (!now.equals(last)) {
-            cn.blockforge.generated.nnnnr1201forge2.Curse.data(p).putString("HigurumaChar", now);
+            p.getPersistentData().putString("HigurumaChar", now);
             if (higuruma) { if (!hasGavel(p)) giveGavel(p); }
             else removeGavels(p);
         }

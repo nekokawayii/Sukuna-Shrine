@@ -28,10 +28,10 @@ public final class RyuDomain {
     public static final int EXPAND_TICKS = 80;      // 4 秒展开完
     public static final int CLOSE_TICKS = 100;      // 5 秒收起
     public static final int LIFE_TICKS = 600;       // 30 秒后自动收
-    public static final int FIREWORK_INTERVAL = 40; // 每 2 秒一发烟花
+    public static final int FIREWORK_INTERVAL = 20; // 每 1 秒一波烟花（一波两枚）
     public static final int SHELL_MIN = 15, SHELL_MAX = 45;
     public static final double SHELL_SPEED = 0.65, SHELL_DAMAGE = 6;
-    public static final int SHELL_LIFE = 60, SHELL_CAP = 220;
+    public static final int SHELL_LIFE = 60, SHELL_CAP = 320;
     public static final int COLOR_COUNT = 8;
 
     private static final class Fract {
@@ -185,7 +185,11 @@ public final class RyuDomain {
                 if (!restoreStep(f)) it.remove();
             } else {
                 placeStep(f);
-                if (now >= f.nextFirework) { f.nextFirework = now + FIREWORK_INTERVAL; firework(f, now); }
+                if (now >= f.nextFirework) {
+                    f.nextFirework = now + FIREWORK_INTERVAL;
+                    firework(f, now);
+                    firework(f, now);   // 一波两枚：会同时/错开炸开，观感更密
+                }
             }
         }
         tickFireworks(server, now);
@@ -194,25 +198,30 @@ public final class RyuDomain {
     /** 展开：每刻铺一批（总量/80 刻，最少 600）。 */
     private static void placeStep(Fract f) {
         int budget = Math.max(600, f.total / EXPAND_TICKS);
+        // 施工顺序：**地板优先**（先让脚下有地）→ 外基岩壳 → 内黑混凝土壳 → 内部 13 级光方块
+        int outerStart = f.floor.size(), innerStart = outerStart + f.outer.size(),
+            fillStart = innerStart + f.inner.size();
         for (int i = 0; i < budget; i++) {
             int index = f.cursor++;
             if (index >= f.total) return;
-            int innerStart = f.outer.size(), fillStart = innerStart + f.inner.size(),
-                floorStart = fillStart + f.fill.size();
-            BlockPos pos = index < innerStart ? f.outer.get(index)
-                : index < fillStart ? f.inner.get(index - innerStart)
-                : index < floorStart ? f.fill.get(index - fillStart)
-                : f.floor.get(index - floorStart);
-            if (!f.level.hasChunkAt(pos)) continue;
-            f.before.putIfAbsent(pos, f.level.getBlockState(pos));
-            // 外层基岩 / 内层纯黑混凝土 / 内部 13 级光源方块 / 地板纯黑混凝土
+            BlockPos pos;
             BlockState target;
-            if (index < innerStart) target = Blocks.BEDROCK.defaultBlockState();
-            else target = Blocks.BLACK_CONCRETE.defaultBlockState();   // 内壳与地板：纯黑混凝土
-            if (index >= fillStart && index < floorStart) {
+            if (index < outerStart) {
+                pos = f.floor.get(index);
+                target = Blocks.BLACK_CONCRETE.defaultBlockState();
+            } else if (index < innerStart) {
+                pos = f.outer.get(index - outerStart);
+                target = Blocks.BEDROCK.defaultBlockState();
+            } else if (index < fillStart) {
+                pos = f.inner.get(index - innerStart);
+                target = Blocks.BLACK_CONCRETE.defaultBlockState();
+            } else {
+                pos = f.fill.get(index - fillStart);
                 target = Blocks.LIGHT.defaultBlockState()
                     .setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 13);
             }
+            if (!f.level.hasChunkAt(pos)) continue;
+            f.before.putIfAbsent(pos, f.level.getBlockState(pos));
             if (!f.level.getBlockState(pos).equals(target)) f.level.setBlock(pos, target, 2);
         }
     }
@@ -294,8 +303,10 @@ public final class RyuDomain {
                 dir = dir.scale(0.75).add(want.scale(0.25)).normalize();
             }
             Vec3 pos = shell.pos().add(dir.scale(SHELL_SPEED));
-            Network.send(shell.level(), new Network.Effect(RyuFx.FIREWORK_SHELL, owner.getId(), pos, dir,
-                shell.color(), 4, 0));
+            if ((now & 1) == 0) {
+                Network.send(shell.level(), new Network.Effect(RyuFx.FIREWORK_SHELL, owner.getId(), pos, dir,
+                    shell.color(), 5, 0));
+            }
             LivingEntity hit = null;
             for (var candidate : shell.level().getEntitiesOfClass(LivingEntity.class,
                     new AABB(pos, pos).inflate(1.1),

@@ -330,8 +330,7 @@ public final class HakariCombat {
     private static void loveTrain(ServerPlayer p, CharacterSkill skill) {
         CompoundTag data = Curse.data(p);
         if (!jackpot(p)) { p.displayClientMessage(Component.literal("只能在中奖的 4 分 11 秒内使用").withStyle(ChatFormatting.GRAY), true); return; }
-        if (data.getBoolean(K_TRAIN_USED)) { p.displayClientMessage(Component.literal("本次中奖的纯爱列车已经开过了").withStyle(ChatFormatting.GRAY), true); return; }
-        data.putBoolean(K_TRAIN_USED, true);
+        data.putBoolean(K_TRAIN_USED, true);   // 只做记录，不再限制次数：中奖期间可以无限开
         Vec3 from = p.position(), dir = p.getLookAngle().multiply(1, 0, 1).normalize();
         Vec3 to = from.add(dir.scale(skill.range()));
         for (LivingEntity target : p.serverLevel().getEntitiesOfClass(LivingEntity.class,

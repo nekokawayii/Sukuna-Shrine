@@ -32,8 +32,12 @@ public final class CharacterClient {
         CharacterDefinition base=CharacterRegistry.get(state.id());
         if(base==null)return java.util.List.of();
         // 秤金次：中奖期间轮盘自动切换成中奖专属三格
-        if("hakari".equals(base.id())&&character.hakari.HakariState.jackpot)
-            return character.hakari.HakariSkills.jackpotWheel();
+        if("hakari".equals(base.id())&&character.hakari.HakariState.jackpot){
+            // 中奖期间：三个中奖专属 + 原本七个基础术式全都能用
+            var merged=new java.util.ArrayList<Integer>(character.hakari.HakariSkills.jackpotWheel());
+            merged.addAll(character.hakari.HakariSkills.baseWheel());
+            return java.util.List.copyOf(merged);
+        }
         if(copies.length==0){skillsCache=base.skills();return skillsCache;}
         var list=new java.util.ArrayList<Integer>(base.skills());
         for(int id:copies)if(!list.contains(id))list.add(id);

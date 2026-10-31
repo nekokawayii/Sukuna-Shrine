@@ -17,6 +17,9 @@ import net.minecraftforge.fml.common.Mod;
 public final class HakariClient {
     private static long slotUntil, jackpotUntil;
     private static int luck;
+    /** 车门猛砸：正方形边框向内收拢。 */
+    private record Door(net.minecraft.world.phys.Vec3 at, net.minecraft.world.phys.Vec3 dir, long born, int life) {}
+    private static final java.util.List<Door> DOORS = new java.util.ArrayList<>();
 
     public static void receive(Network.Effect e) {
         var mc = Minecraft.getInstance();
@@ -45,7 +48,7 @@ public final class HakariClient {
                 HakariState.jackpot = false;
             }
             case HakariFx.DOOR -> {
-                if (PhotonFx.ready()) PhotonFx.ring(e.position(), 2.4, 0.2, 0xFFFFC44D, 0xFFFFFFFF, 18, 2, 10);
+                DOORS.add(new Door(e.position(), e.direction(), now, Math.max(6, e.life())));
                 Client.shake(2);
             }
             case HakariFx.SPARK -> {
@@ -72,12 +75,69 @@ public final class HakariClient {
         }
     }
 
+    /** 世界内绘制：车门猛砸的四条边从外向内收拢 + 边角火花。 */
+    @net.minecraftforge.eventbus.api.SubscribeEvent public static void render(
+            net.minecraftforge.client.event.RenderLevelStageEvent event) {
+        if (event.getStage() != net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
+        var mc = Minecraft.getInstance();
+        if (mc.level == null || DOORS.isEmpty()) return;
+        long now = mc.level.getGameTime();
+        var cam = event.getCamera().getPosition();
+        var ps = event.getPoseStack();
+        ps.pushPose();
+        ps.translate(-cam.x, -cam.y, -cam.z);
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+        com.mojang.blaze3d.systems.RenderSystem.disableCull();
+        com.mojang.blaze3d.systems.RenderSystem.depthMask(false);
+        var builder = com.mojang.blaze3d.vertex.Tesselator.getInstance().getBuilder();
+        builder.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+            com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR);
+        for (Door door : DOORS) {
+            float t = Math.min(1f, (now - door.born()) / (float) door.life);
+            double half = 3.2 * (1.0 - t) + 0.25;        // 由外向内收拢
+            int alpha = (int) (235 * (1 - t * 0.3));
+            int gold = (alpha << 24) | 0xFFC44D, core = (alpha << 24) | 0xFFF6D6;
+            // 以命中点为中心、面向相机的正方形四边
+            Vec3 look = door.at().subtract(cam);
+            if (look.lengthSqr() < 1e-4) look = new Vec3(0, 0, 1);
+            look = look.normalize();
+            Vec3 right = look.cross(new Vec3(0, 1, 0));
+            if (right.lengthSqr() < 1e-4) right = new Vec3(1, 0, 0);
+            right = right.normalize();
+            Vec3 up = right.cross(look).normalize();
+            Vec3 c = door.at();
+            Vec3 tl = c.add(right.scale(-half)).add(up.scale(half));
+            Vec3 tr = c.add(right.scale(half)).add(up.scale(half));
+            Vec3 bl = c.add(right.scale(-half)).subtract(up.scale(half));
+            Vec3 br = c.add(right.scale(half)).subtract(up.scale(half));
+            Client.ribbon(builder, ps, tl, tr, 0.16, gold, cam);
+            Client.ribbon(builder, ps, tr, br, 0.16, gold, cam);
+            Client.ribbon(builder, ps, br, bl, 0.16, gold, cam);
+            Client.ribbon(builder, ps, bl, tl, 0.16, gold, cam);
+            Client.ribbon(builder, ps, tl, tr, 0.06, core, cam);
+            Client.ribbon(builder, ps, br, bl, 0.06, core, cam);
+            // 四角火花朝内
+            for (int i = 0; i < 4; i++) {
+                Vec3 corner = switch (i) { case 0 -> tl; case 1 -> tr; case 2 -> br; default -> bl; };
+                Vec3 inward = c.subtract(corner).normalize().scale(0.5 + 0.7 * t);
+                Client.ribbon(builder, ps, corner, corner.add(inward), 0.05, core, cam);
+            }
+        }
+        com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(builder.end());
+        com.mojang.blaze3d.systems.RenderSystem.depthMask(true);
+        com.mojang.blaze3d.systems.RenderSystem.enableCull();
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+        ps.popPose();
+    }
+
     public static void tick() {
         var mc = Minecraft.getInstance();
-        if (mc.level == null) { slotUntil = 0; jackpotUntil = 0; HakariState.reset(); return; }
+        if (mc.level == null) { slotUntil = 0; jackpotUntil = 0; DOORS.clear(); HakariState.reset(); return; }
         long now = mc.level.getGameTime();
         if (jackpotUntil != 0 && now >= jackpotUntil) { jackpotUntil = 0; HakariState.jackpot = false; }
         if (slotUntil != 0 && now >= slotUntil) slotUntil = 0;
+        DOORS.removeIf(door -> now - door.born() > door.life());
     }
 
     /** 屏幕上方：三格老虎机 + 幸运值进度条；中奖时是金色横幅与倒计时。 */

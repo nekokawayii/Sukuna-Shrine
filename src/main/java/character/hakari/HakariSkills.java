@@ -66,8 +66,8 @@ public final class HakariSkills {
                 "中奖期间被动：咒力无限、平A与基础技能冷却 -90%，可以无限砸车门、扔钢珠。",
                 0xFFFFD700, 0, 1, CharacterSkill.Shape.BURST, 1, 1, 180, 0, 0, 1, 0, 0, 0),
             new CharacterSkill(LOVE_TRAIN, "纯爱列车·全速前进", "纯爱列车",
-                "双手拍地召唤巨大的私铁纯爱列车沿直线碾压，毁灭性伤害、沿途地形全毁；每次中奖只能用一次。",
-                0xFF35E06A, 0, 600, CharacterSkill.Shape.RAY, 32, 3, 20, 120, 30, 12, 2, 0, 0),
+                "双手拍地召唤巨大的私铁纯爱列车沿直线碾压，毁灭性伤害、沿途地形全毁；中奖期间可以无限释放。",
+                0xFF35E06A, 0, 1, CharacterSkill.Shape.RAY, 32, 3, 20, 120, 30, 12, 2, 0, 0),
             new CharacterSkill(REVERSAL, "逆转反击", "逆转反击",
                 "中奖期间被动：受到致命伤害不会被杀，反而强制再拨动三格并回复生命。",
                 0xFF9BE8FF, 0, 1, CharacterSkill.Shape.BURST, 1, 1, 180, 0, 0, 1, 0, 0, 0));

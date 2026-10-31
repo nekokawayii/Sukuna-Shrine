@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "image=0": {
+      "model": "sukuna:block/domain_screen_0"
+    },
+    "image=1": {
+      "model": "sukuna:block/domain_screen_1"
+    },
+    "image=2": {
+      "model": "sukuna:block/domain_screen_2"
+    },
+    "image=3": {
+      "model": "sukuna:block/domain_screen_3"
+    },
+    "image=4": {
+      "model": "sukuna:block/domain_screen_4"
+    },
+    "image=5": {
+      "model": "sukuna:block/domain_screen_5"
+    },
+    "image=6": {
+      "model": "sukuna:block/domain_screen_6"
+    },
+    "image=7": {
+      "model": "sukuna:block/domain_screen_7"
+    }
+  }
+}

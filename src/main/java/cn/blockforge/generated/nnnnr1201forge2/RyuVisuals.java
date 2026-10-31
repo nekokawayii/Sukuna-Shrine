@@ -101,7 +101,8 @@ public final class RyuVisuals {
                 TRAILS.add(new Trail(e.position().subtract(e.direction().normalize().scale(0.7)), e.position(), now, 4));
             }
             case RyuFx.DOMAIN -> {
-                SKY = e.size() > 0 ? new Sky(e.position(), Math.max(2, e.size()), now + Math.max(1, e.life())) : null;
+                // 内壳改成显示图片的领域方块后，穹顶本身就是那张图，不再叠天空层
+                SKY = null;
                 if (e.size() <= 0) break;
                 DOMAINS.add(new Domain(e.position(), Math.max(2, e.size()), now, 20));
                 if (PhotonFx.ready()) {

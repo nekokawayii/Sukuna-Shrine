@@ -41,6 +41,7 @@ public final class RyuDomain {
         final List<BlockPos> outer = new ArrayList<>(), inner = new ArrayList<>(), floor = new ArrayList<>(),
             fill = new ArrayList<>();
         final Map<BlockPos, BlockState> before = new LinkedHashMap<>();
+        int image;
         int cursor;            // 已施工/已还原的块数
         int total;
         boolean closing;
@@ -90,6 +91,7 @@ public final class RyuDomain {
     public static void open(ServerPlayer p) {
         if (!(p.level() instanceof ServerLevel level) || ACTIVE.containsKey(p.getUUID())) return;
         Fract f = new Fract(level, p.getUUID(), p.blockPosition());
+        f.image = cn.blockforge.generated.nnnnr1201forge2.DomainScreenItem.imageOf(p);
         buildShell(f);
         f.total = f.outer.size() + f.inner.size() + f.fill.size() + f.floor.size();
         f.openedAt = level.getGameTime();
@@ -192,6 +194,8 @@ public final class RyuDomain {
     /** 展开：每刻铺一批（总量/80 刻，最少 600）。 */
     private static void placeStep(Fract f) {
         int budget = Math.max(600, f.total / EXPAND_TICKS);
+        BlockState screen = cn.blockforge.generated.nnnnr1201forge2.Content.DOMAIN_SCREEN.get().defaultBlockState()
+            .setValue(cn.blockforge.generated.nnnnr1201forge2.DomainScreenBlock.IMAGE, f.image);
         for (int i = 0; i < budget; i++) {
             int index = f.cursor++;
             if (index >= f.total) return;
@@ -206,8 +210,7 @@ public final class RyuDomain {
             // 外层基岩 / 内层纯黑混凝土 / 内部 13 级光源方块 / 地板纯黑混凝土
             BlockState target;
             if (index < innerStart) target = Blocks.BEDROCK.defaultBlockState();
-            else if (index < floorStart) target = Blocks.BLACK_CONCRETE.defaultBlockState();
-            else target = Blocks.BLACK_CONCRETE.defaultBlockState();
+            else target = screen;   // 内壳与地板都用领域方块（六个面显示施术者选的那张图）
             if (index >= fillStart && index < floorStart) {
                 target = Blocks.LIGHT.defaultBlockState()
                     .setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 13);

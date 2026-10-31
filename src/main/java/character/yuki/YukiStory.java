@@ -33,7 +33,8 @@ public final class YukiStory {
         var list = new ArrayList<Chapter>(KILLS.length);
         for (int i = 0; i < KILLS.length; i++) {
             int n = i + 1;
-            Stats stats = new Stats(1000 + n * 900, 15 + n * 6, 2 + n * 2, 4 + n, 2 + n);
+            // 注意：CharacterDefinition 会把整条线的奖励累加后校验，每项必须 ≤ 100 万。
+            Stats stats = new Stats(9000, 40 + n * 4, 2 + n * 2, 4 + n * 3, 2 + n);
             list.add(new Chapter("yuki_" + n, "第" + n + "章·" + WORDS[i % WORDS.length] + " " + ((i / WORDS.length) + 1),
                 KILLS[i], "累计击败 " + KILLS[i] + " 个敌人", "质量成长",
                 new CharacterReward(stats, 30 + n * 6, 80 + n * 25, List.of())));

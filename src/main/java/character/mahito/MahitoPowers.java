@@ -28,8 +28,10 @@ import java.util.List;
 
 /** 无为转变的「攻击 / 具象化 / 潜能激发」实体效果与临时地形。 */
 public final class MahitoPowers {
-    /** 临时肉块用原版地狱疣块代替（自定义贴图未提供）。 */
-    private static final net.minecraft.world.level.block.Block FLESH = Blocks.NETHER_WART_BLOCK;
+    /** 模组自带的「无为转变改造肉块」。 */
+    private static net.minecraft.world.level.block.Block fleshBlock() {
+        return cn.blockforge.generated.nnnnr1201forge2.ProgressionContent.TRANSFIGURED_FLESH.get();
+    }
 
     private record Wall(ServerLevel level, Vec3 center, Vec3 dir, long end) {}
     private record Bridge(ServerLevel level, ServerPlayer owner, long end) {}
@@ -47,7 +49,7 @@ public final class MahitoPowers {
             Vec3 at = base.add(side.scale(w)).add(0, h, 0);
             BlockPos pos = BlockPos.containing(at);
             if (level.isEmptyBlock(pos) || level.getBlockState(pos).canBeReplaced())
-                level.setBlockAndUpdate(pos, FLESH.defaultBlockState());
+                level.setBlockAndUpdate(pos, fleshBlock().defaultBlockState());
         }
         WALLS.add(new Wall(level, p.position(), look, level.getGameTime() + 200));
         p.sendSystemMessage(Component.literal("无为转变·墙：触手将在 10 秒内攻击前方敌人").withStyle(ChatFormatting.AQUA));
@@ -146,7 +148,7 @@ public final class MahitoPowers {
             for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {
                 BlockPos pos = center.offset(dx, 0, dz);
                 if (bridge.level().isEmptyBlock(pos) || bridge.level().getBlockState(pos).canBeReplaced())
-                    bridge.level().setBlockAndUpdate(pos, FLESH.defaultBlockState());
+                    bridge.level().setBlockAndUpdate(pos, fleshBlock().defaultBlockState());
             }
         }
     }

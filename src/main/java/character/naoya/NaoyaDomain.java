@@ -113,10 +113,20 @@ public final class NaoyaDomain {
                     int d = dx * dx + dy * dy + dz * dz;
                     BlockPos pos = realm.center.offset(dx, dy, dz);
                     if (d > outerSq) continue;
-                    if (d >= innerSq) { realm.outer.add(pos); continue; }          // 外壁（骨白）
-                    if (pos.getY() >= floorY) realm.light.add(pos);                // 内部清空+光源
+                    if (d >= innerSq) { realm.outer.add(pos); continue; }          // 外壁（黑色混凝土）
+                    // 半径 (r-2) 以内**整颗球都清空**（含地板以下），否则下方还是原地形
+                    if (d <= (r - 2) * (r - 2)) realm.light.add(pos);
                     if (d >= (r - 2) * (r - 2)) realm.inner.add(pos);              // 内壁（黑色混凝土）
                 }
+            }
+        }
+        // 地板：黑混凝土圆盘（清空后没有地形可站，必须补一层）
+        int floorSq = (r - 2) * (r - 2);
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                if (dx * dx + dz * dz > floorSq) continue;
+                BlockPos pos = new BlockPos(realm.center.getX() + dx, floorY, realm.center.getZ() + dz);
+                realm.inner.add(pos);
             }
         }
         // 子宫：三圈白色褶皱（球内的同心弧）

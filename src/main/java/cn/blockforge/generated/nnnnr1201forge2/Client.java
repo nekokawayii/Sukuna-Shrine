@@ -43,33 +43,44 @@ public final class Client {
     public static Network.Progress progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false,false,false,DomainOptions.DEFAULT_RADIUS,DomainOptions.DEFAULT_DAMAGE,DomainOptions.DEFAULT_SPEED,true);
     public static String energyText(double amount){return BalanceRules.number(amount);}
 
-    private static final net.minecraft.resources.ResourceLocation CURSE_RING_EMPTY =
-        new net.minecraft.resources.ResourceLocation("sukuna", "textures/hud/curse_ring_empty.png");
-    private static final net.minecraft.resources.ResourceLocation CURSE_RING_GOLD =
-        new net.minecraft.resources.ResourceLocation("sukuna", "textures/hud/curse_ring_gold.png");
-    private static final net.minecraft.resources.ResourceLocation CURSE_RING_RED =
-        new net.minecraft.resources.ResourceLocation("sukuna", "textures/hud/curse_ring_red.png");
-
     /**
-     * 圆形咒力表：**底圈贴图始终盖在最上层**（描边永远完整），里面是咒力液面。
+     * 圆形咒力表：**完全自绘**（不用贴图）——逐行扫描线画出圆形描边，圆内按比例填液面。
      *
-     * <p>贴图里彩色部分只有下半圈，所以按目标液面高度把这条色带**竖向拉伸**铺满
-     * （纯色拉伸看不出来），这样 0~100% 都能正确显示，不会「一开始就一半」。
+     * <p>这样 0~100% 都完整显示：满咒力时整个圆被填满、低咒力时只剩底部一截，
+     * 描边始终是最后画的一层，所以永远闭合、不会被液面盖住。
      */
     public static void drawCurseRing(net.minecraft.client.gui.GuiGraphics g, net.minecraft.client.Minecraft mc,
                                      float ratio, boolean awakened, int x, int y, int size) {
         ratio = Math.max(0f, Math.min(1f, ratio));
-        var fill = (awakened || ratio <= 0.3f) ? CURSE_RING_RED : CURSE_RING_GOLD;
-        if (ratio > 0.001f) {
-            int sourceTop = 28, sourceBottom = 63;                 // 贴图里彩色液面所在的带
-            int bandHeight = sourceBottom - sourceTop + 1;
-            int drawHeight = Math.max(1, Math.round(size * ratio));
-            int drawY = y + size - drawHeight;
-            int sourceHeight = Math.max(1, Math.round(bandHeight * Math.min(1f, ratio / 0.5f)));
-            int sourceY = sourceBottom - sourceHeight + 1;
-            g.blit(fill, x, drawY, 0, sourceY, size, drawHeight, 64, 64);
+        int radius = Math.max(6, size / 2);
+        int cx = x + radius, cy = y + radius;
+        int outline = 0xFF1B2440;                                   // 深蓝黑描边
+        int liquid = (awakened || ratio <= 0.3f) ? 0xFFE00000 : 0xFFFFDD00;
+        int surface = 0xFFFFF4B8;                                   // 液面高光
+        int liquidTop = y + size - Math.round(size * ratio);
+        for (int dy = 0; dy < size; dy++) {
+            int row = y + dy;
+            double offset = dy - radius + 0.5;
+            int half = (int) Math.round(Math.sqrt(Math.max(0.0, (double) radius * radius - offset * offset)));
+            if (half <= 0) continue;
+            // ① 圆内液面（描边内缩 2px）
+            if (row >= liquidTop) {
+                int inner = half - 2;
+                if (inner > 0) g.fill(cx - inner, row, cx + inner, row + 1, liquid);
+            }
+            // ② 描边：每行左右各 2px（最后一步画，保证轮廓完整）
+            g.fill(cx - half, row, cx - half + 2, row + 1, outline);
+            g.fill(cx + half - 2, row, cx + half, row + 1, outline);
         }
-        g.blit(CURSE_RING_EMPTY, x, y, 0, 0, size, size, 64, 64);  // 描边始终叠在最上面
+        // ③ 液面高光线
+        if (ratio > 0.04f) {
+            int half = (int) Math.round(Math.sqrt(Math.max(0.0,
+                (double) radius * radius - Math.pow(liquidTop - y - radius + 0.5, 2))));
+            int inner = half - 2;
+            if (inner > 0) g.fill(cx - inner, Math.max(y, liquidTop - 1), cx + inner, Math.max(y, liquidTop), surface);
+        }
+        // ④ 一点高光（右上角）
+        g.fill(cx + radius / 3, cy - radius / 2, cx + radius / 3 + 2, cy - radius / 2 + 2, 0xFFBFD0FF);
     }
     public static int wallSize(){return BranchRules.wallSize(progress.nine(),progress.soulShrine(),progress.voidShrine(),progress.pureLandVictory());}
     public static boolean voidStage(){return progress.voidShrine();}

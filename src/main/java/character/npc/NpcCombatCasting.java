@@ -94,7 +94,7 @@ public final class NpcCombatCasting {
                 hurtAround(mob, player, 5, 16);
                 fire(mob, player, 0xFF9FDFFF);
             }
-            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 26, NpcDomain.Style.FIREWORK);   // 打上花火
+            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 35, NpcDomain.Style.FIREWORK);   // 打上花火（半径与玩家一致 35）
         } else if (id.contains("hakari_npc")) {
             if (distance <= 6 && ready(mob, K_ATK, 40)) {
                 hurtAround(mob, player, 3.5, (int) (18 * (jackpot ? 2 : 1)));

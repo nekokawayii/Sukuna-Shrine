@@ -116,10 +116,40 @@ public final class NpcDomain {
                 double dd = pos.distSqr(job.center);
                 boolean isShell = dd <= (double) RADIUS * RADIUS && dd > (double) (RADIUS - 1) * (RADIUS - 1);
                 boolean isFloor = pos.getY() == job.center.getY() - 1 && dd <= (double) RADIUS * RADIUS;
-                job.level.setBlock(pos, isShell || isFloor ? shell : air, 2);
+                boolean outer = dd > (double) (RADIUS - 1) * (RADIUS - 1) && dd <= (double) RADIUS * RADIUS;
+                var block = (isFloor || isShell)
+                    ? (job.style == Style.FIREWORK && outer ? Blocks.BEDROCK.defaultBlockState() : shell)
+                    : air;
+                job.level.setBlock(pos, block, 2);
                 if (!isShell && !isFloor && (pos.getX() + pos.getY() + pos.getZ()) % 5 == 0)
                     job.level.setBlock(pos, light, 2);
                 done++;
+            }
+            // ── 石流龙·打上花火：每 1 秒两枚火箭炸出追踪弹幕（与玩家同款机制：必中） ──
+            if (job.style == Style.FIREWORK && job.level.getGameTime() % 20 == 0) {
+                ServerLevel level = job.level;
+                var rand = level.random;
+                for (int i = 0; i < 2; i++) {
+                    Vec3 rise = Vec3.atCenterOf(job.center)
+                        .add((rand.nextDouble() - 0.5) * 40, 20 + rand.nextDouble() * 14,
+                             (rand.nextDouble() - 0.5) * 40);
+                    Network.send(level, new Network.Effect(character.ryu.RyuFx.FIREWORK_RISE,
+                        owner.getId(), rise, Vec3.ZERO, 1f, 20, 0));
+                    Network.send(level, new Network.Effect(character.ryu.RyuFx.FIREWORK_BURST,
+                        owner.getId(), rise, Vec3.ZERO, 3f, 25, 0));
+                    int shells = 15 + rand.nextInt(31);
+                    for (int s = 0; s < shells; s++) {
+                        Vec3 target = rise.add((rand.nextDouble() - 0.5) * 36,
+                            -14 - rand.nextDouble() * 10, (rand.nextDouble() - 0.5) * 36);
+                        Network.send(level, new Network.Effect(character.ryu.RyuFx.FIREWORK_SHELL,
+                            owner.getId(), target, Vec3.ZERO, 0.6f, 30, 0));
+                    }
+                }
+                // 必中：领域内所有玩家吃一波烟花伤害
+                for (var pl : level.getEntitiesOfClass(LivingEntity.class,
+                        new AABB(job.center).inflate(RADIUS), t -> t != owner && t instanceof net.minecraft.world.entity.player.Player)) {
+                    pl.hurt(pl.damageSources().magic(), (float) DAMAGE);
+                }
             }
             if (job.level.getGameTime() % 10 == 0) {
                 double r2 = (double) RADIUS * RADIUS;
@@ -130,8 +160,8 @@ public final class NpcDomain {
                     switch (job.style) {
                         case FIREWORK -> {                       // 石流龙：打上花火 · 追踪烟花
                             living.hurt(living.damageSources().magic(), (float) DAMAGE);
-                            if (living.level() instanceof ServerLevel level)
-                                Network.send(level, new Network.Effect(character.ryu.RyuFx.FIREWORK_BURST,
+                            if (living.level() instanceof ServerLevel sl)
+                                Network.send(sl, new Network.Effect(character.ryu.RyuFx.FIREWORK_BURST,
                                     living.getId(), living.position(), Vec3.ZERO, 2f, 20, 0));
                         }
                         case PACHINKO -> {                       // 秤金次：赌场 · 双倍伤害

@@ -25,8 +25,9 @@ public final class RyuSkills {
                 "掏出蛋糕吃掉：2 秒内不攻击，咒力回复速度翻倍；高风险高回报。",
                 0xFFFFD9A0, 0, 400, CharacterSkill.Shape.BURST,
                 4, 1, 180, 0, 0, 1, 0, 0, 0),
-            new CharacterSkill(DOMAIN, "领域展开", "领域（占位）",
-                "占位技能：目前只播放起手与提示，领域内容尚未制作。",
+            new CharacterSkill(DOMAIN, "领域展开·打上花火", "打上花火",
+                "半径 65 格的封闭领域（外基岩、内纯黑混凝土，内部换成落日云海）：4 秒展开、5 秒收起、持续 30 秒；"
+                    + "领域内自己所有招式必中，并不断升起烟花炸成各色追踪弹幕。再按一次可提前收起。",
                 0xFF7FB8E8, 4000, 2400, CharacterSkill.Shape.BURST,
                 8, 8, 180, 0, 0, 1, 0, 0, 0)
         );

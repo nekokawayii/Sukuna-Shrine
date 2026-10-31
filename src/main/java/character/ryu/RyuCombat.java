@@ -139,9 +139,13 @@ public final class RyuCombat {
                               boolean knockback, boolean effect, double length) {
         if (!(caster.level() instanceof ServerLevel level)) return;
         Vec3 origin = origin(caster), dir = caster.getLookAngle().normalize();
+        // 领域内"招式必中"：不再被方块截断，直接打满
+        boolean pierce = owner != null && RyuDomain.active(owner);
         Vec3 end = origin.add(dir.scale(length));
-        var blockHit = level.clip(new ClipContext(origin, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, caster));
-        if (blockHit.getType() != HitResult.Type.MISS) end = blockHit.getLocation();
+        if (!pierce) {
+            var blockHit = level.clip(new ClipContext(origin, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, caster));
+            if (blockHit.getType() != HitResult.Type.MISS) end = blockHit.getLocation();
+        }
         if (effect) {
             Network.send(level, new Network.Effect(RyuFx.BEAM, caster.getId(), origin, end, (float) width, 8, 0));
         }
@@ -241,7 +245,8 @@ public final class RyuCombat {
                 continue;
             }
             var pos0 = net.minecraft.core.BlockPos.containing(pos);
-            if (!level.getBlockState(pos0).getCollisionShape(level, pos0).isEmpty()) continue;
+            if (!(missile.owner() != null && RyuDomain.active(missile.owner()))
+                && !level.getBlockState(pos0).getCollisionShape(level, pos0).isEmpty()) continue;
             keep.add(new Missile(level, missile.owner(), missile.caster(), pos, dir, missile.born(), missile.damage()));
         }
         MISSILES.clear();
@@ -302,14 +307,16 @@ public final class RyuCombat {
     }
 
     // ------------------------------------------------------------ 领域（占位）
-    public static void domain(ServerPlayer p) {
-        if (!(p.level() instanceof ServerLevel level)) return;
-        Network.send(level, new Network.Effect(RyuFx.DOMAIN, p.getId(), p.position(), Vec3.ZERO,
-            (float) DOMAIN_RADIUS, 20, 0));
-        level.playSound(null, p.blockPosition(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 0.8f, 0.7f);
-        p.sendSystemMessage(Component.literal("领域展开·（占位）：内容尚未制作，本次只播放了起手").withStyle(ChatFormatting.GRAY));
-        p.displayClientMessage(Component.literal("领域展开（占位）"), true);
+    /** 5 领域展开·打上花火：再按一次收起（收起走 TechniqueInput 的前置拦截，不重复扣费）。 */
+    public static void domain(ServerPlayer p) { RyuDomain.toggle(p); }
+
+    /** 供领域烟花弹幕结算伤害（内部仍走统一敌友与术式换算）。 */
+    public static void hurtPublic(ServerLevel level, ServerPlayer owner, LivingEntity target, double damage) {
+        hurt(level, owner, owner, target, damage);
     }
+
+    /** 招式必中：自己领域开着时，冲击波不被方块截断、追踪弹穿墙。 */
+    public static boolean sureHit(ServerPlayer p) { return RyuDomain.active(p); }
 
     // ------------------------------------------------------------ 每刻
     @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent e) {
@@ -368,6 +375,7 @@ public final class RyuCombat {
     @SubscribeEvent public static void serverTick(TickEvent.ServerTickEvent e) {
         if (e.phase == TickEvent.Phase.END && e.getServer() != null) {
             tickMissiles(e.getServer().overworld().getGameTime());
+            RyuDomain.tick(e.getServer());
         }
     }
 

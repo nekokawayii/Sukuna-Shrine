@@ -28,6 +28,10 @@ public final class RyuVisuals {
     private record Charge(int owner, double ratio, long until) {}
     private record Dessert(int owner, long until) {}
     private record Domain(Vec3 pos, double radius, long born, int life) {}
+    private record Sky(Vec3 center, double radius, long until) {}
+    private record Rise(Vec3 pos, double height, long born, int life) {}
+    private record Burst2(Vec3 pos, int color, long born, int life) {}
+    private record Spark(Vec3 pos, int color, long born, int life) {}
 
     /** 一条光束只保留最新的一条（施术者 id → 光束），持续喷的时候不会叠成一堆。 */
     private static final Map<Integer, Beam> BEAMS = new LinkedHashMap<>();
@@ -36,6 +40,14 @@ public final class RyuVisuals {
     private static final Map<Integer, Charge> CHARGES = new HashMap<>();
     private static final Map<Integer, Dessert> DESSERTS = new HashMap<>();
     private static final List<Domain> DOMAINS = new ArrayList<>();
+    private static final List<Rise> RISES = new ArrayList<>();
+    private static final List<Burst2> BURSTS2 = new ArrayList<>();
+    private static final List<Spark> SPARKS = new ArrayList<>();
+    /** 烟花颜色表（特效的 size 里存的就是这个下标）。 */
+    private static final int[] COLORS = {0xFFFFFF, 0xFF5A5A, 0xFFD24A, 0x7CFF6B, 0x6BE8FF, 0x6B8CFF, 0xFF6BE8, 0xFFA24A};
+    private static final net.minecraft.resources.ResourceLocation SKY_TEXTURE =
+        new net.minecraft.resources.ResourceLocation("sukuna", "textures/environment/ryu_domain_sky.png");
+    private static Sky SKY;
     private static Object world;
 
     public static void receive(Network.Effect e) {
@@ -74,7 +86,22 @@ public final class RyuVisuals {
                 if (e.size() > 0) DESSERTS.put(e.owner(), new Dessert(e.owner(), now + Math.max(1, e.life())));
                 else DESSERTS.remove(e.owner());
             }
+            case RyuFx.FIREWORK_RISE -> RISES.add(new Rise(e.position(), Math.max(1, e.direction().y), now, 40));
+            case RyuFx.FIREWORK_BURST -> {
+                BURSTS2.add(new Burst2(e.position(), (int) e.size(), now, 18));
+                if (PhotonFx.ready()) {
+                    int color = COLORS[Math.floorMod((int) e.size(), COLORS.length)];
+                    PhotonFx.spark(e.position(), 2.4, 1.2, 0xFFFFFFFF, 0xFF000000 | color, TEX_GLOW, true, 6, 10, 40, 0.4);
+                }
+                Client.shake(2);
+            }
+            case RyuFx.FIREWORK_SHELL -> {
+                SPARKS.add(new Spark(e.position(), (int) e.size(), now, 5));
+                TRAILS.add(new Trail(e.position().subtract(e.direction().normalize().scale(0.7)), e.position(), now, 4));
+            }
             case RyuFx.DOMAIN -> {
+                SKY = e.size() > 0 ? new Sky(e.position(), Math.max(2, e.size()), now + Math.max(1, e.life())) : null;
+                if (e.size() <= 0) break;
                 DOMAINS.add(new Domain(e.position(), Math.max(2, e.size()), now, 20));
                 if (PhotonFx.ready()) {
                     PhotonFx.ring(e.position().add(0, 0.2, 0), Math.max(2, e.size()), 1.2, 0xA8D8F7FF, 0xFF9FDFFF, 44, 10, 14);
@@ -103,6 +130,10 @@ public final class RyuVisuals {
         CHARGES.values().removeIf(c -> c.until() <= now);
         DESSERTS.values().removeIf(d -> d.until() <= now);
         DOMAINS.removeIf(d -> now - d.born() > d.life());
+        RISES.removeIf(r -> now - r.born() > r.life());
+        BURSTS2.removeIf(b -> now - b.born() > b.life());
+        SPARKS.removeIf(s2 -> now - s2.born() > s2.life());
+        if (SKY != null && now >= SKY.until()) SKY = null;
         // 甜品：吃蛋糕的小表现
         var p = mc.player;
         if (p == null || !PhotonFx.ready()) return;
@@ -119,13 +150,17 @@ public final class RyuVisuals {
         CHARGES.clear();
         DESSERTS.clear();
         DOMAINS.clear();
+        RISES.clear();
+        BURSTS2.clear();
+        SPARKS.clear();
+        SKY = null;
     }
 
     @SubscribeEvent public static void render(RenderLevelStageEvent e) {
         var mc = Minecraft.getInstance();
         if (mc.level == null || e.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
         if (BEAMS.isEmpty() && TRAILS.isEmpty() && BURSTS.isEmpty() && DOMAINS.isEmpty()
-            && CHARGES.isEmpty() && DESSERTS.isEmpty()) return;
+            && CHARGES.isEmpty() && DESSERTS.isEmpty() && RISES.isEmpty() && BURSTS2.isEmpty() && SPARKS.isEmpty()) return;
         long now = now(mc);
         PoseStack ps = e.getPoseStack();
         Vec3 cam = e.getCamera().getPosition();
@@ -147,6 +182,9 @@ public final class RyuVisuals {
         for (Domain domain : DOMAINS) drawDomain(b, ps, domain, cam, now);
         for (var entry : CHARGES.entrySet()) drawCharge(b, ps, mc, entry.getValue(), cam, now);
         for (var entry : DESSERTS.entrySet()) drawDessert(b, ps, mc, entry.getKey(), cam, now);
+        for (Rise rise : RISES) drawRise(b, ps, rise, cam, now);
+        for (Burst2 burst : BURSTS2) drawBurst2(b, ps, burst, cam, now);
+        for (Spark spark : SPARKS) drawSpark(b, ps, spark, cam, now);
         BufferUploader.drawWithShader(b.end());
         RenderSystem.depthMask(true);
         RenderSystem.enableCull();
@@ -280,6 +318,96 @@ public final class RyuVisuals {
         Client.ribbon(b, ps, at.add(0, 0.1, 0), at.add(0.34, 0.12, 0), 0.07, argb(cream, 235), cam);
         Client.ribbon(b, ps, at.add(0.02, 0.16, 0), at.add(0.2, 0.17, 0), 0.05, argb(jam, 235), cam);
         Client.ribbon(b, ps, at.add(0, 0.04, 0), at.add(0, 0.16, 0), 0.05, argb(body, 200), cam);
+    }
+
+    /** 烟花火箭：一颗带尾迹的小亮点往上飞。 */
+    private static void drawRise(BufferBuilder b, PoseStack ps, Rise rise, Vec3 cam, long now) {
+        float t = (now - rise.born()) / (float) rise.life();
+        if (t < 0 || t > 1) return;
+        Vec3 at = rise.pos().add(0, rise.height() * t, 0);
+        int alpha = (int) (230 * (1 - t * 0.4));
+        Client.ribbon(b, ps, at.subtract(0, 0.6, 0), at, 0.16, argb(0xFFE7B0, (int) (alpha * 0.5)), cam);
+        Client.ribbon(b, ps, at.subtract(0, 0.35, 0), at, 0.07, argb(0xFFFFFF, alpha), cam);
+    }
+
+    /** 烟花炸开：一圈该颜色的环 + 交叉火花。 */
+    private static void drawBurst2(BufferBuilder b, PoseStack ps, Burst2 burst, Vec3 cam, long now) {
+        float t = (now - burst.born()) / (float) burst.life();
+        if (t < 0 || t > 1) return;
+        int color = COLORS[Math.floorMod(burst.color(), COLORS.length)];
+        int alpha = (int) (235 * (1 - t));
+        double radius = 0.6 + 3.4 * Math.min(1, t * 1.25);
+        Client.ring(b, ps, burst.pos(), radius, 0.12, argb(color, alpha), cam);
+        Client.ring(b, ps, burst.pos(), radius * 0.6, 0.06, argb(0xFFFFFF, (int) (alpha * 0.8)), cam);
+        Random rnd = new Random(burst.born() * 131 + burst.color());
+        for (int i = 0; i < 12; i++) {
+            double a = rnd.nextDouble() * Math.PI * 2, d = radius * (0.4 + rnd.nextDouble() * 0.8);
+            Vec3 at = burst.pos().add(Math.cos(a) * d, (rnd.nextDouble() - 0.5) * d, Math.sin(a) * d);
+            Client.ribbon(b, ps, at.subtract(0.14, 0, 0), at.add(0.14, 0, 0), 0.03, argb(color, alpha), cam);
+            Client.ribbon(b, ps, at.subtract(0, 0.14, 0), at.add(0, 0.14, 0), 0.03, argb(color, alpha), cam);
+        }
+    }
+
+    /** 追踪弹幕：一颗小亮点。 */
+    private static void drawSpark(BufferBuilder b, PoseStack ps, Spark spark, Vec3 cam, long now) {
+        float t = (now - spark.born()) / (float) spark.life();
+        if (t < 0 || t > 1) return;
+        int color = COLORS[Math.floorMod(spark.color(), COLORS.length)];
+        int alpha = (int) (245 * (1 - t));
+        Client.ribbon(b, ps, spark.pos().subtract(0.1, 0, 0), spark.pos().add(0.1, 0, 0), 0.05, argb(color, alpha), cam);
+        Client.ribbon(b, ps, spark.pos().subtract(0, 0.1, 0), spark.pos().add(0, 0.1, 0), 0.05, argb(color, alpha), cam);
+        Client.ribbon(b, ps, spark.pos().subtract(0, 0, 0.1), spark.pos().add(0, 0, 0.1), 0.05, argb(color, alpha), cam);
+    }
+
+    /**
+     * 领域内部天空：把用户给的日落云海贴图贴在一个**内翻的球**上（只在自己领域里画）。
+     * 画在方块之后、粒子之前，保证领域里的实体仍然正常盖在上面。
+     */
+    @SubscribeEvent public static void renderSky(RenderLevelStageEvent e) {
+        var mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null || SKY == null) return;
+        if (e.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+        Vec3 cam = e.getCamera().getPosition();
+        if (cam.distanceToSqr(SKY.center()) > (SKY.radius() + 8) * (SKY.radius() + 8)) return;
+        PoseStack ps = e.getPoseStack();
+        Vec3 center = SKY.center();
+        double radius = SKY.radius() - 1.5;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableCull();
+        RenderSystem.depthMask(false);
+        RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShaderTexture(0, SKY_TEXTURE);
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+        BufferBuilder b = Tesselator.getInstance().getBuilder();
+        b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        int lon = 24, lat = 12;
+        for (int i = 0; i < lat; i++) {
+            double v0 = i / (double) lat, v1 = (i + 1) / (double) lat;
+            double phi0 = Math.PI * (v0 - 0.5), phi1 = Math.PI * (v1 - 0.5);
+            for (int j = 0; j < lon; j++) {
+                double u0 = j / (double) lon, u1 = (j + 1) / (double) lon;
+                double th0 = Math.PI * 2 * u0, th1 = Math.PI * 2 * u1;
+                skyVertex(b, ps, center, radius, phi0, th0, u0, v0);
+                skyVertex(b, ps, center, radius, phi1, th0, u0, v1);
+                skyVertex(b, ps, center, radius, phi1, th1, u1, v1);
+                skyVertex(b, ps, center, radius, phi0, th1, u1, v0);
+            }
+        }
+        BufferUploader.drawWithShader(b.end());
+        RenderSystem.depthMask(true);
+        RenderSystem.enableCull();
+        RenderSystem.disableBlend();
+    }
+
+    private static void skyVertex(BufferBuilder b, PoseStack ps, Vec3 center, double radius,
+                                  double phi, double theta, double u, double v) {
+        double cosPhi = Math.cos(phi);
+        float x = (float) (center.x + radius * cosPhi * Math.cos(theta));
+        float y = (float) (center.y + radius * Math.sin(phi));
+        float z = (float) (center.z + radius * cosPhi * Math.sin(theta));
+        b.vertex(ps.last().pose(), x, y, z).uv((float) u, (float) v).endVertex();
     }
 
     private static int argb(int rgb, int alpha) {

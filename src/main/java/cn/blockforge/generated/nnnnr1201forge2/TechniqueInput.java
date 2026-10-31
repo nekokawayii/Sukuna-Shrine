@@ -42,6 +42,13 @@ public final class TechniqueInput {
             else character.ryu.RyuCombat.releaseCharge(p,input.phase()==2);
             return;
         }
+        // 石流龙：领域「打上花火」开着时再按一次 = 提前收起（要在扣费/冷却之前拦下）
+        if(input.skill()==character.ryu.RyuSkills.DOMAIN&&input.phase()==0
+            &&character.CharacterService.selected(p)!=null
+            &&"ryu".equals(character.CharacterService.selected(p).id())
+            &&character.ryu.RyuDomain.isOwner(p)){
+            character.ryu.RyuDomain.close(p,"主动收起");return;
+        }
         // 鹿紫云一：防御键（右键）→ 同极相斥
         if(input.skill()==character.kashimo.KashimoCombat.GUARD&&input.phase()==7){character.kashimo.KashimoCombat.guard(p);return;}
         if(!character.CharacterService.allowsSkill(p,input.skill())){

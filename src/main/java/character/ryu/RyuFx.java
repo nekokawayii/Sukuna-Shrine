@@ -14,6 +14,12 @@ public final class RyuFx {
     public static final int DESSERT = 394;
     /** 领域（占位）：position=玩家，size=半径。 */
     public static final int DOMAIN = 395;
-    public static final int FIRST = BEAM, LAST = DOMAIN;
+    /** 烟花火箭上升：position=起点，direction=(0,上升高度,0)。 */
+    public static final int FIREWORK_RISE = 396;
+    /** 烟花炸开：position=炸点，size=颜色索引。 */
+    public static final int FIREWORK_BURST = 397;
+    /** 烟花弹幕：position=当前位置，direction=朝向，size=颜色索引。 */
+    public static final int FIREWORK_SHELL = 398;
+    public static final int FIRST = BEAM, LAST = FIREWORK_SHELL;
     private RyuFx() {}
 }

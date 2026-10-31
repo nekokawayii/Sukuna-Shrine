@@ -129,12 +129,14 @@ public final class GeneratedMod {
             @Override public String reason() { return "甜品时间：正在吃，2 秒内不能施术"; }
         });
         MinecraftForge.EVENT_BUS.register(character.ryu.RyuCombat.class);
+        MinecraftForge.EVENT_BUS.register(character.ryu.RyuDomain.class);
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent event) -> {
             character.kashimo.KashimoCharges.reset();
             character.kashimo.KashimoZones.reset();
             character.todo.TodoMarks.reset();
             character.nanami.NanamiRatio.reset();
             character.ryu.RyuCombat.reset();
+            character.ryu.RyuDomain.reset();
         });
         character.CharacterCasting.registerEffect("megumi", character.megumi.MegumiSkills.TEN_SHADOWS, (net.minecraft.server.level.ServerPlayer p, character.CharacterSkill skill, int rank) -> Network.sendTo(p, new Network.Effect(308, p.getId(), p.position(), net.minecraft.world.phys.Vec3.ZERO, 0f, 0, 0)));
         MinecraftForge.EVENT_BUS.register(character.CharacterService.class);

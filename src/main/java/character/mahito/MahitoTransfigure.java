@@ -123,7 +123,7 @@ public final class MahitoTransfigure {
         if (action == 400) { sendModelData(p); return; }
         if (action == MahitoSelf.STORAGE_HEAL || action == MahitoSelf.HEAL) { MahitoSelf.heal(p); return; }
         if (action == MahitoSelf.STORAGE_BURST) { MahitoSelf.burst(p, pendingTarget(p)); return; }
-        if (action == MahitoSelf.CLONE) { p.sendSystemMessage(Component.literal("分身：下一版实现").withStyle(ChatFormatting.GRAY)); return; }
+        if (action == MahitoSelf.CLONE) { MahitoSelf.clone(p); return; }
         if (action == MahitoSelf.SPIRIT) { MahitoSelf.spirit(p); return; }
         if (action == MahitoSelf.LIMBS) { MahitoSelf.limbs(p); return; }
         if (action >= 401 && action <= 406) { adjust(p, action); return; }

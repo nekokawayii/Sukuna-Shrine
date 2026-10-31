@@ -139,6 +139,8 @@ public final class GeneratedMod {
         MinecraftForge.EVENT_BUS.register(character.naoya.NaoyaCombat.class);
         MinecraftForge.EVENT_BUS.register(character.naoya.NaoyaDomain.class);
         MinecraftForge.EVENT_BUS.register(character.mainline.Mainline.class);   // 共同主线成就
+        MinecraftForge.EVENT_BUS.register(character.npc.NpcDomain.class);      // NPC 真领域
+        MinecraftForge.EVENT_BUS.register(character.npc.NpcCombatCasting.class); // NPC 咒术
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent event) -> {
             character.kashimo.KashimoCharges.reset();
             character.kashimo.KashimoZones.reset();

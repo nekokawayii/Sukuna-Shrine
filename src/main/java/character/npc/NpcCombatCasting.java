@@ -69,7 +69,7 @@ public final class NpcCombatCasting {
                 burn(player);
                 fire(mob, player, 0xFFFFA33C);
             }
-            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 26);   // 盖棺铁围山
+            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 26, NpcDomain.Style.LAVA);   // 盖棺铁围山
         } else if (id.contains("uraume_npc")) {
             if (distance <= 5 && ready(mob, K_ATK, 50)) {
                 hurtAround(mob, player, 4, 10);
@@ -80,6 +80,7 @@ public final class NpcCombatCasting {
                 player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 1));
                 fire(mob, player, 0xFFD6F6FF);
             }
+            if (ready(mob, K_DOM, 1400) && distance <= 24) NpcDomain.open(mob, 22, NpcDomain.Style.ICE);
         } else if (id.contains("choso")) {
             if (distance <= 5 && ready(mob, K_ATK, 40)) {
                 hurtAround(mob, player, 4, 14);
@@ -93,7 +94,7 @@ public final class NpcCombatCasting {
                 hurtAround(mob, player, 5, 16);
                 fire(mob, player, 0xFF9FDFFF);
             }
-            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 26);   // 打上花火
+            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 26, NpcDomain.Style.FIREWORK);   // 打上花火
         } else if (id.contains("hakari_npc")) {
             if (distance <= 6 && ready(mob, K_ATK, 40)) {
                 hurtAround(mob, player, 3.5, (int) (18 * (jackpot ? 2 : 1)));
@@ -102,7 +103,7 @@ public final class NpcCombatCasting {
                 hurtAround(mob, player, 5, (int) (9 * (jackpot ? 2 : 1)));
                 fire(mob, player, 0xFFE0E0E0);
             }
-            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 26);   // 坐杀博徒
+            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 26, NpcDomain.Style.PACHINKO);   // 坐杀博徒
         }
     }
 

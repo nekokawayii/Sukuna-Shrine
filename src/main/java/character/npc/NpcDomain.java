@@ -26,6 +26,9 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  * 逐块记录原始方块 → 施工（黑混凝土球壳 + 内部清空 + 地板）→ 持续伤害 → 到期/死亡/关服整批还原。
  */
 public final class NpcDomain {
+    /** 各角色自己的领域风格（r387 用户要求：石流龙=烟花、秤金次=赌场…）。 */
+    public enum Style { FIREWORK, PACHINKO, LAVA, ICE, BLOOD, GENERIC }
+
     public static final int RADIUS = 26;
     public static final int TICKS = 400;          // 20 秒
     private static final int BATCH = 2000;
@@ -36,13 +39,14 @@ public final class NpcDomain {
         final ServerLevel level;
         final BlockPos center;
         final long end;
+        final Style style;
         final List<long[]> saved = new ArrayList<>();     // 编码：pos | (stateId << 64) 分两段存
         final List<BlockState> states = new ArrayList<>();
         final List<BlockPos> plan = new ArrayList<>();
         int cursor;
 
-        Job(UUID owner, ServerLevel level, BlockPos center, long end) {
-            this.owner = owner; this.level = level; this.center = center; this.end = end;
+        Job(UUID owner, ServerLevel level, BlockPos center, long end, Style style) {
+            this.owner = owner; this.level = level; this.center = center; this.end = end; this.style = style;
         }
     }
 
@@ -50,10 +54,12 @@ public final class NpcDomain {
 
     public static boolean active(Mob mob) { return mob != null && JOBS.containsKey(mob.getUUID()); }
 
-    public static void open(Mob mob, double radiusOverride) {
+    public static void open(Mob mob, double radiusOverride) { open(mob, radiusOverride, Style.GENERIC); }
+
+    public static void open(Mob mob, double radiusOverride, Style style) {
         if (!(mob.level() instanceof ServerLevel level) || active(mob)) return;
         BlockPos center = mob.blockPosition();
-        Job job = new Job(mob.getUUID(), level, center, level.getGameTime() + TICKS);
+        Job job = new Job(mob.getUUID(), level, center, level.getGameTime() + TICKS, style);
         int r = (int) Math.round(radiusOverride);
         // 施工计划：外壳球壳 + 地板（内部先清空气，保证是空地）
         for (int dx = -r; dx <= r; dx++)
@@ -120,8 +126,33 @@ public final class NpcDomain {
                 for (LivingEntity living : job.level.getEntitiesOfClass(LivingEntity.class,
                         new AABB(job.center).inflate(RADIUS), t -> t != owner && t.isAlive()
                             && !(t instanceof Mob m && m.getType() == owner.getType()))) {
-                    if (living.distanceToSqr(Vec3.atCenterOf(job.center)) <= r2)
-                        NpcCombat.hurt(owner, living, (float) DAMAGE);
+                    if (living.distanceToSqr(Vec3.atCenterOf(job.center)) > r2) continue;
+                    switch (job.style) {
+                        case FIREWORK -> {                       // 石流龙：打上花火 · 追踪烟花
+                            living.hurt(living.damageSources().magic(), (float) DAMAGE);
+                            if (living.level() instanceof ServerLevel level)
+                                Network.send(level, new Network.Effect(character.ryu.RyuFx.FIREWORK_BURST,
+                                    living.getId(), living.position(), Vec3.ZERO, 2f, 20, 0));
+                        }
+                        case PACHINKO -> {                       // 秤金次：赌场 · 双倍伤害
+                            living.hurt(living.damageSources().magic(), (float) DAMAGE * 2);
+                        }
+                        case LAVA -> {                           // 漏壶：盖棺铁围山 · 点燃
+                            living.hurt(living.damageSources().magic(), (float) DAMAGE);
+                            living.setSecondsOnFire(2);
+                        }
+                        case ICE -> {                            // 里梅：冰冻减速
+                            living.hurt(living.damageSources().magic(), (float) DAMAGE);
+                            living.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                                net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 40, 2));
+                        }
+                        case BLOOD -> {                          // 胀相：赤血 · 流血
+                            living.hurt(living.damageSources().magic(), (float) DAMAGE);
+                            living.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                                net.minecraft.world.effect.MobEffects.WITHER, 40, 0));
+                        }
+                        default -> living.hurt(living.damageSources().magic(), (float) DAMAGE);
+                    }
                 }
             }
         }

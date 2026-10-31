@@ -31,10 +31,11 @@ public final class TenShadows {
     /** 0=未调服时开始仪式，1=完全显现，2=不完全显现（开着时再点=解除）。 */
     public record Summon(int mode){}
     public static java.util.function.Consumer<State> receiver=s->{};
-    public static boolean incarnated(Player p){
+    public static boolean incarnated(Player p){return !character.CharacterService.toji(p)&&Curse.data(p).getBoolean("MegumiIncarnated");}
+    /** 能否使用十影操作（召唤/调服/收回）：受肉伏黑，或直接选了伏黑惠角色。外观仍只看 incarnated。 */
+    public static boolean canUse(Player p){
         var d=character.CharacterService.selected(p);
-        if(d!=null&&"megumi".equals(d.id()))return true;   // 伏黑惠角色线：直接用十影，不需要受肉
-        return !character.CharacterService.toji(p)&&Curse.data(p).getBoolean("MegumiIncarnated");
+        return incarnated(p)||d!=null&&"megumi".equals(d.id());
     }
     public static boolean tamed(Player p){return Curse.data(p).getBoolean("TenShadowsMahoragaTamed");}
     /** 不完全显现是十影状态，不占头盔栏；服务端据此给予法轮适应。 */

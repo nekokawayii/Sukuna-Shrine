@@ -159,19 +159,21 @@ public final class CharacterClient {
         int h=mc.getWindow().getGuiScaledHeight(),w=mc.getWindow().getGuiScaledWidth(),bar=Math.min(224,w-20);
         int y=12;for(var line:mc.font.split(Component.literal(Client.progress.guide()+" · J查看个人线"),Math.min(350,w-20))){g.drawString(mc.font,line,10,y,0xFFE5E2EC);y+=11;}
         double amount=toji()?state.stamina():Client.progress.energy(),max=toji()?state.maximum():Client.progress.maximum();
-        g.fill(7,h-102,7+bar,h-76,0xD0191C24);g.fill(11,h-84,3+bar,h-80,0xFF343A43);
-        g.fill(11,h-84,11+(int)((bar-8)*Math.max(0,Math.min(1,amount/Math.max(1,max)))),h-80,d.color());
-        g.drawString(mc.font,d.resourceName()+" "+(int)amount+" / "+(int)max+" · 阶段"+state.rank(),12,h-97,d.color());
-        g.fill(7,h-68,7+bar,h-12,0xC0151821);
-        g.drawString(mc.font,d.name()+" · "+d.technique(),12,h-63,d.color());
-        if(toji()){
-            g.drawString(mc.font,Client.CAST.getTranslatedKeyMessage().getString()+"突进20 · 潜行+释放 重击30",12,h-47,0xFFE3F4E9);
-            g.drawString(mc.font,"跳跃+释放 跃身25 · 停手恢复体术",12,h-31,0xFFB6CCBD);
-        }else{
-            g.drawString(mc.font,name(Client.selected),12,h-47,0xFFF1E9E7);
-            g.drawString(mc.font,"长按 "+Client.WHEEL.getTranslatedKeyMessage().getString()+" 选择 · "+Client.CAST.getTranslatedKeyMessage().getString()+" 释放",12,h-31,0xFFCAD0DB);
-            if(Client.progress.burnout())g.drawCenteredString(mc.font,"术式熔断中，请等待恢复",w/2,h-112,0xFFFF7986);
-        }
+        // 咒力（体术）统一用圆形液面表：最右下角，颜色跟随角色主题色，低于 30% 统一红
+        float ratio=(float)(amount/Math.max(1.0,max));
+        int ringSize=44,ringX=w-ringSize-8,ringY=h-ringSize-8;
+        int ringColor=ratio<=0.3f?0xFFE00000:d.color();
+        Client.drawCurseRing(g,mc,ratio,ringColor,ringX,ringY,ringSize);
+        String hint="长按 "+Client.WHEEL.getTranslatedKeyMessage().getString()+" · "+Client.CAST.getTranslatedKeyMessage().getString()+" 释放";
+        g.drawString(mc.font,hint,ringX-mc.font.width(hint)-6,ringY-24,0xFF8C7C88);
+        String skill=toji()?"甚尔 · 体术":name(Client.selected);
+        g.drawString(mc.font,skill,ringX-mc.font.width(skill)-6,ringY-14,0xFFF1E9E7);
+        String resource=(toji()?"体术 ":"咒力 ")+(int)amount+" / "+(int)max;
+        g.drawString(mc.font,resource,ringX-mc.font.width(resource)-6,ringY+ringSize-26,d.color());
+        String rank=d.name()+" · 阶段"+state.rank();
+        g.drawString(mc.font,rank,ringX-mc.font.width(rank)-6,ringY+ringSize-14,d.color());
+        if(!toji()&&Client.progress.burnout())
+            g.drawCenteredString(mc.font,"术式熔断中，请等待恢复",w/2,h-112,0xFFFF7986);
         return true;
     }
     private CharacterClient() {}

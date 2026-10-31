@@ -103,6 +103,10 @@ public final class MahitoTransfigure {
             p.sendSystemMessage(Component.literal("无为转变·贮存完成：右键贮存体可打开轮盘").withStyle(ChatFormatting.AQUA));
             return;
         }
+        if (action >= 1000) { MahitoPowers.materialize(p, action - 1000); return; }
+        if (action == 200) { MahitoPowers.wall(p); return; }
+        if (action == 201) { MahitoPowers.bridge(p); return; }
+        if (action == 300) { MahitoPowers.potential(p); return; }
         if (action >= FORM_CURSED_BASE && action <= FORM_CURSED_BASE + 4) { transformCursed(p, action - FORM_CURSED_BASE); return; }
         if (action < FORM_SWORD || action > FORM_CURSED) return;
         transform(p, action);

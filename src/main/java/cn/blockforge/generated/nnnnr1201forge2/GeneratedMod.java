@@ -78,6 +78,7 @@ public final class GeneratedMod {
         character.CharacterCasting.registerEffect("mahito",character.mahito.MahitoSkills.TRANSMUTE,
             (p,skill,rank)->character.mahito.MahitoTransfigure.arm(p));
         MinecraftForge.EVENT_BUS.register(character.mahito.MahitoTransfigure.class);
+        MinecraftForge.EVENT_BUS.register(character.mahito.MahitoPowers.class);
         character.CharacterCasting.registerEffect("mahito",character.mahito.MahitoSkills.SELF_EMBRYO,
             (p,skill,rank)->character.domainking.SelfEmbryoDomain.toggle(p));
         character.domainking.DomainKingCombat.register();

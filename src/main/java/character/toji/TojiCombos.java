@@ -29,73 +29,98 @@ public final class TojiCombos {
         C8 = 26, C9 = 24, C10 = 45, C11A = 20, C11B = 28, C11C = 35, C12 = 26, C13 = 8, C13_LAST = 30,
         C14 = 36, C15 = 32, C16 = 0, C17 = 30, C18 = 40, C19A = 24, C19B = 34, C20 = 0.8;
 
+    /** 连招配方：token 只要**按顺序**在窗口内出现过即可，中间插错键不影响。 */
+    private record Recipe(int combo, int... tokens) {}
+
+    private static final java.util.List<Recipe> RECIPES = java.util.List.of(
+        new Recipe(20, TojiQte.EXECUTE),
+        new Recipe(12, TojiQte.THROW),
+        new Recipe(16, TojiQte.USE),
+        new Recipe(19, TojiQte.ATTACK, TojiQte.AIR_DODGE, TojiQte.ATTACK),
+        new Recipe(13, TojiQte.DODGE, TojiQte.ATTACK, TojiQte.ATTACK, TojiQte.ATTACK, TojiQte.ATTACK,
+            TojiQte.ATTACK, TojiQte.ATTACK, TojiQte.ATTACK, TojiQte.ATTACK),
+        new Recipe(11, TojiQte.DODGE, TojiQte.WEAPON_TENKA, TojiQte.ATTACK, TojiQte.WEAPON_YUYUN,
+            TojiQte.ATTACK, TojiQte.USE),
+        new Recipe(10, TojiQte.DODGE, TojiQte.WEAPON_YUYUN, TojiQte.CHARGE_ATTACK),
+        new Recipe(15, TojiQte.JUMP, TojiQte.JUMP, TojiQte.ATTACK),
+        new Recipe(18, TojiQte.DODGE, TojiQte.WEAPON_YUYUN, TojiQte.ATTACK),
+        new Recipe(7, TojiQte.DODGE, TojiQte.WEAPON_YUYUN, TojiQte.ATTACK),
+        new Recipe(6, TojiQte.WEAPON_TENKA, TojiQte.ATTACK),
+        new Recipe(17, TojiQte.DODGE, TojiQte.DISARM),
+        new Recipe(8, TojiQte.GRAB, TojiQte.ATTACK),
+        new Recipe(4, TojiQte.DODGE, TojiQte.SHIFT_ATTACK),
+        new Recipe(5, TojiQte.SLIDE, TojiQte.ATTACK),
+        new Recipe(3, TojiQte.BACKSTEP, TojiQte.ATTACK),
+        new Recipe(9, TojiQte.AIR_DODGE, TojiQte.ATTACK),
+        new Recipe(2, TojiQte.DODGE, TojiQte.ATTACK, TojiQte.ATTACK),
+        new Recipe(14, TojiQte.DODGE, TojiQte.ATTACK),
+        new Recipe(1, TojiQte.DODGE, TojiQte.ATTACK));
+
     /** 匹配并执行。返回是否命中某招。 */
     public static boolean tryMatch(ServerPlayer p) {
-        List<Integer> seq = TojiQte.sequence(p);
+        java.util.List<Integer> seq = TojiQte.sequence(p);
         if (seq.isEmpty()) return false;
-        int size = seq.size();
-        int last = seq.get(size - 1);
-        // 20：完美闪避 3 次后按 F
-        if (last == TojiQte.EXECUTE && TojiQte.perfectCount(p) >= TojiQte.PERFECT_PER_EXECUTE) {
-            return done(p, 20) && execute(p);
+        java.util.List<Recipe> hits = new java.util.ArrayList<>();
+        for (Recipe recipe : RECIPES) {
+            if (isSubsequence(seq, recipe.tokens()) && lastIs(seq, recipe.tokens())) hits.add(recipe);
         }
-        // 12：敌人长前摇时提前按 R 投掷咒具（不需要闪避）
-        if (last == TojiQte.THROW) return done(p, 12) && intercept(p);
-        // 16：装备天逆鉾时右键弹反弹道
-        if (last == TojiQte.USE) return done(p, 16) && deflect(p);
-        // 19：跳 → 左键飞踢 → 空中闪避 → 左键下砸
-        if (size >= 4 && ends(seq, TojiQte.ATTACK, TojiQte.AIR_DODGE, TojiQte.ATTACK)) {
-            return done(p, 19) && aerialCombo(p);
+        hits.sort((a, b) -> b.tokens().length - a.tokens().length);   // 长的先试（越具体越优先）
+        for (Recipe recipe : hits) {
+            if (fire(p, recipe.combo())) { TojiQte.resetSequence(p); return true; }
         }
-        // 13：闪避后左键连点 8 次
-        if (size >= 9 && tailAll(seq, 8, TojiQte.ATTACK) && has(seq, TojiQte.DODGE)) {
-            return done(p, 13) && flurry(p);
-        }
-        // 11：闪避 → 天逆鉾 → 左键 → 游云 → 左键 → 右键
-        if (size >= 6 && ends(seq, TojiQte.DODGE, TojiQte.WEAPON_TENKA, TojiQte.ATTACK,
-                TojiQte.WEAPON_YUYUN, TojiQte.ATTACK, TojiQte.USE)) {
-            return done(p, 11) && tripleExecute(p);
-        }
-        // 10：闪避 → 游云 → 长按蓄力
-        if (size >= 3 && ends(seq, TojiQte.DODGE, TojiQte.WEAPON_YUYUN, TojiQte.CHARGE_ATTACK)) {
-            return done(p, 10) && chargedSmash(p);
-        }
-        // 7 / 18：闪避 → 游云 → 左键（目标在冲刺 → 18，否则 7）
-        if (size >= 3 && ends(seq, TojiQte.DODGE, TojiQte.WEAPON_YUYUN, TojiQte.ATTACK)) {
-            LivingEntity target = TojiQte.approach(p, 4.5);
-            boolean charging = target != null && target.getDeltaMovement().horizontalDistanceSqr() > 0.06
-                && target.getDeltaMovement().multiply(1, 0, 1).normalize()
-                .dot(p.position().subtract(target.position()).multiply(1, 0, 1).normalize()) > 0.6;
-            if (charging) return done(p, 18) && bat(p, target);
-            return done(p, 7) && kneeStrike(p, target);
-        }
-        // 6：天逆鉾砍有增益/护盾的目标（不需要闪避）
-        if (last == TojiQte.ATTACK && size >= 2 && seq.get(size - 2) == TojiQte.WEAPON_TENKA) {
-            return done(p, 6) && breakMagic(p);
-        }
-        // 17：闪避 → E 缴械
-        if (size >= 2 && ends(seq, TojiQte.DODGE, TojiQte.DISARM)) return done(p, 17) && disarm(p);
-        // 8：按 G 抓取 → 左键
-        if (size >= 2 && ends(seq, TojiQte.GRAB, TojiQte.ATTACK)) return done(p, 8) && hostage(p);
-        // 4：闪避 → Shift+左键 过肩摔
-        if (size >= 2 && ends(seq, TojiQte.DODGE, TojiQte.SHIFT_ATTACK)) return done(p, 4) && suplex(p);
-        // 5：Ctrl 滑铲 → 左键
-        if (size >= 2 && ends(seq, TojiQte.SLIDE, TojiQte.ATTACK)) return done(p, 5) && slideKick(p);
-        // 3：Shift+空格后撤 → 左键
-        if (size >= 2 && ends(seq, TojiQte.BACKSTEP, TojiQte.ATTACK)) return done(p, 3) && flyingKick(p);
-        // 9：空中闪避 → 左键 踩头处决
-        if (size >= 2 && ends(seq, TojiQte.AIR_DODGE, TojiQte.ATTACK)) return done(p, 9) && stomp(p);
-        // 2：闪避 → 左键 → 左键（快速两连，必须排在最基础的反击之前）
-        if (size >= 3 && ends(seq, TojiQte.DODGE, TojiQte.ATTACK, TojiQte.ATTACK)) return done(p, 2) && boneKnee(p);
-        // 14：闪避 → 左键，且目标背后 2 格是墙
-        if (size >= 2 && ends(seq, TojiQte.DODGE, TojiQte.ATTACK)) {
-            LivingEntity target = TojiQte.approach(p, 4.0);
-            if (target != null && wallBehind(p, target)) return done(p, 14) && wallSlam(p, target);
-            return done(p, 1) && counter(p);
-        }
-        // 15：连续两次空中闪避（蹬墙）后左键
-        if (size >= 3 && ends(seq, TojiQte.JUMP, TojiQte.JUMP, TojiQte.ATTACK)) return done(p, 15) && parkourKick(p);
         return false;
+    }
+
+    /** 按顺序出现过即可（允许中间夹着别的按键）。 */
+    private static boolean isSubsequence(java.util.List<Integer> seq, int[] pattern) {
+        int index = 0;
+        for (int token : seq) {
+            if (index < pattern.length && token == pattern[index]) index++;
+        }
+        return index == pattern.length;
+    }
+
+    /** 序列的最后一个 token 必须是这一招的收尾键（避免"打完了又按错键"还触发）。 */
+    private static boolean lastIs(java.util.List<Integer> seq, int[] pattern) {
+        return !seq.isEmpty() && seq.get(seq.size() - 1) == pattern[pattern.length - 1];
+    }
+
+    /** 执行某一招；条件不满足（比如背后没墙、附近没弹幕）返回 false 让下一招接着试。 */
+    private static boolean fire(ServerPlayer p, int combo) {
+        LivingEntity target = TojiQte.approach(p, 4.5);
+        switch (combo) {
+            case 1 -> { return counter(p); }
+            case 2 -> { return boneKnee(p); }
+            case 3 -> { return flyingKick(p); }
+            case 4 -> { return suplex(p); }
+            case 5 -> { return slideKick(p); }
+            case 6 -> {
+                if (target == null || target.getActiveEffects().stream().noneMatch(effect -> effect.getEffect().isBeneficial()))
+                    return false;                                   // 目标身上没有增益就不算破魔
+                return breakMagic(p);
+            }
+            case 7 -> { return kneeStrike(p, target); }
+            case 8 -> { return hostage(p); }
+            case 9 -> { return stomp(p); }
+            case 10 -> { return chargedSmash(p); }
+            case 11 -> { return tripleExecute(p); }
+            case 12 -> { return intercept(p); }
+            case 13 -> { return flurry(p); }
+            case 14 -> {
+                if (target == null || !wallBehind(p, target)) return false;   // 背后没墙就打基础反击
+                return wallSlam(p, target);
+            }
+            case 15 -> { return parkourKick(p); }
+            case 16 -> { return deflect(p); }
+            case 17 -> { return disarm(p); }
+            case 18 -> { return bat(p, target); }
+            case 19 -> { return aerialCombo(p); }
+            case 20 -> {
+                if (TojiQte.perfectCount(p) < TojiQte.PERFECT_PER_EXECUTE) return false;
+                return execute(p);
+            }
+            default -> { return false; }
+        }
     }
 
     // ── 1~5 入门 ─────────────────────────────────────────
@@ -406,25 +431,6 @@ public final class TojiCombos {
             if (!p.serverLevel().getBlockState(at).getCollisionShape(p.serverLevel(), at).isEmpty()) return true;
         }
         return false;
-    }
-
-    // 小工具：后缀/包含判断
-    private static boolean ends(List<Integer> seq, int... tail) {
-        if (seq.size() < tail.length) return false;
-        for (int i = 0; i < tail.length; i++) {
-            if (seq.get(seq.size() - tail.length + i) != tail[i]) return false;
-        }
-        return true;
-    }
-
-    private static boolean has(List<Integer> seq, int token) {
-        return seq.contains(token);
-    }
-
-    private static boolean tailAll(List<Integer> seq, int count, int token) {
-        if (seq.size() < count + 1) return false;
-        for (int i = seq.size() - count; i < seq.size(); i++) if (seq.get(i) != token) return false;
-        return true;
     }
 
     private TojiCombos() {}

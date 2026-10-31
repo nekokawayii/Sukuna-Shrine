@@ -167,7 +167,7 @@ public final class TojiQte {
         }
         com.mojang.logging.LogUtils.getLogger().info("[甚尔] 输入 token={} 窗口={} 连招窗口={}",
             token, n < d.getLong(K_WINDOW), n < d.getLong(K_COMBO));
-        if (token != JUMP) push(p, token, n);
+        push(p, token, n);
     }
 
     /** 完美闪避：躲开 5 格（背对威胁方向）、无敌帧、速度 ×2、下一击翻倍。 */

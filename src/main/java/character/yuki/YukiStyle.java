@@ -12,7 +12,7 @@ public final class YukiStyle {
         return new CharacterConfig(
             new Wheel("九十九由基", "星之怒", 0xE01A1420, 0xE02C2138, 0xE0FFC46B, 0xB03A2E44, 0xFFFFF1DC),
             // 数值怪：高咒力、高生命、高近战与术式加成，回咒也快。
-            new Stats(6000, 30, 8, 10, 20),
+            new Stats(6000, 10, 8, 10, 20),
             Stats.ZERO,
             YukiSkills.all(),
             Map.of(),

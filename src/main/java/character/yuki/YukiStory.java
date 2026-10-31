@@ -34,7 +34,10 @@ public final class YukiStory {
         for (int i = 0; i < KILLS.length; i++) {
             int n = i + 1;
             // 注意：CharacterDefinition 会把整条线的奖励累加后校验，每项必须 ≤ 100 万。
-            Stats stats = new Stats(9000, 40 + n * 4, 2 + n * 2, 4 + n * 3, 2 + n);
+            // 生命上限封顶 300：只有前 27 章加生命（27×10=270，加基础 30 正好 300），
+            // 之后不再涨血，改由 YukiCombat 按章节数提供「抗性」（减伤）。
+            double hp = n <= 27 ? 10 : 0;
+            Stats stats = new Stats(9000, hp, 2 + n * 2, 4 + n * 3, 2 + n);
             list.add(new Chapter("yuki_" + n, "第" + n + "章·" + WORDS[i % WORDS.length] + " " + ((i / WORDS.length) + 1),
                 KILLS[i], "累计击败 " + KILLS[i] + " 个敌人", "质量成长",
                 new CharacterReward(stats, 30 + n * 6, 80 + n * 25, List.of())));

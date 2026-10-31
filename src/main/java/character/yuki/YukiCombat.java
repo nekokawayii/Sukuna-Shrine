@@ -236,5 +236,21 @@ public final class YukiCombat {
         return null;
     }
 
+    /** 生命封顶之后，成长改走「抗性」：27 章以后每多一章 +1% 减伤，上限 60%。 */
+    public static double resist(ServerPlayer p) {
+        if (!"yuki".equals(character.CharacterService.selected(p) == null ? ""
+            : character.CharacterService.selected(p).id())) return 0;
+        int rank = character.CharacterService.rank(p);
+        return Math.min(0.60, Math.max(0, rank - 27) * 0.01);
+    }
+
+    @net.minecraftforge.eventbus.api.SubscribeEvent
+    public static void onHurt(net.minecraftforge.event.entity.living.LivingHurtEvent e) {
+        if (!(e.getEntity() instanceof ServerPlayer p)) return;
+        double cut = resist(p);
+        if (cut <= 0) return;
+        e.setAmount((float) (e.getAmount() * (1 - cut)));
+    }
+
     private YukiCombat() {}
 }

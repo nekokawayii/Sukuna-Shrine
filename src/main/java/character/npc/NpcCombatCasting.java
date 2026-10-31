@@ -98,13 +98,30 @@ public final class NpcCombatCasting {
         } else if (id.contains("hakari_npc")) {
             if (distance <= 6 && ready(mob, K_ATK, 40)) {
                 hurtAround(mob, player, 3.5, (int) (18 * (jackpot ? 2 : 1)));
+                rollSlot(mob);
                 fire(mob, player, 0xFFFFC44D);
             } else if (distance <= 14 && ready(mob, K_ATK, 60)) {
                 hurtAround(mob, player, 5, (int) (9 * (jackpot ? 2 : 1)));
+                rollSlot(mob);
                 fire(mob, player, 0xFFE0E0E0);
             }
             if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 30, NpcDomain.Style.PACHINKO);   // 坐杀博徒（与玩家同半径 30）
         }
+    }
+
+    /** 秤金次 NPC 的抽奖：每次攻击命中 +1 格，满 30 格中奖 4 分 11 秒。 */
+    private static void rollSlot(Mob mob) {
+        if (!(mob.level() instanceof ServerLevel level)) return;
+        var data = mob.getPersistentData();
+        int luck = data.getInt("HakariNpcLuck") + 1;
+        if (luck >= 30) {
+            luck = 0;
+            data.putLong("HakariNpcJackpot", level.getGameTime() + 5020);
+            mob.heal(mob.getMaxHealth());
+            Network.send(level, new Network.Effect(character.hakari.HakariFx.JACKPOT, mob.getId(),
+                mob.position(), Vec3.ZERO, 1f, 5020, 0));
+        }
+        data.putInt("HakariNpcLuck", luck);
     }
 
     private static void hurtAround(Mob mob, ServerPlayer player, double radius, int damage) {

@@ -180,30 +180,13 @@ public final class NpcDomain {
                     }
                 }
             }
-            if (job.style != Style.FIREWORK && job.level.getGameTime() % 10 == 0) {
+            if (job.style != Style.FIREWORK && job.style != Style.PACHINKO && job.level.getGameTime() % 10 == 0) {
                 double r2 = (double) RADIUS * RADIUS;
                 for (LivingEntity living : job.level.getEntitiesOfClass(LivingEntity.class,
                         new AABB(job.center).inflate(RADIUS), t -> t != owner && t.isAlive()
                             && !(t instanceof Mob m && m.getType() == owner.getType()))) {
                     if (living.distanceToSqr(Vec3.atCenterOf(job.center)) > r2) continue;
                     switch (job.style) {
-                        case PACHINKO -> {
-                            long jackpotUntil = owner.getPersistentData().getLong("HakariNpcJackpot");
-                            boolean jackpot = jackpotUntil > job.level.getGameTime();
-                            living.hurt(living.damageSources().magic(), (float) DAMAGE * (jackpot ? 2 : 1));
-                            // 打人即抽奖：每命中一次 +1 格，满 30 格中奖
-                            var data = owner.getPersistentData();
-                            int luck = data.getInt("HakariNpcLuck") + 1;
-                            if (luck >= 30) {
-                                luck = 0;
-                                data.putLong("HakariNpcJackpot", job.level.getGameTime() + 5020);
-                                owner.heal(owner.getMaxHealth());
-                                ServerLevel sl = job.level;
-                                Network.send(sl, new Network.Effect(character.hakari.HakariFx.JACKPOT,
-                                    owner.getId(), owner.position(), Vec3.ZERO, 1f, 5020, 0));
-                            }
-                            data.putInt("HakariNpcLuck", luck);
-                        }
                         case FIREWORK -> {                       // 石流龙：打上花火 · 追踪烟花
                             living.hurt(living.damageSources().magic(), (float) DAMAGE);
                             if (living.level() instanceof ServerLevel sl)

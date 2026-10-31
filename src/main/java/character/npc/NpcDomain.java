@@ -44,6 +44,7 @@ public final class NpcDomain {
         final List<BlockState> states = new ArrayList<>();
         final List<BlockPos> plan = new ArrayList<>();
         final Map<Long, Integer> decor = new HashMap<>();
+        final Map<Long, BlockState> decorBlock = new HashMap<>();
         int cursor;
 
         Job(UUID owner, ServerLevel level, BlockPos center, long end, Style style) {
@@ -77,6 +78,29 @@ public final class NpcDomain {
                     if (shell || floor) job.plan.add(center.offset(dx, dy, dz));
                     else if (inside && !keep) job.plan.add(center.offset(dx, dy, dz).immutable());
                 }
+        if (style == Style.HIGURUMA) {
+            // 1:1 铺玩家那套法庭结构（黑混凝土/桦木/深色橡木/安山岩/紫水晶/铁栏/珠光蛙明灯）
+            BlockPos origin = center.offset(-character.higuruma.HigurumaLayout.SIZE_X / 2, -23,
+                -character.higuruma.HigurumaLayout.SIZE_Z / 2);
+            try {
+                byte[] raw = java.util.Base64.getDecoder().decode(character.higuruma.HigurumaLayout.DATA);
+                var inflater = new java.util.zip.Inflater();
+                inflater.setInput(raw);
+                byte[] out = new byte[character.higuruma.HigurumaLayout.SIZE_X
+                    * character.higuruma.HigurumaLayout.SIZE_Y * character.higuruma.HigurumaLayout.SIZE_Z * 4];
+                int n = inflater.inflate(out);
+                for (int i = 0; i + 3 < n; i += 4) {
+                    int x = out[i] & 0xFF, y = out[i + 1] & 0xFF, z = out[i + 2] & 0xFF, pal = out[i + 3] & 0xFF;
+                    if (pal >= character.higuruma.HigurumaLayout.PALETTE.length) continue;
+                    var block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(
+                        net.minecraft.resources.ResourceLocation.tryParse(
+                            character.higuruma.HigurumaLayout.PALETTE[pal]));
+                    BlockPos pos = origin.offset(x, y, z);
+                    job.decorBlock.put(pos.asLong(), block.defaultBlockState());
+                    if (!job.plan.contains(pos)) job.plan.add(pos);
+                }
+            } catch (Exception ignored) { }
+        }
         if (style == Style.NAOYA) {
             // 1:1 铺玩家那套烘焙布局（白环/紫水晶/眼球）；地板层只去黑地板、保留白路与紫水晶
             character.naoya.NaoyaDomainLayout.forEach((rel, state) -> {
@@ -163,6 +187,8 @@ public final class NpcDomain {
                     : air;
                 if (job.style == Style.PACHINKO && isFloor) block = Blocks.GOLD_BLOCK.defaultBlockState();
                 if (job.style == Style.BLOOD && isFloor) block = Blocks.RED_CONCRETE.defaultBlockState();
+                BlockState courtBlock = job.decorBlock.get(pos.asLong());
+                if (courtBlock != null) { job.level.setBlock(pos, courtBlock, 2); done++; continue; }
                 Integer decor = job.decor.get(pos.asLong());
                 if (decor != null)
                     block = switch (decor) {

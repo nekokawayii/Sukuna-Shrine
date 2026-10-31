@@ -124,6 +124,7 @@ public final class NpcDomain {
                     ? (job.style == Style.FIREWORK && outer ? Blocks.BEDROCK.defaultBlockState() : shell)
                     : air;
                 if (job.style == Style.PACHINKO && isFloor) block = Blocks.GOLD_BLOCK.defaultBlockState();
+                if (job.style == Style.BLOOD && isFloor) block = Blocks.RED_CONCRETE.defaultBlockState();
                 if (job.style == Style.NAOYA && isFloor)
                     block = (Math.abs(pos.getX() - job.center.getX()) + Math.abs(pos.getZ() - job.center.getZ())) % 6 == 0
                         ? Blocks.WHITE_CONCRETE.defaultBlockState() : Blocks.BLACK_CONCRETE.defaultBlockState();
@@ -214,8 +215,9 @@ public final class NpcDomain {
                             living.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                                 net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, 40, 2));
                         }
-                        case BLOOD -> {                          // 胀相：赤血 · 流血
+                        case BLOOD -> {                          // 胀相：胎海 · 流血 + 施术者命中回血
                             living.hurt(living.damageSources().magic(), (float) DAMAGE);
+                            owner.heal(2f);
                             living.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                                 net.minecraft.world.effect.MobEffects.WITHER, 40, 0));
                         }

@@ -89,6 +89,8 @@ public final class NpcCombatCasting {
                 hurtAround(mob, player, 5, 10);
                 fire(mob, player, 0xFFFF7AA0);
             }
+            if (ready(mob, K_DOM, 1200) && distance <= 24)
+                NpcDomain.open(mob, 26, NpcDomain.Style.BLOOD);     // 胎海·赤血领域
         } else if (id.contains("ryu_npc")) {
             if (distance <= 14 && ready(mob, K_ATK, 60)) {
                 hurtAround(mob, player, 5, 16);

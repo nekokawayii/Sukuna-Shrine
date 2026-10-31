@@ -63,7 +63,9 @@ public final class NaoyaCombat {
     private static final int END_NONE = 0, END_ASSIMILATE = 1, END_INTERCEPT = 2, END_SKYSTEP = 3;
 
     // ── 输入 token（客户端 → 服务端） ─────────────────────
-    public static final int CHARGE = 0, PLACE = 1, EXECUTE = 2;
+    public static final int CHARGE = 0, PLACE = 1, EXECUTE = 2,
+        /** 千手乱舞：按住左键开、松开关。 */
+        AUTO_ON = 3, AUTO_OFF = 4;
 
     public static long now(net.minecraft.world.entity.Entity e) { return e.level().getGameTime(); }
 
@@ -73,12 +75,8 @@ public final class NaoyaCombat {
         switch (skill) {
             case NaoyaSkills.PROJECT -> startProjection(p);
             case NaoyaSkills.RELEASE -> release(p);
-            case NaoyaSkills.DOMAIN -> {
-                Network.send(p.serverLevel(), new Network.Effect(NaoyaFx.DOMAIN, p.getId(), p.position(),
-                    Vec3.ZERO, 1f, 20, 0));
-                p.sendSystemMessage(Component.literal("领域展开（占位）：直哉的领域还没做，本次只播放起手")
-                    .withStyle(ChatFormatting.GRAY));
-            }
+            case NaoyaSkills.DOMAIN -> NaoyaDomain.toggle(p);        // 时胞月宫殿
+
             default -> {
                 Curse.data(p).putInt(K_SELECTED, skill);
                 technique(p, Curse.data(p), skill);      // 释放键直接释放：自动生成投影点并立刻冲过去
@@ -155,6 +153,8 @@ public final class NaoyaCombat {
                     + String.format(java.util.Locale.ROOT, "%.1f", range) + " 格）").withStyle(ChatFormatting.AQUA), true);
             }
             case EXECUTE -> execute(p, data);
+            case AUTO_ON -> NaoyaDomain.autoAttack(p, true);
+            case AUTO_OFF -> NaoyaDomain.autoAttack(p, false);
             default -> { }
         }
     }
@@ -508,6 +508,7 @@ public final class NaoyaCombat {
 
     @SubscribeEvent public static void serverTick(TickEvent.ServerTickEvent e) {
         if (e.phase != TickEvent.Phase.END) return;
+        NaoyaDomain.tick(e.getServer());
         tickPlanes(e.getServer());
         if (LOCKS.isEmpty()) return;
         LOCKS.removeIf(lock -> {

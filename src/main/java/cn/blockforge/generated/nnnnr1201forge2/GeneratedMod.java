@@ -137,6 +137,7 @@ public final class GeneratedMod {
                 (character.CharacterCasting.Effect) (p2, s3, r3) -> character.naoya.NaoyaCombat.cast(p2, s3.id()));
         }
         MinecraftForge.EVENT_BUS.register(character.naoya.NaoyaCombat.class);
+        MinecraftForge.EVENT_BUS.register(character.naoya.NaoyaDomain.class);
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent event) -> {
             character.kashimo.KashimoCharges.reset();
             character.kashimo.KashimoZones.reset();
@@ -144,6 +145,7 @@ public final class GeneratedMod {
             character.nanami.NanamiRatio.reset();
             character.ryu.RyuCombat.reset();
             character.ryu.RyuDomain.reset();
+            character.naoya.NaoyaDomain.reset();
         });
         character.CharacterCasting.registerEffect("megumi", character.megumi.MegumiSkills.TEN_SHADOWS, (net.minecraft.server.level.ServerPlayer p, character.CharacterSkill skill, int rank) -> Network.sendTo(p, new Network.Effect(308, p.getId(), p.position(), net.minecraft.world.phys.Vec3.ZERO, 0f, 0, 0)));
         // 九十九由基·星之怒：四招全部原版伤害实现

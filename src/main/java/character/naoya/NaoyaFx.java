@@ -24,7 +24,9 @@ public final class NaoyaFx {
     public static final int DOMAIN = 527;
     /** 设定完成：position=基准位置，direction=(0,基准朝向,0)，此后整条投影跟随并随准星旋转。 */
     public static final int ANCHOR = 530;
-    public static final int FIRST = PROJECT, LAST = 530;
+    /** 领域里的半透明影子：position=施术者，direction=指向目标，size=组数。 */
+    public static final int SHADOW = 531;
+    public static final int FIRST = PROJECT, LAST = 531;
 
     private NaoyaFx() {}
 }

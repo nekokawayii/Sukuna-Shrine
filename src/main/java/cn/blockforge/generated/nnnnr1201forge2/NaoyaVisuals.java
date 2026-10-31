@@ -39,11 +39,17 @@ public final class NaoyaVisuals {
     private static int anchorOwner = -1;
     /** 设定完成后的基准：位置 + 朝向（之后整条投影跟着玩家并随准星旋转）。 */
     private static Vec3 base;
+    private static long domainUntil;
     private static float baseYaw;
     private static final List<Trail> TRAILS = new ArrayList<>();
     private static final List<Plane> PLANES = new ArrayList<>();
     private static final List<Shards> SHARDS = new ArrayList<>();
     private static long projectUntil;
+
+    public static boolean domainActive() {
+        var mc = Minecraft.getInstance();
+        return mc.level != null && mc.level.getGameTime() < domainUntil;
+    }
 
     public static boolean projecting() {
         var mc = Minecraft.getInstance();
@@ -63,6 +69,15 @@ public final class NaoyaVisuals {
             case NaoyaFx.GHOST -> {
                 GHOSTS.removeIf(g -> g.owner() == e.owner());
                 GHOSTS.add(new Ghost(e.owner(), e.position(), e.direction(), now + Math.max(1, e.life())));
+            }
+            case NaoyaFx.DOMAIN -> domainUntil = e.size() > 0 ? now + Math.max(1, e.life()) : 0;
+            case NaoyaFx.SHADOW -> {
+                // 半透明影子：从施术者位置朝目标扑过去（用残影人形渲染，深色）
+                GHOSTS.add(new Ghost(e.owner(), e.position(), e.direction().normalize(), now + 20));
+                if (PhotonFx.ready()) {
+                    PhotonFx.spark(e.position().add(e.direction().normalize().scale(2)), 2.2, 1.0,
+                        0xFF3B4A66, 0xFF9FB6FF, "textures/effect/glow.png", true, 6, 8, 24, 0.35);
+                }
             }
             case NaoyaFx.ANCHOR -> {
                 base = e.position();

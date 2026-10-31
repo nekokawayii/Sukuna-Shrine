@@ -33,6 +33,18 @@ public final class NaoyaClient {
         return false;
     }
 
+    /** 领域内按住左键 = 千手乱舞（16 次/秒自动连打），与投影模式的右键互不影响。 */
+    public static boolean attack(int action) {
+        var mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return false;
+        var selected = character.CharacterClient.selected();
+        if (selected == null || !"naoya".equals(selected.id())) return false;
+        if (!NaoyaVisuals.domainActive()) return false;
+        if (action == GLFW.GLFW_PRESS) send(NaoyaCombat.AUTO_ON);
+        else if (action == GLFW.GLFW_RELEASE) send(NaoyaCombat.AUTO_OFF);
+        return true;
+    }
+
     public static void tick() {
         var mc = Minecraft.getInstance();
         if (mc.level == null || !NaoyaVisuals.projecting()) charging = false;

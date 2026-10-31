@@ -116,6 +116,7 @@ public final class GeneratedMod {
         character.CharacterCasting.registerEffect("yuki", character.yuki.YukiSkills.DOMAIN, character.yuki.YukiCombat::domain);
         MinecraftForge.EVENT_BUS.addListener(character.yuki.YukiDomain::onServerTick);
         MinecraftForge.EVENT_BUS.addListener(character.yuki.YukiCombat::onHurt);
+        MinecraftForge.EVENT_BUS.addListener(character.yuki.YukiCombat::onPlayerTick);
         character.CharacterCasting.registerEffect("yuki", character.yuki.YukiSkills.STAR_RAGE, character.yuki.YukiCombat::starRage);
         MinecraftForge.EVENT_BUS.register(character.CharacterService.class);
         MinecraftForge.EVENT_BUS.register(character.CharacterRewards.class);

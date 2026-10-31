@@ -236,6 +236,29 @@ public final class YukiCombat {
         return null;
     }
 
+    /**
+     * 回血：生命封顶之后，章节数继续提供每秒生命恢复。
+     * <p>公式：1 + (章节 - 27) × 0.5 点/秒，且不超过最大生命的 10%。
+     * <p>100 章时约 37.5 点/秒，但被 10%（=30 点/秒）夹住。
+     */
+    public static float regenPerSecond(ServerPlayer p) {
+        int rank = character.CharacterService.rank(p);
+        float raw = 1f + Math.max(0, rank - 27) * 0.5f;
+        return Math.min(raw, p.getMaxHealth() * 0.10f);
+    }
+
+    /** 每秒结算一次生命恢复（仅九十九由基）。 */
+    @net.minecraftforge.eventbus.api.SubscribeEvent
+    public static void onPlayerTick(net.minecraftforge.event.TickEvent.PlayerTickEvent e) {
+        if (e.phase != net.minecraftforge.event.TickEvent.Phase.END) return;
+        if (!(e.player instanceof ServerPlayer p) || p.level().isClientSide) return;
+        if (p.tickCount % 20 != 0) return;
+        var def = character.CharacterService.selected(p);
+        if (def == null || !"yuki".equals(def.id())) return;
+        if (p.getHealth() <= 0 || p.getHealth() >= p.getMaxHealth()) return;
+        p.heal(regenPerSecond(p));
+    }
+
     /** 生命封顶之后，成长改走「抗性」：27 章以后每多一章 +1% 减伤，上限 60%。 */
     public static double resist(ServerPlayer p) {
         if (!"yuki".equals(character.CharacterService.selected(p) == null ? ""

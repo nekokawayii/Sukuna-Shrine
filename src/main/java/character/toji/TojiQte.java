@@ -51,7 +51,11 @@ public final class TojiQte {
     // ── 输入 token ────────────────────────────────────────
     public static final int DODGE = 0, BACKSTEP = 1, SLIDE = 2, ATTACK = 3, SHIFT_ATTACK = 4, USE = 5,
         WEAPON_YUYUN = 6, WEAPON_TENKA = 7, GRAB = 8, DISARM = 9, EXECUTE = 10, THROW = 11,
-        AIR_DODGE = 12, CHARGE_ATTACK = 13, JUMP = 14;
+        AIR_DODGE = 12, CHARGE_ATTACK = 13, JUMP = 14,
+        /** J 身法键：地面=后撤步，空中=空中闪避/二段跳。 */
+        MOBILITY = 15,
+        /** K 重击键：只作为连招 token（蓄力/处决/投掷/弹反）。 */
+        HEAVY = 16;
 
     // ── 状态键 ────────────────────────────────────────────
     static final String K_WINDOW = "TojiQteUntil", K_TARGET = "TojiQteTarget", K_PERFECT = "TojiPerfectUntil",
@@ -159,6 +163,19 @@ public final class TojiQte {
             }
             case AIR_DODGE -> {
                 if (n < d.getLong(K_WINDOW) && !p.onGround()) airDodge(p, n);
+            }
+            case MOBILITY -> {
+                if (!p.onGround()) {
+                    if (d.getBoolean("TojiAirDodged")) airJump(p, n);
+                    else airDodge(p, n);
+                } else {
+                    Vec3 back = p.getLookAngle().multiply(-1, 0, 1).normalize();
+                    teleportAlong(p, back, BACKSTEP_DISTANCE);
+                    p.serverLevel().playSound(null, p.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
+                        SoundSource.PLAYERS, 0.5f, 0.8f);
+                    d.putLong(K_COMBO, n + COMBO_TICKS);
+                    extendComboWindow(p);
+                }
             }
             case JUMP -> airJump(p, n);
             case WEAPON_YUYUN -> equipWeapon(p, true);

@@ -40,51 +40,37 @@ public final class TojiQteClient {
     /** 返回 true 表示这次按键已被 QTE 吃掉（调用方不应再走施法/轮盘）。 */
     public static boolean key(int key, int action, int mods) {
         if (!active() || action == GLFW.GLFW_RELEASE) return false;
-        boolean shift = (mods & GLFW.GLFW_MOD_SHIFT) != 0;
         var player = Minecraft.getInstance().player;
         if (player == null) return false;
-        int token = -1;
-        if (key == GLFW.GLFW_KEY_SPACE) {
-            if (player.onGround()) token = shift ? TojiQte.BACKSTEP : TojiQte.DODGE;
-            else token = airPresses++ == 0 ? TojiQte.AIR_DODGE : TojiQte.JUMP;
-        } else if (key == GLFW.GLFW_KEY_LEFT_CONTROL || key == GLFW.GLFW_KEY_RIGHT_CONTROL) {
-            token = TojiQte.SLIDE;
-        } else if (key == GLFW.GLFW_KEY_G) token = TojiQte.GRAB;
-        else if (key == GLFW.GLFW_KEY_E) {
-            token = TojiQte.DISARM;
-            Minecraft.getInstance().execute(() -> Minecraft.getInstance().setScreen(null));   // 别让背包界面顶掉连招
-        } else if (key == GLFW.GLFW_KEY_F) token = TojiQte.EXECUTE;
-        else if (key == GLFW.GLFW_KEY_R) token = TojiQte.THROW;
-        else if (key == GLFW.GLFW_KEY_1) token = TojiQte.WEAPON_YUYUN;
-        else if (key == GLFW.GLFW_KEY_2) token = TojiQte.WEAPON_TENKA;
+        int token = switch (key) {
+            case GLFW.GLFW_KEY_SPACE -> player.onGround() ? TojiQte.DODGE
+                : (airPresses++ == 0 ? TojiQte.AIR_DODGE : TojiQte.MOBILITY);
+            case GLFW.GLFW_KEY_G -> TojiQte.GRAB;
+            case GLFW.GLFW_KEY_H -> TojiQte.WEAPON_YUYUN;
+            case GLFW.GLFW_KEY_J -> TojiQte.MOBILITY;
+            case GLFW.GLFW_KEY_K -> TojiQte.HEAVY;
+            default -> -1;
+        };
         if (token < 0) return false;
         send(token);
         return true;
     }
 
-    /** 鼠标：左键攻击（按住 1 秒＝蓄力），Shift+左键＝过肩摔，右键＝弹反/使用。 */
+    /** 鼠标：窗口内左键＝连招攻击（按住 1 秒＝蓄力重击），其余按键不碰。 */
     public static boolean mouse(int button, int action, int mods) {
         if (!active()) return false;
         var mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return false;
-        boolean shift = (mods & GLFW.GLFW_MOD_SHIFT) != 0;
-        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-            if (action == GLFW.GLFW_PRESS) {
-                holding = true;
-                pressedAt = mc.level.getGameTime();
-                if (shift) { send(TojiQte.SHIFT_ATTACK); holding = false; }
-            } else if (action == GLFW.GLFW_RELEASE && holding) {
-                holding = false;
-                long held = mc.level.getGameTime() - pressedAt;
-                send(held >= 20 ? TojiQte.CHARGE_ATTACK : TojiQte.ATTACK);
-            }
-            return true;
+        if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+        if (action == GLFW.GLFW_PRESS) {
+            holding = true;
+            pressedAt = mc.level.getGameTime();
+        } else if (action == GLFW.GLFW_RELEASE && holding) {
+            holding = false;
+            long held = mc.level.getGameTime() - pressedAt;
+            send(held >= 20 ? TojiQte.HEAVY : TojiQte.ATTACK);
         }
-        if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT && action == GLFW.GLFW_PRESS) {
-            send(TojiQte.USE);
-            return true;
-        }
-        return false;
+        return true;
     }
 
     public static void tick() {

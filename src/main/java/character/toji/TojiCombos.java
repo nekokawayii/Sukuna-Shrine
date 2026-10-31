@@ -32,29 +32,33 @@ public final class TojiCombos {
     /** 连招配方：token 只要**按顺序**在窗口内出现过即可，中间插错键不影响。 */
     private record Recipe(int combo, int... tokens) {}
 
+    /**
+     * 五种键：**左键＝攻击 · G＝抓取/投技 · H＝咒具 · J＝身法（地面前撤/空中闪避、二段跳） · K＝重击**。
+     * 同一组键在不同处境（地面/空中/背后有墙/敌人冲刺）会落到不同的招，靠顺序 + 条件自动区分。
+     */
     private static final java.util.List<Recipe> RECIPES = java.util.List.of(
-        new Recipe(20, TojiQte.EXECUTE),
-        new Recipe(12, TojiQte.THROW),
-        new Recipe(16, TojiQte.USE),
-        new Recipe(19, TojiQte.ATTACK, TojiQte.AIR_DODGE, TojiQte.ATTACK),
-        new Recipe(13, TojiQte.DODGE, TojiQte.ATTACK, TojiQte.ATTACK, TojiQte.ATTACK, TojiQte.ATTACK,
-            TojiQte.ATTACK, TojiQte.ATTACK, TojiQte.ATTACK, TojiQte.ATTACK),
-        new Recipe(11, TojiQte.DODGE, TojiQte.WEAPON_TENKA, TojiQte.ATTACK, TojiQte.WEAPON_YUYUN,
-            TojiQte.ATTACK, TojiQte.USE),
-        new Recipe(10, TojiQte.DODGE, TojiQte.WEAPON_YUYUN, TojiQte.CHARGE_ATTACK),
-        new Recipe(15, TojiQte.JUMP, TojiQte.JUMP, TojiQte.ATTACK),
-        new Recipe(18, TojiQte.DODGE, TojiQte.WEAPON_YUYUN, TojiQte.ATTACK),
-        new Recipe(7, TojiQte.DODGE, TojiQte.WEAPON_YUYUN, TojiQte.ATTACK),
-        new Recipe(6, TojiQte.WEAPON_TENKA, TojiQte.ATTACK),
-        new Recipe(17, TojiQte.DODGE, TojiQte.DISARM),
-        new Recipe(8, TojiQte.GRAB, TojiQte.ATTACK),
-        new Recipe(4, TojiQte.DODGE, TojiQte.SHIFT_ATTACK),
-        new Recipe(5, TojiQte.SLIDE, TojiQte.ATTACK),
-        new Recipe(3, TojiQte.BACKSTEP, TojiQte.ATTACK),
-        new Recipe(9, TojiQte.AIR_DODGE, TojiQte.ATTACK),
-        new Recipe(2, TojiQte.DODGE, TojiQte.ATTACK, TojiQte.ATTACK),
-        new Recipe(14, TojiQte.DODGE, TojiQte.ATTACK),
-        new Recipe(1, TojiQte.DODGE, TojiQte.ATTACK));
+        // 长序列优先
+        new Recipe(19, TojiQte.ATTACK, TojiQte.MOBILITY, TojiQte.ATTACK),      // 飞踢 → 空中二段 → 下砸
+        new Recipe(11, TojiQte.WEAPON_YUYUN, TojiQte.ATTACK, TojiQte.WEAPON_YUYUN, TojiQte.ATTACK), // 切武三连
+        new Recipe(10, TojiQte.WEAPON_YUYUN, TojiQte.WEAPON_YUYUN, TojiQte.HEAVY),  // 游云蓄力破甲
+        new Recipe(13, TojiQte.ATTACK, TojiQte.ATTACK, TojiQte.ATTACK, TojiQte.ATTACK,
+            TojiQte.ATTACK, TojiQte.ATTACK, TojiQte.ATTACK, TojiQte.ATTACK),   // 左键连点 8 次
+        new Recipe(15, TojiQte.MOBILITY, TojiQte.MOBILITY, TojiQte.ATTACK),    // 空中两次身法 → 蹬墙膝撞
+        new Recipe(5, TojiQte.MOBILITY, TojiQte.MOBILITY, TojiQte.ATTACK),     // 地面两次身法 → 滑铲切足
+        new Recipe(8, TojiQte.GRAB, TojiQte.GRAB, TojiQte.ATTACK),             // 双 G → 夺命挡箭牌
+        new Recipe(18, TojiQte.WEAPON_YUYUN, TojiQte.WEAPON_YUYUN, TojiQte.ATTACK),  // 敌人冲刺 → 打棒球
+        new Recipe(7, TojiQte.WEAPON_YUYUN, TojiQte.WEAPON_YUYUN, TojiQte.ATTACK),   // 游云破膝
+        new Recipe(2, TojiQte.ATTACK, TojiQte.ATTACK),                          // 裂骨膝撞
+        new Recipe(12, TojiQte.HEAVY, TojiQte.ATTACK),                          // 先之先·截击
+        new Recipe(17, TojiQte.GRAB, TojiQte.HEAVY),                            // 夺刃反杀
+        new Recipe(3, TojiQte.MOBILITY, TojiQte.ATTACK),                        // 飞踢拉扯
+        new Recipe(4, TojiQte.GRAB, TojiQte.ATTACK),                            // 过肩重摔
+        new Recipe(6, TojiQte.WEAPON_YUYUN, TojiQte.ATTACK),                    // 天逆鉾·破魔
+        new Recipe(9, TojiQte.MOBILITY, TojiQte.ATTACK),                        // 空中 → 踩头处决
+        new Recipe(14, TojiQte.ATTACK),                                         // 背后有墙 → 墙壁反杀
+        new Recipe(1, TojiQte.ATTACK),                                          // 基础闪避反击
+        new Recipe(20, TojiQte.HEAVY),                                          // 完美闪避 3 次后处决
+        new Recipe(16, TojiQte.HEAVY, TojiQte.HEAVY));                          // 双 K 弹反
 
     /** 匹配并执行。返回是否命中某招。 */
     public static boolean tryMatch(ServerPlayer p) {
@@ -91,9 +95,9 @@ public final class TojiCombos {
         switch (combo) {
             case 1 -> { return counter(p); }
             case 2 -> { return boneKnee(p); }
-            case 3 -> { return flyingKick(p); }
+            case 3 -> { return p.onGround() && flyingKick(p); }
             case 4 -> { return suplex(p); }
-            case 5 -> { return slideKick(p); }
+            case 5 -> { return p.onGround() && slideKick(p); }
             case 6 -> {
                 if (target == null || target.getActiveEffects().stream().noneMatch(effect -> effect.getEffect().isBeneficial()))
                     return false;                                   // 目标身上没有增益就不算破魔
@@ -101,7 +105,7 @@ public final class TojiCombos {
             }
             case 7 -> { return kneeStrike(p, target); }
             case 8 -> { return hostage(p); }
-            case 9 -> { return stomp(p); }
+            case 9 -> { return !p.onGround() && stomp(p); }
             case 10 -> { return chargedSmash(p); }
             case 11 -> { return tripleExecute(p); }
             case 12 -> { return intercept(p); }
@@ -110,17 +114,22 @@ public final class TojiCombos {
                 if (target == null || !wallBehind(p, target)) return false;   // 背后没墙就打基础反击
                 return wallSlam(p, target);
             }
-            case 15 -> { return parkourKick(p); }
+            case 15 -> { return !p.onGround() && parkourKick(p); }
             case 16 -> { return deflect(p); }
             case 17 -> { return disarm(p); }
             case 18 -> { return bat(p, target); }
-            case 19 -> { return aerialCombo(p); }
+            case 19 -> { return !p.onGround() && aerialCombo(p); }
             case 20 -> {
                 if (TojiQte.perfectCount(p) < TojiQte.PERFECT_PER_EXECUTE) return false;
                 return execute(p);
             }
             default -> { return false; }
         }
+    }
+
+    /** 双 K：弹反（附近有弹幕才算）。 */
+    private static boolean deflectGuard(ServerPlayer p) {
+        return deflect(p);
     }
 
     // ── 1~5 入门 ─────────────────────────────────────────

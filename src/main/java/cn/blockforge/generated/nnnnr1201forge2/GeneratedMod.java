@@ -109,6 +109,11 @@ public final class GeneratedMod {
             character.todo.TodoMarks.reset();
         });
         character.CharacterCasting.registerEffect("megumi", character.megumi.MegumiSkills.TEN_SHADOWS, (net.minecraft.server.level.ServerPlayer p, character.CharacterSkill skill, int rank) -> Network.send((net.minecraft.server.level.ServerLevel) p.level(), new Network.Effect(308, p.getId(), p.position(), net.minecraft.world.phys.Vec3.ZERO, 0f, 0, 0)));
+        // 九十九由基·星之怒：四招全部原版伤害实现
+        character.CharacterCasting.registerEffect("yuki", character.yuki.YukiSkills.MASS_FIST, character.yuki.YukiCombat::massFist);
+        character.CharacterCasting.registerEffect("yuki", character.yuki.YukiSkills.GARUDA, character.yuki.YukiCombat::garuda);
+        character.CharacterCasting.registerEffect("yuki", character.yuki.YukiSkills.STAR_RAGE, character.yuki.YukiCombat::starRage);
+        character.CharacterCasting.registerEffect("yuki", character.yuki.YukiSkills.BLACK_HOLE, character.yuki.YukiCombat::blackHole);
         MinecraftForge.EVENT_BUS.register(character.CharacterService.class);
         MinecraftForge.EVENT_BUS.register(character.CharacterRewards.class);
         // 漏壶·灾厄火焰：三招自定义效果 + 被动免疫 + 第一章泡岩浆进度

@@ -74,7 +74,7 @@ public final class CharacterClient {
     public static void openWheel() {
         var mc=Minecraft.getInstance();
         if(toji())return;
-        if(tenShadows()){mc.setScreen(new cn.blockforge.generated.nnnnr1201forge2.TenShadowsScreen());return;}
+        if(tenShadows()){if(!(mc.screen instanceof cn.blockforge.generated.nnnnr1201forge2.TenShadowsScreen))mc.setScreen(new cn.blockforge.generated.nnnnr1201forge2.TenShadowsScreen());return;}
         mc.setScreen(customWheel()?new CharacterWheel():new SkillWheel());
     }
     public static int rank() { return state.rank(); }

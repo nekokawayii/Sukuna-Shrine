@@ -42,6 +42,33 @@ public final class Client {
     public static int selected;
     public static Network.Progress progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false,false,false,DomainOptions.DEFAULT_RADIUS,DomainOptions.DEFAULT_DAMAGE,DomainOptions.DEFAULT_SPEED,true);
     public static String energyText(double amount){return BalanceRules.number(amount);}
+
+    private static final net.minecraft.resources.ResourceLocation CURSE_RING_EMPTY =
+        new net.minecraft.resources.ResourceLocation("sukuna", "textures/hud/curse_ring_empty.png");
+    private static final net.minecraft.resources.ResourceLocation CURSE_RING_GOLD =
+        new net.minecraft.resources.ResourceLocation("sukuna", "textures/hud/curse_ring_gold.png");
+    private static final net.minecraft.resources.ResourceLocation CURSE_RING_RED =
+        new net.minecraft.resources.ResourceLocation("sukuna", "textures/hud/curse_ring_red.png");
+
+    /**
+     * 圆形咒力表：底圈 + 从下往上涨的液面（金=正常、红=低于三成或觉醒态）。
+     * 液面按比例裁切贴图的下半部分，所以消耗时像水位往下掉。
+     */
+    public static void drawCurseRing(net.minecraft.client.gui.GuiGraphics g, net.minecraft.client.Minecraft mc,
+                                     float ratio, boolean awakened, int x, int y, int size) {
+        ratio = Math.max(0f, Math.min(1f, ratio));
+        var fill = (awakened || ratio <= 0.3f) ? CURSE_RING_RED : CURSE_RING_GOLD;
+        // 底圈（空表）
+        g.blit(CURSE_RING_EMPTY, x, y, 0, 0, size, size, 64, 64);
+        // 液面：只画贴图下方 ratio 那一截
+        int sourceHeight = Math.max(1, (int) Math.ceil(64 * ratio));
+        int sourceY = 64 - sourceHeight;
+        int drawHeight = Math.max(1, (int) Math.ceil(size * ratio));
+        int drawY = y + size - drawHeight;
+        g.blit(fill, x, drawY, 0, sourceY, size, drawHeight, 64, 64);
+        // 再叠一次底圈，保证外轮廓始终清楚（不会被液面盖掉）
+        g.blit(CURSE_RING_EMPTY, x, y, 0, 0, size, size, 64, 64);
+    }
     public static int wallSize(){return BranchRules.wallSize(progress.nine(),progress.soulShrine(),progress.voidShrine(),progress.pureLandVictory());}
     public static boolean voidStage(){return progress.voidShrine();}
     public static boolean soulStage(){return progress.soulShrine()&&!progress.voidShrine();}
@@ -370,10 +397,11 @@ public final class Client {
         g.fill(7,h-49,215,h-11,0xB0181019);g.fill(7,h-49,10,h-11,0xFFBD283D);
         g.drawString(mc.font,skillName(selected),16,h-42,0xFFF3D3CB);
         g.drawString(mc.font,"长按 "+WHEEL.getTranslatedKeyMessage().getString()+" 选择 · "+CAST.getTranslatedKeyMessage().getString()+" 释放",16,h-26,0xFFB8A4AE);
-        g.fill(7,h-102,215,h-78,0xCC140E20);
-        g.fill(10,h-84,212,h-80,0xFF342639);
-        g.fill(10,h-84,10+(int)(202*progress.energy()/Math.max(1,progress.maximum())),h-80,progress.awakened()?0xFFE23455:0xFFAF66EB);
-        g.drawString(mc.font,(AuthorityClient.enabled()?"军团咒力池 ":"咒力 ")+(progress.maximum()>=999999.0?"∞":(int)progress.energy()+" / "+(int)progress.maximum())+(progress.sukuna()?"  手指 "+progress.fingers()+"/20":"  冰鱼 "+progress.iceFish()),12,h-97,0xFFEED5FF);
+        // 咒力：圆形液面仪表（红框黑底面板与旧进度条已删除；技能名区域保持不变）
+        drawCurseRing(g,mc,(float)(progress.energy()/Math.max(1.0,progress.maximum())),progress.awakened(),10,h-106,44);
+        g.drawString(mc.font,(AuthorityClient.enabled()?"军团咒力池 ":"咒力 ")+(progress.maximum()>=999999.0?"∞":(int)progress.energy()+" / "+(int)progress.maximum()),58,h-98,0xFFEED5FF);
+        if(progress.sukuna())g.drawString(mc.font,"手指 "+progress.fingers()+"/20",58,h-88,0xFFEED5FF);
+        else g.drawString(mc.font,"冰鱼 "+progress.iceFish(),58,h-88,0xFFEED5FF);
         if(voidStage())g.drawString(mc.font,progress.pureLandVictory()?"蓝色虚空术式 · 生命+200 · 普攻+20 · 术式+200":"虚空术式 · 解/捌造裂隙 → 灶点燃 → 开引爆",12,h-115,progress.pureLandVictory()?0xFF53CFFF:0xFFBE7CEF);
         else if(progress.awakened())g.drawString(mc.font,"肉体融合 · 解长按连发 · 世界斩在分支中选择",12,h-115,0xFFFF5774);
         if(progress.amplification())g.drawString(mc.font,"领域展延 · 每秒 "+BalanceRules.number(DomainAmplification.COST_PER_SECOND)+" 咒力 · 术式穿透无下限 · "+AMPLIFY.getTranslatedKeyMessage().getString()+" 关闭",12,h-160,0xFF9FE8FF);

@@ -51,23 +51,25 @@ public final class Client {
         new net.minecraft.resources.ResourceLocation("sukuna", "textures/hud/curse_ring_red.png");
 
     /**
-     * 圆形咒力表：底圈 + 从下往上涨的液面（金=正常、红=低于三成或觉醒态）。
-     * 液面按比例裁切贴图的下半部分，所以消耗时像水位往下掉。
+     * 圆形咒力表：**底圈贴图始终盖在最上层**（描边永远完整），里面是咒力液面。
+     *
+     * <p>贴图里彩色部分只有下半圈，所以按目标液面高度把这条色带**竖向拉伸**铺满
+     * （纯色拉伸看不出来），这样 0~100% 都能正确显示，不会「一开始就一半」。
      */
     public static void drawCurseRing(net.minecraft.client.gui.GuiGraphics g, net.minecraft.client.Minecraft mc,
                                      float ratio, boolean awakened, int x, int y, int size) {
         ratio = Math.max(0f, Math.min(1f, ratio));
         var fill = (awakened || ratio <= 0.3f) ? CURSE_RING_RED : CURSE_RING_GOLD;
-        // 底圈（空表）
-        g.blit(CURSE_RING_EMPTY, x, y, 0, 0, size, size, 64, 64);
-        // 液面：只画贴图下方 ratio 那一截
-        int sourceHeight = Math.max(1, (int) Math.ceil(64 * ratio));
-        int sourceY = 64 - sourceHeight;
-        int drawHeight = Math.max(1, (int) Math.ceil(size * ratio));
-        int drawY = y + size - drawHeight;
-        g.blit(fill, x, drawY, 0, sourceY, size, drawHeight, 64, 64);
-        // 再叠一次底圈，保证外轮廓始终清楚（不会被液面盖掉）
-        g.blit(CURSE_RING_EMPTY, x, y, 0, 0, size, size, 64, 64);
+        if (ratio > 0.001f) {
+            int sourceTop = 28, sourceBottom = 63;                 // 贴图里彩色液面所在的带
+            int bandHeight = sourceBottom - sourceTop + 1;
+            int drawHeight = Math.max(1, Math.round(size * ratio));
+            int drawY = y + size - drawHeight;
+            int sourceHeight = Math.max(1, Math.round(bandHeight * Math.min(1f, ratio / 0.5f)));
+            int sourceY = sourceBottom - sourceHeight + 1;
+            g.blit(fill, x, drawY, 0, sourceY, size, drawHeight, 64, 64);
+        }
+        g.blit(CURSE_RING_EMPTY, x, y, 0, 0, size, size, 64, 64);  // 描边始终叠在最上面
     }
     public static int wallSize(){return BranchRules.wallSize(progress.nine(),progress.soulShrine(),progress.voidShrine(),progress.pureLandVictory());}
     public static boolean voidStage(){return progress.voidShrine();}
@@ -394,14 +396,21 @@ public final class Client {
         if(progress.nine())g.drawString(mc.font,progress.rotation()?"九相轮转进行中 · 每秒20次斩击判定":"九相轮转 · "+ROTATE.getTranslatedKeyMessage().getString()+" 开启15秒",12,h-128,0xFFD48AFF);
         if(charging&&tick-chargeBorn>=Skills.CHARGE_DELAY){int elapsed=(int)(tick-chargeBorn)-Skills.CHARGE_DELAY;g.fill(w/2-70,h/2+28,w/2+70,h/2+34,0xB022122D);g.fill(w/2-70,h/2+28,w/2-70+(int)(140*Math.min(1,elapsed/(float)Skills.CHARGE_TIME)),h/2+34,elapsed>=Skills.CHARGE_TIME?0xFFFFDDEE:0xFFAF397B);g.drawCenteredString(mc.font,elapsed>=Skills.CHARGE_TIME?"空间斩就绪 · 松开释放 · "+energyText(2000)+"咒力":"空间正在崩裂……",w/2,h/2+40,0xFFFFD7EE);}
 
-        g.fill(7,h-49,215,h-11,0xB0181019);g.fill(7,h-49,10,h-11,0xFFBD283D);
-        g.drawString(mc.font,skillName(selected),16,h-42,0xFFF3D3CB);
-        g.drawString(mc.font,"长按 "+WHEEL.getTranslatedKeyMessage().getString()+" 选择 · "+CAST.getTranslatedKeyMessage().getString()+" 释放",16,h-26,0xFFB8A4AE);
-        // 咒力：圆形液面仪表（红框黑底面板与旧进度条已删除；技能名区域保持不变）
-        drawCurseRing(g,mc,(float)(progress.energy()/Math.max(1.0,progress.maximum())),progress.awakened(),10,h-106,44);
-        g.drawString(mc.font,(AuthorityClient.enabled()?"军团咒力池 ":"咒力 ")+(progress.maximum()>=999999.0?"∞":(int)progress.energy()+" / "+(int)progress.maximum()),58,h-98,0xFFEED5FF);
-        if(progress.sukuna())g.drawString(mc.font,"手指 "+progress.fingers()+"/20",58,h-88,0xFFEED5FF);
-        else g.drawString(mc.font,"冰鱼 "+progress.iceFish(),58,h-88,0xFFEED5FF);
+
+        // 咒力：圆形液面仪表（放最右下角），技能名显示在圆表左边
+        int ringSize = 44, ringX = w - ringSize - 8, ringY = h - ringSize - 8;
+        drawCurseRing(g,mc,(float)(progress.energy()/Math.max(1.0,progress.maximum())),progress.awakened(),ringX,ringY,ringSize);
+        String curseText=(AuthorityClient.enabled()?"军团咒力池 ":"咒力 ")+(progress.maximum()>=999999.0?"∞":(int)progress.energy()+" / "+(int)progress.maximum());
+        int curseWidth=mc.font.width(curseText);
+        g.drawString(mc.font,curseText,ringX-curseWidth-6,ringY+ringSize-26,0xFFEED5FF);
+        String sub=progress.sukuna()?"手指 "+progress.fingers()+"/20":"冰鱼 "+progress.iceFish();
+        g.drawString(mc.font,sub,ringX-mc.font.width(sub)-6,ringY+ringSize-14,0xFFEED5FF);
+        String name=skillName(selected);
+        int nameWidth=mc.font.width(name);
+        g.drawString(mc.font,name,ringX-nameWidth-6,ringY-14,0xFFF3D3CB);
+        String hint="长按 "+WHEEL.getTranslatedKeyMessage().getString()+" · "+CAST.getTranslatedKeyMessage().getString()+" 释放";
+        int hintWidth=mc.font.width(hint);
+        g.drawString(mc.font,hint,ringX-hintWidth-6,ringY-24,0xFF8C7C88);
         if(voidStage())g.drawString(mc.font,progress.pureLandVictory()?"蓝色虚空术式 · 生命+200 · 普攻+20 · 术式+200":"虚空术式 · 解/捌造裂隙 → 灶点燃 → 开引爆",12,h-115,progress.pureLandVictory()?0xFF53CFFF:0xFFBE7CEF);
         else if(progress.awakened())g.drawString(mc.font,"肉体融合 · 解长按连发 · 世界斩在分支中选择",12,h-115,0xFFFF5774);
         if(progress.amplification())g.drawString(mc.font,"领域展延 · 每秒 "+BalanceRules.number(DomainAmplification.COST_PER_SECOND)+" 咒力 · 术式穿透无下限 · "+AMPLIFY.getTranslatedKeyMessage().getString()+" 关闭",12,h-160,0xFF9FE8FF);

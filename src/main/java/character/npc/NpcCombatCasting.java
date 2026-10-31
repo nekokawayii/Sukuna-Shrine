@@ -115,8 +115,6 @@ public final class NpcCombatCasting {
                 case 9 -> { mugi(mob, player, 18); fire(mob, player, 0xFFD0F0FF); }   // 雷影化
                 default -> { mugi(mob, player, 34); fire(mob, player, 0xFFFFE066); }  // 终奥·幻兽琥珀
             }
-            if (ready(mob, K_DOM, 200) && distance <= 30)
-                NpcDomain.open(mob, 26, NpcDomain.Style.GENERIC);   // 静电/雷霆主场
         } else if (id.contains("sukuna_npc")) {
             // 宿傩的全部术式（无冷却，每 10 刻按招表轮转），领域固定「伏魔御厨子」
             var data = mob.getPersistentData();
@@ -137,7 +135,7 @@ public final class NpcCombatCasting {
                 default -> { mugi(mob, player, 36); fire(mob, player, 0xFF8B0000); }           // 神龛（御厨子内部斩击）
             }
             if (ready(mob, K_DOM, 200) && distance <= 32)
-                NpcDomain.open(mob, 40, NpcDomain.Style.GENERIC);   // 伏魔御厨子（半径 40，必中斩击）
+                NpcDomain.open(mob, 40, NpcDomain.Style.SUKUNA_OPEN);   // 伏魔御厨子·开放领域（无结界，只结算必中斩击）
         } else if (id.contains("higuruma_npc")) {
             if (distance <= 6 && ready(mob, K_ATK, 50)) {
                 if (NpcDomain.deathMark(mob, player)) { player.setHealth(0); }

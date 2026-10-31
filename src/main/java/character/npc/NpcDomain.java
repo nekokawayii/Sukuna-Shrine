@@ -27,7 +27,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  */
 public final class NpcDomain {
     /** 各角色自己的领域风格（r387 用户要求：石流龙=烟花、秤金次=赌场…）。 */
-    public enum Style { FIREWORK, PACHINKO, LAVA, ICE, BLOOD, NAOYA, HIGURUMA, GENERIC }
+    public enum Style { FIREWORK, PACHINKO, LAVA, ICE, BLOOD, NAOYA, HIGURUMA, SUKUNA_OPEN, GENERIC }
 
     public static final int RADIUS = 26;
     public static final int TICKS = 400;          // 20 秒
@@ -72,8 +72,10 @@ public final class NpcDomain {
                     boolean shell = d2 <= (double) r * r && d2 > (double) (r - 1) * (r - 1);
                     boolean floor = dy == -1 && d2 <= (double) r * r;
                     boolean inside = d2 <= (double) (r - 1) * (r - 1) && dy >= 0;
+                    if (style == Style.SUKUNA_OPEN) continue;                 // 开放领域：不改任何地形
+                    boolean keep = style == Style.HIGURUMA;                   // 日车：只铺壳与地板，不挖内部
                     if (shell || floor) job.plan.add(center.offset(dx, dy, dz));
-                    else if (inside) job.plan.add(center.offset(dx, dy, dz).immutable());
+                    else if (inside && !keep) job.plan.add(center.offset(dx, dy, dz).immutable());
                 }
         if (style == Style.NAOYA) {
             // 1:1 铺玩家那套烘焙布局（白环/紫水晶/眼球）；地板层只去黑地板、保留白路与紫水晶
@@ -233,7 +235,9 @@ public final class NpcDomain {
                     }
                 }
             }
-            if (job.style != Style.FIREWORK && job.style != Style.PACHINKO && job.level.getGameTime() % 10 == 0) {
+            boolean sureHit = job.style == Style.SUKUNA_OPEN || job.style == Style.GENERIC;
+            if (job.level.getGameTime() % 10 == 0 && job.style != Style.FIREWORK && job.style != Style.PACHINKO
+                && (sureHit || !job.plan.isEmpty())) {
                 double r2 = (double) RADIUS * RADIUS;
                 for (LivingEntity living : job.level.getEntitiesOfClass(LivingEntity.class,
                         new AABB(job.center).inflate(RADIUS), t -> t != owner && t.isAlive()

@@ -15,6 +15,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LightBlock;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -141,8 +142,8 @@ public final class NaoyaDomain {
             BlockPos pos = new BlockPos(realm.center.getX() + x - NaoyaDomainLayout.OFFSET_X,
                 realm.center.getY() + y + NaoyaDomainLayout.OFFSET_Y,
                 realm.center.getZ() + z - NaoyaDomainLayout.OFFSET_Z);
-            // 地板层保持镂空：整层不放，只留那块紫水晶当玩家的落点
-            if (y == 0 && state != 2) continue;
+            // 地板层镂空：只去掉黑色地板，**保留白色的路与紫水晶**（路是紫水晶那边通往球壁的那条）
+            if (y == 0 && state == 0) continue;
             if (state == 2) realm.seat = pos;
             realm.decor.add(pos);
             realm.decorStates.add(switch (state) {
@@ -152,6 +153,27 @@ public final class NaoyaDomain {
             });
         }
         if (realm.seat == null) realm.seat = realm.center;
+    }
+
+    /** 领域里掉到地板层以下的生物：压成二次元平面，再送回紫水晶上方。 */
+    private static void catchFalling(ServerPlayer owner, Realm realm, long now) {
+        if (realm.seat == null || (now & 1) != 0) return;
+        double floor = realm.center.getY() - 0.5;
+        Vec3 middle = Vec3.atCenterOf(realm.center);
+        for (LivingEntity entity : realm.level.getEntitiesOfClass(LivingEntity.class,
+                new AABB(middle, middle).inflate(RADIUS), t -> t.isAlive() && !t.isSpectator())) {
+            if (entity.getY() >= floor) continue;
+            BlockPos seat = realm.seat;
+            double x = seat.getX() + 0.5 + (realm.level.random.nextDouble() - 0.5) * 3.0;
+            double z = seat.getZ() + 0.5 + (realm.level.random.nextDouble() - 0.5) * 3.0;
+            entity.teleportTo(x, seat.getY() + 1.0, z);
+            entity.setDeltaMovement(0, 0, 0);
+            entity.fallDistance = 0;
+            entity.hurtMarked = true;
+            if (entity != owner) NaoyaCombat.freeze(owner, entity);
+            Network.send(realm.level, new Network.Effect(NaoyaFx.SHATTER, entity.getId(), entity.position(),
+                Vec3.ZERO, 1f, 10, 0));
+        }
     }
 
     /** 结构铺完后把施术者放到紫水晶上（眼球等先长出来，再传人）。 */
@@ -184,6 +206,7 @@ public final class NaoyaDomain {
             }
             placeStep(realm);
             if (realm.done) seat(owner, realm);
+            catchFalling(owner, realm, now);
             tickAuto(owner, realm, now);
         }
     }

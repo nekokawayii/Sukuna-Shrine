@@ -121,12 +121,15 @@ public final class RyuDomain {
         int outerSq = (int) (RADIUS * RADIUS), innerSq = (int) ((RADIUS - 1) * (RADIUS - 1));
         List<BlockPos> outer = new ArrayList<>(), inner = new ArrayList<>();
         int r = (int) Math.ceil(RADIUS);
+        int floorY = f.center.getY() - 1;
         for (int dy = -r; dy <= r; dy++) {
+            if (f.center.getY() + dy < floorY) continue;   // 地板以下不动（否则会把地层一起挖空）
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {
                     int d = dx * dx + dy * dy + dz * dz;
                     if (d > outerSq || d < innerSq) continue;
                     BlockPos pos = f.center.offset(dx, dy, dz);
+                    if (pos.getY() < floorY) continue;
                     if (d > innerSq) outer.add(pos);
                     else inner.add(pos);
                 }
@@ -139,7 +142,6 @@ public final class RyuDomain {
         outer.sort(order);
         inner.sort(order);
         // 地板：站在施术者脚下那一层，铺满半径内的圆盘（光源方块没有碰撞，必须有地板站人）
-        int floorY = f.center.getY() - 1;
         List<BlockPos> floor = new ArrayList<>();
         for (int dx = -r; dx <= r; dx++) {
             for (int dz = -r; dz <= r; dz++) {
@@ -151,11 +153,14 @@ public final class RyuDomain {
         int fillSq = (int) ((RADIUS - 2) * (RADIUS - 2));
         List<BlockPos> fill = new ArrayList<>();
         for (int dy = -r; dy <= r; dy++) {
+            if (f.center.getY() + dy < floorY) continue;   // 地板以下原地层保留
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {
                     int d = dx * dx + dy * dy + dz * dz;
                     if (d > fillSq) continue;
-                    fill.add(f.center.offset(dx, dy, dz));
+                    BlockPos pos = f.center.offset(dx, dy, dz);
+                    if (pos.getY() < floorY) continue;
+                    fill.add(pos);
                 }
             }
         }

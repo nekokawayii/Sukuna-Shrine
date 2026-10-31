@@ -60,7 +60,7 @@ public final class MahitoTransfigure {
                 new AABB(p.position(), p.position()).inflate(16),
                 e -> e != p && e.isAlive() && !(e instanceof Player)).isEmpty();
         if (noneAround) {
-            cn.blockforge.generated.nnnnr1201forge2.Network.send((net.minecraft.server.level.ServerLevel) p.level(),
+            cn.blockforge.generated.nnnnr1201forge2.Network.sendTo(p,
                 new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(300, p.getId(), p.position(),
                     Vec3.ZERO, 3f, 0, 0));
             p.sendSystemMessage(Component.literal("无为转变：周围没有生物 → 自我改变").withStyle(ChatFormatting.AQUA));
@@ -106,7 +106,7 @@ public final class MahitoTransfigure {
         CompoundTag snap = snapshot(target);
         p.getPersistentData().put(PENDING, snap);
         p.getPersistentData().putUUID(PENDING_TARGET, target.getUUID());
-        cn.blockforge.generated.nnnnr1201forge2.Network.send((net.minecraft.server.level.ServerLevel) p.level(),
+        cn.blockforge.generated.nnnnr1201forge2.Network.sendTo(p,
             new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(300, p.getId(), p.position(),
                 Vec3.ZERO, 0f, 0, 0));
         p.sendSystemMessage(Component.literal("无为转变：选择要贮存的形态").withStyle(ChatFormatting.AQUA));
@@ -194,7 +194,7 @@ public final class MahitoTransfigure {
     }
 
     private static void sendModel(ServerPlayer p, CompoundTag snap) {
-        cn.blockforge.generated.nnnnr1201forge2.Network.send((net.minecraft.server.level.ServerLevel) p.level(),
+        cn.blockforge.generated.nnnnr1201forge2.Network.sendTo(p,
             new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(302, p.getId(),
                 new Vec3(snap.getFloat("width"), snap.getFloat("height"), snap.getFloat("health")),
                 Vec3.ZERO, 0f, 0, 0));

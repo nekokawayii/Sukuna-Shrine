@@ -43,6 +43,9 @@ public final class CreativeRestorer extends Item {
         VoidJourney.clear(p);BloodArts.exit(p);DeathStar.testReset(p);Curse.data(p).remove("BloodCooldowns");
         character.kashimo.KashimoCombat.testReset(p);   // 鹿紫云一：肉体崩溃 / 终奥 / 磁化 / 附着 / 电荷
         character.todo.TodoCombat.testReset(p);         // 东堂葵：换位免疫窗口 + 自己挂的咒力标记
+        character.nanami.NanamiCombat.testReset(p);     // 七海建人：弱点/加班/格挡状态与属性
+        character.ryu.RyuCombat.testReset(p);           // 石流龙：蓄力 / 甜品时间
+        character.ryu.RyuDomain.forceClose(p);          // 石流龙：领域（整批还原地形）
         var progress=Curse.data(p);for(String key:List.copyOf(progress.getAllKeys()))if(RecoveryRules.progressKey(key))progress.remove(key);
         var data=p.getPersistentData();for(String key:List.copyOf(data.getAllKeys()))if(RecoveryRules.entityKey(key))data.remove(key);
         SoulCombat.testReset(p);

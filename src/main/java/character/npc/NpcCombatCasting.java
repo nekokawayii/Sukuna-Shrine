@@ -98,20 +98,20 @@ public final class NpcCombatCasting {
             }
             if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 35, NpcDomain.Style.FIREWORK);   // 打上花火（半径与玩家一致 35）
         } else if (id.contains("sukuna_npc")) {
-            // 无冷却：每 10 刻就能放一轮（解 / 捌 / 灶 / 斩击）
-            hurtAround(mob, player, 8, 20);
-            fire(mob, player, 0xFFE34D65);
-            if (distance <= 12) {
-                hurtAround(mob, player, 4, 16);                        // 近身捌
-                player.setSecondsOnFire(2);
+            // 宿傩的全部术式（无冷却，每 10 刻按招表轮转），领域固定「伏魔御厨子」
+            var data = mob.getPersistentData();
+            int step = (data.getInt("SukunaNpcStep") + 1) % 6;
+            data.putInt("SukunaNpcStep", step);
+            switch (step) {
+                case 0 -> { mugi(mob, player, 20); fire(mob, player, 0xFFE34D65); }            // 解·远程斩击
+                case 1 -> { mugi(mob, player, 8);  fire(mob, player, 0xFFFF9FB0); }            // 解·八方罗网（多段）
+                case 2 -> { mugi(mob, player, 34); fire(mob, player, 0xFFD62E4B); }            // 捌·必断斩击
+                case 3 -> { mugi(mob, player, 16); fire(mob, player, 0xFFFF7A3D); }            // 开·炎弓
+                case 4 -> { mugi(mob, player, 28); fire(mob, player, 0xFFFFB347); }            // 灶·粉尘爆炸
+                default -> { mugi(mob, player, 12); fire(mob, player, 0xFFB14CFF); }           // 灵魂剥离
             }
-            // 领域轮换（无冷却：每 200 刻换一个风格）
-            if (ready(mob, K_DOM, 200) && distance <= 32) {
-                var styles = new NpcDomain.Style[]{NpcDomain.Style.GENERIC, NpcDomain.Style.HIGURUMA,
-                    NpcDomain.Style.NAOYA, NpcDomain.Style.FIREWORK, NpcDomain.Style.LAVA};
-                int idx = ownerCounter(mob) % styles.length;
-                NpcDomain.open(mob, 30, styles[idx]);
-            }
+            if (ready(mob, K_DOM, 200) && distance <= 32)
+                NpcDomain.open(mob, 40, NpcDomain.Style.GENERIC);   // 伏魔御厨子（半径 40，必中斩击）
         } else if (id.contains("higuruma_npc")) {
             if (distance <= 6 && ready(mob, K_ATK, 50)) {
                 if (NpcDomain.deathMark(mob, player)) { player.setHealth(0); }
@@ -163,6 +163,14 @@ public final class NpcCombatCasting {
         int c = data.getInt("SukunaNpcDomainIdx") + 1;
         data.putInt("SukunaNpcDomainIdx", c);
         return c;
+    }
+
+    /** 宿傩 NPC 的斩击/爆炸：对目标点周围结算一次伤害。 */
+    private static void mugi(Mob mob, ServerPlayer target, int damage) {
+        if (!(mob.level() instanceof ServerLevel level)) return;
+        for (LivingEntity living : level.getEntitiesOfClass(LivingEntity.class,
+                new AABB(target.position(), target.position()).inflate(3), t -> t.isAlive() && t != mob))
+            NpcCombat.hurt(mob, living, damage);
     }
 
     private static void hurtAround(Mob mob, ServerPlayer player, double radius, int damage) {

@@ -270,6 +270,10 @@ public final class NpcDomain {
                             living.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                                 net.minecraft.world.effect.MobEffects.WITHER, 40, 0));
                         }
+                        case GENERIC -> {                        // 宿傩·伏魔御厨子：必中斩击（无视无敌帧）
+                            living.invulnerableTime = 0;
+                            living.hurt(living.damageSources().magic(), 12f);
+                        }
                         default -> living.hurt(living.damageSources().magic(), (float) DAMAGE);
                     }
                 }

@@ -34,6 +34,21 @@ public final class TechniqueInput {
         if(input.skill()==character.mahito.MahitoSkills.TRANSMUTE&&input.phase()==7){character.mahito.MahitoTransfigure.handle(p,input.motion());return;}
         // 鹿紫云一：轮盘中心「幻兽·琥珀」用 phase=7 直接请求（终奥不在轮盘技能表里，不走 CharacterCasting 的扣费/冷却）
         if(input.skill()==character.kashimo.KashimoCombat.ULT&&input.phase()==7){character.kashimo.KashimoCombat.requestUltimate(p);return;}
+        // 石流龙：冰沙冲击波可蓄力（按住越久越粗、伤害越高），走 phase 0/1/2 而不是立刻施法
+        if(input.skill()==character.ryu.RyuSkills.BLAST&&character.CharacterService.selected(p)!=null
+            &&"ryu".equals(character.CharacterService.selected(p).id())){
+            if(input.phase()==0)character.ryu.RyuCombat.startCharge(p);
+            else if(input.phase()==1)character.ryu.RyuCombat.holdCharge(p);
+            else character.ryu.RyuCombat.releaseCharge(p,input.phase()==2);
+            return;
+        }
+        // 石流龙：领域「打上花火」开着时再按一次 = 提前收起（要在扣费/冷却之前拦下）
+        if(input.skill()==character.ryu.RyuSkills.DOMAIN&&input.phase()==0
+            &&character.CharacterService.selected(p)!=null
+            &&"ryu".equals(character.CharacterService.selected(p).id())
+            &&character.ryu.RyuDomain.isOwner(p)){
+            character.ryu.RyuDomain.close(p,"主动收起");return;
+        }
         // 鹿紫云一：防御键（右键）→ 同极相斥
         if(input.skill()==character.kashimo.KashimoCombat.GUARD&&input.phase()==7){character.kashimo.KashimoCombat.guard(p);return;}
         if(!character.CharacterService.allowsSkill(p,input.skill())){

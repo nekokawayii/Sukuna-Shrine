@@ -53,7 +53,7 @@ public class ChosoEntity extends PathfinderMob {
 
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes()
-            .add(Attributes.MAX_HEALTH, BalanceRules.modpackMode() ? 550.0 * 30.0 : 550.0)
+            .add(Attributes.MAX_HEALTH, NpcBalance.health("sukuna:choso"))
             .add(Attributes.ATTACK_DAMAGE, 5.0)
             .add(Attributes.MOVEMENT_SPEED, 0.30)
             .add(Attributes.FOLLOW_RANGE, 32.0)

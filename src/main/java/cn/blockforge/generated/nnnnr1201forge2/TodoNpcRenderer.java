@@ -8,11 +8,10 @@ import net.minecraft.resources.ResourceLocation;
 
 /**
  * 东堂葵 NPC：玩家模型 + 默认 Steve 皮肤。
- * <p>用户还没给皮肤，等发图后改成 {@code textures/entity/todo_npc.png} 即可（只改这一行）。
  */
 public final class TodoNpcRenderer extends MobRenderer<TodoNpcEntity, PlayerModel<TodoNpcEntity>> {
     private static final ResourceLocation SKIN =
-        new ResourceLocation("minecraft", "textures/entity/player/wide/steve.png");
+        new ResourceLocation("sukuna", "textures/entity/todo_npc.png");
 
     public TodoNpcRenderer(EntityRendererProvider.Context context) {
         super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false), 0.5f);

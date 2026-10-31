@@ -103,12 +103,42 @@ public final class GeneratedMod {
         character.CharacterCasting.registerEffect("todo", character.todo.TodoSkills.SWAP,
             (character.CharacterCasting.Effect) (p, s2, r) -> character.todo.TodoCombat.swap(p));
         MinecraftForge.EVENT_BUS.register(character.todo.TodoCombat.class);
+        // 七海建人 · 十划咒法：7:3 弱点
+        character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.SMASH,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiCombat.smash(p));
+        character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.VALOR,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiCombat.valor(p));
+        character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.GAP,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiCombat.gap(p));
+        character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.OVERTIME,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiCombat.overtime(p));
+        MinecraftForge.EVENT_BUS.register(character.nanami.NanamiCombat.class);
+        // 石流龙 · 咒力强化/放出：冰沙冲击波（蓄力在 TechniqueInput 里拦截）/ 追踪弹 / 咒力喷涌 / 甜品 / 领域占位
+        character.CharacterCasting.registerEffect("ryu", character.ryu.RyuSkills.SCATTER,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.ryu.RyuCombat.scatter(p));
+        character.CharacterCasting.registerEffect("ryu", character.ryu.RyuSkills.BURST,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.ryu.RyuCombat.burst(p));
+        character.CharacterCasting.registerEffect("ryu", character.ryu.RyuSkills.DESSERT,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.ryu.RyuCombat.dessert(p));
+        character.CharacterCasting.registerEffect("ryu", character.ryu.RyuSkills.DOMAIN,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.ryu.RyuCombat.domain(p));
+        character.CharacterCasting.registerLock("ryu", new character.CharacterCasting.Lock() {
+            @Override public boolean locked(net.minecraft.server.level.ServerPlayer player) {
+                return character.ryu.RyuCombat.dessertActive(player);
+            }
+            @Override public String reason() { return "甜品时间：正在吃，2 秒内不能施术"; }
+        });
+        MinecraftForge.EVENT_BUS.register(character.ryu.RyuCombat.class);
+        MinecraftForge.EVENT_BUS.register(character.ryu.RyuDomain.class);
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent event) -> {
             character.kashimo.KashimoCharges.reset();
             character.kashimo.KashimoZones.reset();
             character.todo.TodoMarks.reset();
+            character.nanami.NanamiRatio.reset();
+            character.ryu.RyuCombat.reset();
+            character.ryu.RyuDomain.reset();
         });
-        character.CharacterCasting.registerEffect("megumi", character.megumi.MegumiSkills.TEN_SHADOWS, (net.minecraft.server.level.ServerPlayer p, character.CharacterSkill skill, int rank) -> Network.send((net.minecraft.server.level.ServerLevel) p.level(), new Network.Effect(308, p.getId(), p.position(), net.minecraft.world.phys.Vec3.ZERO, 0f, 0, 0)));
+        character.CharacterCasting.registerEffect("megumi", character.megumi.MegumiSkills.TEN_SHADOWS, (net.minecraft.server.level.ServerPlayer p, character.CharacterSkill skill, int rank) -> Network.sendTo(p, new Network.Effect(308, p.getId(), p.position(), net.minecraft.world.phys.Vec3.ZERO, 0f, 0, 0)));
         // 九十九由基·星之怒：四招全部原版伤害实现
         character.CharacterCasting.registerEffect("yuki", character.yuki.YukiSkills.MASS_FIST, character.yuki.YukiCombat::massFist);
         character.CharacterCasting.registerEffect("yuki", character.yuki.YukiSkills.GARUDA, character.yuki.YukiCombat::garuda);

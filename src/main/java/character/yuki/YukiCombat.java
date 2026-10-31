@@ -66,14 +66,21 @@ public final class YukiCombat {
             float floor = e.getMaxHealth() * 0.10f;                    // 保底 10% 目标生命上限
             float before = e.getHealth();
             e.hurt(p.damageSources().magic(), Math.max(base, floor));
-            // 保底优先级最高：若实际掉血不足 10%，差额用不受任何减免的真实伤害补足
+            // 保底优先级最高：不足 10% 就分段补足。
+            // 注意「净土守护者」这类 BOSS 有 HitCap（单次限伤），会夹住每一次 setHealth，
+            // 所以这里循环写血，每段最多掉 HitCap，多段累计到 10% 为止。
             float lost = before - e.getHealth();
-            if (e.isAlive() && lost < floor) {
-                float missing = floor - lost;
-                float after = Math.max(0f, e.getHealth() - missing);
-                e.setHealth(after);
+            int guard = 0;
+            while (e.isAlive() && lost < floor && guard++ < 64) {
+                float remaining = floor - lost;
+                float target = Math.max(0f, e.getHealth() - remaining);
+                if (target >= e.getHealth()) break;          // 已经打不动了，避免死循环
+                e.setHealth(target);
                 e.hurtMarked = true;
-                if (after <= 0f) e.die(p.damageSources().magic());
+                float nowLost = before - e.getHealth();
+                if (nowLost <= lost + 0.01f) break;          // 本次没有任何进展 → 放弃
+                lost = nowLost;
+                if (e.getHealth() <= 0f) { e.die(p.damageSources().magic()); break; }
             }
             Vec3 kb = to.normalize().scale(2.6);
             e.push(kb.x, 0.9, kb.z);

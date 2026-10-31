@@ -55,6 +55,9 @@ public final class NaoyaDomain {
         final Map<BlockPos, BlockState> before = new LinkedHashMap<>();
         int cursor, total;
         boolean closing;
+        boolean done;                                    // 结构是否已经全部铺完
+        boolean seated;                                  // 是否已把施术者放到紫水晶上
+        BlockPos seat;                                   // 结构里的紫水晶（玩家落点）
         long openedAt, closeAt, nextAuto;
         int group;
         Realm(ServerLevel level, UUID owner, BlockPos center) {
@@ -138,6 +141,9 @@ public final class NaoyaDomain {
             BlockPos pos = new BlockPos(realm.center.getX() + x - NaoyaDomainLayout.OFFSET_X,
                 realm.center.getY() + y + NaoyaDomainLayout.OFFSET_Y,
                 realm.center.getZ() + z - NaoyaDomainLayout.OFFSET_Z);
+            // 地板层保持镂空：整层不放，只留那块紫水晶当玩家的落点
+            if (y == 0 && state != 2) continue;
+            if (state == 2) realm.seat = pos;
             realm.decor.add(pos);
             realm.decorStates.add(switch (state) {
                 case 1 -> Blocks.WHITE_CONCRETE.defaultBlockState();
@@ -145,6 +151,22 @@ public final class NaoyaDomain {
                 default -> Blocks.BLACK_CONCRETE.defaultBlockState();
             });
         }
+        if (realm.seat == null) realm.seat = realm.center;
+    }
+
+    /** 结构铺完后把施术者放到紫水晶上（眼球等先长出来，再传人）。 */
+    private static void seat(ServerPlayer owner, Realm realm) {
+        if (realm.seated || realm.seat == null) return;
+        realm.seated = true;
+        BlockPos seat = realm.seat;
+        owner.teleportTo(seat.getX() + 0.5, seat.getY() + 1.0, seat.getZ() + 0.5);
+        owner.setDeltaMovement(0, 0, 0);
+        owner.hurtMarked = true;
+        owner.fallDistance = 0;
+        ServerLevel level = realm.level;
+        Network.send(level, new Network.Effect(NaoyaFx.TRAIL, owner.getId(), owner.position(), Vec3.ZERO, 1.5f, 12, 0));
+        level.playSound(null, owner.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 0.7f, 1.6f);
+        owner.displayClientMessage(Component.literal("时胞月宫殿 · 落座紫水晶").withStyle(net.minecraft.ChatFormatting.AQUA), true);
     }
 
     // ── 每刻 ─────────────────────────────────────────────
@@ -161,6 +183,7 @@ public final class NaoyaDomain {
                 continue;
             }
             placeStep(realm);
+            if (realm.done) seat(owner, realm);
             tickAuto(owner, realm, now);
         }
     }
@@ -192,6 +215,7 @@ public final class NaoyaDomain {
             if (!realm.level.hasChunkAt(pos)) continue;
             realm.before.putIfAbsent(pos, realm.level.getBlockState(pos));
             if (!realm.level.getBlockState(pos).equals(target)) realm.level.setBlock(pos, target, 2);
+            if (index + 1 >= realm.total) realm.done = true;
         }
     }
 

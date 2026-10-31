@@ -178,7 +178,7 @@ public final class NaoyaDomain {
             int index = realm.cursor++;
             if (index >= realm.total) return;
             int outerEnd = realm.outer.size(), innerEnd = outerEnd + realm.inner.size(),
-                decorEnd = innerEnd + realm.decor.size();
+                lightEnd = innerEnd + realm.light.size();
             BlockPos pos;
             BlockState target;
             if (index < outerEnd) {
@@ -187,12 +187,13 @@ public final class NaoyaDomain {
             } else if (index < innerEnd) {
                 pos = realm.inner.get(index - outerEnd);
                 target = Blocks.BLACK_CONCRETE.defaultBlockState();   // 内壁：黑色混凝土
-            } else if (index < decorEnd) {
-                pos = realm.decor.get(index - innerEnd);
-                target = Blocks.WHITE_CONCRETE.defaultBlockState();
-            } else {
-                pos = realm.light.get(index - decorEnd);
+            } else if (index < lightEnd) {
+                pos = realm.light.get(index - innerEnd);
                 target = Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 15);
+            } else {
+                // 子宫/眼睛/路最后铺：否则会被内部光源方块整个盖掉（r360 内部全空的根因）
+                pos = realm.decor.get(index - lightEnd);
+                target = Blocks.WHITE_CONCRETE.defaultBlockState();
             }
             if (!realm.level.hasChunkAt(pos)) continue;
             realm.before.putIfAbsent(pos, realm.level.getBlockState(pos));
@@ -247,6 +248,7 @@ public final class NaoyaDomain {
         for (var other : realm.level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
                 new AABB(at, at).inflate(SHADOW_RADIUS),
                 t -> t != p && t.isAlive() && CombatSettings.canHit(p, t))) {
+            other.invulnerableTime = 0;
             CombatSettings.hurt(p, other, p.damageSources().playerAttack(p), (float) damage);
             NaoyaCombat.freeze(p, other);
             Network.send(realm.level, new Network.Effect(NaoyaFx.HIT, other.getId(), other.position(),
@@ -270,7 +272,9 @@ public final class NaoyaDomain {
         if (targets.isEmpty()) return;
         var random = level.random;
         for (var target : targets) {
+            target.invulnerableTime = 0;                 // 无视无敌帧：每一刻都真正结算
             CombatSettings.hurt(p, target, p.damageSources().playerAttack(p), (float) AUTO_DAMAGE);
+            target.invulnerableTime = 0;
             if (random.nextDouble() < AUTO_PLANE_CHANCE) NaoyaCombat.freeze(p, target);
             Network.send(level, new Network.Effect(NaoyaFx.HIT, target.getId(), target.position(),
                 Vec3.ZERO, 1f, 4, 0));

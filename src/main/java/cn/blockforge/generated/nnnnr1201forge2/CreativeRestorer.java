@@ -48,6 +48,7 @@ public final class CreativeRestorer extends Item {
         character.ryu.RyuDomain.forceClose(p);          // 石流龙：领域（整批还原地形）
         character.naoya.NaoyaCombat.testReset(p);       // 禅院直哉：投影节点与模式
         character.naoya.NaoyaDomain.forceClose(p);      // 禅院直哉：领域（整批还原地形）
+        character.hakari.HakariCombat.testReset(p);     // 秤金次：老虎机与中奖状态
         var progress=Curse.data(p);for(String key:List.copyOf(progress.getAllKeys()))if(RecoveryRules.progressKey(key))progress.remove(key);
         var data=p.getPersistentData();for(String key:List.copyOf(data.getAllKeys()))if(RecoveryRules.entityKey(key))data.remove(key);
         SoulCombat.testReset(p);

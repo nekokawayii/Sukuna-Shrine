@@ -31,6 +31,9 @@ public final class CharacterClient {
         if(skillsCache!=null)return skillsCache;
         CharacterDefinition base=CharacterRegistry.get(state.id());
         if(base==null)return java.util.List.of();
+        // 秤金次：中奖期间轮盘自动切换成中奖专属三格
+        if("hakari".equals(base.id())&&character.hakari.HakariState.jackpot)
+            return character.hakari.HakariSkills.jackpotWheel();
         if(copies.length==0){skillsCache=base.skills();return skillsCache;}
         var list=new java.util.ArrayList<Integer>(base.skills());
         for(int id:copies)if(!list.contains(id))list.add(id);

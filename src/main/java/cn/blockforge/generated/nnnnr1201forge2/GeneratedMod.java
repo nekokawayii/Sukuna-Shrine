@@ -158,12 +158,14 @@ public final class GeneratedMod {
         MinecraftForge.EVENT_BUS.addListener(character.yuki.YukiCombat::onPlayerTick);
 
         // 秤金次·坐杀博打：拳、连打、开盘、领域 + 领域 tick
-        character.CharacterCasting.registerEffect("hakari", character.hakari.HakariSkills.PUNCH, character.hakari.HakariCombat::punch);
-        character.CharacterCasting.registerEffect("hakari", character.hakari.HakariSkills.BARRAGE, character.hakari.HakariCombat::barrage);
-        character.CharacterCasting.registerEffect("hakari", character.hakari.HakariSkills.SPIN, character.hakari.HakariCombat::spin);
-        character.CharacterCasting.registerEffect("hakari", character.hakari.HakariSkills.DOMAIN, character.hakari.HakariCombat::domain);
+        // 秤金次·坐杀博徒（r371 大改）：十个技能全部走 HakariCombat.cast
+        for (int hakariSkill : character.hakari.HakariSkills.allIds()) {
+            character.CharacterCasting.registerEffect("hakari", hakariSkill,
+                (character.CharacterCasting.Effect) (p3, s3, r3) -> character.hakari.HakariCombat.cast(p3, s3));
+        }
+        character.CharacterCasting.registerCooldownScale("hakari", character.hakari.HakariCombat::cooldownScale);
         MinecraftForge.EVENT_BUS.addListener(character.hakari.HakariDomain::onServerTick);
-        MinecraftForge.EVENT_BUS.addListener(character.hakari.HakariCombat::onPlayerTick);
+        MinecraftForge.EVENT_BUS.register(character.hakari.HakariCombat.class);
         character.CharacterCasting.registerEffect("yuki", character.yuki.YukiSkills.STAR_RAGE, character.yuki.YukiCombat::starRage);
         MinecraftForge.EVENT_BUS.register(character.CharacterService.class);
         MinecraftForge.EVENT_BUS.register(character.CharacterRewards.class);

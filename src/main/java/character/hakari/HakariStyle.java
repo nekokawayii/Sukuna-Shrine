@@ -14,7 +14,7 @@ public final class HakariStyle {
             new Stats(3000, 20, 5, 5, 12),
             Stats.ZERO,
             HakariSkills.all(),
-            Map.of(),
+            Map.of(HakariSkills.DOOR_SMASH, 0),
             Map.of()
         );
     }

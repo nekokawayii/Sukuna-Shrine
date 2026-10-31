@@ -103,10 +103,21 @@ public final class GeneratedMod {
         character.CharacterCasting.registerEffect("todo", character.todo.TodoSkills.SWAP,
             (character.CharacterCasting.Effect) (p, s2, r) -> character.todo.TodoCombat.swap(p));
         MinecraftForge.EVENT_BUS.register(character.todo.TodoCombat.class);
+        // 七海建人 · 十划咒法：7:3 弱点
+        character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.SMASH,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiCombat.smash(p));
+        character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.VALOR,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiCombat.valor(p));
+        character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.GAP,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiCombat.gap(p));
+        character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.OVERTIME,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiCombat.overtime(p));
+        MinecraftForge.EVENT_BUS.register(character.nanami.NanamiCombat.class);
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent event) -> {
             character.kashimo.KashimoCharges.reset();
             character.kashimo.KashimoZones.reset();
             character.todo.TodoMarks.reset();
+            character.nanami.NanamiRatio.reset();
         });
         character.CharacterCasting.registerEffect("megumi", character.megumi.MegumiSkills.TEN_SHADOWS, (net.minecraft.server.level.ServerPlayer p, character.CharacterSkill skill, int rank) -> Network.sendTo(p, new Network.Effect(308, p.getId(), p.position(), net.minecraft.world.phys.Vec3.ZERO, 0f, 0, 0)));
         MinecraftForge.EVENT_BUS.register(character.CharacterService.class);

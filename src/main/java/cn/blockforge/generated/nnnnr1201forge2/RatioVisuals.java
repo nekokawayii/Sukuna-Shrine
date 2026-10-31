@@ -169,8 +169,13 @@ public final class RatioVisuals {
         Vec3 shift = feet.subtract(living.position());
         double bottom = box.minY + shift.y, top = box.maxY + shift.y;
         double height = Math.max(0.2, top - bottom);
+        // 太近（相机几乎贴在身上）或已经跑到镜头后面就不画：否则近裁剪面会把面片撕成糊屏的光带
+        if (feet.distanceToSqr(cam) < 2.0) return;
+        Vec3 center0 = new Vec3(box.getCenter().x + shift.x, feet.y + height * 0.5, box.getCenter().z + shift.z);
+        Vec3 cameraLook = new Vec3(mc.gameRenderer.getMainCamera().getLookVector());
+        if (cameraLook.dot(center0.subtract(cam).normalize()) < 0.15) return;
         float appear = Math.min(1f, (now - axis.since() + partial) / 12f);   // 缓慢浮现
-        int baseAlpha = (int) (200 * appear);
+        int baseAlpha = (int) (235 * appear);
         // 朝向镜头：把整条轴往镜头方向推 0.55 格，避免埋进身体里
         Vec3 toward = cam.subtract(feet);
         Vec3 flat = new Vec3(toward.x, 0, toward.z);
@@ -179,26 +184,41 @@ public final class RatioVisuals {
             .add(flat.normalize().scale(0.5));
         Vec3 right = new Vec3(-flat.z, 0, flat.x).normalize();
         if (right.lengthSqr() < 1e-4) right = new Vec3(1, 0, 0);
-        // 主竖线
-        Client.ribbon(b, ps, center, center.add(0, top, 0), 0.035, argb(GOLD, baseAlpha), cam);
-        // 第 7 段（60%~70%）金色区
+        Vec3 top_ = center.add(0, height, 0);
+        // ① 先铺一层黑色描边（宽一圈），保证在白墙/天空/亮特效上也能看清
+        Client.ribbon(b, ps, center, top_, 0.075, argb(BLACK, (int) (baseAlpha * 0.85)), cam);
+        // ② 主竖线：金色 + 白色内芯
+        Client.ribbon(b, ps, center, top_, 0.045, argb(GOLD, baseAlpha), cam);
+        Client.ribbon(b, ps, center, top_, 0.016, argb(CORE, (int) (baseAlpha * 0.9)), cam);
+        // ③ 第 7 段（60%~70%）金色区：两层，外面一层暗底
         double y0 = height * 0.60, y1 = height * 0.70;
         Vec3 a = center.add(0, y0, 0), c = center.add(0, y1, 0);
-        double w = 0.16;
+        double w = 0.21;
+        Client.quad(b, ps, a.subtract(right.scale(w + 0.03)), a.add(right.scale(w + 0.03)),
+            c.add(right.scale(w + 0.03)), c.subtract(right.scale(w + 0.03)), argb(BLACK, (int) (baseAlpha * 0.5)));
         Client.quad(b, ps, a.subtract(right.scale(w)), a.add(right.scale(w)),
-            c.add(right.scale(w)), c.subtract(right.scale(w)), argb(GOLD, (int) (baseAlpha * 0.55)));
-        // 刻度：每 10% 一格，第 5、10 格更长
+            c.add(right.scale(w)), c.subtract(right.scale(w)), argb(GOLD, (int) (baseAlpha * 0.8)));
+        // ④ 刻度：每 10% 一格，第 5、10 格更长；金色第 7 格再加长
         for (int i = 0; i <= 10; i++) {
             double y = height * (i / 10.0);
-            double length = i % 5 == 0 ? 0.30 : 0.16;
+            double length = i == 7 ? 0.44 : i % 5 == 0 ? 0.34 : 0.22;
             Vec3 at = center.add(0, y, 0);
-            Client.ribbon(b, ps, at, at.add(right.scale(length)), i == 5 ? 0.03 : 0.02,
-                argb(i == 7 ? GOLD : CORE, (int) (baseAlpha * (i == 7 ? 0.95 : 0.55))), cam);
+            Client.ribbon(b, ps, at, at.add(right.scale(length)), i == 7 ? 0.05 : 0.03,
+                argb(BLACK, (int) (baseAlpha * 0.7)), cam);
+            Client.ribbon(b, ps, at, at.add(right.scale(length)), i == 7 ? 0.03 : 0.016,
+                argb(i == 7 ? GOLD : CORE, (int) (baseAlpha * (i == 7 ? 1.0 : 0.7))), cam);
         }
-        // 70% 那条分割线：最关键的一条
+        // ⑤ 70% 那条分割线：最显眼的一条（黑底 → 金色光晕 → 白色芯，还带呼吸）
         Vec3 lineAt = center.add(0, height * 0.70, 0);
-        Client.ribbon(b, ps, lineAt.subtract(right.scale(0.42)), lineAt.add(right.scale(0.42)), 0.055,
-            argb(0xFFF3C4, baseAlpha), cam);
+        double pulse = 0.9 + 0.1 * Math.sin(now * 0.35);
+        Client.ribbon(b, ps, lineAt.subtract(right.scale(0.55)), lineAt.add(right.scale(0.55)),
+            0.16, argb(BLACK, (int) (baseAlpha * 0.85)), cam);
+        Client.ribbon(b, ps, lineAt.subtract(right.scale(0.52)), lineAt.add(right.scale(0.52)),
+            (float) (0.11 * pulse), argb(GOLD, baseAlpha), cam);
+        Client.ribbon(b, ps, lineAt.subtract(right.scale(0.5)), lineAt.add(right.scale(0.5)),
+            (float) (0.045 * pulse), argb(0xFFF3C4, baseAlpha), cam);
+        Client.ribbon(b, ps, lineAt.subtract(right.scale(0.48)), lineAt.add(right.scale(0.48)),
+            (float) (0.018 * pulse), argb(CORE, baseAlpha), cam);
         // 眩晕 / 加班时把判定窗口画得更宽（提示弱点被放大）
         double widen = 0.0;
         if (axis.stunned()) widen += 0.22;

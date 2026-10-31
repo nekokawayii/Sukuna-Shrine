@@ -15,7 +15,7 @@ public final class HakariCharacter {
             "hakari", "秤金次", "坐杀博打",
             "赌上性命的赌徒。抽中头奖即进入 4 分 11 秒无限咒力，没中奖时只能靠咒力强化的拳脚。",
             Family.CUSTOM, Resource.CURSED_ENERGY, 0xFFFFCB3D,
-            List.of(HakariSkills.PUNCH, HakariSkills.BARRAGE, HakariSkills.SPIN, HakariSkills.DOMAIN),
+            HakariSkills.allIds(),
             HakariStory.chapters(), HakariStyle.config());
     }
 

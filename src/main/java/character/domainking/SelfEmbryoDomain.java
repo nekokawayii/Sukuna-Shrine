@@ -57,6 +57,7 @@ public final class SelfEmbryoDomain {
         Build build = new Build(level, center, level.getGameTime() + LIFE_TICKS);
         plan(level, center, build);
         ACTIVE.put(p.getUUID(), build);
+        cn.blockforge.generated.nnnnr1201forge2.DomainClash.opened(p, net.minecraft.world.phys.Vec3.atCenterOf(center), RADIUS);
         spawnFruits(level, p, build);
         level.playSound(null, center, net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE,
             net.minecraft.sounds.SoundSource.HOSTILE, 1.8f, 0.4f);

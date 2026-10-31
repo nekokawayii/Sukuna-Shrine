@@ -131,6 +131,7 @@ public final class HigurumaDomain {
             built.judgeSpot = new BlockPos(column.getX(), topY + 1, column.getZ());
         }
         ACTIVE.put(p.getUUID(), built);
+        cn.blockforge.generated.nnnnr1201forge2.DomainClash.opened(p, net.minecraft.world.phys.Vec3.atCenterOf(anchor), 21.0);
         p.sendSystemMessage(Component.literal("领域展开·诛伏赐死（再按收回）").withStyle(ChatFormatting.DARK_PURPLE));
     }
 

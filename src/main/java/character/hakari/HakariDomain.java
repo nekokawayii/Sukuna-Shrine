@@ -39,6 +39,7 @@ public final class HakariDomain {
         final BlockPos center;
         final List<Rec> saved = new ArrayList<>();
         final List<Rec> plan = new ArrayList<>();
+        long extra;
         int cursor;
         boolean built;
         long start;
@@ -61,9 +62,22 @@ public final class HakariDomain {
         buildPlan(job);
         job.start = level.getGameTime();
         JOBS.put(p.getUUID(), job);
+        cn.blockforge.generated.nnnnr1201forge2.DomainClash.opened(p,
+            net.minecraft.world.phys.Vec3.atCenterOf(job.center), RADIUS);
         p.displayClientMessage(Component.literal("领域展开 · 坐杀博打"), false);
         level.playSound(null, p.blockPosition(), net.minecraft.sounds.SoundEvents.NOTE_BLOCK_PLING.get(),
             net.minecraft.sounds.SoundSource.PLAYERS, 1.4f, 0.8f);
+    }
+
+    /** 再按一次收起。 */
+    public static void toggle(ServerPlayer p) {
+        if (active(p)) close(p, "已收起"); else open(p);
+    }
+
+    /** 领域对拼获胜：延长存在时间。 */
+    public static void extend(ServerPlayer p, int ticks) {
+        Job job = JOBS.get(p.getUUID());
+        if (job != null) job.extra += ticks;
     }
 
     public static void close(ServerPlayer p, String reason) {
@@ -137,13 +151,12 @@ public final class HakariDomain {
                 continue;
             }
 
-            if (age > MAX_TICKS) { close(p, "赌场关闭"); it.remove(); continue; }
+            if (age > MAX_TICKS + job.extra) { close(p, "赌场关闭"); it.remove(); continue; }
             if (age > 0 && age % 20 == 0
                 && !cn.blockforge.generated.nnnnr1201forge2.Curse.spend(p, DRAIN_PER_SECOND)) {
                 close(p, "咒力耗尽"); it.remove(); continue;
             }
             if (age % SPIN_INTERVAL == 0) {
-                HakariCombat.trySpin(p, false);
             }
             if (age % 10 == 0) {
                 job.level.sendParticles(ParticleTypes.END_ROD,

@@ -98,6 +98,8 @@ public final class RyuDomain {
         f.closeAt = f.openedAt + LIFE_TICKS;
         f.nextFirework = f.openedAt + 20;
         ACTIVE.put(p.getUUID(), f);
+        // 领域真的生成后登记对拼（固定球心 + 实际半径），玩家之间球体重叠才会开局
+        DomainClash.opened(p, Vec3.atCenterOf(f.center), RADIUS);
         Network.send(level, new Network.Effect(RyuFx.DOMAIN, p.getId(), p.position(), Vec3.ZERO,
             (float) RADIUS, LIFE_TICKS, 0));
         level.playSound(null, p.blockPosition(), net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_THUNDER,

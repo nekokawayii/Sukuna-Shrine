@@ -1,5 +1,5 @@
 plugins { id 'java'; id 'net.minecraftforge.gradle' version '[6.0,6.2)' }
-version = '1.6.0-r288-high-2-r368'
+version = '1.6.0-r288-high-2-r405'
 group = 'cn.blockforge.generated.nnnnr1201forge2'
 base { archivesName = "sukuna-forge-1.20.1" }
 // 产物文件名固定为 sukuna-forge-1.20.1（不带版本号），版本号只保留在 jar 内部的 mods.toml 里。
@@ -23,6 +23,8 @@ processResources {
     filesMatching('META-INF/mods.toml') { expand props }
 }
 jar {
+    // 用户要求：发行 jar 的文件名固定为 sukuna-forge-1.20.1（不带版本号），版本只写进模组内部
+    archiveVersion = ''
     archiveClassifier = 'ask'
     manifest { attributes 'Sukuna-Wallpaper-Edition': 'ask' }
 }
@@ -32,6 +34,7 @@ jar.finalizedBy('reobfJar')
 // 该任务由正式 build 执行；不在构建之外手工修改发行 jar。
 def autoShareJar = tasks.register('autoShareJar', Jar) {
     dependsOn tasks.named('reobfJar')
+    archiveVersion = ''
     archiveClassifier = 'auto-share'
     from({ zipTree(tasks.named('jar').get().archiveFile.get().asFile) }) {
         exclude 'sukuna-wallpaper-defaults.properties', 'META-INF/MANIFEST.MF'

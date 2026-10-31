@@ -100,7 +100,7 @@ public final class NpcCombatCasting {
         } else if (id.contains("sukuna_npc")) {
             // 宿傩的全部术式（无冷却，每 10 刻按招表轮转），领域固定「伏魔御厨子」
             var data = mob.getPersistentData();
-            int step = (data.getInt("SukunaNpcStep") + 1) % 6;
+            int step = (data.getInt("SukunaNpcStep") + 1) % 12;
             data.putInt("SukunaNpcStep", step);
             switch (step) {
                 case 0 -> { mugi(mob, player, 20); fire(mob, player, 0xFFE34D65); }            // 解·远程斩击
@@ -108,7 +108,13 @@ public final class NpcCombatCasting {
                 case 2 -> { mugi(mob, player, 34); fire(mob, player, 0xFFD62E4B); }            // 捌·必断斩击
                 case 3 -> { mugi(mob, player, 16); fire(mob, player, 0xFFFF7A3D); }            // 开·炎弓
                 case 4 -> { mugi(mob, player, 28); fire(mob, player, 0xFFFFB347); }            // 灶·粉尘爆炸
-                default -> { mugi(mob, player, 12); fire(mob, player, 0xFFB14CFF); }           // 灵魂剥离
+                case 5 -> { mugi(mob, player, 12); fire(mob, player, 0xFFB14CFF); }            // 灵魂剥离
+                case 6 -> { mugi(mob, player, 22); fire(mob, player, 0xFFFFC0C8); }            // 解·滞留（八方罗网分支）
+                case 7 -> { mugi(mob, player, 30); fire(mob, player, 0xFFB3123C); }            // 捌·滞留
+                case 8 -> { mugi(mob, player, 46); fire(mob, player, 0xFFFFD700); }            // 灶·最大功率·开
+                case 9 -> { mugi(mob, player, 18); fire(mob, player, 0xFFFFFFFF); }            // 斩击环（旋转环斩）
+                case 10 -> { mugi(mob, player, 26); fire(mob, player, 0xFFFF4F65); }           // 咒力附拳
+                default -> { mugi(mob, player, 36); fire(mob, player, 0xFF8B0000); }           // 神龛（御厨子内部斩击）
             }
             if (ready(mob, K_DOM, 200) && distance <= 32)
                 NpcDomain.open(mob, 40, NpcDomain.Style.GENERIC);   // 伏魔御厨子（半径 40，必中斩击）

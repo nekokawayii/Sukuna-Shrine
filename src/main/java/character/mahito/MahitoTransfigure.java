@@ -113,7 +113,32 @@ public final class MahitoTransfigure {
         return tag;
     }
 
+    /** 各动作的咒力消耗。 */
+    private static double costOf(int action) {
+        if (action == 0) return 200;                       // 储存
+        if (action >= 1 && action <= 5) return 100;        // 工具
+        if (action >= 100 && action <= 104) return 300;    // 咒具
+        if (action == 200 || action == 201) return 500;    // 墙 / 桥
+        if (action == 300) return 800;                     // 潜能激发
+        if (action == 400 || (action >= 401 && action <= 406) || action == 410) return 0; // 改变是纯粹的微调
+        if (action >= 1000) return 400;                    // 具象化
+        if (action == MahitoSelf.STORAGE_HEAL || action == MahitoSelf.HEAL) return 600;
+        if (action == MahitoSelf.STORAGE_BURST) return 700;
+        if (action == MahitoSelf.CLONE) return 900;
+        if (action == MahitoSelf.SPIRIT) return 1200;
+        if (action == MahitoSelf.LIMBS) return 700;
+        return 0;
+    }
+
     public static void handle(ServerPlayer p, int action) {
+        double cost = costOf(action);
+        if (cost > 0) {
+            if (cn.blockforge.generated.nnnnr1201forge2.Curse.energy(p) < cost) {
+                p.sendSystemMessage(Component.literal("咒力不足：需要 " + (int) cost).withStyle(ChatFormatting.GRAY));
+                return;
+            }
+            cn.blockforge.generated.nnnnr1201forge2.Curse.add(p, -cost);
+        }
         com.mojang.logging.LogUtils.getLogger().info("[无为] 服务端收到 action={}", action);
         if (action == 0) { storePending(p); return; }
         if (action >= 1000) { MahitoPowers.materialize(p, action - 1000); return; }

@@ -1,5 +1,5 @@
 plugins { id 'java'; id 'net.minecraftforge.gradle' version '[6.0,6.2)' }
-version = '1.6.0-r288-high-2-r405'
+version = '1.6.0-r288-high-2-r406'
 group = 'cn.blockforge.generated.nnnnr1201forge2'
 base { archivesName = "sukuna-forge-1.20.1" }
 // 产物文件名固定为 sukuna-forge-1.20.1（不带版本号），版本号只保留在 jar 内部的 mods.toml 里。

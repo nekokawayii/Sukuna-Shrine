@@ -63,10 +63,10 @@ public final class YukiCombat {
             if (to.length() > range) continue;
             if (to.normalize().dot(dir) < Math.cos(Math.toRadians(skill.halfAngle()))) continue;
             // 先按正常伤害结算（magic：无视护甲）
-            float floor = e.getMaxHealth() * 0.10f;                    // 保底 10% 目标生命上限
+            float floor = e.getMaxHealth() * 0.20f;                    // 保底 20% 目标生命上限
             float before = e.getHealth();
             e.hurt(p.damageSources().magic(), Math.max(base, floor));
-            // 保底优先级最高：不足 10% 就用「真伤」补足，绕过一切限伤/防御/减伤。
+            // 保底优先级最高：不足 20% 就用「真伤」补足，绕过一切限伤/防御/减伤。
             float lost = before - e.getHealth();
             if (e.isAlive() && lost < floor) {
                 trueDamage(p, e, floor - lost);

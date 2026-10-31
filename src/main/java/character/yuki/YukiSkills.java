@@ -13,7 +13,7 @@ public final class YukiSkills {
     public static final int GARUDA = 2001;
     /** 加重：叠满 10 层后，第 11 次点击触发黑洞（不再是独立技能）。 */
     public static final int STAR_RAGE = 2002;
-    /** 星崩拳：质量拳的五倍伤害、无视防御、保底 10% 目标生命，冷却 30 秒。 */
+    /** 星崩拳：质量拳的五倍伤害、无视防御、保底 20% 目标生命，冷却 30 秒。 */
     public static final int STAR_CRASH = 2003;
     /** 领域展开·星轨坠亡。 */
     public static final int DOMAIN = 2004;
@@ -22,7 +22,7 @@ public final class YukiSkills {
         return List.of(
             // 编号、全名、轮盘短名、说明、颜色、消耗、冷却、形状、距离、半径、半角、伤害、每章加伤、目标数、每章加目标、减速刻数、减速等级
             new CharacterSkill(STAR_CRASH, "星之怒·星崩拳", "星崩拳",
-                "质量拳的五倍重击：无视防御，至少造成目标 10% 生命上限的伤害；冷却 30 秒。",
+                "质量拳的五倍重击：无视防御与一切限伤，至少造成目标 20% 生命上限的伤害；冷却 30 秒。",
                 0xFFFFB35C, 800, 600, CharacterSkill.Shape.CONE, 8, 4, 60, 1500, 400, 10, 1, 40, 3),
             new CharacterSkill(MASS_FIST, "星之怒·质量拳", "质量拳",
                 "把质量压进拳里：前方锥形重击，伤害随「加重」层数暴涨。",

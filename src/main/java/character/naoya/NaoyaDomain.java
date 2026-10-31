@@ -115,11 +115,11 @@ public final class NaoyaDomain {
                     if (d > outerSq) continue;
                     if (d >= innerSq) { realm.outer.add(pos); continue; }          // 外壁（骨白）
                     if (pos.getY() >= floorY) realm.light.add(pos);                // 内部清空+光源
-                    if (d >= (r - 2) * (r - 2)) realm.inner.add(pos);              // 内壁（肉粉）
+                    if (d >= (r - 2) * (r - 2)) realm.inner.add(pos);              // 内壁（黑色混凝土）
                 }
             }
         }
-        // 子宫：三圈肉粉褶皱（球内的同心弧）
+        // 子宫：三圈白色褶皱（球内的同心弧）
         for (int i = 0; i < 3; i++) {
             double ringRadius = 8 + i * 6;
             int samples = (int) (ringRadius * 8);
@@ -131,7 +131,7 @@ public final class NaoyaDomain {
                     (int) Math.round(center.z + Math.sin(angle) * ringRadius)));
             }
         }
-        // 中央的眼睛：白色眼球 + 黑色瞳孔
+        // 中央的眼睛：白色眼球 + 黑色瞳孔（黑色混凝土球壁内唯一的白结构）
         for (int dy = -4; dy <= 4; dy++) {
             for (int dx = -4; dx <= 4; dx++) {
                 for (int dz = -4; dz <= 4; dz++) {
@@ -183,10 +183,10 @@ public final class NaoyaDomain {
             BlockState target;
             if (index < outerEnd) {
                 pos = realm.outer.get(index);
-                target = Blocks.BONE_BLOCK.defaultBlockState();
+                target = Blocks.BLACK_CONCRETE.defaultBlockState();   // 外壁：黑色混凝土
             } else if (index < innerEnd) {
                 pos = realm.inner.get(index - outerEnd);
-                target = Blocks.PINK_CONCRETE.defaultBlockState();
+                target = Blocks.BLACK_CONCRETE.defaultBlockState();   // 内壁：黑色混凝土
             } else if (index < decorEnd) {
                 pos = realm.decor.get(index - innerEnd);
                 target = Blocks.WHITE_CONCRETE.defaultBlockState();

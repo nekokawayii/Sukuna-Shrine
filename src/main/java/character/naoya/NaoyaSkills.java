@@ -43,9 +43,10 @@ public final class NaoyaSkills {
             new CharacterSkill(PROJECT, "投射咒法·设定投影", "设定投影",
                 "接下来 10 秒：每移动一段距离就记录一个投影节点，并留下一个半透明残影（从开始位置朝准星方向）。",
                 0xFFFFE36B, 200, 200, CharacterSkill.Shape.BURST, 4, 1, 180, 0, 0, 1, 0, 0, 0),
-            new CharacterSkill(DOMAIN, "领域展开（占位）", "领域展开",
-                "占位：直哉的领域还没做，暂时只播放起手提示。",
-                0xFF808080, 4000, 2400, CharacterSkill.Shape.BURST, 8, 2, 180, 0, 0, 1, 0, 0, 0),
+            new CharacterSkill(DOMAIN, "领域展开·时胞月宫殿", "领域展开",
+                "半径 30 的黑色混凝土正圆球体，内部子宫与中央巨眼；领域内每三次命中由半透明影子复制动作必中结算，"
+                    + "按住左键即千手乱舞（每秒 16 次、95% 概率把目标压成二次元）。",
+                0xFF808080, 1200, 2400, CharacterSkill.Shape.BURST, 8, 2, 180, 0, 0, 1, 0, 0, 0),
             new CharacterSkill(RELEASE, "投射咒法·释放", "释放",
                 "按释放键：在已设定的投影节点之间自动穿梭，沿途敌人受伤（无击退）并挂上「帧数泥沼」。",
                 0xFFFFFFFF, 0, 1, CharacterSkill.Shape.BURST, 8, 1, 180, 16, 3, 8, 1, 0, 0),

@@ -60,9 +60,20 @@ public final class CharacterClient {
         }
     }
     public static void clear() { state=new CharacterPackets.State("",0,100,0,false,new int[0]);copies=new int[0];skillsCache=null;world=null;physicalHeld=false; }
+    private static long tenShadowsOpenedAt = -100;
+
     public static void tick() {
         var mc=Minecraft.getInstance();if(world!=mc.level){clear();world=mc.level;}
         boolean down=ClientInput.held(Client.CAST);
+        // 伏黑惠：释放键直接在本地打开十影界面（不依赖服务端回包，避免只闪一下）
+        if (tenShadows() && down && !physicalHeld && mc.player != null && mc.player.isAlive()
+            && mc.screen == null && mc.level != null && mc.level.getGameTime() - tenShadowsOpenedAt > 10) {
+            tenShadowsOpenedAt = mc.level.getGameTime();
+            com.mojang.logging.LogUtils.getLogger().info("[十影] 本地打开十影界面");
+            mc.setScreen(new cn.blockforge.generated.nnnnr1201forge2.TenShadowsScreen());
+            physicalHeld = true;
+            return;
+        }
         if(toji()&&down&&!physicalHeld&&mc.player!=null&&mc.player.isAlive()&&!mc.player.isSpectator()&&mc.screen==null&&mc.isWindowActive()&&mc.mouseHandler.isMouseGrabbed()) {
             int kind=mc.options.keyShift.isDown()?1:mc.options.keyJump.isDown()?2:0;
             Network.CHANNEL.sendToServer(new CharacterPackets.Physical(kind));

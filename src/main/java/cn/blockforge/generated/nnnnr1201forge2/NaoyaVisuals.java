@@ -35,6 +35,8 @@ public final class NaoyaVisuals {
     private static final List<Node> NODES = new ArrayList<>();
     /** 设定投影的起点（节点的局部坐标参考点）。 */
     private static Vec3 anchor;
+    /** 这份投影属于哪个玩家（平移时按他自己的位置算，多人下不会跟着别人走）。 */
+    private static int anchorOwner = -1;
     private static final List<Trail> TRAILS = new ArrayList<>();
     private static final List<Plane> PLANES = new ArrayList<>();
     private static final List<Shards> SHARDS = new ArrayList<>();
@@ -51,9 +53,9 @@ public final class NaoyaVisuals {
         long now = mc.level.getGameTime();
         switch (e.kind()) {
             case NaoyaFx.PROJECT -> {
-                if (e.size() <= 0 && e.life() <= 0) { NODES.clear(); anchor = null; projectUntil = 0; break; }
+                if (e.size() <= 0 && e.life() <= 0) { NODES.clear(); anchor = null; anchorOwner = -1; projectUntil = 0; break; }
                 projectUntil = Math.max(projectUntil, now + Math.max(1, e.life()));
-                if (anchor == null) { anchor = e.position(); NODES.clear(); }
+                if (anchor == null) { anchor = e.position(); anchorOwner = e.owner(); NODES.clear(); }
             }
             case NaoyaFx.GHOST -> {
                 GHOSTS.removeIf(g -> g.owner() == e.owner());
@@ -65,7 +67,7 @@ public final class NaoyaVisuals {
             }
             case NaoyaFx.TRAIL -> TRAILS.add(new Trail(e.position(), e.position().add(e.direction()),
                 now, Math.max(4, e.life())));
-            case NaoyaFx.RELEASE -> { NODES.clear(); anchor = null; }
+            case NaoyaFx.RELEASE -> { NODES.clear(); anchor = null; anchorOwner = -1; }
             case NaoyaFx.PLANE -> {
                 PLANES.removeIf(plane -> plane.entity() == e.owner());
                 PLANES.add(new Plane(e.owner(), now + Math.max(1, e.life()), Math.max(1.2, e.size())));
@@ -86,7 +88,7 @@ public final class NaoyaVisuals {
 
     public static void tick() {
         var mc = Minecraft.getInstance();
-        if (mc.level == null) { GHOSTS.clear(); NODES.clear(); TRAILS.clear(); projectUntil = 0; anchor = null; return; }
+        if (mc.level == null) { GHOSTS.clear(); NODES.clear(); TRAILS.clear(); projectUntil = 0; anchor = null; anchorOwner = -1; return; }
         long now = mc.level.getGameTime();
         GHOSTS.removeIf(g -> now >= g.until() || mc.level.getEntity(g.owner()) == null);
         NODES.removeIf(n -> now >= n.until());
@@ -121,8 +123,8 @@ public final class NaoyaVisuals {
         // 节点环：整条投影按"玩家当前位置 − 锚点"平移 → 设定完成后地上的投影跟着玩家走
         Vec3 shift = Vec3.ZERO;
         if (anchor != null) {
-            var local = mc.player;
-            if (local != null) shift = local.position().subtract(anchor);
+            var entity = anchorOwner >= 0 ? mc.level.getEntity(anchorOwner) : mc.player;
+            if (entity != null) shift = entity.position().subtract(anchor);
         }
         Vec3 previous = null;
         for (Node node : NODES) {

@@ -42,9 +42,8 @@ public final class HigurumaDomain {
                 for (int dz = -RADIUS; dz <= RADIUS; dz++) {
                     double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
                     if (dist > RADIUS) continue;
-                    boolean shell = dist > RADIUS - 1.5;
                     BlockPos pos = new BlockPos(cx + dx, cy + dy, cz + dz);
-                    if (shell || dy <= 0) positions.add(pos);
+                    positions.add(pos);
                 }
         positions.sort(Comparator.comparingDouble(p0 -> p0.distSqr(anchor)));
         for (BlockPos pos : positions) {
@@ -97,7 +96,8 @@ public final class HigurumaDomain {
                 else if (dy == 1 && rz <= -12 && rz >= -16 && Math.abs(rx) <= 7) state = Blocks.DARK_OAK_PLANKS.defaultBlockState(); // 法官席台阶
                 else if (dy == 2 && rz <= -14 && rz >= -16 && Math.abs(rx) <= 6) state = Blocks.DARK_OAK_PLANKS.defaultBlockState(); // 法官席面
                 else if (dy >= 1 && Math.abs(rx) == 9 && (rz == -10 || rz == 10)) state = Blocks.STRIPPED_DARK_OAK_LOG.defaultBlockState(); // 柱子
-                else state = Blocks.AIR.defaultBlockState();
+                else state = Blocks.LIGHT.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 15);
                 level.setBlock(pos, state, 2);
             }
             ServerPlayer owner = level.getServer().getPlayerList().getPlayer(e.getKey());

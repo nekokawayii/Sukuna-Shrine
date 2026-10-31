@@ -125,6 +125,11 @@ public final class CharacterCasting {
             character.yuta.YutaDomain.close(p,"主动解除");
             return;
         }
+        // 九十九由基：领域展开中再次按下 = 主动收起，不进入冷却（必须在冷却判断之前）。
+        if("yuki".equals(definition.id())&&id==character.yuki.YukiSkills.DOMAIN&&character.yuki.YukiDomain.active(p)){
+            character.yuki.YukiDomain.close(p,"主动解除");
+            return;
+        }
         String cooldown="CharacterSkillCooldown_"+id;
         long nowTick=p.level().getGameTime();
         long remainSkill=Curse.data(p).getLong(cooldown)-nowTick;

@@ -13,8 +13,8 @@ public final class YukiSkills {
     public static final int GARUDA = 2001;
     /** 加重：叠满 10 层后，第 11 次点击触发黑洞（不再是独立技能）。 */
     public static final int STAR_RAGE = 2002;
-    /** 连拳·质量拳：1 秒内挥出 5 拳，冷却 30 秒。 */
-    public static final int COMBO = 2003;
+    /** 星崩拳：质量拳的五倍伤害、无视防御、保底 10% 目标生命，冷却 30 秒。 */
+    public static final int STAR_CRASH = 2003;
     /** 领域展开·星轨坠亡。 */
     public static final int DOMAIN = 2004;
 
@@ -27,9 +27,9 @@ public final class YukiSkills {
             new CharacterSkill(GARUDA, "星之怒·迦楼罗", "迦楼罗",
                 "召出式神迦楼罗沿准星贯穿，沿途所有敌人承受巨量伤害，同样吃加重层数。",
                 0xFFFFE9A8, 400, 60, CharacterSkill.Shape.RAY, 22, 2.6, 12, 450, 120, 10, 1, 0, 0),
-            new CharacterSkill(COMBO, "星之怒·连拳", "连拳",
-                "1 秒内挥出五记质量拳，每一拳都吃加重层数；冷却 30 秒。",
-                0xFFFFB35C, 600, 600, CharacterSkill.Shape.CONE, 6.5, 3.2, 55, 200, 50, 8, 1, 10, 2),
+            new CharacterSkill(STAR_CRASH, "星之怒·星崩拳", "星崩拳",
+                "质量拳的五倍重击：无视防御，至少造成目标 10% 生命上限的伤害；冷却 30 秒。",
+                0xFFFFB35C, 800, 600, CharacterSkill.Shape.CONE, 8, 4, 60, 1500, 400, 10, 1, 40, 3),
             new CharacterSkill(DOMAIN, "领域展开·星轨坠亡", "星轨坠亡",
                 "展开星空领域：内壁纯黑混凝土、外壳星轨壁；领域内敌人无法移动且虚弱，生命低于你的直接被压扁。",
                 0xFF1B2A6B, 1000, 1200, CharacterSkill.Shape.BURST, 1, 1, 180, 0, 0, 1, 0, 0, 0),

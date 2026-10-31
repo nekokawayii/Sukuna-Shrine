@@ -7,11 +7,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 九十九由基：50 章成长线，全部按「累计击杀」判定。
- * <p>门槛递增（最后一章约 3000 只），奖励持续堆属性；配合领域内自动刷怪，后期可以靠领域刷章。
+ * 九十九由基：100 章成长线，全部按「累计击杀」判定。
+ * <p>门槛递增（最后一章约 1.6 万只），奖励持续堆属性；配合领域内自动刷怪，后期可以靠领域刷章。
  */
 public final class YukiStory {
-    /** 50 章的累计击杀门槛。 */
+    /** 100 章的累计击杀门槛。 */
     private static final int[] KILLS = buildKills();
 
     private static final String[] WORDS = {
@@ -20,10 +20,10 @@ public final class YukiStory {
     };
 
     private static int[] buildKills() {
-        int[] arr = new int[50];   // 框架上限已放宽到 128，这里用 50 章
+        int[] arr = new int[100];   // 框架上限 128，这里用 100 章
         double acc = 0;
         for (int i = 0; i < arr.length; i++) {
-            acc += 2 + i * 2.4;      // 每章步长递增，50 章合计约 3000
+            acc += 3 + i * 3.2;      // 每章步长递增，100 章合计约 1.6 万
             arr[i] = (int) Math.round(acc);
         }
         return arr;
@@ -33,7 +33,7 @@ public final class YukiStory {
         var list = new ArrayList<Chapter>(KILLS.length);
         for (int i = 0; i < KILLS.length; i++) {
             int n = i + 1;
-            Stats stats = new Stats(500 + n * 400, 8 + n * 3, 1 + n, 2 + n / 2, 1 + n / 2);
+            Stats stats = new Stats(1000 + n * 900, 15 + n * 6, 2 + n * 2, 4 + n, 2 + n);
             list.add(new Chapter("yuki_" + n, "第" + n + "章·" + WORDS[i % WORDS.length] + " " + ((i / WORDS.length) + 1),
                 KILLS[i], "累计击败 " + KILLS[i] + " 个敌人", "质量成长",
                 new CharacterReward(stats, 30 + n * 6, 80 + n * 25, List.of())));

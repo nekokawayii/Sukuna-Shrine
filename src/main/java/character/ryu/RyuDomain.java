@@ -24,7 +24,7 @@ import net.minecraft.world.phys.Vec3;
  * <p>地形借用遵循项目惯例：**每一格都记第一次的原始状态**，收起时逐格还原；关服/死亡/切角色都会兜底还原。
  */
 public final class RyuDomain {
-    public static final double RADIUS = 65;
+    public static final double RADIUS = 35;
     public static final int EXPAND_TICKS = 80;      // 4 秒展开完
     public static final int CLOSE_TICKS = 100;      // 5 秒收起
     public static final int LIFE_TICKS = 600;       // 30 秒后自动收
@@ -38,7 +38,8 @@ public final class RyuDomain {
         final ServerLevel level;
         final UUID owner;
         final BlockPos center;
-        final List<BlockPos> outer = new ArrayList<>(), inner = new ArrayList<>(), floor = new ArrayList<>();
+        final List<BlockPos> outer = new ArrayList<>(), inner = new ArrayList<>(), floor = new ArrayList<>(),
+            fill = new ArrayList<>();
         final Map<BlockPos, BlockState> before = new LinkedHashMap<>();
         int cursor;            // 已施工/已还原的块数
         int total;
@@ -90,7 +91,7 @@ public final class RyuDomain {
         if (!(p.level() instanceof ServerLevel level) || ACTIVE.containsKey(p.getUUID())) return;
         Fract f = new Fract(level, p.getUUID(), p.blockPosition());
         buildShell(f);
-        f.total = f.outer.size() + f.inner.size() + f.floor.size();
+        f.total = f.outer.size() + f.inner.size() + f.fill.size() + f.floor.size();
         f.openedAt = level.getGameTime();
         f.closeAt = f.openedAt + LIFE_TICKS;
         f.nextFirework = f.openedAt + 20;
@@ -137,7 +138,7 @@ public final class RyuDomain {
             .thenComparingDouble(p -> Math.atan2(p.getZ() - f.center.getZ(), p.getX() - f.center.getX()));
         outer.sort(order);
         inner.sort(order);
-        // 地板：站在施术者脚下那一层，铺满半径内的圆盘（否则大家会直接掉到球底）
+        // 地板：站在施术者脚下那一层，铺满半径内的圆盘（光源方块没有碰撞，必须有地板站人）
         int floorY = f.center.getY() - 1;
         List<BlockPos> floor = new ArrayList<>();
         for (int dx = -r; dx <= r; dx++) {
@@ -146,8 +147,21 @@ public final class RyuDomain {
                 floor.add(new BlockPos(f.center.getX() + dx, floorY, f.center.getZ() + dz));
             }
         }
+        // 内部：球壳以内**全部填 13 级光源方块**（而不是空气），地板最后铺
+        int fillSq = (int) ((RADIUS - 2) * (RADIUS - 2));
+        List<BlockPos> fill = new ArrayList<>();
+        for (int dy = -r; dy <= r; dy++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    int d = dx * dx + dy * dy + dz * dz;
+                    if (d > fillSq) continue;
+                    fill.add(f.center.offset(dx, dy, dz));
+                }
+            }
+        }
         f.outer.addAll(outer);
         f.inner.addAll(inner);
+        f.fill.addAll(fill);
         f.floor.addAll(floor);
     }
 
@@ -176,13 +190,23 @@ public final class RyuDomain {
         for (int i = 0; i < budget; i++) {
             int index = f.cursor++;
             if (index >= f.total) return;
-            BlockPos pos = index < f.outer.size() ? f.outer.get(index)
-                : index < f.outer.size() + f.inner.size() ? f.inner.get(index - f.outer.size())
-                : f.floor.get(index - f.outer.size() - f.inner.size());
+            int innerStart = f.outer.size(), fillStart = innerStart + f.inner.size(),
+                floorStart = fillStart + f.fill.size();
+            BlockPos pos = index < innerStart ? f.outer.get(index)
+                : index < fillStart ? f.inner.get(index - innerStart)
+                : index < floorStart ? f.fill.get(index - fillStart)
+                : f.floor.get(index - floorStart);
             if (!f.level.hasChunkAt(pos)) continue;
             f.before.putIfAbsent(pos, f.level.getBlockState(pos));
-            BlockState target = index < f.outer.size()
-                ? Blocks.BEDROCK.defaultBlockState() : Blocks.BLACK_CONCRETE.defaultBlockState();   // 内外壳与地板都用黑混凝土
+            // 外层基岩 / 内层纯黑混凝土 / 内部 13 级光源方块 / 地板纯黑混凝土
+            BlockState target;
+            if (index < innerStart) target = Blocks.BEDROCK.defaultBlockState();
+            else if (index < floorStart) target = Blocks.BLACK_CONCRETE.defaultBlockState();
+            else target = Blocks.BLACK_CONCRETE.defaultBlockState();
+            if (index >= fillStart && index < floorStart) {
+                target = Blocks.LIGHT.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 13);
+            }
             if (!f.level.getBlockState(pos).equals(target)) f.level.setBlock(pos, target, 2);
         }
     }

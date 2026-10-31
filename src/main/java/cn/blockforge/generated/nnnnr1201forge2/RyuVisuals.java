@@ -45,8 +45,9 @@ public final class RyuVisuals {
     private static final List<Spark> SPARKS = new ArrayList<>();
     /** 烟花颜色表（特效的 size 里存的就是这个下标）。 */
     private static final int[] COLORS = {0xFFFFFF, 0xFF5A5A, 0xFFD24A, 0x7CFF6B, 0x6BE8FF, 0x6B8CFF, 0xFF6BE8, 0xFFA24A};
+    /** 内部天空用无量空处同款云图（黑底不透明，所以走加法层）。 */
     private static final net.minecraft.resources.ResourceLocation SKY_TEXTURE =
-        new net.minecraft.resources.ResourceLocation("sukuna", "textures/environment/ryu_domain_sky.png");
+        new net.minecraft.resources.ResourceLocation("sukuna", "textures/effect/unlimited_void_sky.png");
     private static Sky SKY;
     private static Object world;
 
@@ -360,8 +361,9 @@ public final class RyuVisuals {
     }
 
     /**
-     * 领域内部天空：把用户给的日落云海贴图贴在一个**内翻的球**上（只在自己领域里画）。
-     * 画在方块之后、粒子之前，保证领域里的实体仍然正常盖在上面。
+     * 领域内部天空：**无量空处同款**——先铺一层深紫黑的球壳底色，再把云图用加法混合贴在同一层内翻球上，
+     * UV 随时间横向漂移 + 亮度呼吸，看起来就是一片缓慢翻涌的云海。
+     * 画在方块之后、粒子之前，并保留深度测试：球壳 35 格在云层 33 格之外，所以云层只会盖住墙、不会盖住地板。
      */
     @SubscribeEvent public static void renderSky(RenderLevelStageEvent e) {
         var mc = Minecraft.getInstance();
@@ -371,43 +373,63 @@ public final class RyuVisuals {
         if (cam.distanceToSqr(SKY.center()) > (SKY.radius() + 8) * (SKY.radius() + 8)) return;
         PoseStack ps = e.getPoseStack();
         Vec3 center = SKY.center();
-        double radius = SKY.radius() - 1.5;
+        double radius = SKY.radius() - 2.0;
+        float time = (float) ((now(mc)) * 0.0016);
         RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.disableCull();
         RenderSystem.depthMask(false);
         RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderTexture(0, SKY_TEXTURE);
+        RenderSystem.disableCull();
         RenderSystem.setShaderColor(1, 1, 1, 1);
+        // ① 底色：深紫黑（云图是黑底不透明的，必须有这层压住，加法层才不会糊在空气里）
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
         BufferBuilder b = Tesselator.getInstance().getBuilder();
-        b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        int lon = 24, lat = 12;
+        b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        sphereQuads(b, ps, center, radius, 0xEE0C0716, 0f, 1f, false);
+        BufferUploader.drawWithShader(b.end());
+        // ② 云层：加法混合 + UV 漂移 + 呼吸
+        float pulse = (float) (0.70 + 0.30 * Math.sin(now(mc) * 0.012));
+        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+        RenderSystem.setShaderTexture(0, SKY_TEXTURE);
+        RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
+            com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
+        b = Tesselator.getInstance().getBuilder();
+        b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        sphereQuads(b, ps, center, radius * 0.985, ((int) (150 * pulse) << 24) | 0xFFFFFF, time, 3f, true);
+        BufferUploader.drawWithShader(b.end());
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.depthMask(true);
+        RenderSystem.enableCull();
+        RenderSystem.disableBlend();
+    }
+
+    /** 内翻球（经纬网格）；uvRepeat>0 时按经度把 UV 横向叠 uvRepeat 次并加漂移。 */
+    private static void sphereQuads(BufferBuilder b, PoseStack ps, Vec3 center, double radius,
+                                    int color, float uvShift, float uvRepeat, boolean textured) {
+        int lon = 32, lat = 16;
         for (int i = 0; i < lat; i++) {
             double v0 = i / (double) lat, v1 = (i + 1) / (double) lat;
             double phi0 = Math.PI * (v0 - 0.5), phi1 = Math.PI * (v1 - 0.5);
             for (int j = 0; j < lon; j++) {
                 double u0 = j / (double) lon, u1 = (j + 1) / (double) lon;
                 double th0 = Math.PI * 2 * u0, th1 = Math.PI * 2 * u1;
-                skyVertex(b, ps, center, radius, phi0, th0, u0, v0);
-                skyVertex(b, ps, center, radius, phi1, th0, u0, v1);
-                skyVertex(b, ps, center, radius, phi1, th1, u1, v1);
-                skyVertex(b, ps, center, radius, phi0, th1, u1, v0);
+                skyVertex(b, ps, center, radius, phi0, th0, u0 * uvRepeat + uvShift, v0, color, textured);
+                skyVertex(b, ps, center, radius, phi1, th0, u0 * uvRepeat + uvShift, v1, color, textured);
+                skyVertex(b, ps, center, radius, phi1, th1, u1 * uvRepeat + uvShift, v1, color, textured);
+                skyVertex(b, ps, center, radius, phi0, th1, u1 * uvRepeat + uvShift, v0, color, textured);
             }
         }
-        BufferUploader.drawWithShader(b.end());
-        RenderSystem.depthMask(true);
-        RenderSystem.enableCull();
-        RenderSystem.disableBlend();
     }
 
     private static void skyVertex(BufferBuilder b, PoseStack ps, Vec3 center, double radius,
-                                  double phi, double theta, double u, double v) {
+                                  double phi, double theta, double u, double v, int color, boolean textured) {
         double cosPhi = Math.cos(phi);
         float x = (float) (center.x + radius * cosPhi * Math.cos(theta));
         float y = (float) (center.y + radius * Math.sin(phi));
         float z = (float) (center.z + radius * cosPhi * Math.sin(theta));
-        b.vertex(ps.last().pose(), x, y, z).uv((float) u, (float) v).endVertex();
+        var vertex = b.vertex(ps.last().pose(), x, y, z);
+        if (textured) vertex.uv((float) u, (float) v);
+        vertex.color((color >> 16) & 255, (color >> 8) & 255, color & 255, (color >>> 24) & 255).endVertex();
     }
 
     private static int argb(int rgb, int alpha) {

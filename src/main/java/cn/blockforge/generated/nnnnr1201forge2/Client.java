@@ -206,13 +206,7 @@ public final class Client {
         if(mc.level==null||mc.player==null||mc.isPaused())return;if(progress.unlocked()&&!availableSkill(selected))selected=fallbackSkill();
         // 轮盘里刚选中御厨子(5) → 弹出点数分配界面；确定后按释放键正常释放
         if(!AuthorityClient.enabled()&&selected==5&&lastShrineSel!=5&&mc.screen==null&&!shrineDomainOpen()&&availableSkill(5))mc.setScreen(new DomainOptionsScreen());
-        // 共同主线：L 打开成就面板；G 放领域展延
-        while(mc.options.keyPlayerList.consumeClick()){}
-        if(Minecraft.getInstance().screen==null&&net.minecraft.client.KeyMapping.class!=null){
-            boolean lDown=org.lwjgl.glfw.GLFW.glfwGetKey(mc.getWindow().getWindow(),org.lwjgl.glfw.GLFW.GLFW_KEY_L)==org.lwjgl.glfw.GLFW.GLFW_PRESS;
-            if(lDown&&!mainlineKeyHeld)mc.setScreen(new character.mainline.MainlineScreen());
-            mainlineKeyHeld=lDown;
-        }
+        // 共同主线：L 键在 ClientInput.key 里开面板（这里不再轮询 GLFW）
         lastShrineSel=selected;tick++;TojiQteVisuals.tick();TojiQteClient.tick();NaoyaVisuals.tick();NaoyaClient.tick();HakariClient.tick();tripleJump(mc);DismantleMotionClient.tick();SlashTerrainClient.tick();SlashFormVisuals.tick();FreehandClient.tick(selected==SlashFormRules.FREEHAND&&FreehandClient.keyDown());BranchVisuals.tick();NetBranchVisuals.tick();VoidTechniqueClient.tick();VoidBossClient.tick();FurnaceMaxClient.tick();GojoFx.tick();MahoragaWheelClient.tick();ShinbukeVisuals.tick();SoulClient.tick();FistFlameClient.tick();BlackFlashMarks.clientTick();VoidVisuals.tick();if(charging&&tick-chargeBorn>200)charging=false;
         if(tick-window>=20){window=tick;generated=0;}
         if(ObserverClient.active()||FinaleClient.local()||DomainClashClient.active()||NetBranchVisuals.locked()||DismantleMotionClient.locked()){

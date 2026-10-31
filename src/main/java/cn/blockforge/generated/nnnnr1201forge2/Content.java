@@ -37,6 +37,14 @@ public final class Content {
     public static final RegistryObject<Item> MAHITO_FINGER=ITEMS.register("mahito_finger",()->new Item(new Item.Properties().rarity(Rarity.EPIC).stacksTo(16)));
     public static final RegistryObject<Item> YUJI_FAMILY_PHOTO=ITEMS.register("yuji_family_photo",()->new Item(new Item.Properties().rarity(Rarity.RARE).stacksTo(1)));
     /** 不属于这个世界的碎片：五条悟通关后从灵魂通道裂隙里掉出来的剧情道具，长得像一张网页截图/鼠标指针。 */
+    /** 无为转变·分身 / 尾巴：玩家模型、友方。 */
+    public static final RegistryObject<EntityType<character.mahito.MahitoCloneEntity>> MAHITO_CLONE =
+        ENTITIES.register("mahito_clone", () -> EntityType.Builder.<character.mahito.MahitoCloneEntity>of(
+            character.mahito.MahitoCloneEntity::new, MobCategory.CREATURE).sized(0.6f, 1.8f)
+            .clientTrackingRange(10).updateInterval(2).build("sukuna:mahito_clone"));
+    /** 圆钝果实：真人领域里的不可移动实体（渲染 一堆手.bbmodel）。 */
+    public static final RegistryObject<EntityType<YiduiShouEntity>> YIDUI = ENTITIES.register("yidui",
+        () -> EntityType.Builder.of(YiduiShouEntity::new, MobCategory.MONSTER).sized(2.0f, 2.0f).clientTrackingRange(10).updateInterval(20).build("sukuna:yidui"));
     /** 漏壶（NPC）：敌对，使用漏壶技能；见到玩家开领域（冷却 300 秒）。 */
     public static final RegistryObject<EntityType<JogoNpcEntity>> JOGO_NPC = ENTITIES.register("jogo_npc",
         () -> EntityType.Builder.of(JogoNpcEntity::new, MobCategory.MONSTER).sized(0.6f, 1.9f).fireImmune().clientTrackingRange(16).updateInterval(1).build("sukuna:jogo_npc"));
@@ -131,6 +139,45 @@ public final class Content {
     }
 
     /** 作弊道具：仅创造模式可得，右键立刻完成当前角色章节（漏壶按章节旗标推进，其他角色按击杀数推进）。 */
+    public static final RegistryObject<Item> TRANSFIGURED_BODY=ITEMS.register("transfigured_body",
+        ()->new character.mahito.TransfiguredItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)){
+            @Override public net.minecraft.world.InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level level,
+                    net.minecraft.world.entity.player.Player p, net.minecraft.world.InteractionHand hand){
+                if(level.isClientSide) net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(
+                    net.minecraftforge.api.distmarker.Dist.CLIENT, ()->()->character.mahito.TransfigureScreen.open(1));
+                return net.minecraft.world.InteractionResultHolder.success(p.getItemInHand(hand));
+            }
+        });
+    /** 无为转变工具：4 种工具 × 6 个材质，材质由贮存生物血量决定。 */
+    public static final String[] TRANSFIGURE_TIERS={"wood","stone","gold","iron","diamond","netherite"};
+    public static final net.minecraft.world.item.Tier[] TRANSFIGURE_TIER_OBJ={
+        net.minecraft.world.item.Tiers.WOOD, net.minecraft.world.item.Tiers.STONE,
+        net.minecraft.world.item.Tiers.GOLD, net.minecraft.world.item.Tiers.IRON,
+        net.minecraft.world.item.Tiers.DIAMOND, net.minecraft.world.item.Tiers.NETHERITE};
+    @SuppressWarnings("unchecked")
+    public static final RegistryObject<Item>[] TRANSFIGURED_AXES=new RegistryObject[6];
+    @SuppressWarnings("unchecked")
+    public static final RegistryObject<Item>[] TRANSFIGURED_PICKAXES=new RegistryObject[6];
+    @SuppressWarnings("unchecked")
+    public static final RegistryObject<Item>[] TRANSFIGURED_HOES=new RegistryObject[6];
+    @SuppressWarnings("unchecked")
+    public static final RegistryObject<Item>[] TRANSFIGURED_SHOVELS=new RegistryObject[6];
+    static {
+        for(int i=0;i<6;i++){
+            final int k=i;
+            TRANSFIGURED_AXES[i]=ITEMS.register("transfigured_axe_"+TRANSFIGURE_TIERS[i],
+                ()->new net.minecraft.world.item.AxeItem(TRANSFIGURE_TIER_OBJ[k],6.0f,-3.0f,new Item.Properties().rarity(Rarity.EPIC)));
+            TRANSFIGURED_PICKAXES[i]=ITEMS.register("transfigured_pickaxe_"+TRANSFIGURE_TIERS[i],
+                ()->new net.minecraft.world.item.PickaxeItem(TRANSFIGURE_TIER_OBJ[k],1,-2.8f,new Item.Properties().rarity(Rarity.EPIC)));
+            TRANSFIGURED_HOES[i]=ITEMS.register("transfigured_hoe_"+TRANSFIGURE_TIERS[i],
+                ()->new net.minecraft.world.item.HoeItem(TRANSFIGURE_TIER_OBJ[k],-2,-3.0f,new Item.Properties().rarity(Rarity.EPIC)));
+            TRANSFIGURED_SHOVELS[i]=ITEMS.register("transfigured_shovel_"+TRANSFIGURE_TIERS[i],
+                ()->new net.minecraft.world.item.ShovelItem(TRANSFIGURE_TIER_OBJ[k],1.5f,-3.0f,new Item.Properties().rarity(Rarity.EPIC)));
+        }
+    }
+    public static final RegistryObject<Item> TRANSFIGURED_SWORD=ITEMS.register("transfigured_sword",
+        ()->new character.mahito.TransfiguredSwordItem(net.minecraft.world.item.Tiers.NETHERITE,5,-2.4f,
+            new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
     public static final RegistryObject<Item> CHAPTER_CHEAT=ITEMS.register("chapter_cheat",()->new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)){
         @Override public InteractionResultHolder<ItemStack> use(Level level,Player player,InteractionHand hand){
             ItemStack stack=player.getItemInHand(hand);
@@ -216,8 +263,8 @@ public final class Content {
     public static final RegistryObject<Item> GETO_EGG=ITEMS.register("geto_spawn_egg",()->new net.minecraftforge.common.ForgeSpawnEggItem(GETO,0x2b2b3d,0x6b7fd7,new Item.Properties()));
     public static final RegistryObject<Item> LOW_CURSE_EGG=ITEMS.register("low_curse_spawn_egg",()->new net.minecraftforge.common.ForgeSpawnEggItem(LOW_CURSE,0x141414,0x4a4a55,new Item.Properties()));
     public static void init(IEventBus bus){ITEMS.register(bus);ENTITIES.register(bus);YUTA_BLOCKS.register(bus);YUTA_BES.register(bus);bus.addListener(Content::attributes);}
-    private static void attributes(EntityAttributeCreationEvent e){e.put(DAITIAN.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,200).add(Attributes.MOVEMENT_SPEED,0.26).add(Attributes.ATTACK_DAMAGE,5).add(Attributes.FOLLOW_RANGE,32).add(Attributes.KNOCKBACK_RESISTANCE,0.4).build());e.put(BUDDHA.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,5000).add(Attributes.MOVEMENT_SPEED,0.24).add(Attributes.ATTACK_DAMAGE,10).add(Attributes.FOLLOW_RANGE,64).add(Attributes.KNOCKBACK_RESISTANCE,0.9).build());e.put(PARASITE.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,12).add(Attributes.MOVEMENT_SPEED,0.32).add(Attributes.ATTACK_DAMAGE,2).add(Attributes.FOLLOW_RANGE,48).build());e.put(MOTHER.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,160).add(Attributes.MOVEMENT_SPEED,0.23).add(Attributes.ATTACK_DAMAGE,12).add(Attributes.FOLLOW_RANGE,48).add(Attributes.KNOCKBACK_RESISTANCE,0.8).build());e.put(BROKEN_MAHITO.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,20000).add(Attributes.MOVEMENT_SPEED,0.34).add(Attributes.ATTACK_DAMAGE,40).add(Attributes.FOLLOW_RANGE,64).add(Attributes.ARMOR,20).add(Attributes.KNOCKBACK_RESISTANCE,0.55).build());e.put(MAHITO_LIMB.get(),MahitoLimbEntity.createAttributes());e.put(CHOSO.get(),ChosoEntity.createAttributes().build());e.put(URAUME_NPC.get(),UraumeNpcEntity.createAttributes().build());e.put(JOGO_NPC.get(),JogoNpcEntity.createAttributes().build());e.put(GETO.get(),GetoEntity.createAttributes().build());e.put(LOW_CURSE.get(),LowCurseEntity.createAttributes().build());e.put(RIKA.get(),RikaEntity.createAttributes().build());e.put(OBSERVER.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,1).add(Attributes.MOVEMENT_SPEED,0).add(Attributes.FOLLOW_RANGE,64).add(Attributes.KNOCKBACK_RESISTANCE,1).build());}
-    private static void tabs(BuildCreativeModeTabContentsEvent e){if(e.getTabKey()==CreativeModeTabs.COMBAT){e.accept(FINGER.get());e.accept(BODY.get());e.accept(ORB.get());e.accept(RELIC.get());e.accept(SEAL.get());e.accept(INCENSE.get());e.accept(EGG.get());e.accept(IDLE_TRANSFIGURATION_CURSE.get());e.accept(MAHITO_FINGER.get());e.accept(YUJI_FAMILY_PHOTO.get());e.accept(CHAPTER_CHEAT.get());e.accept(BLACK_ROPE.get());e.accept(SLAUGHTER_DEMON.get());e.accept(YUYUN.get());e.accept(CHOSO_EGG.get());e.accept(URAUME_NPC_EGG.get());e.accept(JOGO_NPC_EGG.get());e.accept(SOUL_SEPARATION_NEEDLE.get());e.accept(EternalLove.TRUE_FALSE.get());}}
+    private static void attributes(EntityAttributeCreationEvent e){e.put(DAITIAN.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,200).add(Attributes.MOVEMENT_SPEED,0.26).add(Attributes.ATTACK_DAMAGE,5).add(Attributes.FOLLOW_RANGE,32).add(Attributes.KNOCKBACK_RESISTANCE,0.4).build());e.put(BUDDHA.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,5000).add(Attributes.MOVEMENT_SPEED,0.24).add(Attributes.ATTACK_DAMAGE,10).add(Attributes.FOLLOW_RANGE,64).add(Attributes.KNOCKBACK_RESISTANCE,0.9).build());e.put(PARASITE.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,12).add(Attributes.MOVEMENT_SPEED,0.32).add(Attributes.ATTACK_DAMAGE,2).add(Attributes.FOLLOW_RANGE,48).build());e.put(MOTHER.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,160).add(Attributes.MOVEMENT_SPEED,0.23).add(Attributes.ATTACK_DAMAGE,12).add(Attributes.FOLLOW_RANGE,48).add(Attributes.KNOCKBACK_RESISTANCE,0.8).build());e.put(BROKEN_MAHITO.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,20000).add(Attributes.MOVEMENT_SPEED,0.34).add(Attributes.ATTACK_DAMAGE,40).add(Attributes.FOLLOW_RANGE,64).add(Attributes.ARMOR,20).add(Attributes.KNOCKBACK_RESISTANCE,0.55).build());e.put(MAHITO_LIMB.get(),MahitoLimbEntity.createAttributes());e.put(CHOSO.get(),ChosoEntity.createAttributes().build());e.put(URAUME_NPC.get(),UraumeNpcEntity.createAttributes().build());e.put(JOGO_NPC.get(),JogoNpcEntity.createAttributes().build());e.put(MAHITO_CLONE.get(),character.mahito.MahitoCloneEntity.createAttributes().build());e.put(YIDUI.get(),YiduiShouEntity.createAttributes().build());e.put(GETO.get(),GetoEntity.createAttributes().build());e.put(LOW_CURSE.get(),LowCurseEntity.createAttributes().build());e.put(RIKA.get(),RikaEntity.createAttributes().build());e.put(OBSERVER.get(),Monster.createMonsterAttributes().add(Attributes.MAX_HEALTH,1).add(Attributes.MOVEMENT_SPEED,0).add(Attributes.FOLLOW_RANGE,64).add(Attributes.KNOCKBACK_RESISTANCE,1).build());}
+    private static void tabs(BuildCreativeModeTabContentsEvent e){if(e.getTabKey()==CreativeModeTabs.COMBAT){e.accept(FINGER.get());e.accept(BODY.get());e.accept(ORB.get());e.accept(RELIC.get());e.accept(SEAL.get());e.accept(INCENSE.get());e.accept(EGG.get());e.accept(IDLE_TRANSFIGURATION_CURSE.get());e.accept(MAHITO_FINGER.get());e.accept(YUJI_FAMILY_PHOTO.get());e.accept(CHAPTER_CHEAT.get());e.accept(BLACK_ROPE.get());e.accept(TRANSFIGURED_BODY.get());e.accept(TRANSFIGURED_SWORD.get());e.accept(SLAUGHTER_DEMON.get());e.accept(YUYUN.get());e.accept(CHOSO_EGG.get());e.accept(URAUME_NPC_EGG.get());e.accept(JOGO_NPC_EGG.get());e.accept(SOUL_SEPARATION_NEEDLE.get());e.accept(EternalLove.TRUE_FALSE.get());}}
 
     private static class GrowthFood extends Item {
         final boolean body;GrowthFood(boolean body){super(new Properties().stacksTo(16).rarity(Rarity.EPIC).fireResistant().food(new FoodProperties.Builder().nutrition(1).saturationMod(0).alwaysEat().build()));this.body=body;}

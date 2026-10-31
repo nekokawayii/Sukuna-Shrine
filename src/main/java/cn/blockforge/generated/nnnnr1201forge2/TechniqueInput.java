@@ -31,6 +31,7 @@ public final class TechniqueInput {
     public static Input intent(ServerPlayer p){return intents.getOrDefault(p.getUUID(),new Input(0,0,false,false,false));}
     public static boolean holding(ServerPlayer p,int skill){Hold h=holds.get(p.getUUID());return h!=null&&h.skill==skill;}
     public static void receive(ServerPlayer p,Input input){
+        if(input.skill()==character.mahito.MahitoSkills.TRANSMUTE&&input.phase()==7){character.mahito.MahitoTransfigure.handle(p,input.motion());return;}
         if(!character.CharacterService.allowsSkill(p,input.skill())){
             if(input.phase()==0)p.sendSystemMessage(net.minecraft.network.chat.Component.literal("无法施放：技能"+input.skill()+" 不在当前角色的技能表里"));
             if(input.phase()==3)cancel(p);return;

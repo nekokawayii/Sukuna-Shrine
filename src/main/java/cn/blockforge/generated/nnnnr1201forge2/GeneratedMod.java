@@ -77,6 +77,14 @@ public final class GeneratedMod {
         character.CharacterService.registerRanker("jogo",character.jogo.JogoCombat::rank);
         character.CharacterCasting.registerCooldownScale("jogo",pl->character.jogo.JogoCombat.inDomain(pl)?0.5:1.0);
         MinecraftForge.EVENT_BUS.register(character.jogo.JogoCombat.class);
+        character.CharacterCasting.registerEffect("mahito",character.mahito.MahitoSkills.TRANSMUTE,
+            (p,skill,rank)->character.mahito.MahitoTransfigure.arm(p));
+        MinecraftForge.EVENT_BUS.register(character.mahito.MahitoTransfigure.class);
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.living.LivingHurtEvent ev)->{if(ev.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp&&character.mahito.MahitoSelf.damageScale(sp)<1f)ev.setAmount(ev.getAmount()*character.mahito.MahitoSelf.damageScale(sp));});
+        MinecraftForge.EVENT_BUS.register(character.mahito.MahitoPowers.class);
+        MinecraftForge.EVENT_BUS.register(character.mahito.MahitoSelf.class);
+        character.CharacterCasting.registerEffect("mahito",character.mahito.MahitoSkills.SELF_EMBRYO,
+            (p,skill,rank)->character.domainking.SelfEmbryoDomain.toggle(p));
         character.domainking.DomainKingCombat.register();
         MinecraftForge.EVENT_BUS.register(character.domainking.DomainKingCombat.class);
         MinecraftForge.EVENT_BUS.register(character.domainking.SelfEmbryoDomain.class);

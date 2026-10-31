@@ -19,7 +19,7 @@ public final class TransfigureScreen extends Screen {
     private static final double RADIUS = 92;
     private static final int NODE = 52;
 
-    private static final String[] ROOT = {"1 工具", "2 咒具", "3 具象化", "？", "5 攻击", "6 潜能激发"};
+    private static final String[] ROOT = {"1 工具", "2 咒具", "3 具象化", "？", "5 攻击", "？"};
     private static final String[] TOOLS = {"剑", "斧", "镐", "锄", "铲", "返回"};
     private static final String[] CURSED = {"黑绳", "屠坐魔", "游云", "神武解", "飞天", "返回"};
     private static final String[] ATTACK = {"墙", "桥", "返回", "？", "？", "？"};
@@ -39,7 +39,7 @@ public final class TransfigureScreen extends Screen {
     }
 
     private String label(int i) {
-        if (mode == 0) return i == 0 ? "1 储存" : i == 1 ? "2 改变" : i == 2 ? "3 治疗" : i == 3 ? "4 爆裂" : "？";
+        if (mode == 0) return i == 0 ? "1 储存" : i == 1 ? "2 改变" : i == 2 ? "3 治疗" : i == 3 ? "4 爆裂" : i == 4 ? "5 潜能激发" : "？";
         if (mode == 3) return new String[]{"1 治疗", "2 分身", "3 遍杀即灵体", "4 肢体", "？", "？"}[i];
         return switch (page) {
             case 1 -> TOOLS[i];
@@ -59,13 +59,13 @@ public final class TransfigureScreen extends Screen {
     }
 
     private boolean selectable(int i) {
-        if (mode == 0) return i <= 3;
+        if (mode == 0) return i <= 4;
         if (mode == 3) return i <= 3;
         return switch (page) {
             case 1, 2 -> true;
             case 3 -> i < 3;
             case 4 -> listPage * SLOTS + i < MahitoPowers.entityKeys().size();
-            default -> i != 3;
+            default -> i != 3 && i != 5;
         };
     }
 
@@ -132,7 +132,7 @@ public final class TransfigureScreen extends Screen {
         }
         int hit = hovered(mx, my);
         if (hit < 0 || !selectable(hit)) return super.mouseClicked(mx, my, button);
-        if (mode == 0) { send(hit == 0 ? 0 : hit == 1 ? 400 : hit == 2 ? 500 : 501); return true; }
+        if (mode == 0) { send(hit == 0 ? 0 : hit == 1 ? 400 : hit == 2 ? 500 : hit == 3 ? 501 : 300); return true; }
         if (mode == 3) { send(510 + hit); return true; }
         switch (page) {
             case 1 -> { if (hit == 5) { page = 0; return true; } send(hit + 1); return true; }
@@ -144,7 +144,6 @@ public final class TransfigureScreen extends Screen {
                 if (hit == 1) { page = 2; return true; }
                 if (hit == 2) { page = 4; listPage = 0; return true; }
                 if (hit == 4) { page = 3; return true; }
-                if (hit == 5) { send(300); return true; }
                 return true;
             }
         }

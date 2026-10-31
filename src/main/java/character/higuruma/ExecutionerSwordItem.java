@@ -25,6 +25,10 @@ public class ExecutionerSwordItem extends SwordItem {
     @Override public int getMaxDamage(ItemStack stack) { return 1; }
     @Override public boolean isDamageable(ItemStack stack) { return true; }
 
+    @Override public void initializeClient(java.util.function.Consumer<net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
+        HigurumaClient.item(consumer);
+    }
+
     @Override public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable Level level,
                                           List<Component> lines, TooltipFlag flag) {
         lines.add(Component.literal("处刑人之剑 · 一击处刑（耐久 1）").withStyle(ChatFormatting.DARK_RED));

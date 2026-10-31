@@ -15,7 +15,12 @@ import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.Item;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -27,8 +32,15 @@ import java.util.Map;
 @Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class MahitoArmsClient {
     private static final Map<Integer, Integer> ARMS = new HashMap<>();
+    private static final Map<Integer, List<ItemStack>> HELD = new HashMap<>();
 
     public static void set(int entityId, int count) { ARMS.put(entityId, Math.min(4, Math.max(0, count))); }
+    /** 收到 Effect(306)：owner=实体 id、size=物品注册号、life=数量。 */
+    public static void addHeld(int entityId, int itemId, int count) {
+        if (count <= 0) { HELD.remove(entityId); return; }
+        HELD.computeIfAbsent(entityId, k -> new ArrayList<>()).add(new ItemStack(Item.byId(itemId), count));
+    }
+    public static void clearHeld(int entityId) { HELD.remove(entityId); }
     public static void clear() { ARMS.clear(); }
 
     @SubscribeEvent public static void layers(EntityRenderersEvent.AddLayers event) {
@@ -57,6 +69,17 @@ public final class MahitoArmsClient {
                 ps.mulPose(Axis.ZP.rotationDegrees(right ? 22f * pair : -22f * pair));
                 ps.mulPose(Axis.XP.rotationDegrees(-12f));
                 (right ? model.rightArm : model.leftArm).render(ps, vc, light, OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, 1f);
+                // 手上的物品：按手臂顺序依次渲染
+                List<ItemStack> held = HELD.get(player.getId());
+                if (held != null && i < held.size() && !held.get(i).isEmpty()) {
+                    ps.pushPose();
+                    ps.translate(right ? 0.03 : -0.03, 0.52, 0.02);
+                    ps.mulPose(Axis.XP.rotationDegrees(-90f));
+                    net.minecraft.client.Minecraft.getInstance().getItemRenderer().renderStatic(held.get(i),
+                        ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, light, OverlayTexture.NO_OVERLAY,
+                        ps, buffers, player.level(), player.getId());
+                    ps.popPose();
+                }
                 ps.popPose();
             }
         }

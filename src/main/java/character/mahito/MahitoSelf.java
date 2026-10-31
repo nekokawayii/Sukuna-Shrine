@@ -122,6 +122,7 @@ public final class MahitoSelf {
         CompoundTag data = cn.blockforge.generated.nnnnr1201forge2.Curse.data(p);
         int arms = Math.min(4, data.getInt(ARMS) + 1);
         data.putInt(ARMS, arms);
+        syncArms(p);
         if (p.level() instanceof net.minecraft.server.level.ServerLevel level) {
             cn.blockforge.generated.nnnnr1201forge2.Network.send(level,
                 new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(305, p.getId(), p.position(),
@@ -234,6 +235,7 @@ public final class MahitoSelf {
         list.add(main.copy().save(new CompoundTag()));
         data.put(LIMB_ITEMS, list);
         p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        syncArms(p);
         p.sendSystemMessage(Component.literal("肢体：已放入手臂（" + list.size() + " / " + arms + "）").withStyle(ChatFormatting.AQUA));
     }
 
@@ -252,7 +254,95 @@ public final class MahitoSelf {
             list.add(stack.save(new CompoundTag()));
             data.put(LIMB_ITEMS, list);
         }
+        syncArms(p);
         p.sendSystemMessage(Component.literal("肢体：使用了一只手臂的物品").withStyle(ChatFormatting.AQUA));
+    }
+
+    /** 把手臂里的物品同步给能看到这名玩家的客户端（307 清空后再逐件 306）。 */
+    public static void syncArms(ServerPlayer p) {
+        if (!(p.level() instanceof net.minecraft.server.level.ServerLevel level)) return;
+        cn.blockforge.generated.nnnnr1201forge2.Network.send(level,
+            new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(307, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));
+        net.minecraft.nbt.ListTag list = cn.blockforge.generated.nnnnr1201forge2.Curse.data(p).getList(LIMB_ITEMS, 10);
+        for (int i = 0; i < list.size(); i++) {
+            ItemStack st = ItemStack.of(list.getCompound(i));
+            if (st.isEmpty()) continue;
+            cn.blockforge.generated.nnnnr1201forge2.Network.send(level,
+                new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(306, p.getId(), p.position(), Vec3.ZERO,
+                    net.minecraft.core.registries.BuiltInRegistries.ITEM.getId(st.getItem()), st.getCount(), 0));
+        }
+    }
+
+    /** 右键：弓先蓄力、再右键齐射；药水同时扔出；其它物品逐件 use。 */
+    public static void useAllSimultaneous(ServerPlayer p) {
+        CompoundTag data = cn.blockforge.generated.nnnnr1201forge2.Curse.data(p);
+        net.minecraft.nbt.ListTag list = data.getList(LIMB_ITEMS, 10).copy();
+        java.util.List<Integer> bows = new java.util.ArrayList<>();
+        for (int i = 0; i < list.size(); i++) {
+            if (ItemStack.of(list.getCompound(i)).getItem() instanceof net.minecraft.world.item.BowItem) bows.add(i);
+        }
+        if (!bows.isEmpty()) {
+            long start = data.getLong("MahitoBowStart");
+            long now = p.level().getGameTime();
+            if (start == 0) {
+                data.putLong("MahitoBowStart", now);
+                p.sendSystemMessage(Component.literal("肢体：六弓蓄力中…（再右键齐射）").withStyle(ChatFormatting.AQUA));
+                return;
+            }
+            float power = Math.min(1f, (now - start) / 20f);
+            data.putLong("MahitoBowStart", 0);
+            int fired = 0;
+            net.minecraft.nbt.ListTag rest = new net.minecraft.nbt.ListTag();
+            for (int i = 0; i < list.size(); i++) {
+                ItemStack st = ItemStack.of(list.getCompound(i));
+                if (st.getItem() instanceof net.minecraft.world.item.BowItem) {
+                    shootArrow(p, power);
+                    fired++;
+                } else if (!st.isEmpty()) rest.add(st.save(new CompoundTag()));
+            }
+            data.put(LIMB_ITEMS, rest);
+            syncArms(p);
+            p.sendSystemMessage(Component.literal("肢体：齐射 " + fired + " 箭（蓄力 " + (int) (power * 100) + "%）")
+                .withStyle(ChatFormatting.AQUA));
+            return;
+        }
+        int thrown = 0;
+        net.minecraft.nbt.ListTag rest = new net.minecraft.nbt.ListTag();
+        for (int i = 0; i < list.size(); i++) {
+            ItemStack st = ItemStack.of(list.getCompound(i));
+            if (st.getItem() instanceof net.minecraft.world.item.SplashPotionItem
+                || st.getItem() instanceof net.minecraft.world.item.LingeringPotionItem) {
+                net.minecraft.world.entity.projectile.ThrownPotion potion =
+                    new net.minecraft.world.entity.projectile.ThrownPotion(p.level(), p);
+                potion.setItem(st.copy());
+                potion.shootFromRotation(p, p.getXRot(), p.getYRot(), -10f, 0.9f, 1f);
+                p.level().addFreshEntity(potion);
+                thrown++;
+            } else if (!st.isEmpty()) rest.add(st.save(new CompoundTag()));
+        }
+        data.put(LIMB_ITEMS, rest);
+        if (thrown > 0) { syncArms(p); p.sendSystemMessage(Component.literal("肢体：同时扔出 " + thrown + " 瓶药水").withStyle(ChatFormatting.AQUA)); }
+        else { useAllSimultaneousFallback(p); syncArms(p); }
+    }
+
+    private static void shootArrow(ServerPlayer p, float power) {
+        if (!(p.level() instanceof net.minecraft.server.level.ServerLevel level)) return;
+        net.minecraft.world.entity.projectile.Arrow arrow = new net.minecraft.world.entity.projectile.Arrow(level, p);
+        arrow.setPos(p.getX(), p.getEyeY() - 0.1, p.getZ());
+        arrow.shootFromRotation(p, p.getXRot(), p.getYRot(), 0f, power * 3f, 1f);
+        arrow.setBaseDamage(2.0 * power + 1.0);
+        level.addFreshEntity(arrow);
+    }
+
+    private static void useAllSimultaneousFallback(ServerPlayer p) {
+        CompoundTag data = cn.blockforge.generated.nnnnr1201forge2.Curse.data(p);
+        net.minecraft.nbt.ListTag list = data.getList(LIMB_ITEMS, 10);
+        int n = list.size();
+        for (int i = 0; i < n; i++) {
+            list = data.getList(LIMB_ITEMS, 10);
+            if (list.isEmpty()) break;
+            useFromList(p, list, 0, data);
+        }
     }
 
     /** 使用第 index 只手臂的物品（0 起）。 */
@@ -290,13 +380,19 @@ public final class MahitoSelf {
         }
     }
 
+    /** 进服时补一次手臂物品同步。 */
+    @net.minecraftforge.eventbus.api.SubscribeEvent
+    public static void join(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer p) syncArms(p);
+    }
+
     /** 右键：同时使用所有手臂里的物品（不取消主手行为）。 */
     @net.minecraftforge.eventbus.api.SubscribeEvent
     public static void rightClick(net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem event) {
         if (event.getLevel().isClientSide) return;
         if (!(event.getEntity() instanceof ServerPlayer p)) return;
         if (cn.blockforge.generated.nnnnr1201forge2.Curse.data(p).getInt(ARMS) <= 0) return;
-        limbUseAll(p);
+        useAllSimultaneous(p);
     }
 
     /** 治疗减伤：遍杀灵体期间受到伤害减半。 */

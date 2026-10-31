@@ -155,7 +155,7 @@ public final class Client {
         if(mc.level==null||mc.player==null||mc.isPaused())return;if(progress.unlocked()&&!availableSkill(selected))selected=fallbackSkill();
         // 轮盘里刚选中御厨子(5) → 弹出点数分配界面；确定后按释放键正常释放
         if(!AuthorityClient.enabled()&&selected==5&&lastShrineSel!=5&&mc.screen==null&&!shrineDomainOpen()&&availableSkill(5))mc.setScreen(new DomainOptionsScreen());
-        lastShrineSel=selected;tick++;tripleJump(mc);DismantleMotionClient.tick();SlashTerrainClient.tick();SlashFormVisuals.tick();FreehandClient.tick(selected==SlashFormRules.FREEHAND&&FreehandClient.keyDown());BranchVisuals.tick();NetBranchVisuals.tick();VoidTechniqueClient.tick();VoidBossClient.tick();FurnaceMaxClient.tick();GojoFx.tick();MahoragaWheelClient.tick();ShinbukeVisuals.tick();SoulClient.tick();FistFlameClient.tick();BlackFlashMarks.clientTick();VoidVisuals.tick();if(charging&&tick-chargeBorn>200)charging=false;
+        lastShrineSel=selected;tick++;TojiQteVisuals.tick();TojiQteClient.tick();NaoyaVisuals.tick();NaoyaClient.tick();tripleJump(mc);DismantleMotionClient.tick();SlashTerrainClient.tick();SlashFormVisuals.tick();FreehandClient.tick(selected==SlashFormRules.FREEHAND&&FreehandClient.keyDown());BranchVisuals.tick();NetBranchVisuals.tick();VoidTechniqueClient.tick();VoidBossClient.tick();FurnaceMaxClient.tick();GojoFx.tick();MahoragaWheelClient.tick();ShinbukeVisuals.tick();SoulClient.tick();FistFlameClient.tick();BlackFlashMarks.clientTick();VoidVisuals.tick();if(charging&&tick-chargeBorn>200)charging=false;
         if(tick-window>=20){window=tick;generated=0;}
         if(ObserverClient.active()||FinaleClient.local()||DomainClashClient.active()||NetBranchVisuals.locked()||DismantleMotionClient.locked()){
             charging=cleaveHeld=false;castHeld=ClientInput.held(CAST);heldLast=wheelHeld();
@@ -243,6 +243,8 @@ public final class Client {
         if(e.kind()>=character.todo.TodoFx.FIRST&&e.kind()<=character.todo.TodoFx.LAST){TodoVisuals.receive(e);return;}
         if(e.kind()>=character.nanami.NanamiFx.FIRST&&e.kind()<=character.nanami.NanamiFx.LAST){RatioVisuals.receive(e);return;}
         if(e.kind()>=character.ryu.RyuFx.FIRST&&e.kind()<=character.ryu.RyuFx.LAST){RyuVisuals.receive(e);return;}
+        if(e.kind()>=character.toji.TojiFx.FIRST&&e.kind()<=character.toji.TojiFx.LAST){TojiQteVisuals.receive(e);return;}
+        if(e.kind()>=character.naoya.NaoyaFx.FIRST&&e.kind()<=character.naoya.NaoyaFx.LAST){NaoyaVisuals.receive(e);return;}
         boolean self=e.owner()==(Minecraft.getInstance().player==null?-1:Minecraft.getInstance().player.getId());
         if(e.kind()==300){if(self)character.mahito.TransfigureScreen.open((int)e.size());return;}
         if(e.kind()==308){return;}

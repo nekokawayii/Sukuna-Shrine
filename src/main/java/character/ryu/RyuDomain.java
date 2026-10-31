@@ -109,6 +109,12 @@ public final class RyuDomain {
         com.mojang.logging.LogUtils.getLogger().info("[石流龙] 领域展开 {} 中心 {} 总方块 {}", p.getScoreboardName(), f.center, f.total);
     }
 
+    /** 领域对拼获胜：延长领域存在时间。 */
+    public static void extend(ServerPlayer p, int ticks) {
+        Fract f = ACTIVE.get(p.getUUID());
+        if (f != null && !f.closing) f.closeAt += ticks;
+    }
+
     public static void close(ServerPlayer p, String reason) {
         Fract f = ACTIVE.get(p.getUUID());
         if (f == null || f.closing) return;

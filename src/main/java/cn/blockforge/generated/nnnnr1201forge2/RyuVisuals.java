@@ -372,6 +372,9 @@ public final class RyuVisuals {
         Vec3 cam = e.getCamera().getPosition();
         if (cam.distanceToSqr(SKY.center()) > (SKY.radius() + 8) * (SKY.radius() + 8)) return;
         PoseStack ps = e.getPoseStack();
+        // 这一阶段的世界坐标绘制必须先平移 -cam（项目里 RuinClient / Client.render 都是这个约定）
+        ps.pushPose();
+        ps.translate(-cam.x, -cam.y, -cam.z);
         Vec3 center = SKY.center();
         double radius = SKY.radius() - 2.0;
         float time = (float) ((now(mc)) * 0.0016);
@@ -394,12 +397,13 @@ public final class RyuVisuals {
         RenderSystem.defaultBlendFunc();
         b = Tesselator.getInstance().getBuilder();
         b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-        sphereQuads(b, ps, center, radius * 0.985, ((int) (255 * pulse) << 24) | 0xFFFFFF, time, 3f, true);
+        sphereQuads(b, ps, center, radius * 0.985, ((int) (255 * pulse) << 24) | 0xFFFFFF, time * 0.15f, 1f, true);
         BufferUploader.drawWithShader(b.end());
         RenderSystem.defaultBlendFunc();
         RenderSystem.depthMask(true);
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
+        ps.popPose();
     }
 
     /** 内翻球（经纬网格）；uvRepeat>0 时按经度把 UV 横向叠 uvRepeat 次并加漂移。 */
@@ -427,7 +431,7 @@ public final class RyuVisuals {
         float y = (float) (center.y + radius * Math.sin(phi));
         float z = (float) (center.z + radius * cosPhi * Math.sin(theta));
         var vertex = b.vertex(ps.last().pose(), x, y, z);
-        if (textured) vertex.uv((float) u, (float) v);
+        if (textured) vertex.uv((float) u, (float) (1 - v));   // 贴图 v=0 在上，球的 v=0 在南极 → 翻转
         vertex.color((color >> 16) & 255, (color >> 8) & 255, color & 255, (color >>> 24) & 255).endVertex();
     }
 

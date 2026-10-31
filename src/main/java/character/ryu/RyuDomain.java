@@ -155,13 +155,13 @@ public final class RyuDomain {
         int fillSq = (int) ((RADIUS - 2) * (RADIUS - 2));
         List<BlockPos> fill = new ArrayList<>();
         for (int dy = -r; dy <= r; dy++) {
-            if (f.center.getY() + dy < floorY) continue;   // 地板以下原地层保留
+            if (f.center.getY() + dy <= floorY) continue;   // 地板以下（含地板那一层）都不填
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {
                     int d = dx * dx + dy * dy + dz * dz;
                     if (d > fillSq) continue;
                     BlockPos pos = f.center.offset(dx, dy, dz);
-                    if (pos.getY() < floorY) continue;
+                    if (pos.getY() <= floorY) continue;   // 地板本身要保持黑混凝土
                     fill.add(pos);
                 }
             }

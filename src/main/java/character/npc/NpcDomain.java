@@ -27,7 +27,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  */
 public final class NpcDomain {
     /** 各角色自己的领域风格（r387 用户要求：石流龙=烟花、秤金次=赌场…）。 */
-    public enum Style { FIREWORK, PACHINKO, LAVA, ICE, BLOOD, GENERIC }
+    public enum Style { FIREWORK, PACHINKO, LAVA, ICE, BLOOD, NAOYA, GENERIC }
 
     public static final int RADIUS = 26;
     public static final int TICKS = 400;          // 20 秒
@@ -124,6 +124,9 @@ public final class NpcDomain {
                     ? (job.style == Style.FIREWORK && outer ? Blocks.BEDROCK.defaultBlockState() : shell)
                     : air;
                 if (job.style == Style.PACHINKO && isFloor) block = Blocks.GOLD_BLOCK.defaultBlockState();
+                if (job.style == Style.NAOYA && isFloor)
+                    block = (Math.abs(pos.getX() - job.center.getX()) + Math.abs(pos.getZ() - job.center.getZ())) % 6 == 0
+                        ? Blocks.WHITE_CONCRETE.defaultBlockState() : Blocks.BLACK_CONCRETE.defaultBlockState();
                 if (job.style == Style.LAVA && isFloor) {
                     double roll = job.level.random.nextDouble();
                     block = roll < 0.26 ? Blocks.MAGMA_BLOCK.defaultBlockState()
@@ -134,6 +137,15 @@ public final class NpcDomain {
                 if (!isShell && !isFloor && (pos.getX() + pos.getY() + pos.getZ()) % 5 == 0)
                     job.level.setBlock(pos, light, 2);
                 done++;
+            }
+            // ── 直哉·时胞月宫殿：千手乱舞（领域内每 0.5 秒压制 5 格内目标，无视无敌帧） ──
+            if (job.style == Style.NAOYA && job.level.getGameTime() % 10 == 0) {
+                ServerLevel level = job.level;
+                for (LivingEntity living : level.getEntitiesOfClass(LivingEntity.class,
+                        new AABB(owner.position(), owner.position()).inflate(6), t -> t != owner && t.isAlive())) {
+                    living.invulnerableTime = 0;
+                    living.hurt(living.damageSources().magic(), 6f);
+                }
             }
             // ── 秤金次：中奖期间每秒回 20% 最大生命 ──
             if (job.style == Style.PACHINKO) {

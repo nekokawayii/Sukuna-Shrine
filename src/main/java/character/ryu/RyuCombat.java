@@ -54,6 +54,7 @@ public final class RyuCombat {
     public static final double DOMAIN_RADIUS = 8;
 
     private static final String CHANNEL_START = "RyuBlastStart", DESSERT_UNTIL = "RyuDessertUntil";
+    private static final String TOGGLE_AT = "RyuBlastToggleAt";
     private static final String NPC_ENERGY = "RyuNpcEnergy", NPC_CHANNEL_START = "RyuNpcBlastStart";
     private static final String NPC_CHANNEL_END = "RyuNpcBlastEnd";
     public static final double NPC_MAX_ENERGY = 10000, NPC_REGEN = 5;
@@ -78,6 +79,10 @@ public final class RyuCombat {
      */
     public static void startCharge(ServerPlayer p) {
         CompoundTag data = Curse.data(p);
+        long now = now(p);
+        // 防抖：4 刻内的重复按下忽略，避免输入侧抖动把开关连点两次（表现成"只喷一下"）
+        if (now - data.getLong(TOGGLE_AT) < 4) return;
+        data.putLong(TOGGLE_AT, now);
         if (data.getLong(CHANNEL_START) != 0) {
             // 已经开着 → 这一次按下当作"关"
             data.remove(CHANNEL_START);
@@ -86,7 +91,7 @@ public final class RyuCombat {
             p.displayClientMessage(Component.literal("冰沙冲击波 · 关闭"), true);
             return;
         }
-        data.putLong(CHANNEL_START, now(p));
+        data.putLong(CHANNEL_START, now);
         // 起手立刻结算一发：这样"点一下"也一定看得到光（以前要等 4 刻的取模才发第一跳）
         pulse(p, p, BLAST_BASE_WIDTH, BLAST_DAMAGE_BASE + BLAST_BASE_WIDTH * BLAST_DAMAGE_PER_WIDTH, true, true);
         com.mojang.logging.LogUtils.getLogger().info("[石流龙] 冲击波开始 {}（起手已开火）", p.getScoreboardName());

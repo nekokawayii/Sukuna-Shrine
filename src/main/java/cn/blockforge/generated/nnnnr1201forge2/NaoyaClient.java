@@ -30,10 +30,6 @@ public final class NaoyaClient {
             }
             return true;
         }
-        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && action == GLFW.GLFW_PRESS) {
-            send(NaoyaCombat.EXECUTE);
-            return true;
-        }
         return false;
     }
 

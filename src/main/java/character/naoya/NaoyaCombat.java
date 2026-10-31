@@ -36,8 +36,8 @@ public final class NaoyaCombat {
     // ── 数值 ─────────────────────────────────────────────
     public static final int PROJECT_TICKS = 200;        // 设定投影 10 秒
     public static final double NODE_STEP = 0.45;
-    public static final int NODE_CAP = 24;
-    public static final int NODE_LIFE = 200;
+    public static final int NODE_CAP = 128;             // 投影点在 10 秒里最多记 128 个（0.45 格一个）
+    public static final int NODE_LIFE = 600;            // 节点活 30 秒，投影结束后仍能释放
     public static final double CHARGE_MIN = 5, CHARGE_MAX = 20;
     public static final int MUD_TICKS = 60;
     public static final double TRAVEL_SPEED = 2.2;      // 每刻走 2.2 格（残影冲刺）
@@ -55,7 +55,7 @@ public final class NaoyaCombat {
         K_GHOST = "NaoyaGhostAt", K_GHOST_TICK = "NaoyaGhostNext",
         K_TR_PATH = "NaoyaTravelPath", K_TR_START = "NaoyaTravelStart", K_TR_TICKS = "NaoyaTravelTicks",
         K_TR_END = "NaoyaTravelEnd", K_TR_TARGET = "NaoyaTravelTarget", K_TR_MUD = "NaoyaTravelMud",
-        K_TR_DAMAGE = "NaoyaTravelDamage", K_TR_HIT = "NaoyaTravelHitAt";
+        K_TR_DAMAGE = "NaoyaTravelDamage", K_TR_HIT = "NaoyaTravelHitAt", K_TR_DEALT = "NaoyaTravelDealt";
 
     /** 走完之后的收尾动作。 */
     private static final int END_NONE = 0, END_ASSIMILATE = 1, END_INTERCEPT = 2, END_SKYSTEP = 3;
@@ -79,8 +79,7 @@ public final class NaoyaCombat {
             }
             default -> {
                 Curse.data(p).putInt(K_SELECTED, skill);
-                p.displayClientMessage(Component.literal("已选：" + name(skill) + " · 左键执行（会自动设定投影点）")
-                    .withStyle(ChatFormatting.AQUA), true);
+                technique(p, Curse.data(p), skill);      // 释放键直接释放：自动生成投影点并立刻冲过去
             }
         }
     }
@@ -154,9 +153,13 @@ public final class NaoyaCombat {
         }
     }
 
-    /** 五个投射技：自动生成各自的投影点，然后真实跑一遍。 */
+    /** 左键执行：跑当前选中的那个技能（保留给"先选再按左键"的旧习惯）。 */
     private static void execute(ServerPlayer p, CompoundTag data) {
-        int selected = data.getInt(K_SELECTED);
+        technique(p, data, data.getInt(K_SELECTED));
+    }
+
+    /** 五个投射技：自动生成各自的投影点，然后真实跑一遍。 */
+    private static void technique(ServerPlayer p, CompoundTag data, int selected) {
         if (data.getLong(K_TR_START) != 0) return;                       // 正在穿梭中
         switch (selected) {
             case NaoyaSkills.LINE -> {
@@ -239,6 +242,7 @@ public final class NaoyaCombat {
         data.putBoolean(K_TR_MUD, mud);
         data.putDouble(K_TR_DAMAGE, damage);
         data.putLong(K_TR_HIT, 0);
+        data.putInt(K_TR_DEALT, 0);
         Network.send(p.serverLevel(), new Network.Effect(NaoyaFx.RELEASE, p.getId(), p.position(), Vec3.ZERO,
             route.size(), ticks, 0));
         p.setDeltaMovement(0, 0, 0);
@@ -257,7 +261,7 @@ public final class NaoyaCombat {
         double damage = data.getDouble(K_TR_DAMAGE);
         if (damage > 0 && n - data.getLong(K_TR_HIT) >= 2) {
             data.putLong(K_TR_HIT, n);
-            hurtNear(p, at, damage, data.getBoolean(K_TR_MUD));
+            hurtNear(p, at, damage, data.getBoolean(K_TR_MUD), data);
         }
         Network.send(p.serverLevel(), new Network.Effect(NaoyaFx.TRAIL, p.getId(), at, flatLook(p).scale(1.2),
             1.2f, 5, 0));
@@ -268,7 +272,11 @@ public final class NaoyaCombat {
         if (progress < 1) return;
         int end = (int) data.getLong(K_TR_END);
         int targetId = data.getInt(K_TR_TARGET);
+        // 至少造成一次伤害：整条路上一个都没打到的话，收尾时补一次
+        boolean dealt = data.getInt(K_TR_DEALT) > 0;
+        double travelDamage = data.getDouble(K_TR_DAMAGE);
         clearTravel(data);
+        if (!dealt) guaranteeHit(p, at, Math.max(4, travelDamage), end == END_ASSIMILATE);
         if (end == END_INTERCEPT) {
             if (p.serverLevel().getEntity(targetId) instanceof Projectile shot) {
                 Vec3 shotAt = shot.position();
@@ -290,6 +298,22 @@ public final class NaoyaCombat {
         }
     }
 
+    /** 保底命中：附近 4 格内最近的可打目标，至少吃一下。 */
+    private static void guaranteeHit(ServerPlayer p, Vec3 at, double damage, boolean mud) {
+        LivingEntity best = null;
+        double distance = 16;
+        for (LivingEntity living : p.serverLevel().getEntitiesOfClass(LivingEntity.class,
+                new AABB(at, at).inflate(4), e -> e != p && e.isAlive() && CombatSettings.canHit(p, e))) {
+            double d = living.distanceToSqr(at);
+            if (d < distance) { distance = d; best = living; }
+        }
+        if (best == null) return;
+        CombatSettings.hurt(p, best, p.damageSources().playerAttack(p), (float) damage);
+        if (mud) mud(p, best);
+        Network.send(p.serverLevel(), new Network.Effect(NaoyaFx.HIT, best.getId(), best.position(),
+            Vec3.ZERO, 1f, 8, 0));
+    }
+
     private static void clearTravel(CompoundTag data) {
         data.remove(K_TR_PATH);
         data.remove(K_TR_START);
@@ -299,6 +323,7 @@ public final class NaoyaCombat {
         data.remove(K_TR_DAMAGE);
         data.remove(K_TR_HIT);
         data.remove(K_TR_MUD);
+        data.remove(K_TR_DEALT);
     }
 
     /** 弧长插值取点。 */
@@ -319,12 +344,17 @@ public final class NaoyaCombat {
     }
 
     private static void hurtNear(ServerPlayer p, Vec3 at, double damage, boolean mud) {
+        hurtNear(p, at, damage, mud, null);
+    }
+
+    private static void hurtNear(ServerPlayer p, Vec3 at, double damage, boolean mud, CompoundTag travel) {
         for (LivingEntity target : p.serverLevel().getEntitiesOfClass(LivingEntity.class,
                 new AABB(at, at).inflate(1.6),
                 e -> e != p && e.isAlive() && !e.isSpectator() && CombatSettings.canHit(p, e)
                     && e.getBoundingBox().inflate(0.7).contains(at))) {
             CombatSettings.hurt(p, target, p.damageSources().playerAttack(p), (float) damage);
             if (mud) mud(p, target);
+            if (travel != null) travel.putInt(K_TR_DEALT, travel.getInt(K_TR_DEALT) + 1);
             Network.send(p.serverLevel(), new Network.Effect(NaoyaFx.HIT, target.getId(), at, Vec3.ZERO, 1f, 6, 0));
         }
     }

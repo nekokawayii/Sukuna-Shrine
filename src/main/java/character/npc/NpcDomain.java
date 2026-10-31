@@ -1,6 +1,7 @@
 package character.npc;
 
 import cn.blockforge.generated.nnnnr1201forge2.Network;
+import cn.blockforge.generated.nnnnr1201forge2.NpcCombat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -87,20 +88,18 @@ public final class NpcDomain {
 
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e) {
         if (e.phase != TickEvent.Phase.END || JOBS.isEmpty()) return;
-        for (var it = JOBS.entrySet().iterator(); it.hasNext(); ) {
-            var entry = it.next();
+        // 遍历副本：close() 自己会从 JOBS 里移除，边遍历边 remove 会 ConcurrentModificationException（r385 崩服）
+        var shell = Blocks.BLACK_CONCRETE.defaultBlockState();
+        var air = Blocks.AIR.defaultBlockState();
+        var light = Blocks.LIGHT.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 13);
+        for (var entry : new ArrayList<>(JOBS.entrySet())) {
             Job job = entry.getValue();
             Mob owner = job.level.getEntity(entry.getKey()) instanceof Mob mob ? mob : null;
             if (owner == null || !owner.isAlive() || job.level.getGameTime() >= job.end) {
                 close(owner, "结束");
-                it.remove();
                 continue;
             }
-            // 逐批施工
-            var shell = Blocks.BLACK_CONCRETE.defaultBlockState();
-            var air = Blocks.AIR.defaultBlockState();
-            var light = Blocks.LIGHT.defaultBlockState()
-                .setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 13);
             int done = 0;
             while (job.cursor < job.plan.size() && done < BATCH) {
                 BlockPos pos = job.plan.get(job.cursor++);
@@ -109,34 +108,28 @@ public final class NpcDomain {
                 job.saved.add(new long[]{pos.asLong()});
                 job.states.add(old);
                 double dd = pos.distSqr(job.center);
-                int rr = RADIUS;
-                boolean isShell = dd <= (double) rr * rr && dd > (double) (rr - 1) * (rr - 1);
-                boolean isFloor = pos.getY() == job.center.getY() - 1 && dd <= (double) rr * rr;
+                boolean isShell = dd <= (double) RADIUS * RADIUS && dd > (double) (RADIUS - 1) * (RADIUS - 1);
+                boolean isFloor = pos.getY() == job.center.getY() - 1 && dd <= (double) RADIUS * RADIUS;
                 job.level.setBlock(pos, isShell || isFloor ? shell : air, 2);
-                if (!isShell && !isFloor && job.level.getBlockState(pos).isAir()
-                    && (pos.getX() + pos.getY() + pos.getZ()) % 5 == 0)
+                if (!isShell && !isFloor && (pos.getX() + pos.getY() + pos.getZ()) % 5 == 0)
                     job.level.setBlock(pos, light, 2);
                 done++;
             }
-            // 领域内持续伤害（每 10 刻）
             if (job.level.getGameTime() % 10 == 0) {
                 double r2 = (double) RADIUS * RADIUS;
                 for (LivingEntity living : job.level.getEntitiesOfClass(LivingEntity.class,
                         new AABB(job.center).inflate(RADIUS), t -> t != owner && t.isAlive()
                             && !(t instanceof Mob m && m.getType() == owner.getType()))) {
                     if (living.distanceToSqr(Vec3.atCenterOf(job.center)) <= r2)
-                        cn.blockforge.generated.nnnnr1201forge2.NpcCombat.hurt(owner, living, (float) DAMAGE);
+                        NpcCombat.hurt(owner, living, (float) DAMAGE);
                 }
             }
         }
     }
 
     @SubscribeEvent public static void stop(ServerStoppingEvent e) {
-        for (var it = JOBS.entrySet().iterator(); it.hasNext(); ) {
-            var entry = it.next();
+        for (var entry : new ArrayList<>(JOBS.entrySet()))
             close(entry.getValue().level.getEntity(entry.getKey()) instanceof Mob mob ? mob : null, "关服");
-            it.remove();
-        }
     }
 
     private NpcDomain() {}

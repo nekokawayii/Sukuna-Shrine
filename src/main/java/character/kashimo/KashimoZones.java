@@ -379,6 +379,17 @@ public final class KashimoZones {
         return level.getFluidState(BlockPos.containing(at)).is(FluidTags.WATER);
     }
 
+    /** 只清掉某名玩家放下的东西（创造恢复符用）。 */
+    public static void release(ServerPlayer owner) {
+        java.util.UUID id = owner.getUUID();
+        FIELDS.removeIf(f -> f.owner().equals(id));
+        ORBS.removeIf(o -> o.owner().equals(id));
+        WARNS.removeIf(w -> w.owner().equals(id));
+        FLUNG.removeIf(f -> f.owner().equals(id));
+        AWAITS.removeIf(a -> a.owner().equals(id));
+        HOPS.removeIf(h -> h.owner().equals(id));
+    }
+
     /** 退出世界/关服：所有物件都是世界对象，直接清空。 */
     public static void reset() {
         FIELDS.clear();

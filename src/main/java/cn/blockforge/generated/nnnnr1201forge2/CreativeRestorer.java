@@ -25,7 +25,7 @@ public final class CreativeRestorer extends Item {
     }
     @Override public void appendHoverText(ItemStack stack,Level level,List<Component> lines,TooltipFlag flag){
         lines.add(Component.literal("创造专用：右键回满生命、咒力、饥饿和灵魂层数"));
-        lines.add(Component.literal("清除熔断、冷却、禁疗、负面效果，停止当前技能"));
+        lines.add(Component.literal("清除熔断、冷却、禁疗、负面效果、肉体崩溃，停止当前技能"));
         lines.add(Component.literal("保留成长、物品、敌友设置；不消耗道具"));
     }
     /** 定身时也可以使用测试道具，但绝不放开普通物品的交互。 */
@@ -41,6 +41,7 @@ public final class CreativeRestorer extends Item {
         // 先关闭仍会扣费/施加状态的时间轴，最后再清熔断和回满咒力。
         SixfoldFinale.testReset(p);DomainClash.testReset(p);Skills.testReset(p);GuardianPlayerSkills.testReset(p);VoidCombat.testReset(p);
         VoidJourney.clear(p);BloodArts.exit(p);DeathStar.testReset(p);Curse.data(p).remove("BloodCooldowns");
+        character.kashimo.KashimoCombat.testReset(p);   // 鹿紫云一：肉体崩溃 / 终奥 / 磁化 / 附着 / 电荷
         var progress=Curse.data(p);for(String key:List.copyOf(progress.getAllKeys()))if(RecoveryRules.progressKey(key))progress.remove(key);
         var data=p.getPersistentData();for(String key:List.copyOf(data.getAllKeys()))if(RecoveryRules.entityKey(key))data.remove(key);
         SoulCombat.testReset(p);

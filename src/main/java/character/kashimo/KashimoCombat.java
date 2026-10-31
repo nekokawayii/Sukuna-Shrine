@@ -582,6 +582,27 @@ public final class KashimoCombat {
     }
 
     // ------------------------------------------------------------ 磁化
+    /** 创造恢复符：清掉电荷/磁化/附着/终奥/崩溃的全部状态、属性修饰、场上物件与客户端 HUD。 */
+    public static void testReset(ServerPlayer p) {
+        CompoundTag data = data(p);
+        for (String key : new String[]{ULT_UNTIL, CRASH_UNTIL, ATTACH_UNTIL, MAGNET_UNTIL, GUARD_UNTIL, GUARD_READY,
+            COMBO, COMBO_AT, REFLECT_READY, SHADOW_UNTIL, "KashimoFanAt"}) data.remove(key);
+        data.putBoolean(ULT_USED, false);
+        data.putBoolean(FREE_DASH, false);
+        data.putInt(KashimoCharges.NEG, 0);
+        data.putLong(KashimoCharges.NEG_AT, now(p));
+        clearModifiers(p);
+        KashimoZones.release(p);
+        if (p.level() instanceof ServerLevel level) {
+            for (int kind : new int[]{KashimoFx.ULT, KashimoFx.CRASH, KashimoFx.ATTACH, KashimoFx.MAGNET, KashimoFx.CHAIN_DARK}) {
+                Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> p),
+                    new Network.Effect(kind, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));
+            }
+            KashimoCharges.syncNegative(p);
+        }
+        p.displayClientMessage(Component.literal("鹿紫云一：电荷、磁化、附着、终奥与肉体崩溃已清除"), true);
+    }
+
     /** 静电场里挂满 3 层也算磁化（跟命中同一条规则）。 */
     public static void magnetizeByField(ServerPlayer p) { magnetize(p); }
 

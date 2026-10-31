@@ -42,12 +42,8 @@ public final class TenShadowsScreen extends Screen {
         button("全部收回",width-left()-82,bottom,82,b->ShadowClient.send(6,0,0));
     }
     @Override public void onClose(){
-        com.mojang.logging.LogUtils.getLogger().info("[十影] 界面被关闭", new Throwable("close-trace"));
+        com.mojang.logging.LogUtils.getLogger().info("[十影] 界面关闭");
         super.onClose();
-    }
-    @Override public void removed(){
-        com.mojang.logging.LogUtils.getLogger().info("[十影] 界面 removed（被替换/关闭）");
-        super.removed();
     }
     @Override public boolean isPauseScreen(){return false;}
     @Override public void render(GuiGraphics g,int mx,int my,float partial){
@@ -70,5 +66,10 @@ public final class TenShadowsScreen extends Screen {
         }
         g.drawCenteredString(font,"L 收回准星式神 · 调服可反复挑战 · 普通式神到时化为黑水",width/2,height-18,0xFFADB3C8);
     }
-    @Override public void tick(){if(!TenShadowsClient.has()||minecraft.level==null||minecraft.player==null||!minecraft.player.isAlive()){onClose();return;}if(wasFused!=ShadowClient.fused())init();}
+    @Override public void tick(){
+        // 伏黑惠角色没有「受肉」状态，但同样要用这个界面：只对宿傩线玩家要求 has()
+        boolean megumi = character.CharacterClient.tenShadows();
+        if((!megumi && !TenShadowsClient.has()) || minecraft.level==null || minecraft.player==null || !minecraft.player.isAlive()){onClose();return;}
+        if(wasFused!=ShadowClient.fused())init();
+    }
 }

@@ -27,6 +27,7 @@ import java.util.UUID;
 public final class MahitoTransfigure {
     public static final String BASE_TAG = "SukunaTransfigured";
     public static final String PENDING = "SukunaPendingTransfig";
+    public static final String PENDING_TARGET = "SukunaPendingTarget";
     public static final int FORM_SWORD = 1, FORM_AXE = 2, FORM_PICKAXE = 3, FORM_HOE = 4, FORM_SHOVEL = 5, FORM_CURSED = 6;
     public static final int FORM_CURSED_BASE = 100;
 
@@ -82,8 +83,8 @@ public final class MahitoTransfigure {
 
     private static void store(ServerPlayer p, LivingEntity target) {
         CompoundTag snap = snapshot(target);
-        target.discard();
         p.getPersistentData().put(PENDING, snap);
+        p.getPersistentData().putUUID(PENDING_TARGET, target.getUUID());
         cn.blockforge.generated.nnnnr1201forge2.Network.send((net.minecraft.server.level.ServerLevel) p.level(),
             new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(300, p.getId(), p.position(),
                 Vec3.ZERO, 0f, 0, 0));
@@ -109,14 +110,56 @@ public final class MahitoTransfigure {
         if (action == 200) { MahitoPowers.wall(p); return; }
         if (action == 201) { MahitoPowers.bridge(p); return; }
         if (action == 300) { MahitoPowers.potential(p); return; }
+        if (action == 400) { sendModelData(p); return; }
+        if (action >= 401 && action <= 406) { adjust(p, action); return; }
         if (action >= FORM_CURSED_BASE && action <= FORM_CURSED_BASE + 4) { transformCursed(p, action - FORM_CURSED_BASE); return; }
         if (action >= FORM_SWORD && action <= FORM_SHOVEL) transform(p, action);
+    }
+
+    private static void sendModelData(ServerPlayer p) {
+        CompoundTag snap = p.getPersistentData().getCompound(PENDING);
+        if (snap.isEmpty()) return;
+        sendModel(p, snap);
+    }
+
+    private static void sendModel(ServerPlayer p, CompoundTag snap) {
+        cn.blockforge.generated.nnnnr1201forge2.Network.send((net.minecraft.server.level.ServerLevel) p.level(),
+            new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(302, p.getId(),
+                new Vec3(snap.getFloat("width"), snap.getFloat("height"), snap.getFloat("health")),
+                Vec3.ZERO, 0f, 0, 0));
+    }
+
+    private static void adjust(ServerPlayer p, int action) {
+        CompoundTag snap = p.getPersistentData().getCompound(PENDING).copy();
+        if (snap.isEmpty()) return;
+        float w = snap.getFloat("width"), h = snap.getFloat("height"), hp = snap.getFloat("health");
+        switch (action) {
+            case 401 -> h = Math.min(8f, h + 0.2f);
+            case 402 -> h = Math.max(0.4f, h - 0.2f);
+            case 403 -> w = Math.min(6f, w + 0.2f);
+            case 404 -> w = Math.max(0.2f, w - 0.2f);
+            case 405 -> hp = Math.min(1000f, hp + 5f);
+            default -> hp = Math.max(1f, hp - 5f);
+        }
+        snap.putFloat("width", w);
+        snap.putFloat("height", h);
+        snap.putFloat("health", hp);
+        snap.putFloat("maxHealth", hp);
+        p.getPersistentData().put(PENDING, snap);
+        sendModel(p, snap);
     }
 
     private static void storePending(ServerPlayer p) {
         if (!p.getPersistentData().contains(PENDING)) return;
         ItemStack body = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.TRANSFIGURED_BODY.get());
         CompoundTag snap = p.getPersistentData().getCompound(PENDING).copy();
+        // 点击储存的这一刻才让怪物消失（不判死亡、不掉落）
+        if (p.getPersistentData().hasUUID(PENDING_TARGET)
+            && p.level() instanceof net.minecraft.server.level.ServerLevel level) {
+            var e = level.getEntity(p.getPersistentData().getUUID(PENDING_TARGET));
+            if (e != null) e.discard();
+        }
+        p.getPersistentData().remove(PENDING_TARGET);
         body.getOrCreateTag().put(BASE_TAG, snap);
         p.getPersistentData().remove(PENDING);
         body.setHoverName(Component.literal("贮存体·" + snap.getString("name")).withStyle(ChatFormatting.AQUA));

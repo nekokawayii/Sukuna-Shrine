@@ -226,6 +226,8 @@ public final class Client {
     public static void slashShake(){shakeUntil=Math.max(shakeUntil,tick+3);}
     public static void receive(Network.Effect e){
         if(e.kind()==300){character.mahito.TransfigureScreen.open((int)e.size());return;}
+        if(e.kind()==302){character.mahito.TransfigureModelScreen.open(
+            (float)e.position().x,(float)e.position().y,(float)e.position().z);return;}
         if(e.kind()==301){
             int flesh=0xFF8E2334, bloom=0xFFC2415A;
             PhotonFx.spark(e.position(),1.6,0.6,flesh,bloom,"textures/effect/glow.png",true,1,10,28,0.35);

@@ -84,6 +84,19 @@ public final class HigurumaDomain {
                     built.originals.putIfAbsent(pos.immutable(), level.getBlockState(pos));
                     built.todo.put(pos.immutable(), light13);
                 }
+        // 用户结构是 48³ 裁切版，边缘可能缺壳：按球面半径补齐黑混凝土，避免「球壳边缘空了」
+        double scx = HigurumaLayout.SIZE_X / 2.0, scy = 23.0, scz = HigurumaLayout.SIZE_Z / 2.0;
+        for (int x = 0; x < HigurumaLayout.SIZE_X; x++)
+            for (int y = 0; y < HigurumaLayout.SIZE_Y; y++)
+                for (int z = 0; z < HigurumaLayout.SIZE_Z; z++) {
+                    double d = Math.sqrt((x - scx) * (x - scx) + (y - scy) * (y - scy) + (z - scz) * (z - scz));
+                    if (d <= 21.0 || d > 23.5) continue;
+                    BlockPos pos = origin.offset(x, y, z);
+                    if (filled.contains(pos.asLong())) continue;
+                    if (level.getBlockState(pos).hasBlockEntity()) continue;
+                    built.originals.putIfAbsent(pos.immutable(), level.getBlockState(pos));
+                    built.todo.put(pos.immutable(), Blocks.BLACK_CONCRETE.defaultBlockState());
+                }
         for (Cell cell : layout()) {
             BlockPos pos = origin.offset(cell.x(), cell.y(), cell.z());
             if (level.getBlockState(pos).hasBlockEntity()) continue;   // 保守：容器/机器不动

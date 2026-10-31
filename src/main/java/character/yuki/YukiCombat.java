@@ -113,6 +113,11 @@ public final class YukiCombat {
         }
     }
 
+    /** 领域展开·星轨坠亡。 */
+    public static void domain(ServerPlayer p, CharacterSkill skill, int rank) {
+        YukiDomain.open(p);
+    }
+
     /** 加重：叠一层；第 11 次（已满 10 层）压成黑洞。 */
     public static void starRage(ServerPlayer p, CharacterSkill skill, int rank) {
         int stacks = rage(p);

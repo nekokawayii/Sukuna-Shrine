@@ -7,30 +7,36 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 九十九由基：20 章成长线，全部是「累计击杀」条件，奖励堆属性（血量与伤害拉满）。
- * <p>章节数与击杀门槛逐级递增：1 → 210，后期一章要清不少怪。
+ * 九十九由基：50 章成长线，全部按「累计击杀」判定。
+ * <p>门槛递增（最后一章约 2000 只），奖励持续堆属性；配合领域内自动刷怪，后期可以靠领域刷章。
  */
 public final class YukiStory {
-    private static final int[] KILLS = {
-        1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, 78, 91, 105, 120, 136, 153, 171, 190, 210
+    /** 50 章的累计击杀门槛。 */
+    private static final int[] KILLS = buildKills();
+
+    private static final String[] WORDS = {
+        "星之怒", "质量的自觉", "第一拳", "迦楼罗", "加重", "压碎",
+        "山一般的重量", "不动的质量", "拳骨", "引力"
     };
 
-    private static final String[] TITLES = {
-        "星之怒", "质量的自觉", "第一拳", "迦楼罗", "加重", "压碎",
-        "山一般的重量", "不动的质量", "拳骨", "引力", "坍缩前夜", "奇点",
-        "特级的余裕", "星之轨迹", "落锤", "千钧", "地鸣", "碎山",
-        "黑洞边缘", "质量尽头"
-    };
+    private static int[] buildKills() {
+        int[] arr = new int[50];
+        double acc = 0;
+        for (int i = 0; i < arr.length; i++) {
+            acc += 1 + i * 1.6;      // 每章步长递增，合计约 2000
+            arr[i] = (int) Math.round(acc);
+        }
+        return arr;
+    }
 
     public static List<Chapter> chapters() {
         var list = new ArrayList<Chapter>(KILLS.length);
         for (int i = 0; i < KILLS.length; i++) {
             int n = i + 1;
-            // 数值怪：每章都塞大量咒力、生命与伤害
-            Stats stats = new Stats(600 + n * 400, 10 + n * 3, 2 + n, 3 + n / 2, 2 + n / 2);
-            list.add(new Chapter("yuki_" + n, "第" + n + "章·" + TITLES[i], KILLS[i],
-                "累计击败 " + KILLS[i] + " 个敌人", "质量成长",
-                new CharacterReward(stats, 40 + n * 10, 100 + n * 40, List.of())));
+            Stats stats = new Stats(400 + n * 220, 6 + n * 2, 1 + n / 2, 2 + n / 3, 1 + n / 3);
+            list.add(new Chapter("yuki_" + n, "第" + n + "章·" + WORDS[i % WORDS.length] + " " + ((i / WORDS.length) + 1),
+                KILLS[i], "累计击败 " + KILLS[i] + " 个敌人", "质量成长",
+                new CharacterReward(stats, 30 + n * 6, 80 + n * 25, List.of())));
         }
         return List.copyOf(list);
     }

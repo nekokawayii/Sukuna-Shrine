@@ -15,6 +15,8 @@ public final class YukiSkills {
     public static final int STAR_RAGE = 2002;
     /** 连拳·质量拳：1 秒内挥出 5 拳，冷却 30 秒。 */
     public static final int COMBO = 2003;
+    /** 领域展开·星轨坠亡。 */
+    public static final int DOMAIN = 2004;
 
     public static List<CharacterSkill> all() {
         return List.of(
@@ -28,6 +30,9 @@ public final class YukiSkills {
             new CharacterSkill(COMBO, "星之怒·连拳", "连拳",
                 "1 秒内挥出五记质量拳，每一拳都吃加重层数；冷却 30 秒。",
                 0xFFFFB35C, 600, 600, CharacterSkill.Shape.CONE, 6.5, 3.2, 55, 200, 50, 8, 1, 10, 2),
+            new CharacterSkill(DOMAIN, "领域展开·星轨坠亡", "星轨坠亡",
+                "展开星空领域：内壁纯黑混凝土、外壳星轨壁；领域内敌人无法移动且虚弱，生命低于你的直接被压扁。",
+                0xFF1B2A6B, 1000, 1200, CharacterSkill.Shape.BURST, 1, 1, 180, 0, 0, 1, 0, 0, 0),
             new CharacterSkill(STAR_RAGE, "星之怒·加重", "加重",
                 "给自己叠加质量，最多 10 层，每层大幅提高伤害；第 11 次会把质量压成黑洞。",
                 0xFFFFC46B, 500, 20, CharacterSkill.Shape.BURST, 1, 1, 180, 0, 0, 1, 0, 0, 0)

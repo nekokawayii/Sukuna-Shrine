@@ -269,6 +269,11 @@ public final class Content {
     public static final RegistryObject<net.minecraft.world.level.block.Block> YUTA_GRAVE=YUTA_BLOCKS.register("yuta_grave",
         ()->new character.yuta.YutaGraveBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()
             .noCollission().strength(0.4f).noOcclusion().lightLevel(st->7)));
+    /** 星轨坠亡的外壳方块：贴一张星空图。 */
+    public static final RegistryObject<net.minecraft.world.level.block.Block> YUKI_STAR_SHELL=YUTA_BLOCKS.register("yuki_star_shell",
+        ()->new net.minecraft.world.level.block.Block(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()
+            .strength(50f,1200f).lightLevel(st->15)));
+
     public static final net.minecraftforge.registries.DeferredRegister<net.minecraft.world.level.block.entity.BlockEntityType<?>> YUTA_BES=
         net.minecraftforge.registries.DeferredRegister.create(net.minecraftforge.registries.ForgeRegistries.BLOCK_ENTITY_TYPES,"sukuna");
     public static final RegistryObject<net.minecraft.world.level.block.entity.BlockEntityType<character.yuta.YutaGraveBlockEntity>> YUTA_GRAVE_BE=

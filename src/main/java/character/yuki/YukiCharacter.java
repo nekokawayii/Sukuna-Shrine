@@ -15,7 +15,7 @@ public final class YukiCharacter {
             "yuki", "九十九由基", "星之怒",
             "特级咒术师。给自身与式神叠加质量换取毁灭性打击：质量拳、迦楼罗，以及最多十层的加重（第 11 次压成黑洞）。",
             Family.CUSTOM, Resource.CURSED_ENERGY, 0xFFFFC46B,
-            List.of(YukiSkills.MASS_FIST, YukiSkills.COMBO, YukiSkills.GARUDA, YukiSkills.STAR_RAGE),
+            List.of(YukiSkills.MASS_FIST, YukiSkills.COMBO, YukiSkills.GARUDA, YukiSkills.STAR_RAGE, YukiSkills.DOMAIN),
             YukiStory.chapters(), YukiStyle.config());
     }
 

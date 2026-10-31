@@ -34,7 +34,9 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  */
 public final class RyuCombat {
     // 冰沙冲击波（持续型）
-    public static final double BLAST_LENGTH = 30;
+    public static final double BLAST_LENGTH = 30;          // 起手 30 格
+    public static final double BLAST_LENGTH_GROWTH = 1.25; // 最远距离每秒 +25%
+    public static final double BLAST_MAX_LENGTH = 200;     // 兜底上限（防止无限指数增长把客户端拖死）
     public static final double BLAST_BASE_WIDTH = 1.0;      // 起手 1 格宽
     public static final double BLAST_WIDTH_PER_2S = 1.0;    // 每 2 秒 +1 格，无上限
     public static final double BLAST_SPREAD = 0.06;         // 每格距离再扩张的半径
@@ -104,8 +106,9 @@ public final class RyuCombat {
         }
     }
 
+    /** 按住心跳：**什么都不做**。以前这里会在"通道没开"时调 startCharge，
+     *  结果松手/心跳也会自己放一发，用户要求删掉——只有真正的按下（phase 0）才开关。 */
     public static void holdCharge(ServerPlayer p) {
-        if (Curse.data(p).getLong(CHANNEL_START) == 0) startCharge(p);
     }
 
     /** 松手/取消：**不关**冲击波（开关模式下靠再按一次开关键关闭）。只把蓄力提示收掉。 */
@@ -118,26 +121,36 @@ public final class RyuCombat {
         return BLAST_BASE_WIDTH + (elapsedTicks / 20.0) / 2.0 * BLAST_WIDTH_PER_2S;
     }
 
+    /** 当前最远距离：30 格起，**每秒 ×1.25**（每 20 刻 +25%），兜底不超过 200 格。 */
+    public static double channelLength(long elapsedTicks) {
+        return Math.min(BLAST_MAX_LENGTH, BLAST_LENGTH * Math.pow(BLAST_LENGTH_GROWTH, elapsedTicks / 20.0));
+    }
+
     /**
      * 一次冲击波结算：圆锥体积（枪口半径 = 宽度/2，随距离扩张），
      * 伤害与击退都按"是否在体积内"判定。
      */
     private static void pulse(LivingEntity caster, ServerPlayer owner, double width, double damage,
                               boolean knockback, boolean effect) {
+        pulse(caster, owner, width, damage, knockback, effect, BLAST_LENGTH);
+    }
+
+    private static void pulse(LivingEntity caster, ServerPlayer owner, double width, double damage,
+                              boolean knockback, boolean effect, double length) {
         if (!(caster.level() instanceof ServerLevel level)) return;
         Vec3 origin = origin(caster), dir = caster.getLookAngle().normalize();
-        Vec3 end = origin.add(dir.scale(BLAST_LENGTH));
+        Vec3 end = origin.add(dir.scale(length));
         var blockHit = level.clip(new ClipContext(origin, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, caster));
         if (blockHit.getType() != HitResult.Type.MISS) end = blockHit.getLocation();
         if (effect) {
             Network.send(level, new Network.Effect(RyuFx.BEAM, caster.getId(), origin, end, (float) width, 8, 0));
         }
-        double length = end.distanceTo(origin);
+        double reach = end.distanceTo(origin);
         for (var target : level.getEntitiesOfClass(LivingEntity.class, new AABB(origin, end).inflate(width + 2),
                 t -> t != caster && t.isAlive() && !t.isSpectator())) {
             Vec3 delta = target.getBoundingBox().getCenter().subtract(origin);
             double along = delta.dot(dir);
-            if (along < -0.5 || along > length + 1) continue;
+            if (along < -0.5 || along > reach + 1) continue;
             double radius = width * 0.5 + Math.max(0, along) * BLAST_SPREAD;
             double perpendicular = delta.subtract(dir.scale(along)).length();
             if (perpendicular > radius + Math.max(target.getBbWidth(), 0.6) * 0.5) continue;
@@ -325,11 +338,12 @@ public final class RyuCombat {
                 p.sendSystemMessage(Component.literal("咒力不足：冰沙冲击波中断").withStyle(ChatFormatting.GRAY));
                 p.displayClientMessage(Component.literal("咒力不足 · 中断"), true);
             } else {
+                double length = channelLength(elapsed);
                 if (elapsed % BLAST_DAMAGE_INTERVAL == 0) {
                     boolean effect = (elapsed / BLAST_DAMAGE_INTERVAL) % 2 == 0;
-                    pulse(p, p, width, BLAST_DAMAGE_BASE + width * BLAST_DAMAGE_PER_WIDTH, false, effect);
+                    pulse(p, p, width, BLAST_DAMAGE_BASE + width * BLAST_DAMAGE_PER_WIDTH, false, effect, length);
                 }
-                if (elapsed % BLAST_PUSH_INTERVAL == 0) pulse(p, p, width, 0, true, false);
+                if (elapsed % BLAST_PUSH_INTERVAL == 0) pulse(p, p, width, 0, true, false, length);
                 if (elapsed % 10 == 0) {
                     Network.sendTo(p, new Network.Effect(RyuFx.CHARGE, p.getId(), p.position(), Vec3.ZERO,
                         (float) width, 12, 0));
@@ -433,11 +447,12 @@ public final class RyuCombat {
             return;
         }
         long elapsed = now - start;
+        double length = channelLength(elapsed);
         if (elapsed % BLAST_DAMAGE_INTERVAL == 0) {
             boolean effect = (elapsed / BLAST_DAMAGE_INTERVAL) % 2 == 0;
-            pulse(mob, null, width, BLAST_DAMAGE_BASE + width * BLAST_DAMAGE_PER_WIDTH, false, effect);
+            pulse(mob, null, width, BLAST_DAMAGE_BASE + width * BLAST_DAMAGE_PER_WIDTH, false, effect, length);
         }
-        if (elapsed % BLAST_PUSH_INTERVAL == 0) pulse(mob, null, width, 0, true, false);
+        if (elapsed % BLAST_PUSH_INTERVAL == 0) pulse(mob, null, width, 0, true, false, length);
     }
 
     public static void npcBurst(Mob mob) {

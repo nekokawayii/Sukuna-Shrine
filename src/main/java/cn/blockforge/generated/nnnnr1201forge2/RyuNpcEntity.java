@@ -33,7 +33,7 @@ public class RyuNpcEntity extends PathfinderMob {
 
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes()
-            .add(Attributes.MAX_HEALTH, BalanceRules.modpackMode() ? 700.0 * 30.0 : 700.0)
+            .add(Attributes.MAX_HEALTH, NpcBalance.health("sukuna:ryu_npc"))
             .add(Attributes.ATTACK_DAMAGE, 7.0)
             .add(Attributes.MOVEMENT_SPEED, 0.30)
             .add(Attributes.FOLLOW_RANGE, 40.0)

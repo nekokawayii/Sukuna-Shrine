@@ -69,6 +69,45 @@ public final class GeneratedMod {
         MinecraftForge.EVENT_BUS.register(character.higuruma.HigurumaCombat.class);
         MinecraftForge.EVENT_BUS.addListener(character.higuruma.HigurumaDomain::serverTick);
         MinecraftForge.EVENT_BUS.addListener(character.higuruma.HigurumaDomain::serverStopped);
+        // 鹿紫云一 · 幻兽琥珀：电荷 / 必中落雷 / 终奥
+        character.CharacterCasting.registerEffect("kashimo", character.kashimo.KashimoSkills.DASH,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.kashimo.KashimoCombat.dash(p));
+        character.CharacterCasting.registerEffect("kashimo", character.kashimo.KashimoSkills.DISCHARGE,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.kashimo.KashimoCombat.discharge(p));
+        character.CharacterCasting.registerEffect("kashimo", character.kashimo.KashimoSkills.ATTRACT,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.kashimo.KashimoCombat.attract(p));
+        character.CharacterCasting.registerEffect("kashimo", character.kashimo.KashimoSkills.ATTACH,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.kashimo.KashimoCombat.attach(p));
+        character.CharacterCasting.registerEffect("kashimo", character.kashimo.KashimoSkills.DETONATE,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.kashimo.KashimoCombat.detonate(p));
+        character.CharacterCasting.registerEffect("kashimo", character.kashimo.KashimoSkills.FIELD,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.kashimo.KashimoCombat.field(p));
+        character.CharacterCasting.registerEffect("kashimo", character.kashimo.KashimoSkills.BOLT,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.kashimo.KashimoCombat.bolt(p));
+        character.CharacterCasting.registerEffect("kashimo", character.kashimo.KashimoSkills.ORB,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.kashimo.KashimoCombat.orb(p));
+        character.CharacterCasting.registerEffect("kashimo", character.kashimo.KashimoSkills.CHAIN,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.kashimo.KashimoCombat.chain(p));
+        character.CharacterCasting.registerEffect("kashimo", character.kashimo.KashimoSkills.SHADOW,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.kashimo.KashimoCombat.shadow(p));
+        character.CharacterCasting.registerLock("kashimo", new character.CharacterCasting.Lock() {
+            @Override public boolean locked(net.minecraft.server.level.ServerPlayer player) {
+                return character.kashimo.KashimoCombat.crashing(player);
+            }
+            @Override public String reason() { return "肉体崩溃中：无法使用任何术式"; }
+        });
+        MinecraftForge.EVENT_BUS.register(character.kashimo.KashimoCombat.class);
+        // 东堂葵 · 不义游戏：注入咒力 / 换位
+        character.CharacterCasting.registerEffect("todo", character.todo.TodoSkills.INJECT,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.todo.TodoCombat.inject(p));
+        character.CharacterCasting.registerEffect("todo", character.todo.TodoSkills.SWAP,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.todo.TodoCombat.swap(p));
+        MinecraftForge.EVENT_BUS.register(character.todo.TodoCombat.class);
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent event) -> {
+            character.kashimo.KashimoCharges.reset();
+            character.kashimo.KashimoZones.reset();
+            character.todo.TodoMarks.reset();
+        });
         character.CharacterCasting.registerEffect("megumi", character.megumi.MegumiSkills.TEN_SHADOWS, (net.minecraft.server.level.ServerPlayer p, character.CharacterSkill skill, int rank) -> Network.send((net.minecraft.server.level.ServerLevel) p.level(), new Network.Effect(308, p.getId(), p.position(), net.minecraft.world.phys.Vec3.ZERO, 0f, 0, 0)));
         MinecraftForge.EVENT_BUS.register(character.CharacterService.class);
         MinecraftForge.EVENT_BUS.register(character.CharacterRewards.class);

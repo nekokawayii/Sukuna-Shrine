@@ -10,11 +10,13 @@ import org.lwjgl.glfw.GLFW;
 public final class CharacterWheel extends Screen {
     private final CharacterDefinition definition;
     private int current;
-    private boolean confirmed,starHover;
+    private boolean confirmed,starHover,ultHover;
     public CharacterWheel() { super(Component.literal("角色术式轮盘"));definition=CharacterClient.selected();current=definition!=null&&CharacterClient.skills().contains(Client.selected)?Client.selected:definition==null?0:definition.firstSkill(); }
     private int radius() { return Math.max(42,Math.min(156,Math.min(width/2-12,(height-92)/2))); }
     private boolean blood() { return definition!=null&&definition.family()==CharacterDefinition.Family.BLOOD; }
     private boolean star() { return blood()&&BloodClient.ownDomain(); }
+    /** 鹿紫云一：轮盘中心是终奥「幻兽·琥珀」。 */
+    private boolean kashimo() { return definition!=null&&"kashimo".equals(definition.id()); }
     private int skillAt(double x,double y) {
         if(definition==null||CharacterClient.skills().isEmpty())return -1;
         if(blood()&&CharacterClient.skills().size()==19)return CharacterClient.skills().get(BloodRules.wheelSlot(x,y,radius()));
@@ -25,10 +27,16 @@ public final class CharacterWheel extends Screen {
     private void hover(double mx,double my) {
         double x=mx-width/2.0,y=my-height/2.0,r=x*x+y*y;
         starHover=star()&&r<inner()*inner();
+        ultHover=kashimo()&&r<inner()*inner();
         if(r>=inner()*inner()&&r<=radius()*radius())current=skillAt(x,y);
     }
     private void confirm() {
         if(confirmed)return;confirmed=true;
+        // 鹿紫云一：轮盘中心 = 终奥「幻兽·琥珀」（phase=7 直接请求，不走技能表）
+        if(kashimo()&&ultHover){
+            Network.CHANNEL.sendToServer(new TechniqueInput.Input(character.kashimo.KashimoCombat.ULT,7,false,false,false,false,0,0));
+            minecraft.setScreen(null);return;
+        }
         int skill=starHover?BloodRules.DEATH_STAR:current;
         if(Client.availableSkill(skill))Client.selected=skill;
         minecraft.setScreen(null);
@@ -67,8 +75,9 @@ public final class CharacterWheel extends Screen {
             for(int line=0;line<Math.min(2,lines.size());line++){var text=lines.get(line);g.drawString(font,text,-font.width(text)/2,yy+line*11,textColor);}
             g.pose().popPose();
         }
-        g.drawCenteredString(font,star()?"极之番":style.title().isBlank()?definition.name():style.title(),cx,cy-14,definition.color());
-        g.drawCenteredString(font,star()?"死胎星":style.subtitle().isBlank()?definition.technique():style.subtitle(),cx,cy+1,starHover?0xFFFFBAC9:style.text());
+        g.drawCenteredString(font,kashimo()?"极之番":star()?"极之番":style.title().isBlank()?definition.name():style.title(),cx,cy-14,definition.color());
+        g.drawCenteredString(font,kashimo()?"幻兽·琥珀":star()?"死胎星":style.subtitle().isBlank()?definition.technique():style.subtitle(),cx,cy+1,kashimo()?(ultHover?0xFFFFFFFF:style.text()):starHover?0xFFFFBAC9:style.text());
+        if(kashimo())g.drawCenteredString(font,ultHover?"满咒力释放终奥 · 生命低于30%自动触发":"轮盘中心：幻兽·琥珀",cx,cy+14,ultHover?0xFFBFF4FF:0xFF7FA8BC);
         if(star()&&DeathStarClient.anemic())g.drawCenteredString(font,"贫血禁用",cx,cy+14,0xFFFF7480);
         int skill=starHover?BloodRules.DEATH_STAR:current;
         g.drawCenteredString(font,CharacterClient.name(skill),cx,12,definition.color());

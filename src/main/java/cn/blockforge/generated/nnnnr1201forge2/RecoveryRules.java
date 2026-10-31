@@ -10,13 +10,17 @@ public final class RecoveryRules {
         "RecoveryDelay","Siphon","Disorder","Parasite","Rotation","Combat","MultiArmed","Fist",
         "SoulGap","SoulSuppressed","SoulStiffUntil","SoulStiffStacks","Iwate","SoulHealHalf","SoulExecution","SoulPeelUntil","PureLandNoHeal",
         "GuardianPoisonUntil","GuardianPoisonDamage","GuardianPoisonCooldown","GuardianPoisonSource",
-        "PlayerGuardianPoisonUntil","PlayerGuardianPoisonCooldown");
+        "PlayerGuardianPoisonUntil","PlayerGuardianPoisonCooldown",
+        "KashimoAttachUntil","KashimoUltUntil","KashimoUltUsed","KashimoCrashUntil","KashimoMagnetUntil",
+        "KashimoFreeDash","KashimoGuardUntil","KashimoGuardReady","KashimoCombo","KashimoComboAt",
+        "KashimoReflectReady","KashimoShadowUntil","KashimoNeg","KashimoNegAt","KashimoFanAt");
     public static boolean progressKey(String key){return TRANSIENT.contains(key)||key.contains("Cooldown");}
     public static boolean entityKey(String key){
         return key.startsWith("SukunaSoul")||key.equals("SukunaNoHeal")||key.startsWith("SukunaVoidFlame")
             ||key.startsWith("SukunaVoidIgnition")||key.startsWith("SukunaSixfoldScar")||key.startsWith("ClashAnchor")
             ||key.equals("DomainClashStunUntil")||key.equals("SoulGapUntil")||key.equals("VoidCaptured")
-            ||key.equals("VoidNoHeal")||key.equals("VoidContactCooldown")||key.equals("GuardianSkillNoHeal");
+            ||key.equals("VoidNoHeal")||key.equals("VoidContactCooldown")||key.equals("GuardianSkillNoHeal")
+            ||key.startsWith("Kashimo");
     }
     private RecoveryRules(){}
 }

@@ -90,6 +90,7 @@ public final class NaoyaDomain {
         realm.openedAt = level.getGameTime();
         realm.closeAt = realm.openedAt + LIFE_TICKS;
         ACTIVE.put(p.getUUID(), realm);
+        DomainClash.opened(p, Vec3.atCenterOf(realm.center), RADIUS);
         Network.send(level, new Network.Effect(NaoyaFx.DOMAIN, p.getId(), p.position(), Vec3.ZERO,
             (float) RADIUS, LIFE_TICKS, 0));
         level.playSound(null, p.blockPosition(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 0.8f, 1.4f);

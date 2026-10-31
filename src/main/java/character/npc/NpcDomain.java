@@ -61,7 +61,9 @@ public final class NpcDomain {
                     double d2 = (double) dx * dx + dy * dy + dz * dz;
                     boolean shell = d2 <= (double) r * r && d2 > (double) (r - 1) * (r - 1);
                     boolean floor = dy == -1 && d2 <= (double) r * r;
+                    boolean inside = d2 <= (double) (r - 1) * (r - 1) && dy >= 0;
                     if (shell || floor) job.plan.add(center.offset(dx, dy, dz));
+                    else if (inside) job.plan.add(center.offset(dx, dy, dz).immutable());
                 }
         JOBS.put(mob.getUUID(), job);
         Network.send(level, new Network.Effect(character.ryu.RyuFx.DOMAIN, mob.getId(), Vec3.atCenterOf(center),
@@ -96,6 +98,9 @@ public final class NpcDomain {
             }
             // 逐批施工
             var shell = Blocks.BLACK_CONCRETE.defaultBlockState();
+            var air = Blocks.AIR.defaultBlockState();
+            var light = Blocks.LIGHT.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 13);
             int done = 0;
             while (job.cursor < job.plan.size() && done < BATCH) {
                 BlockPos pos = job.plan.get(job.cursor++);
@@ -103,7 +108,14 @@ public final class NpcDomain {
                 if (old.getBlock() == Blocks.BEDROCK) continue;
                 job.saved.add(new long[]{pos.asLong()});
                 job.states.add(old);
-                job.level.setBlock(pos, shell, 2);
+                double dd = pos.distSqr(job.center);
+                int rr = RADIUS;
+                boolean isShell = dd <= (double) rr * rr && dd > (double) (rr - 1) * (rr - 1);
+                boolean isFloor = pos.getY() == job.center.getY() - 1 && dd <= (double) rr * rr;
+                job.level.setBlock(pos, isShell || isFloor ? shell : air, 2);
+                if (!isShell && !isFloor && job.level.getBlockState(pos).isAir()
+                    && (pos.getX() + pos.getY() + pos.getZ()) % 5 == 0)
+                    job.level.setBlock(pos, light, 2);
                 done++;
             }
             // 领域内持续伤害（每 10 刻）
@@ -113,8 +125,7 @@ public final class NpcDomain {
                         new AABB(job.center).inflate(RADIUS), t -> t != owner && t.isAlive()
                             && !(t instanceof Mob m && m.getType() == owner.getType()))) {
                     if (living.distanceToSqr(Vec3.atCenterOf(job.center)) <= r2)
-                        net.minecraftforge.common.ForgeHooks.onLivingHurt(living,
-                            living.damageSources().magic(), (float) DAMAGE);
+                        cn.blockforge.generated.nnnnr1201forge2.NpcCombat.hurt(owner, living, (float) DAMAGE);
                 }
             }
         }

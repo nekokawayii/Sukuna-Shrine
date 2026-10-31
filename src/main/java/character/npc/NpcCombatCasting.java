@@ -21,7 +21,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  * 按距离直接打出对应招式（`NpcCombat.hurt` 结算），并按冷却开 {@link NpcDomain}。
  */
 public final class NpcCombatCasting {
-    private static final String K_NEXT = "NpcNextCast";
+    private static final String K_ATK = "NpcNextAttack", K_DOM = "NpcNextDomain";
     private static long counter;
 
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e) {
@@ -48,11 +48,11 @@ public final class NpcCombatCasting {
 
     private static long now(Mob mob) { return mob.level().getGameTime(); }
 
-    private static boolean ready(Mob mob, long interval) {
+    private static boolean ready(Mob mob, String key, long interval) {
         var data = mob.getPersistentData();
-        long at = data.getLong(K_NEXT);
+        long at = data.getLong(key);
         if (at > now(mob)) return false;
-        data.putLong(K_NEXT, now(mob) + interval);
+        data.putLong(key, now(mob) + interval);
         return true;
     }
 
@@ -61,48 +61,48 @@ public final class NpcCombatCasting {
         double distance = mob.distanceTo(player);
         boolean jackpot = mob.getPersistentData().getLong("HakariNpcJackpot") > now(mob);
         if (id.contains("jogo_npc")) {
-            if (distance <= 6 && ready(mob, 60)) {
+            if (distance <= 6 && ready(mob, K_ATK, 60)) {
                 hurtAround(mob, player, 4.5, 12);
                 fire(mob, player, 0xFFFF6A1E);
-            } else if (distance <= 18 && ready(mob, 80)) {
+            } else if (distance <= 18 && ready(mob, K_ATK, 80)) {
                 hurtAround(mob, player, 6, 8);
                 burn(player);
                 fire(mob, player, 0xFFFFA33C);
             }
-            if (ready(mob, 1200) && distance <= 24) NpcDomain.open(mob, 26);   // 盖棺铁围山
+            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 26);   // 盖棺铁围山
         } else if (id.contains("uraume_npc")) {
-            if (distance <= 5 && ready(mob, 50)) {
+            if (distance <= 5 && ready(mob, K_ATK, 50)) {
                 hurtAround(mob, player, 4, 10);
                 player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 2));
                 fire(mob, player, 0xFFA8EEFF);
-            } else if (distance <= 14 && ready(mob, 70)) {
+            } else if (distance <= 14 && ready(mob, K_ATK, 70)) {
                 hurtAround(mob, player, 3, 12);
                 player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 1));
                 fire(mob, player, 0xFFD6F6FF);
             }
         } else if (id.contains("choso")) {
-            if (distance <= 5 && ready(mob, 40)) {
+            if (distance <= 5 && ready(mob, K_ATK, 40)) {
                 hurtAround(mob, player, 4, 14);
                 fire(mob, player, 0xFFD84362);
-            } else if (distance <= 16 && ready(mob, 90)) {
+            } else if (distance <= 16 && ready(mob, K_ATK, 90)) {
                 hurtAround(mob, player, 5, 10);
                 fire(mob, player, 0xFFFF7AA0);
             }
         } else if (id.contains("ryu_npc")) {
-            if (distance <= 14 && ready(mob, 60)) {
+            if (distance <= 14 && ready(mob, K_ATK, 60)) {
                 hurtAround(mob, player, 5, 16);
                 fire(mob, player, 0xFF9FDFFF);
             }
-            if (ready(mob, 1200) && distance <= 24) NpcDomain.open(mob, 26);   // 打上花火
+            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 26);   // 打上花火
         } else if (id.contains("hakari_npc")) {
-            if (distance <= 6 && ready(mob, 40)) {
+            if (distance <= 6 && ready(mob, K_ATK, 40)) {
                 hurtAround(mob, player, 3.5, (int) (18 * (jackpot ? 2 : 1)));
                 fire(mob, player, 0xFFFFC44D);
-            } else if (distance <= 14 && ready(mob, 60)) {
+            } else if (distance <= 14 && ready(mob, K_ATK, 60)) {
                 hurtAround(mob, player, 5, (int) (9 * (jackpot ? 2 : 1)));
                 fire(mob, player, 0xFFE0E0E0);
             }
-            if (ready(mob, 1200) && distance <= 24) NpcDomain.open(mob, 26);   // 坐杀博徒
+            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 26);   // 坐杀博徒
         }
     }
 

@@ -6,22 +6,33 @@ import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
- * 「改变」后的体型视觉：给带 {@code SukunaScaleW/H} 标记的生物按比例缩放渲染。
- * 只影响画面，不改碰撞箱（1.20.1 通用实体尺寸不支持运行时改动）。
+ * 「改变」后的体型视觉缩放。
+ * 服务端在改完形态后广播 Effect(303)（owner=实体 id，size=宽比例，life=高比例×1000），
+ * 客户端登记到 map，渲染时按比例缩放（不改碰撞箱）。
  */
 @Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT)
 public final class TransformedScaleClient {
-    public static final String SCALE_W = "SukunaScaleW";
-    public static final String SCALE_H = "SukunaScaleH";
+    private record Scale(float w, float h, long at) {}
+    private static final Map<Integer, Scale> SCALES = new HashMap<>();
 
+    public static void put(int entityId, float w, float h) {
+        SCALES.put(entityId, new Scale(w, h, System.currentTimeMillis()));
+    }
+
+    public static void clear() { SCALES.clear(); }
+
+    @SuppressWarnings("rawtypes")
     @SubscribeEvent
-    public static void pre(RenderLivingEvent.Pre<?, ?> event) {
-        var data = event.getEntity().getPersistentData();
-        if (!data.contains(SCALE_W) && !data.contains(SCALE_H)) return;
-        float w = data.contains(SCALE_W) ? data.getFloat(SCALE_W) : 1f;
-        float h = data.contains(SCALE_H) ? data.getFloat(SCALE_H) : 1f;
-        event.getPoseStack().scale(w, h, w);
+    public static void pre(RenderLivingEvent.Pre event) {
+        Scale scale = SCALES.get(event.getEntity().getId());
+        if (scale == null) return;
+        // 60 秒未刷新则失效（防止残留）
+        if (System.currentTimeMillis() - scale.at() > 60_000L) { SCALES.remove(event.getEntity().getId()); return; }
+        event.getPoseStack().scale(scale.w(), scale.h(), scale.w());
     }
 
     private TransformedScaleClient() {}

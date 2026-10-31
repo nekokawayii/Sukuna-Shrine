@@ -164,8 +164,11 @@ public final class MahitoTransfigure {
                 living.setHealth(hp);
                 float baseW = Math.max(0.1f, living.getBbWidth());
                 float baseH = Math.max(0.2f, living.getBbHeight());
-                living.getPersistentData().putFloat(TransformedScaleClient.SCALE_W, snap.getFloat("width") / baseW);
-                living.getPersistentData().putFloat(TransformedScaleClient.SCALE_H, snap.getFloat("height") / baseH);
+                float scaleW = snap.getFloat("width") / baseW;
+                float scaleH = snap.getFloat("height") / baseH;
+                cn.blockforge.generated.nnnnr1201forge2.Network.send(level,
+                    new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(303, living.getId(), living.position(),
+                        Vec3.ZERO, scaleW, (int) Math.max(1, scaleH * 1000), 0));
                 p.sendSystemMessage(Component.literal("无为转变·改变：" + living.getName().getString()
                     + " 的形态已被改写（生命 " + (int) hp + "）").withStyle(ChatFormatting.AQUA));
             }

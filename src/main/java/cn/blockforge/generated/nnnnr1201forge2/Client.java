@@ -226,6 +226,7 @@ public final class Client {
     public static void slashShake(){shakeUntil=Math.max(shakeUntil,tick+3);}
     public static void receive(Network.Effect e){
         if(e.kind()==300){character.mahito.TransfigureScreen.open((int)e.size());return;}
+        if(e.kind()==303){character.mahito.TransformedScaleClient.put(e.owner(),e.size(),e.life()/1000f);return;}
         if(e.kind()==302){character.mahito.TransfigureModelScreen.open(
             (float)e.position().x,(float)e.position().y,(float)e.position().z);return;}
         if(e.kind()==301){

@@ -12,6 +12,10 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.*;
 
@@ -56,6 +60,8 @@ public final class HigurumaDomain {
         boolean expanded;
         BlockPos amethyst, budding;
         final Set<UUID> pinned = new HashSet<>();
+        final Map<UUID, Long> confiscated = new HashMap<>();
+        UUID judge;
         Built(ServerLevel level, long end) { this.level = level; this.end = end; }
     }
     private static final Map<UUID, Built> ACTIVE = new HashMap<>();
@@ -136,6 +142,17 @@ public final class HigurumaDomain {
                 expandFinish(b, e.getKey());
             }
             if (b.expanded) holdPinned(b);
+            for (var ci = b.confiscated.entrySet().iterator(); ci.hasNext(); ) {
+                var ce = ci.next();
+                if (now < ce.getValue()) continue;
+                var ent = b.level.getEntity(ce.getKey());
+                if (ent instanceof net.minecraft.world.entity.Mob mob) mob.setNoAi(false);
+                if (ent instanceof LivingEntity le) {
+                    var atk2 = le.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+                    if (atk2 != null) atk2.removeModifier(UUID.nameUUIDFromBytes(("higuruma_confiscate:" + le.getUUID()).getBytes()));
+                }
+                ci.remove();
+            }
             if (owner != null) {
                 if (now >= b.end) { it.remove(); restore(level, b); closeMsg(owner); continue; }
                 owner.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 60, 0, false, false));
@@ -165,15 +182,56 @@ public final class HigurumaDomain {
         if (b.amethyst == null || b.budding == null) return;
         ServerPlayer owner = b.level.getServer().getPlayerList().getPlayer(ownerId);
         if (owner != null) owner.teleportTo(b.amethyst.getX() + 0.5, b.amethyst.getY() + 1.0, b.amethyst.getZ() + 0.5);
-        var center = net.minecraft.world.phys.Vec3.atCenterOf(b.amethyst != null ? b.amethyst : b.budding);
-        for (var ent : b.level.getEntities((net.minecraft.world.entity.Entity) null,
-                new net.minecraft.world.phys.AABB(center, center).inflate(24),
-                ent -> ent instanceof net.minecraft.world.entity.LivingEntity living && living.isAlive())) {
-            if (ent.getUUID().equals(ownerId)) continue;
-            b.pinned.add(ent.getUUID());
-            if (ent instanceof net.minecraft.world.entity.Mob mob) mob.setNoAi(true);
-            ent.teleportTo(b.budding.getX() + 0.5, b.budding.getY() + 1.0, b.budding.getZ() + 0.5);
+        var center = Vec3.atCenterOf(b.budding != null ? b.budding : b.amethyst);
+        // 审判者：玩家背后
+        if (owner != null) {
+            var judge = cn.blockforge.generated.nnnnr1201forge2.Content.HIGURUMA_JUDGE.get().create(b.level);
+            if (judge != null) {
+                Vec3 back = new Vec3(-Math.sin(Math.toRadians(owner.getYRot())), 0, Math.cos(Math.toRadians(owner.getYRot()))).normalize().scale(3.0);
+                Vec3 at = owner.position().add(back);
+                judge.moveTo(at.x, owner.getY(), at.z, owner.getYRot() + 180f, 0f);
+                b.level.addFreshEntity(judge);
+                b.judge = judge.getUUID();
+            }
         }
+        var rnd = b.level.getRandom();
+        for (var ent : b.level.getEntities((net.minecraft.world.entity.Entity) null,
+                new AABB(center, center).inflate(24),
+                ent -> ent instanceof LivingEntity living && living.isAlive())) {
+            if (ent.getUUID().equals(ownerId) || ent.getUUID().equals(b.judge)) continue;
+            if (!(ent instanceof LivingEntity living)) continue;
+            String name = living.getName().getString();
+            int roll = rnd.nextInt(3);
+            if (roll == 0) {
+                if (owner != null) owner.sendSystemMessage(Component.literal("审判：" + name + " → 无罪").withStyle(ChatFormatting.GREEN));
+                continue;
+            }
+            boolean death = roll == 2;
+            confiscate(b, living);
+            b.pinned.add(ent.getUUID());
+            if (living instanceof net.minecraft.world.entity.Mob mob) mob.setNoAi(true);
+            living.teleportTo(b.budding.getX() + 0.5, b.budding.getY() + 1.0, b.budding.getZ() + 0.5);
+            if (owner != null) owner.sendSystemMessage(Component.literal("审判：" + name
+                + (death ? " → 有罪：死刑" : " → 有罪：没收（伤害减半 + 5 秒不能动）"))
+                .withStyle(death ? ChatFormatting.DARK_RED : ChatFormatting.GOLD));
+            if (death && owner != null) {
+                ItemStack sword = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.EXECUTIONER_SWORD.get());
+                sword.setHoverName(Component.literal("处刑人之剑").withStyle(ChatFormatting.DARK_RED));
+                if (!owner.getInventory().add(sword)) owner.drop(sword, false);
+            }
+        }
+    }
+
+    /** 有罪·没收：伤害减半 + 5 秒无 AI。 */
+    private static void confiscate(Built b, LivingEntity living) {
+        var atk = living.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        if (atk != null) {
+            var id = UUID.nameUUIDFromBytes(("higuruma_confiscate:" + living.getUUID()).getBytes());
+            if (atk.getModifier(id) == null)
+                atk.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                    id, "higuruma_confiscate", -0.5, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.MULTIPLY_TOTAL));
+        }
+        b.confiscated.put(living.getUUID(), b.level.getGameTime() + 100);
     }
 
     private static void holdPinned(Built b) {
@@ -203,6 +261,19 @@ public final class HigurumaDomain {
     }
 
     private static void restore(ServerLevel level, Built b) {
+        if (b.judge != null) {
+            var judge = level.getEntity(b.judge);
+            if (judge != null) judge.discard();
+        }
+        for (UUID id : b.confiscated.keySet()) {
+            var ent = level.getEntity(id);
+            if (ent instanceof net.minecraft.world.entity.Mob mob) mob.setNoAi(false);
+            if (ent instanceof LivingEntity le) {
+                var atk = le.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+                if (atk != null) atk.removeModifier(UUID.nameUUIDFromBytes(("higuruma_confiscate:" + le.getUUID()).getBytes()));
+            }
+        }
+        b.confiscated.clear();
         for (UUID id : b.pinned) {
             var ent = level.getEntity(id);
             if (ent instanceof net.minecraft.world.entity.Mob mob) mob.setNoAi(false);

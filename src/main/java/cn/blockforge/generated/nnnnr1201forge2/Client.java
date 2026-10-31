@@ -29,6 +29,14 @@ public final class Client {
     public static final KeyMapping STREAM=gameplayKey("key.sukuna.stream",GLFW.GLFW_KEY_HOME);
     public static final KeyMapping AMPLIFY=gameplayKey("key.sukuna.amplify",GLFW.GLFW_KEY_G);
     public static final KeyMapping LIMBS=gameplayKey("key.sukuna.limbs",GLFW.GLFW_KEY_U);
+    public static final KeyMapping LIMB_1=gameplayKey("key.sukuna.limb1",GLFW.GLFW_KEY_LEFT_BRACKET);
+    public static final KeyMapping LIMB_2=gameplayKey("key.sukuna.limb2",GLFW.GLFW_KEY_RIGHT_BRACKET);
+    public static final KeyMapping LIMB_3=gameplayKey("key.sukuna.limb3",GLFW.GLFW_KEY_SEMICOLON);
+    public static final KeyMapping LIMB_4=gameplayKey("key.sukuna.limb4",GLFW.GLFW_KEY_APOSTROPHE);
+    private static void limbUse(int index) {
+        if (Minecraft.getInstance().screen != null) return;
+        Network.CHANNEL.sendToServer(new TechniqueInput.Input(2100, 7, false, false, false, false, 522 + index, 0));
+    }
     private static boolean castHeld,charging,cleaveHeld;
     private static long chargeBorn;
     public static int selected;
@@ -129,7 +137,7 @@ public final class Client {
     }
     public static class Registration {
         @SubscribeEvent public static void setup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent e){e.enqueueWork(()->{ItemBlockRenderTypes.setRenderLayer(SoulContent.THREAD.get(),RenderType.cutout());ItemBlockRenderTypes.setRenderLayer(SoulContent.RICE.get(),RenderType.cutout());MahoragaArmorModel.register();});}
-        @SubscribeEvent public static void keys(RegisterKeyMappingsEvent e){e.register(WHEEL);e.register(CAST);e.register(GUIDE);e.register(ROTATE);e.register(RELATIONS);e.register(FIST);e.register(STREAM);e.register(AMPLIFY);e.register(LIMBS);AuthorityClient.setup();TenShadows.receiver=TenShadowsClient::receive;SlashTerrain.receiver=SlashTerrainClient::receive;ObserverPackets.receiver=ObserverFight::receive;ObserverPackets.cursorReceiver=ObserverFight::cursors;Network.aimReceiver=AimAssistClient::receive;Network.testResetReceiver=Client::testReset;WallpaperPackets.receiver=WallpaperClient::receive;Network.motionReceiver=DismantleMotionClient::receive;Network.drawReceiver=FreehandClient::receive;Network.clashReceiver=DomainClashClient::receive;Network.clientReceiver=Client::receive;Network.progressReceiver=p->progress=p;Network.combatReceiver=FinaleClient::state;Network.relationsReceiver=p->{if(Minecraft.getInstance().screen instanceof RelationsScreen screen)screen.receive(p);};Network.controllerReceiver=p->{if(Minecraft.getInstance().screen instanceof VoidControllerScreen screen)screen.receive(p);else if(Minecraft.getInstance().screen instanceof AimOptionsScreen screen)screen.receive(p);};}
+        @SubscribeEvent public static void keys(RegisterKeyMappingsEvent e){e.register(WHEEL);e.register(CAST);e.register(GUIDE);e.register(ROTATE);e.register(RELATIONS);e.register(FIST);e.register(STREAM);e.register(AMPLIFY);e.register(LIMBS);e.register(LIMB_1);e.register(LIMB_2);e.register(LIMB_3);e.register(LIMB_4);AuthorityClient.setup();TenShadows.receiver=TenShadowsClient::receive;SlashTerrain.receiver=SlashTerrainClient::receive;ObserverPackets.receiver=ObserverFight::receive;ObserverPackets.cursorReceiver=ObserverFight::cursors;Network.aimReceiver=AimAssistClient::receive;Network.testResetReceiver=Client::testReset;WallpaperPackets.receiver=WallpaperClient::receive;Network.motionReceiver=DismantleMotionClient::receive;Network.drawReceiver=FreehandClient::receive;Network.clashReceiver=DomainClashClient::receive;Network.clientReceiver=Client::receive;Network.progressReceiver=p->progress=p;Network.combatReceiver=FinaleClient::state;Network.relationsReceiver=p->{if(Minecraft.getInstance().screen instanceof RelationsScreen screen)screen.receive(p);};Network.controllerReceiver=p->{if(Minecraft.getInstance().screen instanceof VoidControllerScreen screen)screen.receive(p);else if(Minecraft.getInstance().screen instanceof AimOptionsScreen screen)screen.receive(p);};}
     }
     public static boolean wheelHeld(){return ClientInput.held(WHEEL);}
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut e){clear();character.CharacterClient.clear();world=null;}
@@ -164,6 +172,10 @@ public final class Client {
         while(GUIDE.consumeClick())if(mc.screen==null)mc.player.connection.sendCommand("sukuna guide");
         while(ROTATE.consumeClick())if(mc.screen==null&&progress.nine())Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.ROTATE));
         while(LIMBS.consumeClick())if(mc.screen==null&&character.mahito.LimbScreen.arms()>0)mc.setScreen(new character.mahito.LimbScreen());
+        while(LIMB_1.consumeClick())limbUse(0);
+        while(LIMB_2.consumeClick())limbUse(1);
+        while(LIMB_3.consumeClick())limbUse(2);
+        while(LIMB_4.consumeClick())limbUse(3);
         boolean pressed=ClientInput.held(CAST);
         if(charging&&(!progress.unlocked()||!progress.awakened()||mc.screen!=null||!mc.player.isAlive()||selected!=0)){Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.CANCEL_CHARGE));charging=false;}
         if(cleaveHeld&&(!progress.unlocked()||mc.screen!=null||!mc.player.isAlive()||selected!=2)){Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.CANCEL_CHARGE));cleaveHeld=false;}

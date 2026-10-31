@@ -128,6 +128,9 @@ public final class MahitoTransfigure {
         if (action == MahitoSelf.LIMBS) { MahitoSelf.limbs(p); return; }
         if (action == MahitoSelf.LIMB_USE) { MahitoSelf.limbUse(p); return; }
         if (action == MahitoSelf.LIMB_STORE) { MahitoSelf.limbStore(p); return; }
+        if (action >= MahitoSelf.LIMB_USE_AT && action < MahitoSelf.LIMB_USE_AT + 4) {
+            MahitoSelf.limbUseAt(p, action - MahitoSelf.LIMB_USE_AT); return;
+        }
         if (action >= 401 && action <= 406) { adjust(p, action); return; }
         if (action == 410) { applyToMonster(p); return; }
         if (action >= FORM_CURSED_BASE && action <= FORM_CURSED_BASE + 4) { transformCursed(p, action - FORM_CURSED_BASE); return; }

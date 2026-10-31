@@ -32,7 +32,7 @@ public final class MahitoSelf {
     public static final String SPIRIT_FLAG = "MahitoSpirit";
     public static final String ARMS = "MahitoArms";
     public static final String LIMB_ITEMS = "MahitoLimbItems";
-    public static final int LIMB_USE = 520, LIMB_STORE = 521;
+    public static final int LIMB_USE = 520, LIMB_STORE = 521, LIMB_USE_AT = 522;
     public static final String BURST_USED = "MahitoBurstUsed";
 
     /** 治疗：把生命恢复到上限（冷却 200 秒）。目标优先给自己或 8 格内最近的玩家。 */
@@ -253,6 +253,50 @@ public final class MahitoSelf {
             data.put(LIMB_ITEMS, list);
         }
         p.sendSystemMessage(Component.literal("肢体：使用了一只手臂的物品").withStyle(ChatFormatting.AQUA));
+    }
+
+    /** 使用第 index 只手臂的物品（0 起）。 */
+    public static void limbUseAt(ServerPlayer p, int index) {
+        CompoundTag data = cn.blockforge.generated.nnnnr1201forge2.Curse.data(p);
+        net.minecraft.nbt.ListTag list = data.getList(LIMB_ITEMS, 10);
+        if (index < 0 || index >= list.size()) return;
+        useFromList(p, list, index, data);
+    }
+
+    /** 同时使用全部手臂的物品（右键触发）。 */
+    public static void limbUseAll(ServerPlayer p) {
+        CompoundTag data = cn.blockforge.generated.nnnnr1201forge2.Curse.data(p);
+        net.minecraft.nbt.ListTag list = data.getList(LIMB_ITEMS, 10);
+        if (list.isEmpty()) return;
+        int n = list.size();
+        for (int i = 0; i < n; i++) {
+            list = data.getList(LIMB_ITEMS, 10);
+            if (list.isEmpty()) break;
+            useFromList(p, list, 0, data);
+        }
+        p.sendSystemMessage(Component.literal("肢体：所有手臂同时使用（" + n + " 件）").withStyle(ChatFormatting.AQUA));
+    }
+
+    private static void useFromList(ServerPlayer p, net.minecraft.nbt.ListTag list, int index, CompoundTag data) {
+        ItemStack stack = ItemStack.of(list.getCompound(index));
+        list.remove(index);
+        data.put(LIMB_ITEMS, list);
+        var result = stack.use(p.level(), p, net.minecraft.world.InteractionHand.MAIN_HAND);
+        if (result.getResult().consumesAction() && !stack.isEmpty()) {
+            if (!p.getInventory().add(stack)) p.drop(stack, false);
+        } else if (!stack.isEmpty()) {
+            list.add(stack.save(new CompoundTag()));
+            data.put(LIMB_ITEMS, list);
+        }
+    }
+
+    /** 右键：同时使用所有手臂里的物品（不取消主手行为）。 */
+    @net.minecraftforge.eventbus.api.SubscribeEvent
+    public static void rightClick(net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem event) {
+        if (event.getLevel().isClientSide) return;
+        if (!(event.getEntity() instanceof ServerPlayer p)) return;
+        if (cn.blockforge.generated.nnnnr1201forge2.Curse.data(p).getInt(ARMS) <= 0) return;
+        limbUseAll(p);
     }
 
     /** 治疗减伤：遍杀灵体期间受到伤害减半。 */

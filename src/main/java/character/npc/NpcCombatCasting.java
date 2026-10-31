@@ -103,7 +103,7 @@ public final class NpcCombatCasting {
                 hurtAround(mob, player, 5, (int) (9 * (jackpot ? 2 : 1)));
                 fire(mob, player, 0xFFE0E0E0);
             }
-            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 26, NpcDomain.Style.PACHINKO);   // 坐杀博徒
+            if (ready(mob, K_DOM, 1200) && distance <= 24) NpcDomain.open(mob, 30, NpcDomain.Style.PACHINKO);   // 坐杀博徒（与玩家同半径 30）
         }
     }
 

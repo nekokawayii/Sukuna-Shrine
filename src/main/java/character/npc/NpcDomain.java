@@ -123,6 +123,7 @@ public final class NpcDomain {
                 var block = (isFloor || isShell)
                     ? (job.style == Style.FIREWORK && outer ? Blocks.BEDROCK.defaultBlockState() : shell)
                     : air;
+                if (job.style == Style.PACHINKO && isFloor) block = Blocks.GOLD_BLOCK.defaultBlockState();
                 if (job.style == Style.LAVA && isFloor) {
                     double roll = job.level.random.nextDouble();
                     block = roll < 0.26 ? Blocks.MAGMA_BLOCK.defaultBlockState()
@@ -133,6 +134,12 @@ public final class NpcDomain {
                 if (!isShell && !isFloor && (pos.getX() + pos.getY() + pos.getZ()) % 5 == 0)
                     job.level.setBlock(pos, light, 2);
                 done++;
+            }
+            // ── 秤金次：中奖期间每秒回 20% 最大生命 ──
+            if (job.style == Style.PACHINKO) {
+                long until = owner.getPersistentData().getLong("HakariNpcJackpot");
+                if (until > job.level.getGameTime() && job.level.getGameTime() % 20 == 0)
+                    owner.heal(owner.getMaxHealth() * 0.2f);
             }
             // ── 漏壶·盖棺铁围山：敌人脚下 10 格火柱（每 8 刻节流）+ 高温 ──
             if (job.style == Style.LAVA && job.level.getGameTime() % 8 == 0) {
@@ -180,14 +187,28 @@ public final class NpcDomain {
                             && !(t instanceof Mob m && m.getType() == owner.getType()))) {
                     if (living.distanceToSqr(Vec3.atCenterOf(job.center)) > r2) continue;
                     switch (job.style) {
+                        case PACHINKO -> {
+                            long jackpotUntil = owner.getPersistentData().getLong("HakariNpcJackpot");
+                            boolean jackpot = jackpotUntil > job.level.getGameTime();
+                            living.hurt(living.damageSources().magic(), (float) DAMAGE * (jackpot ? 2 : 1));
+                            // 打人即抽奖：每命中一次 +1 格，满 30 格中奖
+                            var data = owner.getPersistentData();
+                            int luck = data.getInt("HakariNpcLuck") + 1;
+                            if (luck >= 30) {
+                                luck = 0;
+                                data.putLong("HakariNpcJackpot", job.level.getGameTime() + 5020);
+                                owner.heal(owner.getMaxHealth());
+                                ServerLevel sl = job.level;
+                                Network.send(sl, new Network.Effect(character.hakari.HakariFx.JACKPOT,
+                                    owner.getId(), owner.position(), Vec3.ZERO, 1f, 5020, 0));
+                            }
+                            data.putInt("HakariNpcLuck", luck);
+                        }
                         case FIREWORK -> {                       // 石流龙：打上花火 · 追踪烟花
                             living.hurt(living.damageSources().magic(), (float) DAMAGE);
                             if (living.level() instanceof ServerLevel sl)
                                 Network.send(sl, new Network.Effect(character.ryu.RyuFx.FIREWORK_BURST,
                                     living.getId(), living.position(), Vec3.ZERO, 2f, 20, 0));
-                        }
-                        case PACHINKO -> {                       // 秤金次：赌场 · 双倍伤害
-                            living.hurt(living.damageSources().magic(), (float) DAMAGE * 2);
                         }
                         case LAVA -> {                           // 漏壶：盖棺铁围山 · 点燃
                             living.hurt(living.damageSources().magic(), (float) DAMAGE);

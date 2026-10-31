@@ -62,8 +62,19 @@ public final class YukiCombat {
             Vec3 to = e.getBoundingBox().getCenter().subtract(eye);
             if (to.length() > range) continue;
             if (to.normalize().dot(dir) < Math.cos(Math.toRadians(skill.halfAngle()))) continue;
-            float damage = Math.max(base, e.getMaxHealth() * 0.10f);   // 最低 10% 目标生命
-            e.hurt(p.damageSources().magic(), damage);                 // magic 类型：无视护甲
+            // 先按正常伤害结算（magic：无视护甲）
+            float floor = e.getMaxHealth() * 0.10f;                    // 保底 10% 目标生命上限
+            float before = e.getHealth();
+            e.hurt(p.damageSources().magic(), Math.max(base, floor));
+            // 保底优先级最高：若实际掉血不足 10%，差额用不受任何减免的真实伤害补足
+            float lost = before - e.getHealth();
+            if (e.isAlive() && lost < floor) {
+                float missing = floor - lost;
+                float after = Math.max(0f, e.getHealth() - missing);
+                e.setHealth(after);
+                e.hurtMarked = true;
+                if (after <= 0f) e.die(p.damageSources().magic());
+            }
             Vec3 kb = to.normalize().scale(2.6);
             e.push(kb.x, 0.9, kb.z);
             e.hurtMarked = true;

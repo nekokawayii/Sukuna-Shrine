@@ -121,7 +121,7 @@ public final class HigurumaDomain {
         }
         // 审判者出生点：以「紫水晶块」为准，往后 4 格找最高的木块堆，站在其顶部
         if (built.amethyst != null) {
-            BlockPos column = built.amethyst.offset(0, 0, -4);
+            BlockPos column = built.amethyst.offset(0, 0, -5);
             int topY = built.amethyst.getY() - 2;
             for (int dy = -2; dy <= 6; dy++) {
                 BlockPos pos = column.offset(0, dy, 0);

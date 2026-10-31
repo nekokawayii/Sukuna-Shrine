@@ -44,8 +44,11 @@ public final class KashimoVisuals {
     private static final List<Shock> shocks = new ArrayList<>();
     private static final List<Pull> pulls = new ArrayList<>();
     private static final List<Overhead> overheads = new ArrayList<>();
-    private static int negStacks;
-    private static long attachUntil, ultUntil, crashUntil;
+    /** 按实体记录的状态：别人身上的电弧也要画出来，不能只有自己看得见。 */
+    private static final Map<Integer, Long> attachUntil = new HashMap<>();
+    private static final Map<Integer, Long> ultUntil = new HashMap<>();
+    private static final Map<Integer, Long> crashUntil = new HashMap<>();
+    private static final Map<Integer, Integer> negStacks = new HashMap<>();
     private static long tick, strikeTick = -1;
     private static final Matrix4f projection = new Matrix4f();
     private static final org.joml.Quaternionf cameraRotation = new org.joml.Quaternionf();
@@ -62,7 +65,8 @@ public final class KashimoVisuals {
                 else charges.put(e.owner(), new Charge((int) e.size(), now + Math.max(1, e.life())));
             }
             case KashimoFx.NEG_CHARGE -> {
-                if (mc.player != null && e.owner() == mc.player.getId()) negStacks = (int) Math.max(0, e.size());
+                if (e.size() > 0) negStacks.put(e.owner(), (int) e.size());
+                else negStacks.remove(e.owner());
             }
             case KashimoFx.STRIKE -> {
                 Vec3 at = e.position();
@@ -104,15 +108,22 @@ public final class KashimoVisuals {
                     PhotonFx.spark(e.direction(), 0.9, 0.7, 0xFFE4FAFF, 0xFF7FDDFF, TEX_GLOW, true, 5, 8, 20, 0.2);
                 }
             }
-            case KashimoFx.ATTACH -> attachUntil = e.size() > 0 ? now + Math.max(1, e.life()) : 0;
+            case KashimoFx.ATTACH -> {
+                if (e.size() > 0) attachUntil.put(e.owner(), now + Math.max(1, e.life()));
+                else attachUntil.remove(e.owner());
+            }
             case KashimoFx.ULT -> {
-                ultUntil = e.size() > 0 ? now + Math.max(1, e.life()) : 0;
+                if (e.size() > 0) ultUntil.put(e.owner(), now + Math.max(1, e.life()));
+                else ultUntil.remove(e.owner());
                 if (e.size() > 0 && PhotonFx.ready()) {
                     PhotonFx.ring(e.position().add(0, 0.2, 0), 4.5, 1.1, 0xC0CFF3FF, 0xFF7FDFFF, 40, 8, 12);
                     PhotonFx.shockwave(e.position(), 0xFFBFF0FF, 5.5, 12);
                 }
             }
-            case KashimoFx.CRASH -> crashUntil = e.size() > 0 ? now + Math.max(1, e.life()) : 0;
+            case KashimoFx.CRASH -> {
+                if (e.size() > 0) crashUntil.put(e.owner(), now + Math.max(1, e.life()));
+                else crashUntil.remove(e.owner());
+            }
             default -> { }
         }
     }
@@ -136,26 +147,60 @@ public final class KashimoVisuals {
         trails.removeIf(v -> now - v.born() > v.life());
         shocks.removeIf(v -> now - v.born() > v.life());
         pulls.removeIf(v -> now - v.born() > v.life());
-        if (attachUntil != 0 && now >= attachUntil) attachUntil = 0;
-        if (ultUntil != 0 && now >= ultUntil) ultUntil = 0;
-        if (crashUntil != 0 && now >= crashUntil) crashUntil = 0;
-        var p = mc.player;
-        if (p == null || !PhotonFx.ready()) return;
-        // 身上的电弧只在第三人称画：第一人称相机就在自己身体里，光斑会糊满整个屏幕。
-        if (mc.options.getCameraType().isFirstPerson()) return;
-        boolean ult = ultUntil > now;
-        if (ult && now % 5 == 0) {
-            Vec3 pos = p.position().add(0, p.getBbHeight() * 0.5, 0);
+        attachUntil.values().removeIf(until -> now >= until);
+        ultUntil.values().removeIf(until -> now >= until);
+        crashUntil.values().removeIf(until -> now >= until);
+        negStacks.entrySet().removeIf(entry -> entry.getValue() <= 0);
+        var self = mc.player;
+        if (self == null || mc.level == null || !PhotonFx.ready()) return;
+        boolean firstPerson = mc.options.getCameraType().isFirstPerson();
+        // 幻兽·琥珀：每 5 刻在身上炸一圈电弧；附着：每 6 刻在手上缠电；
+        // 负电荷：每 4 刻身上的细碎电弧。全都按"这个实体"生成——第一人称只跳过自己，别人照常看得见。
+        if (now % 5 == 0) for (int id : ultUntil.keySet()) aura(mc, id, firstPerson, true);
+        if (now % 6 == 0) for (int id : attachUntil.keySet()) aura(mc, id, firstPerson, false);
+        if (now % 4 == 0) {
+            for (var entry : negStacks.entrySet()) {
+                if (hideSelf(mc, entry.getKey(), firstPerson)) continue;
+                if (!(mc.level.getEntity(entry.getKey()) instanceof net.minecraft.world.entity.LivingEntity living)) continue;
+                if (self.distanceToSqr(living) > 64 * 64) continue;
+                PhotonFx.spark(living.position().add(0, living.getBbHeight() * 0.6, 0), 0.85, 0.45,
+                    0xFFCFEFFF, 0xFF5FCBFF, TEX_GLOW, true, 4, 6, 8, 0.2);
+            }
+        }
+    }
+
+    /** 第一人称下不画"自己身上"的那一层（相机就在身体里，光斑会糊满屏幕）；别人一律照常。 */
+    private static boolean hideSelf(Minecraft mc, int id, boolean firstPerson) {
+        return firstPerson && mc.player != null && mc.player.getId() == id;
+    }
+
+    /** 一个实体身上的持续电弧：body=true 全身（琥珀），false 手部（附着）。 */
+    private static void aura(Minecraft mc, int id, boolean firstPerson, boolean body) {
+        if (hideSelf(mc, id, firstPerson)) return;
+        if (!(mc.level.getEntity(id) instanceof net.minecraft.world.entity.LivingEntity living)) return;
+        if (mc.player != null && mc.player.distanceToSqr(living) > 64 * 64) return;
+        Vec3 pos = body
+            ? living.position().add(0, living.getBbHeight() * 0.5, 0)
+            : living.getEyePosition().add(living.getLookAngle().scale(0.8)).add(0, -0.35, 0);
+        if (body) {
             PhotonFx.lines(pos, 1.35, 0.05, 0.95, 0xFFBFF4FF, 0xFF5FCBFF, 0, 0, 16, 6, 8, false);
             PhotonFx.spark(pos, 1.15, 0.85, 0xFFE8FBFF, 0xFF7FDDFF, TEX_GLOW, true, 5, 8, 18, 0.4);
-        } else if (attachUntil > now && now % 6 == 0) {
-            Vec3 hand = p.getEyePosition().add(p.getLookAngle().scale(0.8)).add(0, -0.35, 0);
-            PhotonFx.lines(hand, 0.55, 0.04, 0.55, 0xFFCFF6FF, 0xFF7FDDFF, 0, 0, 10, 5, 6, false);
+        } else {
+            PhotonFx.lines(pos, 0.55, 0.04, 0.55, 0xFFCFF6FF, 0xFF7FDDFF, 0, 0, 10, 5, 6, false);
         }
-        if (negStacks > 0 && now % 4 == 0) {
-            PhotonFx.spark(p.position().add(0, p.getBbHeight() * 0.6, 0), 0.85, 0.45, 0xFFCFEFFF, 0xFF5FCBFF,
-                TEX_GLOW, true, 4, 6, 8, 0.2);
-        }
+    }
+
+    /** 本机玩家自己身上的状态（HUD 用）。 */
+    private static long local(Map<Integer, Long> map, long now) {
+        var p = Minecraft.getInstance().player;
+        if (p == null) return 0;
+        long until = map.getOrDefault(p.getId(), 0L);
+        return until > now ? until : 0;
+    }
+
+    private static int localNeg() {
+        var p = Minecraft.getInstance().player;
+        return p == null ? 0 : negStacks.getOrDefault(p.getId(), 0);
     }
 
     public static void clear() {
@@ -166,8 +211,10 @@ public final class KashimoVisuals {
         shocks.clear();
         pulls.clear();
         overheads.clear();
-        negStacks = 0;
-        attachUntil = ultUntil = crashUntil = 0;
+        negStacks.clear();
+        attachUntil.clear();
+        ultUntil.clear();
+        crashUntil.clear();
     }
 
     // ------------------------------------------------------------ 世界内绘制
@@ -338,12 +385,12 @@ public final class KashimoVisuals {
     @SubscribeEvent public static void computeFov(net.minecraftforge.client.event.ViewportEvent.ComputeFov e) {
         var mc = Minecraft.getInstance();
         if (mc.player == null || !e.usedConfiguredFov() || mc.level == null) return;
-        if (ultUntil > now(mc)) e.setFOV(e.getFOV() * (1.03f + 0.02f * (float) Math.sin(tick * 0.35)));
+        if (local(ultUntil, now(mc)) > 0) e.setFOV(e.getFOV() * (1.03f + 0.02f * (float) Math.sin(tick * 0.35)));
     }
 
     @SubscribeEvent public static void cameraAngles(net.minecraftforge.client.event.ViewportEvent.ComputeCameraAngles e) {
         var mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || ultUntil <= now(mc)) return;
+        if (mc.player == null || mc.level == null || local(ultUntil, now(mc)) <= 0) return;
         e.setRoll(e.getRoll() + 0.55f * (float) Math.sin(tick * 1.7));
         e.setPitch(e.getPitch() + 0.35f * (float) Math.cos(tick * 1.3));
     }
@@ -363,12 +410,14 @@ public final class KashimoVisuals {
             boltIcon(g, o.x(), o.y(), 0xFF8FE6FF);
             g.drawString(mc.font, Integer.toString(o.layers()), o.x() + 9, o.y() - 5, 0xFFE8FBFF);
         }
-        boolean ult = ultUntil > now, crash = crashUntil > now, attach = attachUntil > now;
+        long ultEnd = local(ultUntil, now), crashEnd = local(crashUntil, now), attachEnd = local(attachUntil, now);
+        int neg = localNeg();
+        boolean ult = ultEnd > 0, crash = crashEnd > 0, attach = attachEnd > 0;
         // 屏幕边缘的蓝白电弧：负电荷越多越亮
-        if (negStacks > 0 && !ult) {
-            int alpha = Math.min(210, 30 + negStacks * 9);
+        if (neg > 0 && !ult) {
+            int alpha = Math.min(210, 30 + neg * 9);
             Random rnd = new Random(tick * 1103515245L + 12345);
-            int count = 10 + negStacks * 2;
+            int count = 10 + neg * 2;
             for (int i = 0; i < count; i++) {
                 int len = 10 + rnd.nextInt(26);
                 int inset = rnd.nextInt(4);
@@ -389,7 +438,7 @@ public final class KashimoVisuals {
             }
         }
         if (ult) {
-            int remain = (int) ((ultUntil - now) / 20);
+            int remain = (int) ((ultEnd - now) / 20);
             for (int i = 0; i < 5; i++) {
                 int color = ((30 - i * 5) << 24) | (i % 2 == 0 ? 0x5FCBFF : 0xE8FBFF);
                 g.fill(i * 4, 0, i * 4 + 4, h, color);
@@ -400,11 +449,11 @@ public final class KashimoVisuals {
             g.drawCenteredString(mc.font, "雷神·附着 · 普攻挂 2 层正电荷", w / 2, 16, 0xFFFFF3B0);
         }
         if (crash) {
-            int remain = (int) ((crashUntil - now) / 20);
+            int remain = (int) ((crashEnd - now) / 20);
             g.drawCenteredString(mc.font, "肉体崩溃 " + remain + " 秒 · 生命锁定 1 · 无法攻击与施术", w / 2, ult ? 28 : 16, 0xFFFF7A85);
         }
-        if (negStacks > 0) {
-            g.drawString(mc.font, "负电荷 " + negStacks + " / " + MAX_NEG,
+        if (neg > 0) {
+            g.drawString(mc.font, "负电荷 " + neg + " / " + MAX_NEG,
                 12, h - 118, 0xFFBFF4FF);
         }
     }

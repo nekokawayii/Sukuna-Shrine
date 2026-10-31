@@ -112,10 +112,11 @@ public final class KashimoCharges {
         setNegative(p, negative(p) + amount);
     }
 
-    /** 负电荷只影响本机 HUD，单发给自己即可（不广播给其他玩家）。 */
+    /** 负电荷要广播：别的玩家也能看见"身上电弧越积越亮"，只是自己第一人称时本地不画。 */
     public static void syncNegative(ServerPlayer p) {
-        Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> p),
-            new Network.Effect(KashimoFx.NEG_CHARGE, p.getId(), p.position(), Vec3.ZERO, negative(p), 0, 0));
+        if (!(p.level() instanceof ServerLevel level)) return;
+        Network.send(level, new Network.Effect(KashimoFx.NEG_CHARGE, p.getId(), p.position(),
+            Vec3.ZERO, negative(p), 0, 0));
     }
 
     private static void sync(ServerLevel level, LivingEntity target, int layers, int life) {

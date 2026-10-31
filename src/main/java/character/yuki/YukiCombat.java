@@ -140,6 +140,19 @@ public final class YukiCombat {
 
     /** 加重：叠一层；第 11 次（已满 10 层）压成黑洞。 */
     public static void starRage(ServerPlayer p, CharacterSkill skill, int rank) {
+        // 潜行释放 = 主动卸掉质量，恢复正常速度（层数清零，不触发黑洞）
+        if (p.isShiftKeyDown()) {
+            setRage(p, 0);
+            p.getPersistentData().remove(SLOW_MARK);
+            p.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
+            p.removeEffect(MobEffects.DAMAGE_BOOST);
+            p.displayClientMessage(Component.literal("加重解除 · 恢复常态"), true);
+            if (p.level() instanceof ServerLevel level) {
+                level.sendParticles(ParticleTypes.CLOUD, p.getX(), p.getY() + 1, p.getZ(), 24, 0.5, 0.6, 0.5, 0.05);
+                level.playSound(null, p.blockPosition(), SoundEvents.ARMOR_EQUIP_LEATHER, SoundSource.PLAYERS, 1f, 1.3f);
+            }
+            return;
+        }
         int stacks = rage(p);
         if (stacks >= RAGE_MAX) {
             blackHole(p, rank, stacks);

@@ -5,7 +5,7 @@
   "spawn_overrides": {},
   "terrain_adaptation": "beard_thin",
   "start_pool": "sukuna:expedition/ancient_grave",
-  "size": 0,
+  "size": 1,
   "start_height": {
     "absolute": -7
   },

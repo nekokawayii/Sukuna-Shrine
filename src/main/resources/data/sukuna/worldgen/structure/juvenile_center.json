@@ -1,11 +1,14 @@
 {
   "type": "minecraft:jigsaw",
-  "biomes": "#sukuna:has_structure/land",
+  "biomes": [
+    "minecraft:plains",
+    "#minecraft:is_forest"
+  ],
   "step": "surface_structures",
   "spawn_overrides": {},
   "terrain_adaptation": "beard_thin",
   "start_pool": "sukuna:expedition/juvenile_center",
-  "size": 0,
+  "size": 1,
   "start_height": {
     "absolute": -7
   },

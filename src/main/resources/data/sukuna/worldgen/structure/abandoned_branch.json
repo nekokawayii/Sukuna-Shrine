@@ -1,11 +1,14 @@
 {
   "type": "minecraft:jigsaw",
-  "biomes": "sukuna:ancient_battlefield",
+  "biomes": [
+    "#minecraft:is_mountain",
+    "sukuna:ancient_battlefield"
+  ],
   "step": "surface_structures",
   "spawn_overrides": {},
   "terrain_adaptation": "beard_thin",
   "start_pool": "sukuna:expedition/abandoned_branch",
-  "size": 0,
+  "size": 1,
   "start_height": {
     "absolute": -7
   },

@@ -1,11 +1,11 @@
 {
   "type": "minecraft:jigsaw",
-  "biomes": "sukuna:cursed_wasteland",
+  "biomes": "sukuna:scorched_volcanic_fields",
   "step": "surface_structures",
   "spawn_overrides": {},
   "terrain_adaptation": "beard_thin",
   "start_pool": "sukuna:expedition/volcanic_altar",
-  "size": 0,
+  "size": 1,
   "start_height": {
     "absolute": -7
   },

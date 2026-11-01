@@ -1,11 +1,16 @@
 {
   "type": "minecraft:jigsaw",
-  "biomes": "#sukuna:has_structure/land",
+  "biomes": [
+    "#minecraft:is_forest",
+    "minecraft:cherry_grove",
+    "sukuna:cursed_wasteland",
+    "sukuna:cursed_sakura_forest"
+  ],
   "step": "surface_structures",
   "spawn_overrides": {},
   "terrain_adaptation": "beard_thin",
   "start_pool": "sukuna:expedition/abandoned_shrine",
-  "size": 0,
+  "size": 1,
   "start_height": {
     "absolute": -7
   },

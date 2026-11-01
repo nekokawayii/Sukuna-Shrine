@@ -1,11 +1,15 @@
 {
   "type": "minecraft:jigsaw",
-  "biomes": "#sukuna:has_structure/land",
+  "biomes": [
+    "#minecraft:is_overworld",
+    "sukuna:cursed_wasteland",
+    "sukuna:ancient_battlefield"
+  ],
   "step": "underground_structures",
   "spawn_overrides": {},
   "terrain_adaptation": "bury",
   "start_pool": "sukuna:expedition/kenjaku_laboratory",
-  "size": 0,
+  "size": 1,
   "start_height": {
     "absolute": -48
   },

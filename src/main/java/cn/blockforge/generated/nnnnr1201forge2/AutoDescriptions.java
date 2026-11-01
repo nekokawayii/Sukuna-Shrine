@@ -88,6 +88,7 @@ public final class AutoDescriptions {
         MAP.put("gojo_spawn_egg", "「五条悟刷怪蛋」获取：创造/命令测试，无普通生存合成。用途：暂无额外合成用途，功能见物品篇。");
         MAP.put("golden_relic", "「金色舍利」获取：击败即身佛。用途：暂无额外合成用途，功能见物品篇。");
         MAP.put("gu_extract", "「蛊毒提炼物」获取：宝箱 sukuna:chests/abandoned_shrine。用途：合成 蛊毒武器涂层；合成 无为转变·剑。");
+        MAP.put("culling_points", "「点数」获取：工作台配方 sukuna:culling_points（四张天逆碎片 + 四个星之咒核 + 金色舍利）。用途：使用后获得 100 点死灭回游积分。");
         MAP.put("gu_vat", "「蛊毒缸」获取：工作台配方 sukuna:expedition_gu_vat；方块掉落 sukuna:blocks/gu_vat。用途：暂无额外合成用途，功能见物品篇。");
         MAP.put("hakari_npc_spawn_egg", "「秤金次刷怪蛋」获取：创造/命令测试，无普通生存合成。用途：暂无额外合成用途，功能见物品篇。");
         MAP.put("heavenly_bone", "「甚尔的无咒之骨」获取：宝箱 sukuna:chests/abandoned_branch；宝箱 sukuna:chests/ancient_grave；玩家击败甚尔 NPC或遗迹残影。用途：祭坛制作 天逆鉾；祭坛制作 噬魂刀；祭坛制作 咒具·游云。");

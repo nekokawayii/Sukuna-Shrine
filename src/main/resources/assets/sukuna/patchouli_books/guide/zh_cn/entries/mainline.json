@@ -1,0 +1,13 @@
+{
+  "name": "共同主线（L）",
+  "category": "sukuna:guide",
+  "icon": "sukuna:sukuna_memory",
+  "priority": true,
+  "sortnum": 4,
+  "pages": [
+    {
+      "type": "text",
+      "text": "$(l)共同主线（L）$(/l)\n反转术式 / 反转术式外放\n结界术 / 简易领域\n领域展开 / 领域展延（G 键）\n达成条件见 L 面板，解锁后全角色通用。"
+    }
+  ]
+}

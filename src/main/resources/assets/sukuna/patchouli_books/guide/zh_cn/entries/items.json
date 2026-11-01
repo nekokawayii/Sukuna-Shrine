@@ -1,0 +1,13 @@
+{
+  "name": "物品与材料",
+  "category": "sukuna:guide",
+  "icon": "sukuna:sukuna_memory",
+  "priority": true,
+  "sortnum": 6,
+  "pages": [
+    {
+      "type": "text",
+      "text": "$(l)物品与材料$(/l)\n宿傩手指 / 佛体 / 九相图：吞噬成长\n咒力结晶：右键回 150 咒力\n解咒符：打断即身佛虹吸\n佛香：召唤即身佛\n虚空钥匙：残渣×4 + 咒力结晶×4 + 金色舍利（可合成）"
+    }
+  ]
+}

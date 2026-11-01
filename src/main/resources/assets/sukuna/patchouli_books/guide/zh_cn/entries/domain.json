@@ -1,0 +1,13 @@
+{
+  "name": "领域对拼",
+  "category": "sukuna:guide",
+  "icon": "sukuna:sukuna_memory",
+  "priority": true,
+  "sortnum": 5,
+  "pages": [
+    {
+      "type": "text",
+      "text": "$(l)领域对拼$(/l)\n两个领域球体重叠后按空格比手速。\n胜方领域延长 20 秒，败方解除并进入熔断。\n秤金次的坐杀博徒对拼必胜。"
+    }
+  ]
+}

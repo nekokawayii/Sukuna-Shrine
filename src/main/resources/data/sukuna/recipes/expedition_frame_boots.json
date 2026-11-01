@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:diamond_boots"
+    },
+    {
+      "item": "sukuna:frame_retina"
+    },
+    {
+      "item": "sukuna:jujutsu_alloy"
+    }
+  ],
+  "result": {
+    "item": "sukuna:frame_boots",
+    "count": 1
+  }
+}

@@ -15,6 +15,7 @@ public final class BrokenMahitoRenderer extends MobRenderer<BrokenMahitoEntity,B
     private static final ResourceLocation SKIN=new ResourceLocation("sukuna","textures/entity/broken_mahito.png");
     public BrokenMahitoRenderer(EntityRendererProvider.Context context){super(context,new Model(),0.4f);}
     @Override public ResourceLocation getTextureLocation(BrokenMahitoEntity entity){return SKIN;}
+    @Override protected void scale(BrokenMahitoEntity entity,PoseStack pose,float partial){float s=3f/1.8f;pose.scale(s,s,s);}
     @Override protected RenderType getRenderType(BrokenMahitoEntity entity,boolean visible,boolean translucent,boolean glowing){return RenderType.entityCutoutNoCull(SKIN);}
     public static final class Model extends PlayerModel<BrokenMahitoEntity>{
         Model(){super(LayerDefinition.create(PlayerModel.createMesh(CubeDeformation.NONE,false),64,64).bakeRoot(),false);}

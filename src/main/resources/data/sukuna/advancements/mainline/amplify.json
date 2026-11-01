@@ -1,0 +1,9 @@
+{
+  "parent":"sukuna:mainline/domain",
+  "display":{"icon":{"item":"minecraft:nether_star"},"title":"领域展延","description":"累计成功展开领域10次，解锁G键领域展延；持续消耗咒力，使术式能够穿透无下限","frame":"challenge","show_toast":true,"announce_to_chat":true,"hidden":false},
+  "criteria":{
+    "use_1":{"trigger":"minecraft:impossible"},"use_2":{"trigger":"minecraft:impossible"},"use_3":{"trigger":"minecraft:impossible"},
+    "use_4":{"trigger":"minecraft:impossible"},"use_5":{"trigger":"minecraft:impossible"},"use_6":{"trigger":"minecraft:impossible"},
+    "use_7":{"trigger":"minecraft:impossible"},"use_8":{"trigger":"minecraft:impossible"},"use_9":{"trigger":"minecraft:impossible"},"use_10":{"trigger":"minecraft:impossible"}
+  }
+}

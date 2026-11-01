@@ -18,8 +18,8 @@ public final class WheelSideSlots {
     public static int gojoSector(int width,int height,double x,double y){double dx=x-gojoX(width,height),dy=y-height/2.0;double a=Math.atan2(dy,dx)+Math.PI/2;if(a<0)a+=Math.PI*2;int n=Math.max(1,gojoSectors());return (int)Math.floor(a/(Math.PI*2/n))%n;}
     public static int radius(int width,int height,boolean ice){return radius(width,height,ice,false);}
     public static int radius(int width,int height,boolean ice,boolean gojo){
-        int left=ice?8+2*iceRadius(width,height)+76:82;
-        int right=gojo?8+2*gojoRadius(width,height)+76:82;
+        int left=ice?8+2*iceRadius(width,height)+76:100;
+        int right=gojo?8+2*gojoRadius(width,height)+76:100;
         return Math.max(12,Math.min((width-left-right)/2,Math.min(100,height/2-48)));
     }
     public static int centerX(int width,int height,boolean ice){return centerX(width,height,ice,false);}
@@ -31,7 +31,7 @@ public final class WheelSideSlots {
         return new Box(width-96,12,84,34);
     }
     public static Box repair(int width,int height){return repair(width,height,false);}
-    public static Box repair(int width,int height,boolean ice){Box reverse=reverse(width,height,ice);return new Box(reverse.x(),reverse.y()+68,64,36);}
+    public static Box repair(int width,int height,boolean ice){return new Box(6,height-86,Math.max(56,Math.min(90,width/5)),34);}
     public static Box netBranch(int width,int height,int branch){return netBranch(width,height,branch,false);}
     public static Box netBranch(int width,int height,int branch,boolean ice){return new Box(centerX(width,height,ice)+radius(width,height,ice)+4,height/2-66+branch*34,74,30);}
     private WheelSideSlots(){}

@@ -55,7 +55,7 @@ public final class HigurumaDomain {
 
     private static final class Built {
         final ServerLevel level; long end;
-        final Map<BlockPos, BlockState> originals = new LinkedHashMap<>();
+        final character.domain.DomainTerrain.Handle terrain;
         final Map<BlockPos, BlockState> todo = new LinkedHashMap<>();
         boolean expanded;
         BlockPos amethyst, budding;
@@ -63,7 +63,7 @@ public final class HigurumaDomain {
         final Map<UUID, Long> confiscated = new HashMap<>();
         UUID judge;
         BlockPos judgeSpot;
-        Built(ServerLevel level, long end) { this.level = level; this.end = end; }
+        Built(ServerLevel level, UUID owner, long end) { this.level = level; this.end = end; this.terrain=character.domain.DomainTerrain.begin(level,owner); }
     }
     private static final Map<UUID, Built> ACTIVE = new HashMap<>();
 
@@ -72,9 +72,10 @@ public final class HigurumaDomain {
     public static void toggle(ServerPlayer p) {
         if (!(p.level() instanceof ServerLevel level)) return;
         if (active(p)) { close(p, "领域展开·诛伏赐死：收回"); return; }
+        if(!character.mainline.Mainline.requireDomain(p))return;
         BlockPos anchor = p.blockPosition();
         BlockPos origin = anchor.offset(-HigurumaLayout.SIZE_X / 2, -23, -HigurumaLayout.SIZE_Z / 2);
-        Built built = new Built(level, level.getGameTime() + LIFE);
+        Built built = new Built(level, p.getUUID(), level.getGameTime() + LIFE);
         var light13 = Blocks.LIGHT.defaultBlockState()
             .setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 13);
         Set<Long> filled = new HashSet<>();
@@ -90,8 +91,6 @@ public final class HigurumaDomain {
                     if (d > 21.0) continue;
                     BlockPos pos = origin.offset(x, y, z);
                     if (filled.contains(pos.asLong())) continue;
-                    if (level.getBlockState(pos).hasBlockEntity()) continue;
-                    built.originals.putIfAbsent(pos.immutable(), level.getBlockState(pos));
                     built.todo.put(pos.immutable(), light13);
                 }
         // 用户结构是 48³ 裁切版，边缘可能缺壳：按球面半径补齐黑混凝土，避免「球壳边缘空了」
@@ -103,14 +102,10 @@ public final class HigurumaDomain {
                     if (d <= 21.0 || d > 23.5) continue;
                     BlockPos pos = origin.offset(x, y, z);
                     if (filled.contains(pos.asLong())) continue;
-                    if (level.getBlockState(pos).hasBlockEntity()) continue;
-                    built.originals.putIfAbsent(pos.immutable(), level.getBlockState(pos));
                     built.todo.put(pos.immutable(), Blocks.BLACK_CONCRETE.defaultBlockState());
                 }
         for (Cell cell : layout()) {
             BlockPos pos = origin.offset(cell.x(), cell.y(), cell.z());
-            if (level.getBlockState(pos).hasBlockEntity()) continue;   // 保守：容器/机器不动
-            built.originals.putIfAbsent(pos.immutable(), level.getBlockState(pos));
             built.todo.put(pos.immutable(), cell.state());
         }
         for (Cell cell : layout()) {
@@ -145,21 +140,23 @@ public final class HigurumaDomain {
             var q = b.todo.entrySet().iterator();
             while (budget-- > 0 && q.hasNext()) {
                 var entry = q.next();
-                if (b.level.getBlockState(entry.getKey()).hasBlockEntity()) { q.remove(); continue; }
-                b.level.setBlock(entry.getKey(), entry.getValue(), 2);
+                b.terrain.place(entry.getKey(),entry.getValue());
                 q.remove();
             }
-            ServerPlayer owner = level.getServer().getPlayerList().getPlayer(e.getKey());
-            if (b.todo.isEmpty() && !b.expanded) {
+            ServerPlayer owner = cn.blockforge.generated.nnnnr1201forge2.MaidBridge.find(level,e.getKey());
+            if(owner==null||!owner.isAlive()){it.remove();restore(level,b);continue;}
+            if(cn.blockforge.generated.nnnnr1201forge2.DomainClash.active(owner))continue;
+            if (b.todo.isEmpty() && !b.expanded && b.terrain.ready()) {
                 b.expanded = true;
                 expandFinish(b, e.getKey());
             }
             if (b.expanded) holdPinned(b);
             for (var ci = b.confiscated.entrySet().iterator(); ci.hasNext(); ) {
                 var ce = ci.next();
-                if (now < ce.getValue()) continue;
                 var ent = b.level.getEntity(ce.getKey());
-                if (ent instanceof net.minecraft.world.entity.Mob mob) mob.setNoAi(false);
+                if(now<ce.getValue()&&!(ent instanceof LivingEntity le&&character.mainline.Mainline.simpleProtected(le)))continue;
+                b.pinned.remove(ce.getKey());
+                if (ent instanceof net.minecraft.world.entity.Mob mob) character.npc.NpcControl.release(mob,"higuruma_judgment");
                 if (ent instanceof LivingEntity le) {
                     var atk2 = le.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
                     if (atk2 != null) atk2.removeModifier(UUID.nameUUIDFromBytes(("higuruma_confiscate:" + le.getUUID()).getBytes()));
@@ -179,7 +176,7 @@ public final class HigurumaDomain {
         for (ServerLevel level : event.getServer().getAllLevels()) tick(level);
     }
 
-    public static void serverStopped(net.minecraftforge.event.server.ServerStoppedEvent event) {
+    public static void serverStopped(net.minecraftforge.event.server.ServerStoppingEvent event) {
         for (Built b : ACTIVE.values()) restore(b.level, b);
         ACTIVE.clear();
     }
@@ -192,14 +189,14 @@ public final class HigurumaDomain {
 
     public static void close(ServerPlayer p, String msg) {
         Built b = ACTIVE.remove(p.getUUID());
-        if (b != null) restore(p.level() instanceof ServerLevel sl ? sl : b.level, b);
+        if (b != null) restore(b.level, b);
         p.sendSystemMessage(Component.literal(msg).withStyle(ChatFormatting.GRAY));
     }
 
     /** 完全展开：日车传送到紫水晶块上；其他生物传送到紫水晶母块上并定住。 */
     private static void expandFinish(Built b, UUID ownerId) {
         if (b.amethyst == null || b.budding == null) return;
-        ServerPlayer owner = b.level.getServer().getPlayerList().getPlayer(ownerId);
+        ServerPlayer owner = cn.blockforge.generated.nnnnr1201forge2.MaidBridge.find(b.level,ownerId);
         if (owner != null) owner.teleportTo(b.amethyst.getX() + 0.5, b.amethyst.getY() + 1.0, b.amethyst.getZ() + 0.5);
         var center = Vec3.atCenterOf(b.budding != null ? b.budding : b.amethyst);
         // 审判者：紫水晶后面的木块堆上，朝向玩家
@@ -219,7 +216,7 @@ public final class HigurumaDomain {
                 new AABB(center, center).inflate(24),
                 ent -> ent instanceof LivingEntity living && living.isAlive())) {
             if (ent.getUUID().equals(ownerId) || ent.getUUID().equals(b.judge)) continue;
-            if (!(ent instanceof LivingEntity living)) continue;
+            if (!(ent instanceof LivingEntity living) || owner==null || character.mainline.Mainline.simpleProtected(living)||cn.blockforge.generated.nnnnr1201forge2.DomainClash.active(owner)|| !cn.blockforge.generated.nnnnr1201forge2.CombatSettings.canHit(owner,living)) continue;
             String name = living.getName().getString();
             int roll = rnd.nextInt(3);
             if (roll == 0) {
@@ -229,7 +226,7 @@ public final class HigurumaDomain {
             boolean death = roll == 2;
             confiscate(b, living);
             b.pinned.add(ent.getUUID());
-            if (living instanceof net.minecraft.world.entity.Mob mob) mob.setNoAi(true);
+            if (living instanceof net.minecraft.world.entity.Mob mob) character.npc.NpcControl.stun(mob,"higuruma_judgment",100);
             living.teleportTo(b.budding.getX() + 0.5, b.budding.getY() + 1.0, b.budding.getZ() + 0.5);
             if (owner != null) owner.sendSystemMessage(Component.literal("审判：" + name
                 + (death ? " → 有罪：死刑" : " → 有罪：没收（伤害减半 + 5 秒不能动）"))
@@ -237,7 +234,8 @@ public final class HigurumaDomain {
             if (death && owner != null) {
                 ItemStack sword = new ItemStack(cn.blockforge.generated.nnnnr1201forge2.Content.EXECUTIONER_SWORD.get());
                 sword.setHoverName(Component.literal("处刑人之剑").withStyle(ChatFormatting.DARK_RED));
-                if (!owner.getInventory().add(sword)) owner.drop(sword, false);
+                if(owner instanceof cn.blockforge.generated.nnnnr1201forge2.NpcBridge.NpcActor)owner.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND,sword);
+                else if (!owner.getInventory().add(sword)) owner.drop(sword, false);
             }
         }
     }
@@ -258,6 +256,7 @@ public final class HigurumaDomain {
         for (UUID id : b.pinned) {
             var ent = b.level.getEntity(id);
             if (ent == null || !ent.isAlive()) continue;
+            if(ent instanceof LivingEntity living&&character.mainline.Mainline.simpleProtected(living)){if(ent instanceof net.minecraft.world.entity.Mob mob)character.npc.NpcControl.release(mob,"higuruma_judgment");continue;}
             double dx = ent.getX() - (b.budding.getX() + 0.5), dz = ent.getZ() - (b.budding.getZ() + 0.5);
             if (dx * dx + dz * dz > 0.04 || Math.abs(ent.getY() - (b.budding.getY() + 1.0)) > 0.6)
                 ent.teleportTo(b.budding.getX() + 0.5, b.budding.getY() + 1.0, b.budding.getZ() + 0.5);
@@ -267,8 +266,10 @@ public final class HigurumaDomain {
     /** 领域内所有人/生物互相不能造成伤害。 */
     @net.minecraftforge.eventbus.api.SubscribeEvent
     public static void noDamage(net.minecraftforge.event.entity.living.LivingHurtEvent e) {
-        for (Built b : ACTIVE.values()) {
-            if (!b.expanded) continue;
+        if(e.getSource().getDirectEntity() instanceof LivingEntity attacker&&attacker.getMainHandItem().is(cn.blockforge.generated.nnnnr1201forge2.Content.EXECUTIONER_SWORD.get()))return;
+        for (var entry : ACTIVE.entrySet()) {
+            Built b=entry.getValue();var owner=cn.blockforge.generated.nnnnr1201forge2.MaidBridge.find(b.level,entry.getKey());if(owner==null||cn.blockforge.generated.nnnnr1201forge2.DomainClash.active(owner))continue;
+            if (!b.expanded||character.mainline.Mainline.simpleProtected(e.getEntity())||e.getSource().getEntity() instanceof LivingEntity source&&character.mainline.Mainline.simpleProtected(source)) continue;
             if (inside(b, e.getEntity())) { e.setCanceled(true); return; }
             if (e.getSource().getEntity() != null && inside(b, e.getSource().getEntity())) { e.setCanceled(true); return; }
         }
@@ -287,7 +288,7 @@ public final class HigurumaDomain {
         }
         for (UUID id : b.confiscated.keySet()) {
             var ent = level.getEntity(id);
-            if (ent instanceof net.minecraft.world.entity.Mob mob) mob.setNoAi(false);
+            if (ent instanceof net.minecraft.world.entity.Mob mob) character.npc.NpcControl.release(mob,"higuruma_judgment");
             if (ent instanceof LivingEntity le) {
                 var atk = le.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
                 if (atk != null) atk.removeModifier(UUID.nameUUIDFromBytes(("higuruma_confiscate:" + le.getUUID()).getBytes()));
@@ -296,13 +297,10 @@ public final class HigurumaDomain {
         b.confiscated.clear();
         for (UUID id : b.pinned) {
             var ent = level.getEntity(id);
-            if (ent instanceof net.minecraft.world.entity.Mob mob) mob.setNoAi(false);
+            if (ent instanceof net.minecraft.world.entity.Mob mob) character.npc.NpcControl.release(mob,"higuruma_judgment");
         }
         b.pinned.clear();
-        for (var entry : b.originals.entrySet()) {
-            if (!level.isLoaded(entry.getKey())) continue;
-            level.setBlock(entry.getKey(), entry.getValue(), 2);
-        }
+        b.todo.clear();b.terrain.close();
     }
 
     private static void closeMsg(ServerPlayer p) {

@@ -21,6 +21,11 @@ public final class PrisonRealmItem extends Item {
         seal.putUUID("Realm",room.getUUID("Id"));seal.putUUID("Token",room.getUUID("PortableToken"));seal.putInt("Count",snapshot.getList("Prisoners",Tag.TAG_COMPOUND).size());seal.put("Snapshot",snapshot);
         stack.getOrCreateTag().put(SEAL,seal);return stack;
     }
+    @Override public InteractionResult interactLivingEntity(ItemStack stack,net.minecraft.world.entity.player.Player player,net.minecraft.world.entity.LivingEntity target,net.minecraft.world.InteractionHand hand){
+        if(player.level().isClientSide)return InteractionResult.SUCCESS;
+        if(player instanceof ServerPlayer sp&&PrisonSystem.captureWeakened(sp,target,stack))return InteractionResult.CONSUME;
+        if(player instanceof ServerPlayer sp)sp.sendSystemMessage(Component.literal("直接封印需要敌方非玩家目标生命低于15%，且手中的狱门疆为空。"));return InteractionResult.FAIL;
+    }
     @Override public InteractionResult useOn(UseOnContext c){
         if(c.getPlayer()==null||c.getClickedFace()!=Direction.UP||PrisonSystem.locked(c.getPlayer()))return InteractionResult.FAIL;
         if(c.getLevel().isClientSide)return InteractionResult.SUCCESS;
@@ -62,6 +67,7 @@ public final class PrisonRealmItem extends Item {
     }
     @Override public void initializeClient(java.util.function.Consumer<net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer){PrisonClient.item(consumer);}
     @Override public void appendHoverText(ItemStack s,Level l,java.util.List<Component> lines,TooltipFlag f){
+        lines.add(Component.literal("空载时右键低于15%血量的敌方生物，可直接封印；不适用于玩家"));
         lines.add(Component.literal("右键地面放置；聊天：狱门僵，开门／狱门僵，闭门"));
         lines.add(Component.literal("闭门后，放置者空手右键收起；封印与内部数据随物品保存"));
         if(s.getTag()!=null&&s.getTag().contains(SEAL))lines.add(Component.literal("已封印："+seal(s).getInt("Count")+" 个生物 · 放下后以邪去悔天梯解封"));

@@ -1,0 +1,15 @@
+{
+  "name": "sukuna:expedition/sakura_hideout",
+  "fallback": "minecraft:empty",
+  "elements": [
+    {
+      "weight": 1,
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "sukuna:expedition/sakura_hideout",
+        "processors": "minecraft:empty",
+        "projection": "rigid"
+      }
+    }
+  ]
+}

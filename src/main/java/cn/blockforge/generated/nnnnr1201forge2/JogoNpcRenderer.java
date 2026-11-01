@@ -23,9 +23,12 @@ public final class JogoNpcRenderer extends EntityRenderer<JogoNpcEntity> {
     @Override public void render(JogoNpcEntity entity, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int light) {
         ps.pushPose();
         ps.mulPose(Axis.YP.rotationDegrees(180f - yaw));
-        // 有目标时播放攻击/移动动画，否则待机
-        String animation = entity.getTarget() != null ? "跑步" : "";
-        MODEL.render(ps, buffers, light, animation, (entity.tickCount + partial) / 20f, 1f, 1f, 1f, 1f);
+        MODEL.fitHeight(ps,entity.getBbHeight());
+        // 客户端没有服务端仇恨目标；用同步的位移/挥手状态，避免永远待机或原地狂奔。
+        double speed=entity.getDeltaMovement().horizontalDistanceSqr();
+        String animation=entity.swinging?"连招":speed>.012?"跑步":speed>.0001?"走路":"";
+        float seconds=entity.swinging?entity.getAttackAnim(partial)*2.25f:(entity.tickCount+partial)/20f;
+        MODEL.render(ps, buffers, light, animation, seconds, 1f, 1f, 1f, 1f);
         ps.popPose();
         super.render(entity, yaw, partial, ps, buffers, light);
     }

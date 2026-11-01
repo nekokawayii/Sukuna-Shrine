@@ -1,0 +1,205 @@
+{
+  "minecraft:block/amethyst_block": [
+    "src/main/resources/assets/sukuna/models/block/special_seal_pillar_inlaid.json",
+    "src/main/resources/assets/sukuna/models/block/special_seal_pillar_inlaid.json",
+    "src/main/resources/assets/sukuna/models/block/simple_seal_pillar_inlaid.json",
+    "src/main/resources/assets/sukuna/models/block/simple_seal_pillar_inlaid.json",
+    "src/main/resources/assets/sukuna/models/block/curse_crystal_block.json"
+  ],
+  "minecraft:block/netherite_block": [
+    "src/main/resources/assets/sukuna/models/block/alloy_block.json"
+  ],
+  "minecraft:block/chiseled_stone_bricks": [
+    "src/main/resources/assets/sukuna/models/block/simple_seal_pillar.json",
+    "src/main/resources/assets/sukuna/models/block/simple_seal_pillar.json",
+    "src/main/resources/assets/sukuna/models/block/barrier_trap.json"
+  ],
+  "minecraft:block/dark_oak_log": [
+    "src/main/resources/assets/sukuna/models/block/shimenawa.json",
+    "src/main/resources/assets/sukuna/models/block/shimenawa.json"
+  ],
+  "minecraft:block/iron_bars": [
+    "src/main/resources/assets/sukuna/models/block/alloy_bars.json",
+    "src/main/resources/assets/sukuna/models/block/alloy_bars.json"
+  ],
+  "minecraft:block/polished_blackstone": [
+    "src/main/resources/assets/sukuna/models/block/volcano_barrier.json"
+  ],
+  "minecraft:block/deepslate_iron_ore": [
+    "src/main/resources/assets/sukuna/models/block/jujutsu_ore.json"
+  ],
+  "minecraft:block/basalt_side": [
+    "src/main/resources/assets/sukuna/models/block/volcanic_rock.json"
+  ],
+  "minecraft:block/chiseled_deepslate": [
+    "src/main/resources/assets/sukuna/models/block/site_anchor.json",
+    "src/main/resources/assets/sukuna/models/block/special_seal_pillar.json",
+    "src/main/resources/assets/sukuna/models/block/special_seal_pillar.json"
+  ],
+  "minecraft:block/polished_deepslate": [
+    "src/main/resources/assets/sukuna/models/block/yuji_photo_slot.json"
+  ],
+  "minecraft:block/lodestone_side": [
+    "src/main/resources/assets/sukuna/models/block/culling_exchange.json"
+  ],
+  "minecraft:block/crying_obsidian": [
+    "src/main/resources/assets/sukuna/models/block/spirit_stone.json",
+    "src/main/resources/assets/sukuna/models/block/culling_exit.json"
+  ],
+  "minecraft:block/gray_concrete_powder": [
+    "src/main/resources/assets/sukuna/models/block/volcanic_ash.json"
+  ],
+  "minecraft:block/magma": [
+    "src/main/resources/assets/sukuna/models/block/eternal_flame.json"
+  ],
+  "minecraft:block/weeping_vines": [
+    "src/main/resources/assets/sukuna/models/block/black_vines.json"
+  ],
+  "minecraft:block/black_stained_glass": [
+    "src/main/resources/assets/sukuna/models/block/culling_barrier.json"
+  ],
+  "minecraft:block/black_concrete": [
+    "src/main/resources/assets/sukuna/models/block/yuta_grave.json"
+  ],
+  "minecraft:item/string": [
+    "src/main/resources/assets/sukuna/models/item/kenjaku_thread.json"
+  ],
+  "minecraft:item/map": [
+    "src/main/resources/assets/sukuna/models/item/tengen_map.json"
+  ],
+  "minecraft:item/netherite_ingot": [
+    "src/main/resources/assets/sukuna/models/item/jujutsu_alloy.json"
+  ],
+  "minecraft:item/slime_ball": [
+    "src/main/resources/assets/sukuna/models/item/gu_extract.json",
+    "src/main/resources/assets/sukuna/models/item/poison_coating.json"
+  ],
+  "minecraft:item/raw_iron": [
+    "src/main/resources/assets/sukuna/models/item/raw_jujutsu_ore.json"
+  ],
+  "minecraft:item/paper": [
+    "src/main/resources/assets/sukuna/models/item/ancient_talisman.json",
+    "src/main/resources/assets/sukuna/models/item/alloy_blueprint.json",
+    "src/main/resources/assets/sukuna/models/item/curtain_talisman.json"
+  ],
+  "minecraft:item/iron_sword": [
+    "src/main/resources/assets/sukuna/models/item/tenka.json"
+  ],
+  "minecraft:item/ender_eye": [
+    "src/main/resources/assets/sukuna/models/item/culling_key.json",
+    "src/main/resources/assets/sukuna/models/item/frame_retina.json"
+  ],
+  "minecraft:item/potion_overlay": [
+    "src/main/resources/assets/sukuna/models/item/mental_resistance.json",
+    "src/main/resources/assets/sukuna/models/item/blood_sakura_wine.json",
+    "src/main/resources/assets/sukuna/models/item/cold_resistance.json"
+  ],
+  "minecraft:item/potion": [
+    "src/main/resources/assets/sukuna/models/item/mental_resistance.json",
+    "src/main/resources/assets/sukuna/models/item/blood_sakura_wine.json",
+    "src/main/resources/assets/sukuna/models/item/cold_resistance.json"
+  ],
+  "minecraft:item/fermented_spider_eye": [
+    "src/main/resources/assets/sukuna/models/item/mutant_gland.json"
+  ],
+  "minecraft:item/iron_nugget": [
+    "src/main/resources/assets/sukuna/models/item/broken_tool.json",
+    "src/main/resources/assets/sukuna/models/item/tenka_fragment.json"
+  ],
+  "minecraft:item/dragon_breath": [
+    "src/main/resources/assets/sukuna/models/item/curse_concentrate.json"
+  ],
+  "minecraft:item/echo_shard": [
+    "src/main/resources/assets/sukuna/models/item/residue_medium.json",
+    "src/main/resources/assets/sukuna/models/item/soul_echo.json"
+  ],
+  "minecraft:block/pink_petals": [
+    "src/main/resources/assets/sukuna/models/item/blood_sakura_petal.json"
+  ],
+  "minecraft:item/diamond_boots": [
+    "src/main/resources/assets/sukuna/models/item/frame_boots.json"
+  ],
+  "minecraft:item/enchanted_book": [
+    "src/main/resources/assets/sukuna/models/item/ultimate_scroll.json",
+    "src/main/resources/assets/sukuna/models/item/ice_scroll.json",
+    "src/main/resources/assets/sukuna/models/item/furnace_scroll.json",
+    "src/main/resources/assets/sukuna/models/item/soul_edge.json"
+  ],
+  "minecraft:item/ghast_tear": [
+    "src/main/resources/assets/sukuna/models/item/incarnation_reagent.json",
+    "src/main/resources/assets/sukuna/models/item/wraith_tear.json"
+  ],
+  "minecraft:item/netherite_chestplate": [
+    "src/main/resources/assets/sukuna/models/item/alloy_chestplate.json",
+    "src/main/resources/assets/sukuna/models/item/forbidden_armor.json",
+    "src/main/resources/assets/sukuna/models/item/blood_armor.json"
+  ],
+  "minecraft:item/bone": [
+    "src/main/resources/assets/sukuna/models/item/heavenly_bone.json",
+    "src/main/resources/assets/sukuna/models/item/deformed_bone.json"
+  ],
+  "minecraft:item/prismarine_crystals": [
+    "src/main/resources/assets/sukuna/models/item/star_iron_fragment.json"
+  ],
+  "minecraft:item/phantom_membrane": [
+    "src/main/resources/assets/sukuna/models/item/soul_molt.json"
+  ],
+  "minecraft:item/name_tag": [
+    "src/main/resources/assets/sukuna/models/item/overtime_binding.json",
+    "src/main/resources/assets/sukuna/models/item/overtime_tie.json"
+  ],
+  "minecraft:item/prismarine_shard": [
+    "src/main/resources/assets/sukuna/models/item/frozen_crystal.json"
+  ],
+  "minecraft:item/magma_cream": [
+    "src/main/resources/assets/sukuna/models/item/volcanic_core.json"
+  ],
+  "minecraft:item/quartz": [
+    "src/main/resources/assets/sukuna/models/item/nether_star_fragment.json"
+  ],
+  "minecraft:item/stick": [
+    "src/main/resources/assets/sukuna/models/item/playful_cloud_parts.json"
+  ],
+  "minecraft:item/gunpowder": [
+    "src/main/resources/assets/sukuna/models/item/ash_clump.json"
+  ],
+  "minecraft:item/netherite_sword": [
+    "src/main/resources/assets/sukuna/models/item/blood_blade.json",
+    "src/main/resources/assets/sukuna/models/item/soul_splitter.json",
+    "src/main/resources/assets/sukuna/models/item/yuta_grave.json"
+  ],
+  "minecraft:item/amethyst_shard": [
+    "src/main/resources/assets/sukuna/models/item/curse_crystal.json",
+    "src/main/resources/assets/sukuna/models/item/residue_low.json"
+  ],
+  "minecraft:item/fire_charge": [
+    "src/main/resources/assets/sukuna/models/item/inferno_bomb.json"
+  ],
+  "minecraft:item/rotten_flesh": [
+    "src/main/resources/assets/sukuna/models/item/curse_flesh.json"
+  ],
+  "minecraft:item/bone_meal": [
+    "src/main/resources/assets/sukuna/models/item/tainted_bone.json"
+  ],
+  "minecraft:item/glass_bottle": [
+    "src/main/resources/assets/sukuna/models/item/soul_capture_bottle.json"
+  ],
+  "minecraft:item/diamond_sword": [
+    "src/main/resources/assets/sukuna/models/item/alloy_sword.json"
+  ],
+  "minecraft:item/blaze_powder": [
+    "src/main/resources/assets/sukuna/models/item/eternal_fire.json"
+  ],
+  "minecraft:item/spyglass": [
+    "src/main/resources/assets/sukuna/models/item/foresight_goggles.json"
+  ],
+  "minecraft:item/writable_book": [
+    "src/main/resources/assets/sukuna/models/item/nine_paintings_manuscript.json"
+  ],
+  "minecraft:item/wheat": [
+    "src/main/resources/assets/sukuna/models/item/blood_wheat.json"
+  ],
+  "minecraft:block/chain": [
+    "src/main/resources/assets/sukuna/models/item/thousand_mile_chain.json"
+  ]
+}

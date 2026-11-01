@@ -35,7 +35,7 @@ public final class CombatSettings {
     public static double baseSpellMultiplier(Player p){ServerPlayer commander=Authority.damageOwner(p);if(commander!=null)return baseSpellMultiplier(commander)*Authority.damageScale(p);return BalanceRules.strength(unscaledSpellMultiplier(p)*CasterDamageRules.casterFactor(MaidBridge.isCaster(p)),BalanceRules.Category.DAMAGE);}
     public static double spellMultiplier(Player p){return baseSpellMultiplier(p);}
     public static float spellDamage(Player p,double base){base=character.yuta.YutaBoost.scale(p,base);ServerPlayer commander=Authority.damageOwner(p);if(commander!=null)return (float)(spellDamage(commander,base)*Authority.damageScale(p));return BalanceRules.damage(CasterDamageRules.spell(base,multiplier(p),Curse.spellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),false,MaidBridge.isCaster(p)));}
-    public static float domainSpellDamage(Player p,double base){ServerPlayer commander=Authority.damageOwner(p);if(commander!=null)return (float)(domainSpellDamage(commander,base)*Authority.damageScale(p));return BalanceRules.damage(CasterDamageRules.spell(base,multiplier(p),Curse.domainSpellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),true,MaidBridge.isCaster(p)));}
+    public static float domainSpellDamage(Player p,double base){if(ExpeditionProgress.data(p).getBoolean("ExpeditionScroll_ultimate_scroll"))base*=1.15;ServerPlayer commander=Authority.damageOwner(p);if(commander!=null)return (float)(domainSpellDamage(commander,base)*Authority.damageScale(p));return BalanceRules.damage(CasterDamageRules.spell(base,multiplier(p),Curse.domainSpellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),true,MaidBridge.isCaster(p)));}
     public static float fixedSpellDamage(Player p,double base,boolean domain){ServerPlayer commander=Authority.damageOwner(p);if(commander!=null)return (float)(fixedSpellDamage(commander,base,domain)*Authority.damageScale(p));return BalanceRules.damage(CasterDamageRules.fixed(base,domain?Curse.domainSpellBonus(p):Curse.spellBonus(p),Curse.damageFactor(p),Curse.residueFactor(p),MaidBridge.isCaster(p)));}
     public static boolean canHit(ServerPlayer owner,LivingEntity target){
         if(owner instanceof NpcBridge.NpcActor npc)return NpcBridge.canHit(npc,target);
@@ -73,6 +73,10 @@ public final class CombatSettings {
             source=new net.minecraft.world.damagesource.DamageSource(source.typeHolder(),source.getDirectEntity()!=null?source.getDirectEntity():owner,null,owner.position());
             target.setLastHurtByPlayer(owner);
         }
+        if(owner instanceof NpcBridge.NpcActor npc){
+            // NPC 不是玩家 PvP：直接伤害来源绑定真正生物，避免和平/队伍玩家规则吞掉命中。
+            source=new net.minecraft.world.damagesource.DamageSource(source.typeHolder(),npc.mob,npc.mob,npc.mob.position());
+        }
         if(owner instanceof MaidBridge.Actor actor){
             // 已由canHit授权的玩家命中不能再被驯养生物友伤或难度缩放吞掉；
             // 保留直接命中者和独立施术归属，不解除其他模组主动取消的伤害事件。
@@ -82,9 +86,10 @@ public final class CombatSettings {
         // 所有来源都绑定施术者，包括 onFire、真伤与无主法术；finally 中恢复嵌套调用。
         ServerPlayer previousOwner=spellOwners.put(source,owner);
         float before=target.getHealth()+target.getAbsorptionAmount();String attackType=AttackTypes.peek();
+        amount*=ExpeditionEvents.techniqueBonus(owner,attackType);
         try{boolean accepted=target.hurt(source,amount);if(accepted&&amount>0&&!source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)&&!source.is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK)){
             int index=AttackTypes.index(attackType);boolean ordinarySlash=index>=0&&AttackTypes.SLASH.equals(AttackTypes.family(index))&&!AttackTypes.WORLD_SLASH.equals(attackType);
-            if(!ordinarySlash)SkillDestruction.impact(owner,target.position(),1);
+            if(!ordinarySlash&&!character.mahito.MahitoCombat.soulSource(source))SkillDestruction.impact(owner,target.position(),1);
             SlashImpact.after(owner,target,attackType,before,true);
         }return accepted;}finally{AttackTypes.consume();if(previousOwner==null)spellOwners.remove(source);else spellOwners.put(source,previousOwner);}
     }

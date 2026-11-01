@@ -1,0 +1,2253 @@
+{
+  "models": [
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/alloy_bars.json",
+      "original": {
+        "textures": {
+          "all": "minecraft:block/iron_bars",
+          "particle": "minecraft:block/iron_bars"
+        },
+        "elements": [
+          {
+            "from": [
+              1,
+              0,
+              6
+            ],
+            "to": [
+              3,
+              16,
+              10
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          },
+          {
+            "from": [
+              7,
+              0,
+              6
+            ],
+            "to": [
+              9,
+              16,
+              10
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          },
+          {
+            "from": [
+              13,
+              0,
+              6
+            ],
+            "to": [
+              15,
+              16,
+              10
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          },
+          {
+            "from": [
+              0,
+              3,
+              6
+            ],
+            "to": [
+              16,
+              5,
+              10
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          },
+          {
+            "from": [
+              0,
+              12,
+              6
+            ],
+            "to": [
+              16,
+              14,
+              10
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          }
+        ]
+      },
+      "borrowed": {
+        "all": "minecraft:block/iron_bars",
+        "particle": "minecraft:block/iron_bars"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/alloy_block.json",
+      "original": {
+        "parent": "minecraft:block/cube_all",
+        "textures": {
+          "all": "minecraft:block/netherite_block"
+        }
+      },
+      "borrowed": {
+        "all": "minecraft:block/netherite_block"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/barrier_trap.json",
+      "original": {
+        "parent": "minecraft:block/cube_all",
+        "textures": {
+          "all": "minecraft:block/chiseled_stone_bricks"
+        }
+      },
+      "borrowed": {
+        "all": "minecraft:block/chiseled_stone_bricks"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/black_vines.json",
+      "original": {
+        "parent": "minecraft:block/cross",
+        "render_type": "minecraft:cutout",
+        "textures": {
+          "cross": "minecraft:block/weeping_vines"
+        }
+      },
+      "borrowed": {
+        "cross": "minecraft:block/weeping_vines"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/culling_barrier.json",
+      "original": {
+        "parent": "minecraft:block/cube_all",
+        "render_type": "minecraft:translucent",
+        "textures": {
+          "all": "minecraft:block/black_stained_glass"
+        }
+      },
+      "borrowed": {
+        "all": "minecraft:block/black_stained_glass"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/culling_exchange.json",
+      "original": {
+        "parent": "minecraft:block/cube_all",
+        "textures": {
+          "all": "minecraft:block/lodestone_side"
+        }
+      },
+      "borrowed": {
+        "all": "minecraft:block/lodestone_side"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/culling_exit.json",
+      "original": {
+        "parent": "minecraft:block/cube_all",
+        "textures": {
+          "all": "minecraft:block/crying_obsidian"
+        }
+      },
+      "borrowed": {
+        "all": "minecraft:block/crying_obsidian"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/curse_crystal_block.json",
+      "original": {
+        "parent": "minecraft:block/cube_all",
+        "textures": {
+          "all": "minecraft:block/amethyst_block"
+        }
+      },
+      "borrowed": {
+        "all": "minecraft:block/amethyst_block"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/eternal_flame.json",
+      "original": {
+        "parent": "minecraft:block/cube_all",
+        "textures": {
+          "all": "minecraft:block/magma"
+        }
+      },
+      "borrowed": {
+        "all": "minecraft:block/magma"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/jujutsu_ore.json",
+      "original": {
+        "parent": "minecraft:block/cube_all",
+        "textures": {
+          "all": "minecraft:block/deepslate_iron_ore"
+        }
+      },
+      "borrowed": {
+        "all": "minecraft:block/deepslate_iron_ore"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/shimenawa.json",
+      "original": {
+        "textures": {
+          "all": "minecraft:block/dark_oak_log",
+          "particle": "minecraft:block/dark_oak_log"
+        },
+        "elements": [
+          {
+            "from": [
+              0,
+              6,
+              6
+            ],
+            "to": [
+              16,
+              10,
+              10
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          },
+          {
+            "from": [
+              5,
+              0,
+              7
+            ],
+            "to": [
+              7,
+              6,
+              9
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          },
+          {
+            "from": [
+              11,
+              1,
+              7
+            ],
+            "to": [
+              13,
+              6,
+              9
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          }
+        ]
+      },
+      "borrowed": {
+        "all": "minecraft:block/dark_oak_log",
+        "particle": "minecraft:block/dark_oak_log"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/simple_seal_pillar.json",
+      "original": {
+        "textures": {
+          "all": "minecraft:block/chiseled_stone_bricks",
+          "particle": "minecraft:block/chiseled_stone_bricks"
+        },
+        "elements": [
+          {
+            "from": [
+              1,
+              0,
+              1
+            ],
+            "to": [
+              15,
+              3,
+              15
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          },
+          {
+            "from": [
+              4,
+              3,
+              4
+            ],
+            "to": [
+              12,
+              12,
+              12
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          },
+          {
+            "from": [
+              0,
+              12,
+              0
+            ],
+            "to": [
+              16,
+              16,
+              16
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          }
+        ]
+      },
+      "borrowed": {
+        "all": "minecraft:block/chiseled_stone_bricks",
+        "particle": "minecraft:block/chiseled_stone_bricks"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/simple_seal_pillar_inlaid.json",
+      "original": {
+        "textures": {
+          "all": "minecraft:block/amethyst_block",
+          "particle": "minecraft:block/amethyst_block"
+        },
+        "elements": [
+          {
+            "from": [
+              1,
+              0,
+              1
+            ],
+            "to": [
+              15,
+              3,
+              15
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          },
+          {
+            "from": [
+              4,
+              3,
+              4
+            ],
+            "to": [
+              12,
+              12,
+              12
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          },
+          {
+            "from": [
+              0,
+              12,
+              0
+            ],
+            "to": [
+              16,
+              16,
+              16
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          }
+        ]
+      },
+      "borrowed": {
+        "all": "minecraft:block/amethyst_block",
+        "particle": "minecraft:block/amethyst_block"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/site_anchor.json",
+      "original": {
+        "parent": "minecraft:block/cube_all",
+        "textures": {
+          "all": "minecraft:block/chiseled_deepslate"
+        }
+      },
+      "borrowed": {
+        "all": "minecraft:block/chiseled_deepslate"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/special_seal_pillar.json",
+      "original": {
+        "textures": {
+          "all": "minecraft:block/chiseled_deepslate",
+          "particle": "minecraft:block/chiseled_deepslate"
+        },
+        "elements": [
+          {
+            "from": [
+              1,
+              0,
+              1
+            ],
+            "to": [
+              15,
+              3,
+              15
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          },
+          {
+            "from": [
+              4,
+              3,
+              4
+            ],
+            "to": [
+              12,
+              12,
+              12
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          },
+          {
+            "from": [
+              0,
+              12,
+              0
+            ],
+            "to": [
+              16,
+              16,
+              16
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          }
+        ]
+      },
+      "borrowed": {
+        "all": "minecraft:block/chiseled_deepslate",
+        "particle": "minecraft:block/chiseled_deepslate"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/special_seal_pillar_inlaid.json",
+      "original": {
+        "textures": {
+          "all": "minecraft:block/amethyst_block",
+          "particle": "minecraft:block/amethyst_block"
+        },
+        "elements": [
+          {
+            "from": [
+              1,
+              0,
+              1
+            ],
+            "to": [
+              15,
+              3,
+              15
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          },
+          {
+            "from": [
+              4,
+              3,
+              4
+            ],
+            "to": [
+              12,
+              12,
+              12
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          },
+          {
+            "from": [
+              0,
+              12,
+              0
+            ],
+            "to": [
+              16,
+              16,
+              16
+            ],
+            "faces": {
+              "up": {
+                "texture": "#all"
+              },
+              "down": {
+                "texture": "#all"
+              },
+              "north": {
+                "texture": "#all"
+              },
+              "south": {
+                "texture": "#all"
+              },
+              "east": {
+                "texture": "#all"
+              },
+              "west": {
+                "texture": "#all"
+              }
+            }
+          }
+        ]
+      },
+      "borrowed": {
+        "all": "minecraft:block/amethyst_block",
+        "particle": "minecraft:block/amethyst_block"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/spirit_stone.json",
+      "original": {
+        "parent": "minecraft:block/cube_all",
+        "textures": {
+          "all": "minecraft:block/crying_obsidian"
+        }
+      },
+      "borrowed": {
+        "all": "minecraft:block/crying_obsidian"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/volcanic_ash.json",
+      "original": {
+        "parent": "minecraft:block/cube_all",
+        "textures": {
+          "all": "minecraft:block/gray_concrete_powder"
+        }
+      },
+      "borrowed": {
+        "all": "minecraft:block/gray_concrete_powder"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/volcanic_rock.json",
+      "original": {
+        "parent": "minecraft:block/cube_all",
+        "textures": {
+          "all": "minecraft:block/basalt_side"
+        }
+      },
+      "borrowed": {
+        "all": "minecraft:block/basalt_side"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/volcano_barrier.json",
+      "original": {
+        "parent": "minecraft:block/cube_all",
+        "textures": {
+          "all": "minecraft:block/polished_blackstone"
+        }
+      },
+      "borrowed": {
+        "all": "minecraft:block/polished_blackstone"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/yuji_photo_slot.json",
+      "original": {
+        "parent": "minecraft:block/cube_all",
+        "textures": {
+          "all": "minecraft:block/polished_deepslate"
+        }
+      },
+      "borrowed": {
+        "all": "minecraft:block/polished_deepslate"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/block/yuta_grave.json",
+      "original": {
+        "textures": {
+          "particle": "minecraft:block/black_concrete"
+        }
+      },
+      "borrowed": {
+        "particle": "minecraft:block/black_concrete"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/alloy_blueprint.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/paper"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/paper"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/alloy_chestplate.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/netherite_chestplate"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/netherite_chestplate"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/alloy_sword.json",
+      "original": {
+        "parent": "minecraft:item/handheld",
+        "textures": {
+          "layer0": "minecraft:item/diamond_sword"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/diamond_sword"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/ancient_talisman.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/paper"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/paper"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/ash_clump.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/gunpowder"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/gunpowder"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/blood_armor.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/netherite_chestplate"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/netherite_chestplate"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/blood_blade.json",
+      "original": {
+        "parent": "minecraft:item/handheld",
+        "textures": {
+          "layer0": "minecraft:item/netherite_sword"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/netherite_sword"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/blood_sakura_petal.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:block/pink_petals"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:block/pink_petals"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/blood_sakura_wine.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/potion_overlay",
+          "layer1": "minecraft:item/potion"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/potion_overlay",
+        "layer1": "minecraft:item/potion"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/blood_wheat.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/wheat"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/wheat"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/broken_tool.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/iron_nugget"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/iron_nugget"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/buddha_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/choso_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/cold_resistance.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/potion_overlay",
+          "layer1": "minecraft:item/potion"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/potion_overlay",
+        "layer1": "minecraft:item/potion"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/culling_key.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/ender_eye"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/ender_eye"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_ashen_wraith_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_blood_judge_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_bloody_ghost_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_bone_hand_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_concentrate.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/dragon_breath"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/dragon_breath"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_corrupted_code_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_corrupted_golem_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_crystal.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/amethyst_shard"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/amethyst_shard"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_disordered_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_ender_scryer_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_face_borrower_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_flesh.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/rotten_flesh"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/rotten_flesh"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_garble_collapser_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_ghost_bride_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_hanging_one_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_longarm_beast_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_mummy_thorn_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_parasite_mother_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_skull_centipede_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_stone_golem_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_stone_spirit_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_stutter_curse_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_sunflower_mummy_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curse_twisted_soul_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/curtain_talisman.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/paper"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/paper"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/daitian_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/deformed_bone.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/bone"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/bone"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/eternal_fire.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/blaze_powder"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/blaze_powder"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/forbidden_armor.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/netherite_chestplate"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/netherite_chestplate"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/foresight_goggles.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/spyglass"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/spyglass"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/frame_boots.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/diamond_boots"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/diamond_boots"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/frame_retina.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/ender_eye"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/ender_eye"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/frozen_crystal.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/prismarine_shard"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/prismarine_shard"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/furnace_scroll.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/enchanted_book"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/enchanted_book"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/geto_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/shulker_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/gojo_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/gu_extract.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/slime_ball"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/slime_ball"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/hakari_npc_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/heavenly_bone.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/bone"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/bone"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/higuruma_npc_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/ice_scroll.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/enchanted_book"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/enchanted_book"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/incarnation_reagent.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/ghast_tear"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/ghast_tear"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/inferno_bomb.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/fire_charge"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/fire_charge"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/jogo_npc_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/jujutsu_alloy.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/netherite_ingot"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/netherite_ingot"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/kashimo_npc_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/kenjaku_thread.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/string"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/string"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/low_curse_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/zombie_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/mahito_npc_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/mahoraga_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/mental_resistance.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/potion_overlay",
+          "layer1": "minecraft:item/potion"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/potion_overlay",
+        "layer1": "minecraft:item/potion"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/mutant_gland.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/fermented_spider_eye"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/fermented_spider_eye"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/nanami_npc_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/naoya_npc_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/nether_star_fragment.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/quartz"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/quartz"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/nine_paintings_manuscript.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/writable_book"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/writable_book"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/overtime_binding.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/name_tag"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/name_tag"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/overtime_tie.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/name_tag"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/name_tag"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/playful_cloud_parts.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/stick"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/stick"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/poison_coating.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/slime_ball"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/slime_ball"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/raw_jujutsu_ore.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/raw_iron"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/raw_iron"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/residue_low.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/amethyst_shard"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/amethyst_shard"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/residue_medium.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/echo_shard"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/echo_shard"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/ryu_npc_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/soul_capture_bottle.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/glass_bottle"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/glass_bottle"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/soul_echo.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/echo_shard"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/echo_shard"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/soul_edge.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/enchanted_book"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/enchanted_book"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/soul_molt.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/phantom_membrane"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/phantom_membrane"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/soul_splitter.json",
+      "original": {
+        "parent": "minecraft:builtin/entity",
+        "textures": {
+          "particle": "minecraft:item/netherite_sword"
+        },
+        "gui_light": "front"
+      },
+      "borrowed": {
+        "particle": "minecraft:item/netherite_sword"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/star_iron_fragment.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/prismarine_crystals"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/prismarine_crystals"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/sukuna_npc_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/tainted_bone.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/bone_meal"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/bone_meal"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/tengen_map.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/map"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/map"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/tenka.json",
+      "original": {
+        "parent": "minecraft:item/handheld",
+        "textures": {
+          "layer0": "minecraft:item/iron_sword"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/iron_sword"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/tenka_fragment.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/iron_nugget"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/iron_nugget"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/thousand_mile_chain.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:block/chain"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:block/chain"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/todo_npc_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/toji_npc_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/ultimate_scroll.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/enchanted_book"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/enchanted_book"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/uraume_npc_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/volcanic_core.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/magma_cream"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/magma_cream"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/wraith_tear.json",
+      "original": {
+        "parent": "minecraft:item/generated",
+        "textures": {
+          "layer0": "minecraft:item/ghast_tear"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/ghast_tear"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/yuji_guardian_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/yuji_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/yuki_npc_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/yuta_grave.json",
+      "original": {
+        "parent": "item/generated",
+        "textures": {
+          "layer0": "minecraft:item/netherite_sword"
+        }
+      },
+      "borrowed": {
+        "layer0": "minecraft:item/netherite_sword"
+      },
+      "egg": false
+    },
+    {
+      "path": "src/main/resources/assets/sukuna/models/item/yuta_npc_spawn_egg.json",
+      "original": {
+        "parent": "minecraft:item/template_spawn_egg"
+      },
+      "borrowed": {},
+      "egg": true
+    }
+  ],
+  "missing": [],
+  "java_vanilla": [
+    {
+      "path": "src/main/java/character/mahito/MahitoCloneRenderer.java",
+      "reference": "new ResourceLocation(\"minecraft\", \"textures/entity/player/wide/steve.png\")"
+    },
+    {
+      "path": "src/main/java/cn/blockforge/generated/nnnnr1201forge2/NaoyaNpcRenderer.java",
+      "reference": "new ResourceLocation(\"minecraft\", \"textures/entity/player/wide/steve.png\")"
+    },
+    {
+      "path": "src/main/java/cn/blockforge/generated/nnnnr1201forge2/ObserverRenderer.java",
+      "reference": "new ResourceLocation(\"minecraft\",\"textures/entity/player/wide/steve.png\")"
+    },
+    {
+      "path": "src/main/java/cn/blockforge/generated/nnnnr1201forge2/TodoAnchorRenderer.java",
+      "reference": "new ResourceLocation(\"minecraft\", \"textures/entity/player/wide/steve.png\")"
+    }
+  ],
+  "protected": {
+    "src/main/resources/assets/sukuna/models/ashen_longarms.bbmodel": "dadb26281b5a710aeb27d4e5d122e35b86ad4b9749cbb9cda3ec1a91024da8df",
+    "src/main/resources/assets/sukuna/models/ashen_wraith.bbmodel": "f0db0544aabe12d509d2a0f6d4d9b58d5abaf6088dbb92a6f7fe62129682e52b",
+    "src/main/resources/assets/sukuna/models/basement_wanderer.bbmodel": "64e55e0e9081cab279aa8cf9deb7fca502bfd5d2286d8d89ab82cc7897965730",
+    "src/main/resources/assets/sukuna/models/blood_judge.bbmodel": "54de4eef71de61583d946ffb215b53705301d709cddac8bfea8979ef7e73c732",
+    "src/main/resources/assets/sukuna/models/bloody_ghost.bbmodel": "29142bc7dc181bc32d21de40b0af4e7014d1a3d603e5a260945064427bc0b113",
+    "src/main/resources/assets/sukuna/models/bone_hand.bbmodel": "20c44efdb21a795e06fe0199da9611ad37eabd7e8f3e6381117b809c0c66ef45",
+    "src/main/resources/assets/sukuna/models/buddha.bbmodel": "a92fc99de3f5d2a3ff4fd4bc868d3467ade4eb2865c09431ad458bbe3077b24c",
+    "src/main/resources/assets/sukuna/models/corrupted_code.bbmodel": "abd25a738a2bef83ef9dbdd7b0e56bf9e856f4ba664c0f3b6226db48a8735b59",
+    "src/main/resources/assets/sukuna/models/corrupted_golem.bbmodel": "478764defcc2ea10599ed429dcfd734aeff702cbda1871a3da96be1240d4cb03",
+    "src/main/resources/assets/sukuna/models/daitian.bbmodel": "ef07cc02b51872b797d73f0415afa11b97d71cf8e944f4545d8aafb7b256078e",
+    "src/main/resources/assets/sukuna/models/disordered.bbmodel": "eab26dee4f97b19d589f0ca50310d898d8d98f552e30bddbd5c9156b71e38bdd",
+    "src/main/resources/assets/sukuna/models/ender_scryer.bbmodel": "06d700ba0e0c66038c971bd1c79ae4be846e6e13b0b6c5c7310067205a0b6199",
+    "src/main/resources/assets/sukuna/models/entity/void_aggregate.bbmodel": "534828a56e5aed2a337f7bfc526fe79f2d986457e613ad68ab7b227aac660d15",
+    "src/main/resources/assets/sukuna/models/executioner_sword.bbmodel": "786c082e473a30ff44b14f07a7411c6bccb3283fd0b4daf6559f12d3dcd9e90f",
+    "src/main/resources/assets/sukuna/models/face_borrower.bbmodel": "34ce67746f5cb652d528655bcc7770be8b7a81e9f9a0d472727e93fdd637c055",
+    "src/main/resources/assets/sukuna/models/garble_collapser.bbmodel": "f95ec53ff301c173117128c9a2ad6d5c234f8eb453ab3e6af5475b18479a06b6",
+    "src/main/resources/assets/sukuna/models/ghost_bride.bbmodel": "ac6c9376d8cd6090e94fa15e152c44764428a0b70da0bcbfb396dda46ec97a89",
+    "src/main/resources/assets/sukuna/models/hanging_one.bbmodel": "7f825426ec6c84ecadd63deb35e25a43bceffb89526f0e05b977f96fd3a95396",
+    "src/main/resources/assets/sukuna/models/higuruma_judge.bbmodel": "fa23d86f5edad6c2ab8cc1b35b086edb1faf9a5e3454e37315a69db94939c33a",
+    "src/main/resources/assets/sukuna/models/jogo_npc.bbmodel": "2a6920b9807c98c6120cdddfec963237a53dc526ffc354381a92d6e46aff4ee2",
+    "src/main/resources/assets/sukuna/models/longarm_beast.bbmodel": "9190a28df1e5a6f2f732f8fccad2446310b1a51de4afcd7e84578321bd34f3b1",
+    "src/main/resources/assets/sukuna/models/mahoraga.bbmodel": "ed677e7a6916438661715ac8f1b1c5f62596f8104fe7dc7cb636f17270de97dd",
+    "src/main/resources/assets/sukuna/models/mahoraga_wheel.bbmodel": "9dc3ef8b126746b5acb963e968d71ae7002ddbeee9b0dd3f08edd09700b3558a",
+    "src/main/resources/assets/sukuna/models/mother.bbmodel": "e1d098592265b8c6a37841f40ee6f461188eb1a97eeaa5d2c7ca9dc4c2c68109",
+    "src/main/resources/assets/sukuna/models/mummy_thorn.bbmodel": "e21233648108253ddfc2c53ad4448fb418db45b7e1f1ec5c89c5a1ed50beae71",
+    "src/main/resources/assets/sukuna/models/oni_muramasa_sheathed.bbmodel": "4fe8f89fb13304ad06a3747b54a34e189e0e95e08decaa22e06ef830a659978e",
+    "src/main/resources/assets/sukuna/models/parasite.bbmodel": "6915c5fa489570b4648e69a081a02ab00a608ca0261eb6caa5ab8ea083408746",
+    "src/main/resources/assets/sukuna/models/parasite_mother.bbmodel": "ef1b31b6ae280e16d924d8d570da9314fd67d660427d0b6ec220065655a6d0f3",
+    "src/main/resources/assets/sukuna/models/rika.bbmodel": "59cb1ee987822960564dbd8f8d00d43b42336d604ccbe6333992c4e13987c659",
+    "src/main/resources/assets/sukuna/models/sealing/jacobs_ladder.bbmodel": "8e164069268b1e7a622a4f6f31001b7384ba78031b497bfb30c85290c909236a",
+    "src/main/resources/assets/sukuna/models/sealing/prison_realm.bbmodel": "0338a023a637796393b5f020b8de435a580a681d2dc41244c5f4434406c74679",
+    "src/main/resources/assets/sukuna/models/shrine.bbmodel": "c993f6c95db2fb9d57db596f7749a7357f3f6ee1b2da9f015c5249887fd9ea0c",
+    "src/main/resources/assets/sukuna/models/skull_centipede.bbmodel": "4437ae8fef1a8297a3faae98244a40c6b27bed80fe3f087a669f3784cf59b37d",
+    "src/main/resources/assets/sukuna/models/soul_devourer.bbmodel": "d0c3c484c91377ddc5000b3b0c14aa9875d97f7cc0005edd020a96c504714ad2",
+    "src/main/resources/assets/sukuna/models/stone_golem.bbmodel": "f1230dbe992fd729e37b949bf75bcab3f70d4e0a72b7310ba2f3033dd385eb41",
+    "src/main/resources/assets/sukuna/models/stone_spirit.bbmodel": "2c77ed4f57f71012cca63e81e376b0c7cad8edacddcf13ab2a58fdf25ca66385",
+    "src/main/resources/assets/sukuna/models/stutter_curse.bbmodel": "956c17b9b8b5553426e390372451046dad551d687577eb1bc24bd681d8ddb83c",
+    "src/main/resources/assets/sukuna/models/sunflower_mummy.bbmodel": "fd674b216adf7a58b6fdfb13174fbfc97d6107597e18b4777e154467cd3207a7",
+    "src/main/resources/assets/sukuna/models/ten_shadows/deer.bbmodel": "dd94df5141a39106eaa809b0c35fe5508a07ed47cbf62c5c802d5b35aed19e07",
+    "src/main/resources/assets/sukuna/models/ten_shadows/dog_black.bbmodel": "7f718d2c144ff0cf4a939be394d54b90ebc7c8b0cfcfbf9f06c0010b9c66bcfe",
+    "src/main/resources/assets/sukuna/models/ten_shadows/dog_totality.bbmodel": "085cf8e16e798a47933e839ce96924e8a20384298afac740c2bd5a906e62fc64",
+    "src/main/resources/assets/sukuna/models/ten_shadows/dog_white.bbmodel": "ecff8f706fe73ca2647db491135b7ae35e24c45072ad6c19d082aa0d6ea9cef1",
+    "src/main/resources/assets/sukuna/models/ten_shadows/elephant.bbmodel": "40ba4ef7f8d033691f305c9a9a68673e5d31b8202cd071c5be174f42ac329326",
+    "src/main/resources/assets/sukuna/models/ten_shadows/nue.bbmodel": "30c4956f4c1daa2f3fec2987f101e5002495dda38cc15515051164c7bd268cf2",
+    "src/main/resources/assets/sukuna/models/ten_shadows/ox.bbmodel": "47ef5e888cef022729361a2c4e2be29082069ad9b4f26a9a7a19216d02586bc6",
+    "src/main/resources/assets/sukuna/models/ten_shadows/rabbit.bbmodel": "33663805c5b5694ee0dfb52a0807954118e9d7d0396cd24cbfd62b075e9ec926",
+    "src/main/resources/assets/sukuna/models/ten_shadows/serpent.bbmodel": "31fcc5119e80d98ffbb214097b65c71f89031f2ebd594ec4e249332f47915b0d",
+    "src/main/resources/assets/sukuna/models/ten_shadows/tiger.bbmodel": "eefd341ac9653ddd4b91b90a6f262fbf9947a467f139ac435773c9b6c8b739d6",
+    "src/main/resources/assets/sukuna/models/ten_shadows/toad.bbmodel": "864cecdb1fd79b21ad34d9670c56cb11dd061f1740997c4122869b52da364bdf",
+    "src/main/resources/assets/sukuna/models/twisted_soul.bbmodel": "4dcb6d10941b0f2f9b27781beb0f4ee008be40680f930224026b025b17f82e04",
+    "src/main/resources/assets/sukuna/models/void_aggregate.bbmodel": "cbbefaf63d93b79e2a4f845650d820592d342f740216b77621f1d68836a4f143",
+    "src/main/resources/assets/sukuna/models/void_core.bbmodel": "cf386fafeb53f16be15978722ecc9578f4a4d725ff9f43abfc2f6aad2d1bf9ed",
+    "src/main/resources/assets/sukuna/models/void_shrine.bbmodel": "1d3b38781d07358c499b75e19dfd8cc30417068e508119fc2e244e1626ef49a0",
+    "src/main/resources/assets/sukuna/models/yiduishou.bbmodel": "e43404d826d2d7af33f5dcbc8be5071784a377b470688138fd1f8eb8d11d8e15",
+    "src/main/resources/assets/sukuna/models/yuta_katana.bbmodel": "371130dfefa60ad93ea27361e545cf27cfda49a9371f7f7119ccebf49d89afea",
+    "src/main/resources/assets/sukuna/sounds/heaven_bow.ogg": "f89f3f9f35779e5f8614004887cc85f0b81779386b5cff7345c6903d380bb64a",
+    "src/main/resources/assets/sukuna/sounds/nine_heaven_bow.ogg": "f89f3f9f35779e5f8614004887cc85f0b81779386b5cff7345c6903d380bb64a",
+    "src/main/resources/assets/sukuna/textures/entity/ashen_longarms_0.png": "ff38bd801bb5d98aec07f86b7e35603af83e5fd6718a6195ed5e9d07b60e9821",
+    "src/main/resources/assets/sukuna/textures/entity/ashen_wraith_0.png": "1829a095bbce0c0791ef9663ccdd8734f5e7c4255709681e3f0589fc0505b5f0",
+    "src/main/resources/assets/sukuna/textures/entity/basement_wanderer_0.png": "8922171a1de7e0b5f3794a7498884eacf9f2542749806c622164264fcb0ed7ee",
+    "src/main/resources/assets/sukuna/textures/entity/basement_wanderer_1.png": "11db3676f031ab5cf66c6057b9c0e9071aead27da8af1114ed477b24ceeadf88",
+    "src/main/resources/assets/sukuna/textures/entity/basement_wanderer_2.png": "8f0b65bbba94a04e04abf508aa1f5fd41f365ef1d41c1ee3b3b52c906755d454",
+    "src/main/resources/assets/sukuna/textures/entity/basement_wanderer_3.png": "3778b502ed8d33e963798041b143721ff5ddc2f807a6c4a5e8eee6a420666a72",
+    "src/main/resources/assets/sukuna/textures/entity/basement_wanderer_4.png": "d02cc4c4d63def1ff85de32947ef832864d5331a69e4e09b2ad43c1b3be5e2f8",
+    "src/main/resources/assets/sukuna/textures/entity/basement_wanderer_5.png": "f330737b7bd5a51155103706aae85731ba036ffe819e1f5691e86946747225dc",
+    "src/main/resources/assets/sukuna/textures/entity/basement_wanderer_6.png": "762d1d819ab48bdd7f7427d9af40b0b00171a21662650a5f36a2397071ce81a1",
+    "src/main/resources/assets/sukuna/textures/entity/basement_wanderer_7.png": "5509698324ce8da769a19e6f2c03c6343cf4af71b39846ea3a949b2c0a42c9a2",
+    "src/main/resources/assets/sukuna/textures/entity/basement_wanderer_8.png": "934cd041843e207645bf4db02ccf28ac933640c4ca830b89f30f9b1a8d1b480e",
+    "src/main/resources/assets/sukuna/textures/entity/blood_judge_0.png": "34b027e9cb70e9b5da2d19f094a1eb0000f53261e4b22dd1cccf7be8b82221f7",
+    "src/main/resources/assets/sukuna/textures/entity/bloody_ghost_0.png": "7a35c844125bc32ec35af4ee25afd707fc4b79409324231619452be2d1e2a0ef",
+    "src/main/resources/assets/sukuna/textures/entity/bone_hand_0.png": "05124a05b17bf53ed0e96d642c092ceb4c7231449fbac0aa70f7c2dc71578b6e",
+    "src/main/resources/assets/sukuna/textures/entity/broken_mahito.png": "9ca6ee93517085f9a89b40fcc488fc08b4a531612d44194a27b1d833b3319af4",
+    "src/main/resources/assets/sukuna/textures/entity/buddha_0.png": "43b8c2d2b2423687931edaf9cf41715a8f35242284354d9305aa7067a8f280ce",
+    "src/main/resources/assets/sukuna/textures/entity/buddha_atlas.png": "7dbc8d40d49f036d6dd249b8dd6035090ea5a7299da94fadf16ae95aacfedc46",
+    "src/main/resources/assets/sukuna/textures/entity/buddha_face.png": "dd20262d51ca1d5656b8b1f80121011daded957bcb2320c4a50c8a8660b3d2b2",
+    "src/main/resources/assets/sukuna/textures/entity/choso.png": "cc28e5f181f58fb3dfa56e56f230dd08fcb914bc3b8fa84cf33631dee03aab03",
+    "src/main/resources/assets/sukuna/textures/entity/corrupted_code_0.png": "e185b5d186a347a775f3857566ebb0f0901d81056ebb028fd6bcb07536fed1da",
+    "src/main/resources/assets/sukuna/textures/entity/corrupted_code_1.png": "0d53ad02bc883eb609b306a1fea5ad815e938a7a30e7b77bcd741a02ae0964b0",
+    "src/main/resources/assets/sukuna/textures/entity/corrupted_code_2.png": "db696d53dac7ef9940ccb5eaad6582fbe0249a0e8a834c1ab7ec6b94315e9a75",
+    "src/main/resources/assets/sukuna/textures/entity/corrupted_code_3.png": "cae91b2e2d7b08eb8daaf52e2196664d9de29159abbfa19d1e91afc2f4c151e7",
+    "src/main/resources/assets/sukuna/textures/entity/corrupted_golem_0.png": "9d3e6d913e8c82253f234c0b70474c85c3848b061ef5ba3820e062c2d17766a5",
+    "src/main/resources/assets/sukuna/textures/entity/daitian_0.png": "679684e580e1ecfe9584b6f8c46e0de1ff5581b146eaf2ecff475bebe7246afb",
+    "src/main/resources/assets/sukuna/textures/entity/disordered_0.png": "3daf76f72be69ee5188692e35993ca95c8a9e01c1f5bd86e9db00c3fddef4eb6",
+    "src/main/resources/assets/sukuna/textures/entity/ender_scryer_0.png": "506ea409dab9c5f19496f9b5d31b3b23d08e5bb68b9e77654c8afe2c8f51bee4",
+    "src/main/resources/assets/sukuna/textures/entity/ender_scryer_1.png": "b4ca054b303cbd9aaaae5fed746be4871a902c52c2f9112afa4198602e9a2b16",
+    "src/main/resources/assets/sukuna/textures/entity/ender_scryer_2.png": "506ea409dab9c5f19496f9b5d31b3b23d08e5bb68b9e77654c8afe2c8f51bee4",
+    "src/main/resources/assets/sukuna/textures/entity/executioner_sword_0.png": "56dbabed5c4b642a7a7733df4cb09d9330531d347963c5384792c15562686d26",
+    "src/main/resources/assets/sukuna/textures/entity/face_borrower_0.png": "36ba80751e23d6b2e1b6cd97771ba08897935095ac44b1dc5b4ea4cd7bbd6312",
+    "src/main/resources/assets/sukuna/textures/entity/garble_collapser_0.png": "5d224f7652d19853864495e5fb93950d36957f3547298e04215e3156737320d1",
+    "src/main/resources/assets/sukuna/textures/entity/geto.png": "3a63e1b6b70621709013e7a691452eb394e82282fc4f3faab83779e37991eed6",
+    "src/main/resources/assets/sukuna/textures/entity/ghost_bride_0.png": "dfce30dbc66748d19e21b3c26928c10bb18ced5d15b14667f9b1baf60c37d6bb",
+    "src/main/resources/assets/sukuna/textures/entity/ghost_bride_1.png": "4d2680c3d9d257cd4f1af528f0000ef1696f0d40782ecffaef1d843e0f41e3da",
+    "src/main/resources/assets/sukuna/textures/entity/ghost_bride_10.png": "3bda374311c7bda96eded126107e735a62f65b87a0c4812a33c6d95ab35a587d",
+    "src/main/resources/assets/sukuna/textures/entity/ghost_bride_2.png": "7a1c59017ba4059463c0f37d6a7465d0ba473ba716021b6edf2efa0c410a4d0c",
+    "src/main/resources/assets/sukuna/textures/entity/ghost_bride_3.png": "55013d0c637981b46398d716dd15759e39f24aff8910b013db981ce3ff9334b6",
+    "src/main/resources/assets/sukuna/textures/entity/ghost_bride_4.png": "9488474548cc6375c028ae483a035b1f4ddff49bf57a88146aea41aa8541b41d",
+    "src/main/resources/assets/sukuna/textures/entity/ghost_bride_5.png": "e9f4ed86a132107aa46a6d05065ed6e80c9769691b2ce9af9c76484b7d123380",
+    "src/main/resources/assets/sukuna/textures/entity/ghost_bride_6.png": "eaf45a8c17811b6a2a71c9faf3994ca18065b5b1e8e092d727ccb376864f9903",
+    "src/main/resources/assets/sukuna/textures/entity/ghost_bride_7.png": "42bcb5a8e5a015c56c0925ad476f4ce6ee74405f8f387642c5711ce5048b408a",
+    "src/main/resources/assets/sukuna/textures/entity/ghost_bride_8.png": "6bc5447cde4934b6735f7d60dabaf36d6fb5afee8cead6d517d78928fbc51a3a",
+    "src/main/resources/assets/sukuna/textures/entity/ghost_bride_9.png": "016c7f3f4fbce24d21246d9e6f1f66404b5d475d5b8507c495efec46be7738fd",
+    "src/main/resources/assets/sukuna/textures/entity/gojo.png": "a2133b19eebc247e2972e5012fcb7dd18024afcb9e1b28a0a5eb773a116bf652",
+    "src/main/resources/assets/sukuna/textures/entity/hakari_npc.png": "3a9a79b2c7e90b8e25c2edc09103ff870a65d4b20cdb33552d2bcf9a18d7752b",
+    "src/main/resources/assets/sukuna/textures/entity/hanging_one_0.png": "98caf49605a926a43b57d00a0db327c04303e307ad6dc9fddc8430eb446d0c21",
+    "src/main/resources/assets/sukuna/textures/entity/higuruma_judge_0.png": "786a60d67aff325e1e0fe75fd18f9b9fc92d885fa63899f721fed38adbd2acc2",
+    "src/main/resources/assets/sukuna/textures/entity/higuruma_npc.png": "391a80bcbdabf68d67ce974257fc8cdf1853a2676a43f34ee876c95b02a6604d",
+    "src/main/resources/assets/sukuna/textures/entity/jogo_npc.png": "80cda997e5e004a87f889eeea31e2ba9c091d72b71f6416a16690cdc69543de0",
+    "src/main/resources/assets/sukuna/textures/entity/jogo_npc_0.png": "80cda997e5e004a87f889eeea31e2ba9c091d72b71f6416a16690cdc69543de0",
+    "src/main/resources/assets/sukuna/textures/entity/kashimo_npc.png": "4563f1119433ca8c4015d157c695ac9d44124a3dab5d6a33b30c86056356b9fa",
+    "src/main/resources/assets/sukuna/textures/entity/longarm_beast_0.png": "121ebc16665a5e7c4b90e7406c29325840fd16e568afc9c107323a68e3cb7623",
+    "src/main/resources/assets/sukuna/textures/entity/mahito_npc.png": "073cde66dca977069bf422f0908d5b550985a719fc6d45bb68634e5f8cb45fe0",
+    "src/main/resources/assets/sukuna/textures/entity/mahoraga_0.png": "749ca556ddefa5ad63e8cbc33709510362cdb26ed7c13897ccd00b3512b4e160",
+    "src/main/resources/assets/sukuna/textures/entity/mahoraga_wheel_0.png": "0285635a35b49c79d241c4b53c341b83a571886cd170dd9e5fa96c2fae6a6660",
+    "src/main/resources/assets/sukuna/textures/entity/mahoraga_wheel_1.png": "098080156c40b1c66b3921f6444cf60989dcb164fe3585be8ce3cc423524c367",
+    "src/main/resources/assets/sukuna/textures/entity/megumi.png": "3e4c8150f28267311965fb9fdc70d761cc3b0b6218f9d40d478b648ac72fc675",
+    "src/main/resources/assets/sukuna/textures/entity/meguna.png": "0366019bba04202446493f0a198f97656ac5203b1f1b911e68726ac40d5b1eb3",
+    "src/main/resources/assets/sukuna/textures/entity/mummy_thorn_0.png": "13f0f9afedf228c27a466cc3cc3ad4395e9855d2d1e2a267361cf5f2976a5eb2",
+    "src/main/resources/assets/sukuna/textures/entity/nanami_npc.png": "387cdea796fb3c0e29e827b2d0f2b01d050524809c3fa5ca0d4300760af0bc84",
+    "src/main/resources/assets/sukuna/textures/entity/oni_muramasa_sheathed_0.png": "d0738a55f708ae263c13a475e0df642144283236800822426f0d37d1a6a04fde",
+    "src/main/resources/assets/sukuna/textures/entity/oni_muramasa_sheathed_1.png": "64da90adfd2fe20752a65fd00d897e0a42815d03668f97ea3eff5443d84be740",
+    "src/main/resources/assets/sukuna/textures/entity/parasite_0.png": "01163ca02547caaebc3b23ca7a9750caa2a37da4d04b29aeb339bdd78b3ccb66",
+    "src/main/resources/assets/sukuna/textures/entity/parasite_mother_0.png": "b137fc410a08cf4e21a82535a0be6855c594996137341ffd5e1e9cd56afa0d88",
+    "src/main/resources/assets/sukuna/textures/entity/rika_0.png": "594523e93c22d46d8a08d65cf03da21adf471ea18aea1e0444e6e8870885e245",
+    "src/main/resources/assets/sukuna/textures/entity/ryu_npc.png": "2fe5b8c8cfa5ed4b69cfe3eab5701e4235c8f63b2e709b6df0b1309e3228a295",
+    "src/main/resources/assets/sukuna/textures/entity/sealing/jacobs_ladder_0.png": "de67f501d4afe45c3edd13726382160a030fb572c1785e015d2a61dbfa94e503",
+    "src/main/resources/assets/sukuna/textures/entity/sealing/prison_realm_0.png": "2fa3a9824e6d9e72982d24737caf5948a95b215b9658b7b5a93010c01429576a",
+    "src/main/resources/assets/sukuna/textures/entity/skull_centipede_0.png": "7fc74e55b5466cef61d39c42ef98edf420dd6ec2fb41677a9d0a9f15172db05b",
+    "src/main/resources/assets/sukuna/textures/entity/skull_centipede_1.png": "b67830fa35e53449dced8fcc6f9a66b2509df1fe59d61b888e24714cb172fb1d",
+    "src/main/resources/assets/sukuna/textures/entity/skull_centipede_2.png": "4aca867ae445c0a3fe231596b5e78d41907549ba0e04ecc038c4351e0edaf9e0",
+    "src/main/resources/assets/sukuna/textures/entity/skull_centipede_3.png": "16729d5052d9202a9974a3d0803c926bb34e388837cafd27ddfc6a479d9ec791",
+    "src/main/resources/assets/sukuna/textures/entity/skull_centipede_4.png": "145847f6bde0fdc8a028a1e808b49d1338fd41f18d1adb98d84b7e0207ad3292",
+    "src/main/resources/assets/sukuna/textures/entity/soul_devourer_0.png": "7a7d3a9b855861614ff782b0dd9e0639066bb14183b313a55753a582150418b3",
+    "src/main/resources/assets/sukuna/textures/entity/stone_golem_0.png": "78eebde8737d4119222c9c80c03ec6167422375a2c64c2160211282cea3a2221",
+    "src/main/resources/assets/sukuna/textures/entity/stone_spirit_0.png": "26f7d318e7bfd3de72f19b4f38e58fd8d62eb76fb94a74b49b11b69e24ef522f",
+    "src/main/resources/assets/sukuna/textures/entity/stone_spirit_1.png": "86865296c24a651e5dddcdcfd383b0cd53c12d9a102a37ef39b67587fdc8907f",
+    "src/main/resources/assets/sukuna/textures/entity/stutter_curse_0.png": "5cf3d5efc01a984417840b0d91067e1a9680207c2da12c64bbffd39d2636c495",
+    "src/main/resources/assets/sukuna/textures/entity/sukuna_npc.png": "d8a424ef89f990b26ada42c3789b193404c6ddb47dccfc1c2942786ea18ea719",
+    "src/main/resources/assets/sukuna/textures/entity/sunflower_mummy_0.png": "65d5d2a03675fcda7b64d3277d3742b70effcf104cc36fc4a040371e65d23f39",
+    "src/main/resources/assets/sukuna/textures/entity/ten_shadows/deer_0.png": "55f68287e117505e7ac471d6e9830a399684c1391169091de64b8aa4d0316608",
+    "src/main/resources/assets/sukuna/textures/entity/ten_shadows/dog_black_0.png": "d09f8729807ef499e29151d473902eec399687d115682558c82a80349815fccd",
+    "src/main/resources/assets/sukuna/textures/entity/ten_shadows/dog_totality_0.png": "8702456fff19b2f4e45a1104e686645fdbd92a752298d596140bee084b632c3f",
+    "src/main/resources/assets/sukuna/textures/entity/ten_shadows/dog_white_0.png": "313a29d25cb85ae8c15c56a5155ddf796d5134bea0ecf989a9b8094e5bbb862f",
+    "src/main/resources/assets/sukuna/textures/entity/ten_shadows/elephant_0.png": "cd2556febd479b68fcc13d6bb5ccdad51dc0144f3fd5c4efdc00c10758988681",
+    "src/main/resources/assets/sukuna/textures/entity/ten_shadows/nue_0.png": "c43d3575341833db073546798d9c2583e2a30bae26270229ebf1912dcec57fe6",
+    "src/main/resources/assets/sukuna/textures/entity/ten_shadows/ox_0.png": "67da911260af145081da277192e309fd03a5516a3f610301f0ed39e97b7f0383",
+    "src/main/resources/assets/sukuna/textures/entity/ten_shadows/rabbit_0.png": "51d041d9e4ee7bc351c6de127ee08b99e6a0ede1f3fffee8d567f3db83e5ea3c",
+    "src/main/resources/assets/sukuna/textures/entity/ten_shadows/serpent_0.png": "20e55ba1565c7345fd0cd118567919010ad6542bbcf2fb720450234e2d9668b2",
+    "src/main/resources/assets/sukuna/textures/entity/ten_shadows/serpent_1.png": "3af72a88d9c9399ab38d3f11eae7a26349780837f504c3db151847c72fd8b983",
+    "src/main/resources/assets/sukuna/textures/entity/ten_shadows/tiger_0.png": "1b98389dce4a67203f5f1f9a4d0fca4854bc94f81e656a9b77a63196eff15557",
+    "src/main/resources/assets/sukuna/textures/entity/ten_shadows/toad_0.png": "b99e345cff805e282bc0f7d16cddaca77a6c79b439b63fb3d806580b23ce7757",
+    "src/main/resources/assets/sukuna/textures/entity/todo_npc.png": "349383a63493ec4cf56e465d887aba37f2dbd04e48bb48e93c9b9052bc290c32",
+    "src/main/resources/assets/sukuna/textures/entity/toji_npc.png": "4378a269bbf1c8f6f2a228f3dd8fa4d4bcd7a938f039c4a7efea6d7d1c36e722",
+    "src/main/resources/assets/sukuna/textures/entity/twisted_soul_0.png": "eb05fd09f6a164e8aed4d290c671ee12fac0e7f663cf3d5be5eb650752cd38b8",
+    "src/main/resources/assets/sukuna/textures/entity/uraume_npc.png": "eb027dccf3d73c411780a8eb2c9e5b5f7cd939055b8d444f5728555ba390622d",
+    "src/main/resources/assets/sukuna/textures/entity/void_aggregate_0.png": "9ffaa9f69e43041adb2238dadfd9a1c56b8a60e7999b5457c0d3805efaab0d83",
+    "src/main/resources/assets/sukuna/textures/entity/void_core_0.png": "3288635a54fb9c78b0ff5df5f16eca935630226ba17c088bf990ee75b675fbf8",
+    "src/main/resources/assets/sukuna/textures/entity/void_shrine_0.png": "3288635a54fb9c78b0ff5df5f16eca935630226ba17c088bf990ee75b675fbf8",
+    "src/main/resources/assets/sukuna/textures/entity/yiduishou_0.png": "619c62731fade74ebf1b808ffae9de8cb9601e46bf6f13deaf8b6630767858b8",
+    "src/main/resources/assets/sukuna/textures/entity/yuji.png": "0193f84811d6d273e18c376b7fab570392080f904a4ccea515cec6eaf40defd1",
+    "src/main/resources/assets/sukuna/textures/entity/yuji_guardian.png": "f81c2429cdf62afd576224680c7408df1fb8fe8d417754e8d54bf9d00293ff67",
+    "src/main/resources/assets/sukuna/textures/entity/yuki_npc.png": "7cd03658ffa897d95a1e04e2084445bc5c4621af2dd05d3682d23c6f62648a70",
+    "src/main/resources/assets/sukuna/textures/entity/yuta_katana_0.png": "22f417226aa7bb500b9819329225db07de482b6cfb0d8f2365ea63e0da1019c7",
+    "src/main/resources/assets/sukuna/textures/entity/yuta_katana_1.png": "064fe042a213758b2ca05d589eb0bacd152abb1ae1d4025015b15331cd50d8eb",
+    "src/main/resources/assets/sukuna/textures/entity/yuta_katana_2.png": "b27517560126135c689632ca2db35cec6a130439076b335f78c598553ccd5378",
+    "src/main/resources/assets/sukuna/textures/entity/yuta_katana_3.png": "aab7515e64cead3fc672ccadc4766d393564c5418554fc35cd3a46889281ca1e",
+    "src/main/resources/assets/sukuna/textures/entity/yuta_katana_4.png": "f5f9822bf322ea5c0c13587b63f2611a8cc7e879422f115df1626c5bc2d34cc2",
+    "src/main/resources/assets/sukuna/textures/entity/yuta_katana_5.png": "dcf8e707040a20bc10536d7640025775126e92fa77efcc7715e94e57bac11bd8",
+    "src/main/resources/assets/sukuna/textures/entity/yuta_katana_6.png": "e744b19690de47b68bff839ad7c5aeb08410f478e73dddfb720507f25661599e",
+    "src/main/resources/assets/sukuna/textures/entity/yuta_katana_7.png": "116833a908a43d78b1b603b0c13c05770b403a65903459ee1bbca21ec2b5b242",
+    "src/main/resources/assets/sukuna/textures/entity/yuta_npc.png": "a6eee850ce8276ae5ed852a99a4db3294350f79740865343b9ad53c8154b2f39"
+  }
+}

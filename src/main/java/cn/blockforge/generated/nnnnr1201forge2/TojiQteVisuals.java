@@ -60,6 +60,10 @@ public final class TojiQteVisuals {
             case TojiFx.COMBO -> {
                 int combo = (int) e.size();
                 BURSTS.add(new Burst(e.position(), combo, now, 14));
+                if(mc.level!=null&&mc.level.getEntity(e.owner()) instanceof SorcererNpcEntity npc){
+                    npc.getPersistentData().putInt("TojiVisualCombo",combo);
+                    npc.getPersistentData().putLong("TojiVisualAt",now);
+                }
                 if (mc.level != null && mc.level.getEntity(e.owner()) instanceof AbstractClientPlayer player) {
                     MotionFallbackClient.play(player, "sukuna:toji_c" + combo,
                         new java.util.UUID(e.owner(), Math.max(1L, (long) e.size())), 0);

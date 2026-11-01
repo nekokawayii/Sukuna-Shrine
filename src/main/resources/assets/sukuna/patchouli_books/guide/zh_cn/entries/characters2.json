@@ -1,0 +1,13 @@
+{
+  "name": "角色一览（二）",
+  "category": "sukuna:guide",
+  "icon": "sukuna:sukuna_memory",
+  "priority": true,
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "text",
+      "text": "$(l)角色一览（二）$(/l)\n漏壶：灾厄火焰 / 盖棺铁围山\n真人：无为转变 / 自闭圆盾裹\n伏黑惠：十种影法术\n日车宽见：诛伏赐死 + 判决\n鹿紫云一：幻兽琥珀\n东堂葵：不义游戏\n七海建人：十划咒法"
+    }
+  ]
+}

@@ -1,11 +1,26 @@
 {
-  "type":"minecraft:crafting_shaped",
-  "pattern":["OEO","GNG","OEO"],
-  "key":{
-    "O":{"item":"minecraft:obsidian"},
-    "E":{"item":"minecraft:ender_eye"},
-    "G":{"item":"minecraft:ghast_tear"},
-    "N":{"item":"minecraft:nether_star"}
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "HFS",
+    "FTF",
+    "SFH"
+  ],
+  "key": {
+    "H": {
+      "item": "sukuna:heavenly_bone"
+    },
+    "F": {
+      "item": "sukuna:tenka_fragment"
+    },
+    "S": {
+      "item": "sukuna:star_curse_core"
+    },
+    "T": {
+      "item": "sukuna:prison_fragment"
+    }
   },
-  "result":{"item":"sukuna:prison_realm","count":1}
+  "result": {
+    "item": "sukuna:prison_realm",
+    "count": 1
+  }
 }

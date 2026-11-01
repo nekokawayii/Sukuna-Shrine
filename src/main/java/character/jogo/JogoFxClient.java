@@ -62,6 +62,7 @@ public final class JogoFxClient {
             case JogoFx.DOMAIN -> {
                 double radius=Math.max(6,e.size());
                 int life=Math.max(40,e.life());
+                DOMAINS.removeIf(d->d.ownerId()==e.owner());
                 DOMAINS.add(new Domain(e.owner(),pos,radius,Minecraft.getInstance().level.getGameTime()+life));
             }
             case JogoFx.DOMAIN_END -> DOMAINS.removeIf(d->d.ownerId()==e.owner());

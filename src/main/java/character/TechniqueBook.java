@@ -10,7 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 public final class TechniqueBook extends Item {
     public TechniqueBook() { super(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)); }
     @Override public InteractionResultHolder<ItemStack> use(Level level,Player player,InteractionHand hand) {
-        if(player instanceof ServerPlayer p)CharacterPackets.open(p);
+        if(player instanceof ServerPlayer p){character.mainline.Mainline.onCharacterChosen(p);CharacterPackets.open(p);}
         return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand),level.isClientSide);
     }
 }

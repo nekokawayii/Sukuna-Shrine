@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "sukuna:black_rope_fiber"
+    },
+    {
+      "item": "sukuna:black_rope_fiber"
+    },
+    {
+      "item": "sukuna:black_rope_fiber"
+    },
+    {
+      "item": "sukuna:black_rope_fiber"
+    },
+    {
+      "item": "minecraft:chain"
+    },
+    {
+      "item": "minecraft:chain"
+    },
+    {
+      "item": "minecraft:chain"
+    },
+    {
+      "item": "sukuna:jujutsu_alloy"
+    }
+  ],
+  "result": {
+    "item": "sukuna:thousand_mile_chain",
+    "count": 1
+  }
+}

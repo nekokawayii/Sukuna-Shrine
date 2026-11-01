@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "sukuna:eternal_fire"
+    },
+    {
+      "item": "sukuna:seal_gold"
+    },
+    {
+      "item": "sukuna:volcanic_core"
+    }
+  ],
+  "result": {
+    "item": "sukuna:furnace_scroll",
+    "count": 1
+  }
+}

@@ -61,6 +61,8 @@ public final class GojoEntity extends Monster {
         if(gojo.getPersistentData().getBoolean("GojoSelfDamage"))return;
         if(gojo.getPersistentData().getBoolean("SukunaWorldSlashHit"))return;
         if(gojo.getPersistentData().getBoolean("GojoAmplified"))return;
+        // 天逆蛑斩断无下限：封印期间伤害不再被无限减速挡下。
+        if(gojo.getPersistentData().getLong("TenkaSeveredUntil")>gojo.level().getGameTime())return;
         LivingEntity attacker=source.getEntity() instanceof LivingEntity living?living:null;
         if(attacker!=null&&DomainAmplification.active(attacker))return;
         event.setCanceled(true);
@@ -103,9 +105,11 @@ public final class GojoEntity extends Monster {
         yBodyRot=getYRot();yHeadRot=getYRot();
     }
     private void begin(int skill,LivingEntity target){
+        if(getPersistentData().getLong("TenkaSeveredUntil")>level().getGameTime())return;
+        if(skill!=6&&!character.npc.NpcLegacyCombat.pay(this,skill==7?1500:80,skill==7))return;
         entityData.set(ACTION,skill);entityData.set(AGE,0);
         if(target!=null)face(target.getBoundingBox().getCenter());
-        cooldowns[skill]=level().getGameTime()+COOLDOWN[skill];
+        cooldowns[skill]=level().getGameTime()+(skill==7?character.npc.NpcBattleRules.DOMAIN_COOLDOWN:COOLDOWN[skill]);
         if(skill!=6)SkillSounds.play(this,"guardian_"+(4+skill%6));
     }
     private void finish(){entityData.set(ACTION,0);entityData.set(AGE,0);rest=12;}
@@ -122,8 +126,9 @@ public final class GojoEntity extends Monster {
         bar.setProgress(Math.max(0,Math.min(1,getHealth()/getMaxHealth())));
         bar.setName(Component.literal("五条悟 · "+(int)getHealth()+" / "+(int)getMaxHealth()+(domain>0?" · 无量空处":"")));
         LivingEntity target=BossTargets.select(this,96);
+        character.npc.NpcLegacyCombat.tick(this,target!=null);
         if(target!=null)participants.add(target.getUUID());
-        if(DomainClash.active(this)){tickDomain(now);return;}
+        if(DomainClash.active(this)||DomainClash.stunned(this)){DomainClash.hold(this);tickDomain(now);return;}
         tickOrbs(now);tickBeams(now);tickDomain(now);
         if(action()!=0){channel(target);return;}
         if(target==null)return;
@@ -139,7 +144,7 @@ public final class GojoEntity extends Monster {
         List<Integer> ready=new ArrayList<>();
         for(int i=0;i<COUNT;i++)if(i!=4&&i!=7&&now>=cooldowns[i])ready.add(i);
         if(distance<=4&&now>=cooldowns[6])return 6;
-        if(domain<=0&&now>=cooldowns[7]&&distance<40)return 7;
+        if(domain<=0&&now>=cooldowns[7]&&distance<40&&character.npc.NpcLegacyCombat.domainReady(this))return 7;
         if(ready.isEmpty())return -1;
         alternate++;
         return ready.get(getRandom().nextInt(ready.size()));
@@ -370,12 +375,15 @@ public final class GojoEntity extends Monster {
     public boolean clashDomainActive(){return domain>0;}
     public Vec3 clashCenter(){return center;}
     public void extendDomain(int ticks){if(domain>0)domain+=ticks;}
-    public void clashCloseDomain(){domain=0;fx(GojoFx.DOMAIN_CLOSE,center,Vec3.ZERO,1,4,0);}
-    public static boolean mindLocked(LivingEntity e){return e.getPersistentData().getLong("GojoVoid")>e.level().getGameTime();}
+    public void clashVisual(boolean show){if(show&&domain>0)fx(GojoFx.DOMAIN_OPEN,center,getLookAngle(),GojoFx.DOMAIN_RADIUS,domain,0);else fx(GojoFx.DOMAIN_CLOSE,center,Vec3.ZERO,1,4,0);}
+    public void clashCloseDomain(){if(domain>0)character.npc.NpcLegacyCombat.burnout(this);domain=0;fx(GojoFx.DOMAIN_CLOSE,center,Vec3.ZERO,1,4,0);}
+    /** 天逆蛑·术式切断：打断正在引导的苍/赫、清掉光球与激光，并关闭无量空处。 */
+    public void severTechnique(){clashCloseDomain();orbs.clear();beams.clear();finish();}
+    public static boolean mindLocked(LivingEntity e){return !ExpeditionEvents.mindShield(e)&&!DomainClash.counterCasting(e)&&!character.mainline.Mainline.simpleProtected(e)&&e.getPersistentData().getLong("GojoVoid")>e.level().getGameTime();}
     private void tickDomain(long now){
-        if(domain<=0)return;
+        if(domain<=0||DomainClash.active(this))return;
         domain--;
-        if(domain<=0){fx(GojoFx.DOMAIN_CLOSE,center,Vec3.ZERO,1,4,0);return;}
+        if(domain<=0){character.npc.NpcLegacyCombat.burnout(this);fx(GojoFx.DOMAIN_CLOSE,center,Vec3.ZERO,1,4,0);return;}
         center=position(); // 领域跟着五条悟走：画布与判定半径都以他为球心
         if(now%20==0)fx(GojoFx.DOMAIN,center,getLookAngle(),GojoFx.DOMAIN_RADIUS,30,0);
         double domR=GojoFx.DOMAIN_RADIUS;

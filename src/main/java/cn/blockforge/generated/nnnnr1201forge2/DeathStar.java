@@ -63,7 +63,7 @@ public final class DeathStar {
         tell(p,"极之番·死胎星：蓄力2秒，生命与咒力已献祭，中断不返还");
     }
     private static void slow(ServerPlayer p,boolean on){var a=MaidBridge.body(p).getAttribute(Attributes.MOVEMENT_SPEED);if(a==null)return;if(!on)a.removeModifier(SLOW);else if(a.getModifier(SLOW)==null)a.addTransientModifier(new AttributeModifier(SLOW,"严重贫血",-.5,AttributeModifier.Operation.MULTIPLY_TOTAL));}
-    private static void syncAnemia(ServerPlayer p){if(p instanceof MaidBridge.Actor)return;int ticks=(int)Math.max(0,Curse.data(p).getLong(UNTIL)-now(p));Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(()->p),new Network.Effect(FX_ANEMIA,p.getId(),p.position(),Vec3.ZERO,0,ticks,0));}
+    private static void syncAnemia(ServerPlayer p){if(p instanceof net.minecraftforge.common.util.FakePlayer)return;int ticks=(int)Math.max(0,Curse.data(p).getLong(UNTIL)-now(p));Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(()->p),new Network.Effect(FX_ANEMIA,p.getId(),p.position(),Vec3.ZERO,0,ticks,0));}
     public static void cancel(ServerPlayer p){Cast c=casts.remove(p.getUUID());if(c!=null){pose(p,0);fx(p,FX_STOP,hand(p),Vec3.ZERO,0,0,c.id);}}
     private static boolean boss(LivingEntity t){
         // 玩家不是可秒杀的杂兵；第三方首领可通过标签补充，不以最大生命值猜测身份。
@@ -141,7 +141,7 @@ public final class DeathStar {
     /** 保留外部取消伤害事件的权利；不直接 setHealth 杀人，不绕过敌友/领地保护。 */
     @SubscribeEvent(priority=EventPriority.HIGHEST) public static void trueDamage(LivingHurtEvent event){Float amount=trueHits.get(event.getEntity());if(source(event.getSource())&&amount!=null)event.setAmount(amount);}
     @SubscribeEvent(priority=EventPriority.LOWEST) public static void outgoing(LivingDamageEvent event){ServerPlayer p=CombatSettings.caster(event.getSource());if(p!=null&&anemic(p)&&!source(event.getSource()))event.setAmount(event.getAmount()*.5f);}
-    @SubscribeEvent(priority=EventPriority.HIGHEST) public static void heal(LivingHealEvent event){ServerPlayer p=event.getEntity() instanceof ServerPlayer player?player:MaidBridge.caster(event.getEntity());if(p!=null&&anemic(p))event.setCanceled(true);}
+    @SubscribeEvent(priority=EventPriority.HIGHEST) public static void heal(LivingHealEvent event){ServerPlayer p=MaidBridge.progression(event.getEntity());if(p!=null&&anemic(p))event.setCanceled(true);}
     @SubscribeEvent(priority=EventPriority.LOWEST) public static void playerTick(TickEvent.PlayerTickEvent event){
         if(event.phase!=TickEvent.Phase.END||!(event.player instanceof ServerPlayer p))return;
         tickAnemia(p);

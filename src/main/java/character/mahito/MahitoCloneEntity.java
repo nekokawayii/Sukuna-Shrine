@@ -53,7 +53,7 @@ public class MahitoCloneEntity extends Monster {
         CompoundTag data = getPersistentData();
         if (!data.hasUUID(OWNER)) return null;
         UUID id = data.getUUID(OWNER);
-        return sl.getServer().getPlayerList().getPlayer(id);
+        return cn.blockforge.generated.nnnnr1201forge2.MaidBridge.find(sl,id);
     }
 
     @Override protected void registerGoals() {

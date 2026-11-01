@@ -172,7 +172,7 @@ public final class KashimoZones {
         if (FIELDS.isEmpty()) return;
         List<Field> keep = new ArrayList<>();
         for (Field f : FIELDS) {
-            ServerPlayer owner = server.getPlayerList().getPlayer(f.owner());
+            ServerPlayer owner = NpcBridge.find(server,f.owner());
             if (owner == null || now >= f.until()) continue;
             if (now % 10 == 0) {
                 for (var target : f.level().getEntitiesOfClass(LivingEntity.class,
@@ -199,7 +199,7 @@ public final class KashimoZones {
         if (ORBS.isEmpty()) return;
         List<Orb> keep = new ArrayList<>();
         for (Orb orb : ORBS) {
-            ServerPlayer owner = server.getPlayerList().getPlayer(orb.owner());
+            ServerPlayer owner = NpcBridge.find(server,orb.owner());
             if (owner == null) continue;
             if (now - orb.born() >= ORB_TICKS) {
                 blast(owner, orb.level(), orb.pos(), orb.water(), ORB_BLAST_RADIUS, KashimoSkills.ORB_DAMAGE);
@@ -233,7 +233,7 @@ public final class KashimoZones {
         List<Warn> keep = new ArrayList<>();
         for (Warn warn : WARNS) {
             if (now < warn.at()) { keep.add(warn); continue; }
-            ServerPlayer owner = server.getPlayerList().getPlayer(warn.owner());
+            ServerPlayer owner = NpcBridge.find(server,warn.owner());
             if (owner == null) continue;
             List<LivingEntity> charged = new ArrayList<>();
             for (var target : warn.level().getEntitiesOfClass(LivingEntity.class,
@@ -266,7 +266,7 @@ public final class KashimoZones {
         if (FLUNG.isEmpty()) return;
         List<Flung> keep = new ArrayList<>();
         for (Flung flung : FLUNG) {
-            ServerPlayer owner = server.getPlayerList().getPlayer(flung.owner());
+            ServerPlayer owner = NpcBridge.find(server,flung.owner());
             if (owner == null) continue;
             var entity = flung.level().getEntity(flung.target());
             if (!(entity instanceof LivingEntity target) || !target.isAlive()) continue;
@@ -289,7 +289,7 @@ public final class KashimoZones {
         List<Await> keep = new ArrayList<>();
         for (Await await : AWAITS) {
             if (now < await.at()) { keep.add(await); continue; }
-            ServerPlayer owner = server.getPlayerList().getPlayer(await.owner());
+            ServerPlayer owner = NpcBridge.find(server,await.owner());
             if (owner == null) continue;
             chain(owner, await.level());
         }
@@ -323,7 +323,7 @@ public final class KashimoZones {
         if (HOPS.isEmpty()) return;
         List<Hop> keep = new ArrayList<>();
         for (Hop hop : HOPS) {
-            ServerPlayer owner = server.getPlayerList().getPlayer(hop.owner());
+            ServerPlayer owner = NpcBridge.find(server,hop.owner());
             if (owner == null) continue;
             if (now < hop.next()) { keep.add(hop); continue; }
             if (hop.step() >= hop.points().size()) continue;

@@ -42,9 +42,14 @@ public final class EntityRendererRegistry {
         return new Entry<>(type,rendererClass,provider);
     }
     // RegistryObject 仅在注册/检查时取值，不能在模组构造阶段提前解析。
-    private static final java.util.List<Entry<?>> ENTRIES=java.util.List.of(
+    private static final java.util.List<Entry<?>> ENTRIES=new java.util.ArrayList<>(java.util.List.of(
         entry(VoidContent.GOJO,GojoRenderer.class,GojoRenderer::new),
         entry(Content.CHOSO,ChosoRenderer.class,ChosoRenderer::new),
+        entry(Content.NANAMI_NPC,SorcererNpcRenderer.class,SorcererNpcRenderer::new),
+        entry(Content.YUTA_NPC,SorcererNpcRenderer.class,SorcererNpcRenderer::new),
+        entry(Content.YUKI_NPC,SorcererNpcRenderer.class,SorcererNpcRenderer::new),
+        entry(Content.TOJI_NPC,SorcererNpcRenderer.class,SorcererNpcRenderer::new),
+        entry(Content.MAHITO_NPC,SorcererNpcRenderer.class,SorcererNpcRenderer::new),
         entry(Content.TODO_NPC,TodoNpcRenderer.class,TodoNpcRenderer::new),
         entry(Content.RYU_NPC,RyuNpcRenderer.class,RyuNpcRenderer::new),
         entry(Content.HAKARI_NPC,HakariNpcRenderer.class,HakariNpcRenderer::new),
@@ -57,6 +62,7 @@ public final class EntityRendererRegistry {
         entry(Content.JOGO_NPC,JogoNpcRenderer.class,JogoNpcRenderer::new),
         entry(Content.YIDUI,YiduiShouRenderer.class,YiduiShouRenderer::new),
         entry(Content.MAHITO_CLONE,character.mahito.MahitoCloneRenderer.class,character.mahito.MahitoCloneRenderer::new),
+        entry(character.mahito.MahitoContent.PUPPET,character.mahito.MahitoVisuals.PuppetRenderer.class,character.mahito.MahitoVisuals.PuppetRenderer::new),
         entry(Content.HIGURUMA_JUDGE,HigurumaJudgeRenderer.class,HigurumaJudgeRenderer::new),
         entry(VoidContent.MAHORAGA,MahoragaRenderer.class,MahoragaRenderer::new),
         entry(SoulContent.YUJI,YujiRenderer.class,YujiRenderer::new),
@@ -76,7 +82,8 @@ public final class EntityRendererRegistry {
         entry(Content.GETO,GetoRenderer.class,GetoRenderer::new),
         entry(Content.LOW_CURSE,LowCurseRenderer.class,LowCurseRenderer::new),
         entry(Content.RIKA,RikaRenderer.class,RikaRenderer::new)
-    );
+    ));
+    static {for(var type:CurseRoster.TYPES.values())ENTRIES.add(entry(type,LowCurseRenderer.class,LowCurseRenderer::new));}
     private static boolean ready,repairing;
     private static final Set<ResourceLocation> reportedMissing=new HashSet<>();
     private static final Set<ResourceLocation> recoveryTried=new HashSet<>();
@@ -84,6 +91,7 @@ public final class EntityRendererRegistry {
 
     public static void register(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(Content.YUTA_GRAVE_BE.get(), character.yuta.YutaGraveRenderer::new);
+        event.registerBlockEntityRenderer(Content.DOMAIN_MASK_BE.get(), DomainMaskRenderer::new);
         for(var entry:ENTRIES)entry.register(event);
         Set<EntityType<?>> covered=new HashSet<>();
         for(var entry:ENTRIES) {
@@ -97,6 +105,7 @@ public final class EntityRendererRegistry {
 
     public static void afterReload(EntityRenderersEvent.AddLayers event) {
         ready=true;
+        character.mahito.MahitoVisuals.reload();
         ensureOwn(Minecraft.getInstance());
         LOGGER.info("[宿傩渲染 r125] 资源重载后的实体渲染器检查通过。");
     }

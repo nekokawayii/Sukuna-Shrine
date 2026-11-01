@@ -80,7 +80,7 @@ public final class RikaEntity extends PathfinderMob {
 
     private Player owner() {
         UUID id = ownerId();
-        return id == null ? null : level().getPlayerByUUID(id);
+        return id==null?null:level() instanceof ServerLevel server?NpcBridge.find(server.getServer(),id):level().getPlayerByUUID(id);
     }
 
     /** 无限血：任何伤害都不结算。 */
@@ -100,6 +100,8 @@ public final class RikaEntity extends PathfinderMob {
         if (action() != 0 && actionAge() > 20) entityData.set(ACTION, 0);
 
         Player owner = owner();
+        if(owner==null||!owner.isAlive()||owner.level()!=level()){vanish(server);return;}
+        if(DomainClash.active(owner)||DomainClash.stunned(owner)){getNavigation().stop();return;}
         LivingEntity target = findTarget();
         long now = server.getGameTime();
         if (target != null) {
@@ -109,15 +111,18 @@ public final class RikaEntity extends PathfinderMob {
                 strike(server, target);
             }
         } else if (owner != null && distanceToSqr(owner) > 36) {
-            getNavigation().moveTo(owner, 1.3);
+            getNavigation().moveTo(owner instanceof ServerPlayer p?MaidBridge.body(p):owner, 1.3);
         } else {
             getNavigation().stop();
         }
     }
 
     private LivingEntity findTarget() {
+        if(!(owner() instanceof ServerPlayer caster))return null;
+        if(MaidBridge.body(caster) instanceof net.minecraft.world.entity.Mob mob
+            &&mob.getTarget()!=null&&CombatSettings.canHit(caster,mob.getTarget())&&distanceToSqr(mob.getTarget())<28*28)return mob.getTarget();
         List<LivingEntity> list = level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(28),
-            e -> e.isAlive() && e != this && e instanceof Enemy && !(e instanceof RikaEntity));
+            e -> e != this && !(e instanceof RikaEntity) && CombatSafety.summonTarget(caster,e));
         list.sort(java.util.Comparator.comparingDouble(this::distanceToSqr));
         return list.isEmpty() ? null : list.get(0);
     }
@@ -128,7 +133,9 @@ public final class RikaEntity extends PathfinderMob {
         if (owner != null) rank = character.CharacterService.rank(owner);
         boolean bite = (server.getGameTime() / ATTACK_INTERVAL) % 2 == 0;
         float damage = bite ? 120f + 30f * rank : 90f + 20f * rank;
-        target.hurt(damageSources().mobAttack(this), damage);
+        if(!(owner instanceof ServerPlayer caster)||!CombatSettings.canHit(caster,target))return;
+        if(caster instanceof NpcBridge.NpcActor){if(!Curse.spend(caster,35))return;damage=Math.min(35,damage);}
+        CombatSettings.hurt(caster,target,damageSources().indirectMagic(this,caster),damage);
         entityData.set(ACTION, bite ? BITE : PUNCH);
         entityData.set(AGE, 0);
         server.sendParticles(new DustParticleOptions(new Vector3f(0.85f, 0.9f, 1f), 0.9f),

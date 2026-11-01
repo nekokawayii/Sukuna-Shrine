@@ -85,7 +85,7 @@ public final class MegumiEntity extends PathfinderMob {
         super.tick();if(level().isClientSide)return;
         if(legacy){discard();return;}
         if(downed()){setDeltaMovement(Vec3.ZERO);return;}
-        if(phase()==0)return;
+        if(phase()==0){CurseHostility.defend(this);return;}
         if(TenShadowRules.megumiChant(phase(),getHealth(),getMaxHealth()))beginChant();
         ServerPlayer player=challenger();
         if(tickCount%20==0){
@@ -101,7 +101,7 @@ public final class MegumiEntity extends PathfinderMob {
                 if(entity instanceof MahoragaEntity m){m.swing(InteractionHand.MAIN_HAND);ShadowSystem.fx((ServerLevel)level(),1,m.getEyePosition(),getBoundingBox().getCenter(),.2f,15);down();if(player!=null)m.setTarget(player);}else{entityData.set(PHASE,2);entityData.set(CHANT,20);}
             }return;
         }
-        if(player==null||!player.isAlive()||player.level()!=level()){setTarget(null);navigation.stop();return;}
+        if(player==null||!player.isAlive()||player.level()!=level()){if(CurseHostility.defend(this))return;setTarget(null);navigation.stop();return;}
         setTarget(player);getLookControl().setLookAt(player,45,45);
         if(meleeCooldown>0)meleeCooldown--;if(summonCooldown>0)summonCooldown--;
         if(distanceToSqr(player)<6.25&&hasLineOfSight(player)&&meleeCooldown<=0){swing(InteractionHand.MAIN_HAND);doHurtTarget(player);meleeCooldown=22;}

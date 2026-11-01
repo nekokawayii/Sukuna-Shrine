@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:stone_bricks"
+    },
+    {
+      "item": "sukuna:seal_white"
+    },
+    {
+      "item": "sukuna:residue_low"
+    }
+  ],
+  "result": {
+    "item": "sukuna:simple_seal_pillar",
+    "count": 2
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:obsidian"
+    },
+    {
+      "item": "sukuna:nether_star_fragment"
+    },
+    {
+      "item": "sukuna:residue_high"
+    }
+  ],
+  "result": {
+    "item": "sukuna:spirit_stone",
+    "count": 1
+  }
+}

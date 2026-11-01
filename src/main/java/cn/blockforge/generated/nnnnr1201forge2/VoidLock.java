@@ -13,6 +13,7 @@ import net.minecraft.world.entity.*;
 public final class VoidLock {
     /** true = 这个目标不能被无量空处抓住。 */
     public static boolean immune(LivingEntity caster,LivingEntity victim){
+        if(victim!=null&&(ExpeditionEvents.mindShield(victim)||character.mainline.Mainline.simpleProtected(victim))){free(victim);return true;}
         if(victim==null||victim==caster||!victim.isAlive()||victim.isRemoved()||victim.isSpectator())return true;
         if(caster instanceof ServerPlayer cp&&victim==MaidBridge.body(cp))return true; // 自己的女仆本体
         if(MaidBridge.isMaid(victim))return true;                          // 女仆：一个都不控
@@ -32,6 +33,7 @@ public final class VoidLock {
      * 玩家再叠一层连接传送——客户端自己就走不动，跳跃与击退同样会被拉回原位。
      */
     public static void hold(LivingEntity victim,long now){
+        if(ExpeditionEvents.mindShield(victim)){free(victim);return;}
         var tag=victim.getPersistentData();
         boolean expired=tag.getLong("GojoVoidUntil")<now||!tag.contains("GojoVoidX");
         if(expired){ // 上一次的控制已经过期：重新取锚点，避免被拉回很久以前的位置

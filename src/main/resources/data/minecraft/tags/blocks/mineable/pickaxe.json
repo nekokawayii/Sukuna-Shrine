@@ -1,0 +1,25 @@
+{
+  "replace": false,
+  "values": [
+    "sukuna:cursed_fissure",
+    "sukuna:volcanic_rock",
+    "sukuna:lava_obsidian",
+    "sukuna:eternal_flame",
+    "sukuna:jujutsu_ore",
+    "sukuna:alloy_block",
+    "sukuna:alloy_bars",
+    "sukuna:curse_crystal_block",
+    "sukuna:spirit_stone",
+    "sukuna:volcano_barrier",
+    "sukuna:simple_seal_pillar",
+    "sukuna:special_seal_pillar",
+    "sukuna:refining_altar",
+    "sukuna:gu_vat",
+    "sukuna:tengen_core",
+    "sukuna:barrier_trap",
+    "sukuna:culling_exchange",
+    "sukuna:culling_exit",
+    "sukuna:culling_barrier",
+    "sukuna:site_anchor"
+  ]
+}

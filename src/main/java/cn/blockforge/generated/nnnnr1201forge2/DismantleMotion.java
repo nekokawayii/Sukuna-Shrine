@@ -134,7 +134,7 @@ public final class DismantleMotion {
             int landing=m.kind==DismantleMotionRules.BACKFLIP?22:m.kind==DismantleMotionRules.FLYING_KICK?30:m.kind==DismantleMotionRules.AIR_PUNCH?1000:0;
             if(next>=landing)m.position=safeMove(m,new Vec3(0,-0.35,0));
             actor.setPos(m.position);actor.setDeltaMovement(Vec3.ZERO);actor.setNoGravity(true);actor.setOnGround(!free(m,m.position.add(0,-0.08,0)));actor.fallDistance=0;
-            if(MaidBridge.isCaster(p)){
+            if(MaidBridge.isCaster(p)||p instanceof NpcBridge.NpcActor){
                 actor.setYRot(m.yaw);actor.yBodyRot=actor.yHeadRot=m.yaw;
                 p.setPos(m.position);p.setYRot(m.yaw);p.setDeltaMovement(Vec3.ZERO);
             }else p.connection.resetPosition();

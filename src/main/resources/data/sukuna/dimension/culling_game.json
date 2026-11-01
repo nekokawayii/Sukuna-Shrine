@@ -1,0 +1,18 @@
+{
+  "type": "sukuna:culling_game",
+  "generator": {
+    "type": "sukuna:culling_city",
+    "settings": {
+      "biome": "sukuna:cursed_wasteland",
+      "lakes": false,
+      "features": false,
+      "structure_overrides": [],
+      "layers": [
+        {
+          "height": 1,
+          "block": "minecraft:bedrock"
+        }
+      ]
+    }
+  }
+}

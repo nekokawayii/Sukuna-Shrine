@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "sukuna:simple_seal_pillar"
+    },
+    {
+      "item": "sukuna:jujutsu_alloy"
+    },
+    {
+      "item": "sukuna:seal_gold"
+    }
+  ],
+  "result": {
+    "item": "sukuna:special_seal_pillar",
+    "count": 1
+  }
+}

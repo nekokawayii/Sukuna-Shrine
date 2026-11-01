@@ -87,6 +87,7 @@ public final class HakariCombat {
         CompoundTag data = Curse.data(p);
         long n = now(p);
         data.putLong(K_JACKPOT, n + JACKPOT_TICKS);
+        HakariDomain.close(p,"中奖后结界解除");
         data.putInt(K_LUCK, 0);
         data.putInt(K_ROLLED, 0);
         data.putBoolean(K_TRAIN_USED, false);
@@ -167,17 +168,20 @@ public final class HakariCombat {
     // ── 受击/命中钩子 ────────────────────────────────────
     @SubscribeEvent public static void hurt(LivingHurtEvent e) {
         // ① 粗粝打击：秤金次的每次命中都撕裂目标并拨动老虎机
-        if (e.getSource().getEntity() instanceof ServerPlayer p && CharacterService.hakari(p)
-            && e.getSource().getDirectEntity() == p && e.getEntity() != p) {
+        ServerPlayer attackerCaster=CombatSettings.caster(e.getSource());
+        if (attackerCaster != null && CharacterService.hakari(attackerCaster)
+            && e.getEntity() != MaidBridge.body(attackerCaster)) {
+            ServerPlayer p=attackerCaster;
             if (e.getEntity() instanceof LivingEntity) {
                 LivingEntity target = (LivingEntity) e.getEntity();
-                CombatSettings.hurt(p, target, p.damageSources().playerAttack(p), e.getAmount() * 0.5f);
+                e.setAmount(e.getAmount()*1.5f); // 在原命中加成，不递归触发同一个受伤事件。
                 target.addEffect(new MobEffectInstance(MobEffects.WITHER, BLEED_TICKS, 0, false, false));
                 roll(p, 1);
             }
             return;
         }
-        if (!(e.getEntity() instanceof ServerPlayer p) || !CharacterService.hakari(p)) return;
+        ServerPlayer p=e.getEntity() instanceof ServerPlayer player?player:cn.blockforge.generated.nnnnr1201forge2.NpcBridge.existing(e.getEntity());
+        if(p==null||!CharacterService.hakari(p))return;
         CompoundTag data = Curse.data(p);
         long n = now(p);
         // ② 车门格挡：正面来袭免伤 + 拨动 + 敌人僵直 + 反手重拳
@@ -212,27 +216,9 @@ public final class HakariCombat {
     /** 极简眩晕（只锁 AI，30 刻后由服务端恢复）。 */
     private static final class NaoyaStun {
         static void stun(Mob mob, int ticks) {
-            mob.setTarget(null);
-            mob.getNavigation().stop();
-            mob.setNoAi(true);
-            STUNNED.add(new Object[]{mob, mob.level().getGameTime() + ticks});
+            character.npc.NpcControl.stun(mob, "hakari_guard", ticks);
         }
     }
-    private static final List<Object[]> STUNNED = new java.util.ArrayList<>();
-
-    @SubscribeEvent public static void serverTick(TickEvent.ServerTickEvent e) {
-        if (e.phase != TickEvent.Phase.END || STUNNED.isEmpty()) return;
-        STUNNED.removeIf(pair -> {
-            Mob mob = (Mob) pair[0];
-            long until = (Long) pair[1];
-            if (mob == null || !mob.isAlive() || mob.level().getGameTime() >= until) {
-                if (mob != null && mob.isAlive()) mob.setNoAi(false);
-                return true;
-            }
-            return false;
-        });
-    }
-
     // ── 技能 ────────────────────────────────────────────
     public static void cast(ServerPlayer p, CharacterSkill skill) {
         if (!CharacterService.hakari(p) || !p.isAlive()) return;

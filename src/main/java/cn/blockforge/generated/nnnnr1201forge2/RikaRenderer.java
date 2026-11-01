@@ -12,7 +12,7 @@ import net.minecraft.resources.ResourceLocation;
 public final class RikaRenderer extends EntityRenderer<RikaEntity> {
     private static final BbModel MODEL = new BbModel("rika", "rika");
     /** 里香设定为 2.2 格高。 */
-    private static final float TARGET_HEIGHT = 2.2f;
+    private static final float TARGET_HEIGHT = 4.0f;
 
     public RikaRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -46,8 +46,7 @@ public final class RikaRenderer extends EntityRenderer<RikaEntity> {
         float alpha = Math.min(1f, e.lifetime() / 20f);
         ps.pushPose();
         ps.mulPose(Axis.YP.rotationDegrees(180 - yaw));
-        ps.scale(scale, scale, scale);
-        ps.translate(0, 0.35, 0);
+        MODEL.fitHeight(ps,TARGET_HEIGHT);
         MODEL.render(ps, buffers, light, animation, seconds, 1, 1, 1, Math.max(0.15f, alpha));
         ps.popPose();
         super.render(e, yaw, partial, ps, buffers, light);

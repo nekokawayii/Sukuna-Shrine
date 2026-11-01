@@ -49,8 +49,8 @@ public final class GuardianPlayerSkills {
     private static void fx(State s,int kind,Vec3 point,Vec3 direction,float size,int life,long seed){Network.send(s.level,new Network.Effect(kind,s.p.getId(),point,direction,size,life,seed));}
     private static LivingEntity target(State s){var e=s.target==null?null:s.level.getEntity(s.target);return e instanceof LivingEntity t&&CombatSettings.canHit(s.p,t)?t:null;}
     private static boolean reach(State s,LivingEntity t){return contains(s,t)||s.p.distanceToSqr(t)<=s.v("Reach")*s.v("Reach")&&s.p.hasLineOfSight(t);}
-    private static boolean contains(State s,LivingEntity t){double r=Math.min(512,s.v("DomainRadius"));return !DomainClash.active(s.p)&&t!=null&&t.level()==s.level&&s.domainUntil>s.level.getGameTime()&&t.position().distanceToSqr(s.center)<=r*r&&CombatSettings.canHit(s.p,t);}
-    public static boolean locked(ServerPlayer p){for(State s:states.values())if(valid(s)&&contains(s,MaidBridge.body(p)))return true;return false;}
+    private static boolean contains(State s,LivingEntity t){double r=Math.min(512,s.v("DomainRadius"));return !DomainClash.active(s.p)&&t!=null&&!character.mainline.Mainline.simpleProtected(t)&&t.level()==s.level&&s.domainUntil>s.level.getGameTime()&&t.position().distanceToSqr(s.center)<=r*r&&CombatSettings.canHit(s.p,t);}
+    public static boolean locked(ServerPlayer p){if(DomainClash.counterCasting(p))return false;for(State s:states.values())if(valid(s)&&contains(s,MaidBridge.body(p)))return true;return false;}
     private static boolean hit(State s,LivingEntity target,double base,boolean punch){
         if(DomainClash.active(s.p)||DomainClash.active(target)||!CombatSettings.canHit(s.p,target))return false;
         double amount=base+(s.boostUntil>s.level.getGameTime()?s.v("DamageMultiplier"):0);
@@ -84,6 +84,7 @@ public final class GuardianPlayerSkills {
         return true;
     }
     public static void cast(ServerPlayer p,int skill){
+        if(skill==5&&!character.mainline.Mainline.requireDomain(p))return;
         if(skill==7){ReverseOutput.cast(p);return;}
         if(skill<0||skill>=COUNT||!p.isAlive()||p.isSpectator()||DomainClash.active(p)||!(GuardianCombat.awakened(p)||character.CharacterService.yuji(p))||!character.CharacterService.allowsSkill(p,skill+7))return;
         if(Curse.burnout(p)&&skill!=7){p.displayClientMessage(Component.literal("术式熔断中：只能使用术式反转或修复熔断"),true);return;}
@@ -100,7 +101,7 @@ public final class GuardianPlayerSkills {
         LivingEntity target=Skills.aimTarget(p);
         s.settings=BossControl.guardian(p.server);
         if(!Curse.spend(p,COST[skill]))return;
-        s.cooldowns[skill]=now+(skill==5&&MaidBridge.isCaster(p)?ShrineRules.MAID_DOMAIN_COOLDOWN_TICKS:(long)Math.ceil(COOLDOWN[skill]*SoulCombat.cooldown(p)));Curse.data(p).putLong("GuardianSkillCooldown"+skill,s.cooldowns[skill]);s.target=target==null?null:target.getUUID();s.casting=skill;s.age=0;
+        s.cooldowns[skill]=now+(skill==5&&p instanceof NpcBridge.NpcActor?character.npc.NpcBattleRules.DOMAIN_COOLDOWN:skill==5&&MaidBridge.isCaster(p)?ShrineRules.MAID_DOMAIN_COOLDOWN_TICKS:(long)Math.ceil(COOLDOWN[skill]*SoulCombat.cooldown(p)));Curse.data(p).putLong("GuardianSkillCooldown"+skill,s.cooldowns[skill]);s.target=target==null?null:target.getUUID();s.casting=skill;s.age=0;
         SkillSounds.play(p,"guardian_"+ACTION[skill]);
         switch(skill){
             case 2 -> {int count=s.count("BloodCount",128);for(int i=0;i<count;i++){double a=i*Math.PI*2/Math.max(1,count);if(blood.size()<4096)blood.add(new Blood(s,target,new Vec3(Math.cos(a),((i%5)-2)*0.12,Math.sin(a)).scale(Math.min(8,s.v("BloodSpeed")))));}s.casting=-1;}

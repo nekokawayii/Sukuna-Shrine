@@ -38,9 +38,9 @@ public final class YutaDomain {
     private static final int RIKA_KEEPALIVE = 40;
 
     private static final class Active {
-        final long start;
-        boolean mid, ost;
-        Active(long start) { this.start = start; }
+        final long start;final ServerPlayer owner;final ServerLevel level;
+        boolean mid, ost;long extra;
+        Active(ServerPlayer p) { start=p.server.overworld().getGameTime();owner=p;level=p.serverLevel(); }
     }
     private static final Map<UUID, Active> ACTIVE = new HashMap<>();
 
@@ -49,21 +49,23 @@ public final class YutaDomain {
     }
 
     public static void open(ServerPlayer p) {
+        if(!character.mainline.Mainline.requireDomain(p))return;
         if (active(p)) {
             p.displayClientMessage(Component.literal("领域已展开"), true);
             return;
         }
-        ACTIVE.put(p.getUUID(), new Active(p.server.overworld().getGameTime()));
+        ACTIVE.put(p.getUUID(), new Active(p));
         cn.blockforge.generated.nnnnr1201forge2.DomainClash.opened(p, p.position(), RADIUS);
+        if(!active(p))return;
         YutaTerrain.begin(p, RADIUS);
         play(p, "sukuna:yuta_domain_start");
         ensureRika(p);
         p.displayClientMessage(Component.literal("领域展开 · 真赝相爱"), false);
     }
 
-    /** 领域对拼获胜：乙骨领域按咒力维持，这里补一次咒力作为延长。 */
+    /** 对拼暂停/胜利只延长 NPC 有限持续时间，不赠送咒力。 */
     public static void extend(ServerPlayer p, int ticks) {
-        cn.blockforge.generated.nnnnr1201forge2.Curse.addRaw(p, ticks * 2.0);
+        Active state=ACTIVE.get(p.getUUID());if(state!=null)state.extra+=ticks;
     }
 
     public static void close(ServerPlayer p, String reason) {
@@ -80,9 +82,9 @@ public final class YutaDomain {
         long now = e.getServer().overworld().getGameTime();
         for (var it = ACTIVE.entrySet().iterator(); it.hasNext(); ) {
             var entry = it.next();
-            ServerPlayer p = e.getServer().getPlayerList().getPlayer(entry.getKey());
-            if (p == null || !p.isAlive() || p.level().isClientSide) {
-                YutaTerrain.restore(p);
+            ServerPlayer p = cn.blockforge.generated.nnnnr1201forge2.NpcBridge.find(e.getServer(),entry.getKey());
+            if (p == null || !p.isAlive() || p.level()!=entry.getValue().level) {
+                YutaTerrain.restore(entry.getValue().owner);
                 it.remove(); continue;
             }
             long age = now - entry.getValue().start;
@@ -90,6 +92,10 @@ public final class YutaDomain {
             if (!state.mid && age >= MID_TICK) { play(p, "sukuna:yuta_domain_mid"); state.mid = true; }
             if (!state.ost && age >= OST_TICK) { play(p, "sukuna:yuta_domain_ost"); state.ost = true; }
 
+            if(cn.blockforge.generated.nnnnr1201forge2.DomainClash.active(p))continue;
+            if(p instanceof cn.blockforge.generated.nnnnr1201forge2.NpcBridge.NpcActor&&age>=600+state.extra){
+                it.remove();YutaTerrain.restore(p);Curse.endDomain(p,false);continue;
+            }
             // 每秒扣一次咒力；不够就自动关闭。
             if (age > 0 && age % 20 == 0 && !Curse.spend(p, DRAIN_PER_SECOND)) {
                 it.remove();
@@ -98,8 +104,8 @@ public final class YutaDomain {
                 continue;
             }
             // 领域维持期间：每 0.1 秒（2 刻）把咒力回满，实测等于用不完。
-            if (age % 2 == 0) {
-                Curse.data(p).putDouble("Energy", 1e18D);
+            if (!(p instanceof cn.blockforge.generated.nnnnr1201forge2.NpcBridge.NpcActor) && age % 2 == 0) {
+                Curse.addRaw(p,Curse.maximum(p));
                 Curse.sync(p);
             }
             ensureRika(p);
@@ -148,5 +154,6 @@ public final class YutaDomain {
         p.serverLevel().playSound(null, p.blockPosition(), sound, SoundSource.PLAYERS, 1.6f, 1f);
     }
 
+    @SubscribeEvent public static void stop(net.minecraftforge.event.server.ServerStoppingEvent event){for(Active a:ACTIVE.values())YutaTerrain.restore(a.owner);ACTIVE.clear();}
     private YutaDomain() {}
 }

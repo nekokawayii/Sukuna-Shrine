@@ -1,0 +1,557 @@
+[
+  {
+    "id": "ghost_bride",
+    "name": "冥婚鬼新娘",
+    "original_height": 2.603125,
+    "grade": 3,
+    "height": 3.5,
+    "bounds": [
+      [
+        -0.5133551576225437,
+        0.5133551576225437
+      ],
+      [
+        -0.0625,
+        2.540625
+      ],
+      [
+        -0.26934375,
+        0.28434375
+      ]
+    ],
+    "animations": [
+      "idle_haunt",
+      "spectral_drift"
+    ],
+    "source": "minecraft-java-2.bbmodel"
+  },
+  {
+    "id": "face_borrower",
+    "name": "借面者",
+    "original_height": 3.343722051096822,
+    "grade": 2,
+    "height": 4,
+    "bounds": [
+      [
+        -0.5649146049547601,
+        0.5522221526752497
+      ],
+      [
+        0.0,
+        3.343722051096822
+      ],
+      [
+        -0.4677601400835454,
+        0.28125
+      ]
+    ],
+    "animations": [
+      "walk",
+      "lunge",
+      "attack",
+      "idle"
+    ],
+    "source": "model-1cddf56a-2.bbmodel"
+  },
+  {
+    "id": "disordered",
+    "name": "失序者",
+    "original_height": 2.486594131660605,
+    "grade": 4,
+    "height": 3,
+    "bounds": [
+      [
+        -0.529694028146961,
+        0.6571623102547727
+      ],
+      [
+        0.0,
+        2.486594131660605
+      ],
+      [
+        -0.4190010377577373,
+        0.5095599601846402
+      ]
+    ],
+    "animations": [
+      "walk",
+      "walk_stutter",
+      "attack",
+      "distort"
+    ],
+    "source": "model-2aa60d6b-2.bbmodel"
+  },
+  {
+    "id": "mummy_thorn",
+    "name": "荆棘木乃伊",
+    "original_height": 9.421875,
+    "grade": 0,
+    "height": 6,
+    "bounds": [
+      [
+        -2.9222203754860057,
+        2.979119375
+      ],
+      [
+        0.0,
+        9.421875
+      ],
+      [
+        -1.2285284887541914,
+        1.2650894966450332
+      ]
+    ],
+    "animations": [],
+    "source": "model-9e17a599-2.bbmodel"
+  },
+  {
+    "id": "corrupted_golem",
+    "name": "腐化铁傀儡",
+    "original_height": 3.370390356891527,
+    "grade": 2,
+    "height": 4,
+    "bounds": [
+      [
+        -1.3460609095995895,
+        1.5917985725749868
+      ],
+      [
+        -0.18345394422738162,
+        3.1869364126641453
+      ],
+      [
+        -1.4680318852292702,
+        2.7689330980349416
+      ]
+    ],
+    "animations": [
+      "combat_ready",
+      "lunge_punch"
+    ],
+    "source": "model-9ed67ade-2.bbmodel"
+  },
+  {
+    "id": "hanging_one",
+    "name": "倒悬者",
+    "original_height": 12.260625,
+    "grade": 0,
+    "height": 6,
+    "bounds": [
+      [
+        -4.0925,
+        3.94125
+      ],
+      [
+        2.3575,
+        14.618125
+      ],
+      [
+        -1.114375,
+        0.848125
+      ]
+    ],
+    "animations": [],
+    "source": "model-63bf56cd-2.bbmodel"
+  },
+  {
+    "id": "bone_hand",
+    "name": "白骨巨手",
+    "original_height": 4.5669787500000005,
+    "grade": 1,
+    "height": 5,
+    "bounds": [
+      [
+        -2.716529375,
+        0.7282887499999999
+      ],
+      [
+        -3.7840875,
+        0.78289125
+      ],
+      [
+        -0.76058625,
+        2.7887537499999997
+      ]
+    ],
+    "animations": [],
+    "source": "model-0073a9a0-2.bbmodel"
+  },
+  {
+    "id": "blood_judge",
+    "name": "血之审判者",
+    "original_height": 4.449158898555223,
+    "grade": 1,
+    "height": 5,
+    "bounds": [
+      [
+        -2.963687647001781,
+        2.963687647001781
+      ],
+      [
+        -0.0625,
+        4.386658898555223
+      ],
+      [
+        -2.5,
+        2.5
+      ]
+    ],
+    "animations": [
+      "idle",
+      "move_drag",
+      "hurt_beat",
+      "death",
+      "core_beat"
+    ],
+    "source": "model-0176bb53-2.bbmodel"
+  },
+  {
+    "id": "stone_golem",
+    "name": "深青石巨人",
+    "original_height": 3.0,
+    "grade": 2,
+    "height": 4,
+    "bounds": [
+      [
+        -1.053125,
+        1.053125
+      ],
+      [
+        0.0,
+        3.0
+      ],
+      [
+        -0.403125,
+        0.35
+      ]
+    ],
+    "animations": [
+      "正常行走",
+      "双手蓄力砸地",
+      "左勾拳",
+      "右勾拳",
+      "单手重砸地面",
+      "冲锋撞击"
+    ],
+    "source": "model-204e7195-2.bbmodel"
+  },
+  {
+    "id": "longarm_beast",
+    "name": "长臂兽",
+    "original_height": 2.7125,
+    "grade": 3,
+    "height": 3.5,
+    "bounds": [
+      [
+        -0.10624999999999996,
+        1.10625
+      ],
+      [
+        0.0,
+        2.7125
+      ],
+      [
+        -0.26249999999999996,
+        0.21250000000000002
+      ]
+    ],
+    "animations": [
+      "idle",
+      "walk",
+      "attack",
+      "death"
+    ],
+    "source": "model-493c7133-2.bbmodel"
+  },
+  {
+    "id": "corrupted_code",
+    "name": "乱码者",
+    "original_height": 3.9402540264093,
+    "grade": 2,
+    "height": 4,
+    "bounds": [
+      [
+        -1.4737064377597227,
+        1.206650628646322
+      ],
+      [
+        0.0,
+        3.9402540264093
+      ],
+      [
+        -0.24488853376042283,
+        0.31524131622420193
+      ]
+    ],
+    "animations": [
+      "待机",
+      "走路"
+    ],
+    "source": "model-42074b48-2.bbmodel"
+  },
+  {
+    "id": "stone_spirit",
+    "name": "黑岩石灵",
+    "original_height": 2.9416875,
+    "grade": 3,
+    "height": 3.5,
+    "bounds": [
+      [
+        -0.9382782763889008,
+        0.9382782763889008
+      ],
+      [
+        -0.3948125,
+        2.546875
+      ],
+      [
+        -0.30901456547516115,
+        0.27489125
+      ]
+    ],
+    "animations": [
+      "待机_岩锥永转",
+      "防御_双臂抱头",
+      "攻击_重岩挥拳"
+    ],
+    "source": "model-ac9b43c0-2.bbmodel"
+  },
+  {
+    "id": "skull_centipede",
+    "name": "螯肢恐惧",
+    "original_height": 165.0,
+    "grade": 0,
+    "height": 6,
+    "bounds": [
+      [
+        -68.71444375000002,
+        113.17724999999999
+      ],
+      [
+        -0.37856874999999945,
+        164.62143125
+      ],
+      [
+        -237.859275,
+        242.14072499999995
+      ]
+    ],
+    "animations": [
+      "游龙_左右盘旋",
+      "悬浮_缓慢摇摆"
+    ],
+    "source": "model-c1ccc1a7-2.bbmodel"
+  },
+  {
+    "id": "ashen_wraith",
+    "name": "灰白幽灵",
+    "original_height": 2.444375,
+    "grade": 4,
+    "height": 3,
+    "bounds": [
+      [
+        -0.7775856824206292,
+        0.767950618994051
+      ],
+      [
+        0.130625,
+        2.575
+      ],
+      [
+        -0.30875,
+        0.2875
+      ]
+    ],
+    "animations": [
+      "01_漂浮待机",
+      "02_施法一_蓄力重砸",
+      "03_施法二_唤魔者",
+      "04_死亡_仰天化灰"
+    ],
+    "source": "model-c22cfd00-2.bbmodel"
+  },
+  {
+    "id": "sunflower_mummy",
+    "name": "向日葵木乃伊",
+    "original_height": 3.053262448940089,
+    "grade": 2,
+    "height": 4,
+    "bounds": [
+      [
+        -0.709512448940089,
+        0.709512448940089
+      ],
+      [
+        0.0,
+        3.053262448940089
+      ],
+      [
+        -0.32480569429221534,
+        0.1049558853528941
+      ]
+    ],
+    "animations": [
+      "idle",
+      "walk",
+      "attack"
+    ],
+    "source": "model-c50be929-2.bbmodel"
+  },
+  {
+    "id": "stutter_curse",
+    "name": "掉帧失序者",
+    "original_height": 2.977213029703056,
+    "grade": 3,
+    "height": 3.5,
+    "bounds": [
+      [
+        -0.9288891651812754,
+        0.8298417409835902
+      ],
+      [
+        -0.2668634752727749,
+        2.710349554430281
+      ],
+      [
+        -0.8664607980919181,
+        0.7815206792537268
+      ]
+    ],
+    "animations": [
+      "掉帧走路",
+      "掉帧跑步",
+      "攻击",
+      "扭曲消失"
+    ],
+    "source": "model-c0807b1b-2.bbmodel"
+  },
+  {
+    "id": "bloody_ghost",
+    "name": "血衣幽灵",
+    "original_height": 2.3269502872477967,
+    "grade": 4,
+    "height": 3,
+    "bounds": [
+      [
+        -0.13865497173071506,
+        0.8840246111248111
+      ],
+      [
+        0.010405246092155207,
+        2.337355533339952
+      ],
+      [
+        0.2609391191029953,
+        0.93125
+      ]
+    ],
+    "animations": [
+      "float"
+    ],
+    "source": "model-c2997094-2.bbmodel"
+  },
+  {
+    "id": "ender_scryer",
+    "name": "末影告密者",
+    "original_height": 3.3407784214921428,
+    "grade": 2,
+    "height": 4,
+    "bounds": [
+      [
+        -0.442128198627312,
+        0.953125
+      ],
+      [
+        0.016708663901817244,
+        3.3574870853939602
+      ],
+      [
+        -0.724615288078016,
+        0.45895510600613665
+      ]
+    ],
+    "animations": [
+      "idle_breath",
+      "slow_walk",
+      "lantern_attack"
+    ],
+    "source": "model-e68941ce-2.bbmodel"
+  },
+  {
+    "id": "garble_collapser",
+    "name": "乱码崩坏者",
+    "original_height": 7.198572361973258,
+    "grade": 0,
+    "height": 6,
+    "bounds": [
+      [
+        -3.7077794510627724,
+        3.7077794510627724
+      ],
+      [
+        0.04891501144203314,
+        7.247487373415291
+      ],
+      [
+        -2.893848763238939,
+        3.3307839789942486
+      ]
+    ],
+    "animations": [
+      "待机",
+      "追击"
+    ],
+    "source": "model-edc35e70-2.bbmodel"
+  },
+  {
+    "id": "parasite_mother",
+    "name": "寄生母体",
+    "original_height": 2.008698318810004,
+    "grade": 4,
+    "height": 3,
+    "bounds": [
+      [
+        -0.3125,
+        1.3125
+      ],
+      [
+        0.0,
+        2.008698318810004
+      ],
+      [
+        -0.125,
+        1.75
+      ]
+    ],
+    "animations": [
+      "walk",
+      "idle"
+    ],
+    "source": "parasite-mother-bbmodel-2-2.bbmodel"
+  },
+  {
+    "id": "twisted_soul",
+    "name": "扭曲残魂",
+    "original_height": 1.8704210841201931,
+    "grade": 4,
+    "height": 3,
+    "bounds": [
+      [
+        -0.4459303555789689,
+        0.3039583369086973
+      ],
+      [
+        -0.2042604923157898,
+        1.6661605918044033
+      ],
+      [
+        -0.28156859984963956,
+        0.4448435535011344
+      ]
+    ],
+    "animations": [
+      "struggle"
+    ],
+    "source": "spiky-club-2.bbmodel"
+  }
+]

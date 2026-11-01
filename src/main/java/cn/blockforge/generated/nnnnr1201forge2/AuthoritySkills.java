@@ -88,13 +88,16 @@ public final class AuthoritySkills {
     public static void tickAutomatic(ServerPlayer p){
         if(p instanceof MaidBridge.Actor&&Authority.pool(p)!=null&&DomainAmplification.active(p)&&!Curse.spend(p,DomainAmplification.COST_PER_SECOND/20))DomainAmplification.stop(p);
         Auto auto=automatic.get(p.getUUID());if(auto==null)return;
+        if(auto.kind==43&&!SimpleDomain.active(p)||auto.kind==44&&!FurnaceMax.active(p)){automatic.remove(p.getUUID());return;}
         if(!p.isAlive()||p.level().getGameTime()>auto.until){if(auto.kind==43)SimpleDomain.cancel(p);automatic.remove(p.getUUID());return;}
-        if(auto.kind==33)SixfoldFinale.heartbeat(p);else if(auto.kind==27)CombatExpansion.chantHeartbeat(p);else if(auto.kind==43&&!SimpleDomain.active(p))automatic.remove(p.getUUID());
+        if(auto.kind==44)FurnaceMax.heartbeat(p);else if(auto.kind==33)SixfoldFinale.heartbeat(p);else if(auto.kind==27)CombatExpansion.chantHeartbeat(p);
     }
     public static void cancel(ServerPlayer p){BloodArts.exit(p);DeathStar.cancel(p);automatic.remove(p.getUUID());DomainAmplification.stop(p);SixfoldFinale.testReset(p);SimpleDomain.cancel(p);FurnaceMax.cancel(p);Skills.cancelCombat(p);GojoCombat.closeDomain(p);GojoCombat.cancel(p);GuardianPlayerSkills.cancel(p);TechniqueInput.cancel(p);}
     public static void clear(){automatic.clear();}
-    public static boolean busy(ServerPlayer p){return BloodArts.casting(p)||SimpleDomain.active(p)||Skills.sealing(p)||GojoCombat.busy(p)||GuardianPlayerSkills.casting(p)||NetBranches.casting(p)||Uraume.breathing(p)||DismantleMotion.active(p)||CombatExpansion.automatic(p)||SixfoldFinale.active(p);}
+    public static boolean busy(ServerPlayer p){return FurnaceMax.active(p)||BloodArts.casting(p)||SimpleDomain.active(p)||Skills.sealing(p)||GojoCombat.busy(p)||GuardianPlayerSkills.casting(p)||NetBranches.casting(p)||Uraume.breathing(p)||DismantleMotion.active(p)||CombatExpansion.automatic(p)||SixfoldFinale.active(p);}
     public static void cast(ServerPlayer p,int id){
+        if(character.mainline.Mainline.domainSkill(p,id)&&DomainClash.registered(p)&&DomainClash.withdraw(p))return;
+        if(character.mainline.Mainline.domainSkill(p,id)&&!character.mainline.Mainline.requireDomain(p))return;
         if(BloodRules.skill(id)){BloodArts.automatic(p,id);return;}
         if(id<6){Skills.cast(p,id);return;}if(id==6){Skills.peel(p);return;}
         if(id>=100&&id<109){GojoCombat.cast(p,id-100);if(id==108)GojoCombat.releaseBlueMax(p);return;}
@@ -106,7 +109,7 @@ public final class AuthoritySkills {
         if(id==28){DismantleMotion.start(p,DismantleMotionRules.SPIN);return;}
         if(id==29||id==32){if(CombatExpansion.startLinger(p,id))CombatExpansion.releaseLinger(p);return;}
         if(id==30){CombatExpansion.purple(p);return;}if(id==31){CombatExpansion.castAutomatic(p,id);return;}
-        if(id==33){SixfoldFinale.start(p);if(SixfoldFinale.active(p))automatic.put(p.getUUID(),new Auto(p,p.level().getGameTime()+200,33));return;}if(id==44){FurnaceMax.start(p);return;}
+        if(id==33){SixfoldFinale.start(p);if(SixfoldFinale.active(p))automatic.put(p.getUUID(),new Auto(p,p.level().getGameTime()+200,33));return;}if(id==44){FurnaceMax.start(p);if(FurnaceMax.active(p))automatic.put(p.getUUID(),new Auto(p,p.level().getGameTime()+420,44));return;}
         if(id==43){if(SimpleDomain.start(p))automatic.put(p.getUUID(),new Auto(p,p.level().getGameTime()+60,43));return;}
         if(id>=200&&id<=205){int[] motions={DismantleMotionRules.BACKFLIP,DismantleMotionRules.FLYING_KICK,DismantleMotionRules.SLIDE,DismantleMotionRules.AIR_PUNCH,DismantleMotionRules.KNEEL,DismantleMotionRules.GROUND_SMASH};DismantleMotion.start(p,motions[id-200]);return;}
         switch(id){

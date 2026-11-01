@@ -53,6 +53,17 @@ public final class PrisonSystem {
             realm.open(false);tell(p,"狱门僵，闭门 · 已封印 "+count+" 个生物");
         }
     }
+    /** 探索合成的空狱门疆可直接封印残血敌人；复用原本的持久化牢房，不删除目标快照。 */
+    public static boolean captureWeakened(ServerPlayer p,LivingEntity target,net.minecraft.world.item.ItemStack stack){
+        if(!target.isAlive()||locked(target)||locked(p)||stack.hasTag()&&stack.getTag().contains(PrisonRealmItem.SEAL))return false;
+        ServerLevel prison=p.server.getLevel(DIMENSION);if(prison==null)return false;
+        PrisonRealmEntity realm=PrisonContent.REALM.get().create(p.serverLevel());if(realm==null)return false;
+        realm.moveTo(p.getX(),p.getY(),p.getZ(),p.getYRot(),0);realm.configure(p.getUUID());
+        if(!p.serverLevel().addFreshEntity(realm))return false;
+        registerRealm(realm);var store=PrisonStore.get(p.server);var room=store.realm(realm.getUUID());prepareRoom(prison,room);
+        if(!capture(realm,target,prison,room,store)){realm.discard();return false;}
+        if(!p.isCreative())stack.shrink(1);realm.open(false);tell(p,"残血目标已封入狱门疆；空手右键本体可收起，解封沿用邪去悔天梯。");return true;
+    }
     private static void prepareRoom(ServerLevel prison,CompoundTag room){
         int x=room.getInt("CellX"),z=room.getInt("CellZ");
         if(room.getBoolean("Built"))return;

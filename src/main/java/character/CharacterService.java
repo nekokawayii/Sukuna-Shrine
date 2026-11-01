@@ -17,7 +17,7 @@ import net.minecraftforge.common.util.FakePlayer;
 public final class CharacterService {
     private static final String ID="SelectedCharacter", PROFILES="CharacterProfiles";
     private static final List<String> SHARED=List.of("Relations","DamageMultiplier","VoidFloor","MemoryGiven","ChoiceBookGiven","R7Migrated","CharacterSwitchAfter","VoidKeyGiven","VoidSettlementR60","SoulRuinBuilt","SoulRuinAttempted");
-    public static CharacterDefinition selected(Player p) { return p instanceof FakePlayer?null:CharacterRegistry.get(Curse.data(p).getString(ID)); }
+    public static CharacterDefinition selected(Player p) { return p instanceof NpcBridge.NpcActor npc?CharacterRegistry.get(npc.characterId):p instanceof FakePlayer?null:CharacterRegistry.get(Curse.data(p).getString(ID)); }
     public static boolean active(Player p) { return selected(p)!=null; }
     public static boolean family(Player p,CharacterDefinition.Family f) { var d=selected(p);return d!=null&&d.family()==f; }
     /** 秤金次：坐杀博徒。 */
@@ -33,6 +33,7 @@ public final class CharacterService {
     public static void registerRanker(String id,Ranker ranker) { RANKERS.put(id, ranker); }
     public static int rank(Player p) {
         var d=selected(p);if(d==null||d.family()==CharacterDefinition.Family.SHRINE)return 0;
+        if(p instanceof NpcBridge.NpcActor)return d.story().size();
         if(p instanceof ServerPlayer sp){var r=RANKERS.get(d.id());if(r!=null)return Math.max(0,Math.min(d.story().size(),r.rank(sp)));}
         // 事件型个人线（如乙骨忧太）按已写入的事件标记计数，不再看累计击杀。
         if(d.hasEvents()){int done=0;var data=Curse.data(p);for(var c:d.events())if(data.getBoolean("ChapterDone_"+c.id()))done++;return done;}
@@ -68,12 +69,14 @@ public final class CharacterService {
         var d=selected(p);if(d==null)return !CharacterSkill.custom(skill);
         // 乙骨掠夺来的旧术式不在角色静态技能表里，按复制记录单独授权（施放时还会校验里香与单次次数）。
         for(int id:character.yuta.YutaCopies.array(p))if(id==skill)return true;
+        if(character.mainline.Mainline.domainSkill(d.id(),skill)&&d.skills().contains(skill))return character.mainline.Mainline.domainUnlocked(p);
         if(CharacterSkill.custom(skill))return d.config().skill(skill)!=null;   // 自定义技能不再按章节门禁（用户要求：选好角色就能放）
         if(!d.hasWheel())return false;
         if(d.family()==CharacterDefinition.Family.SHRINE)return !(skill>=22&&skill<=23)&&!(skill>=34&&skill<=42);
         return d.unlocked(skill,rank(p))||(d.family()==CharacterDefinition.Family.BLOOD&&skill==BloodRules.DEATH_STAR);
     }
     public static boolean allowsAction(Player p,SkillAction action) {
+        if(action==SkillAction.DOMAIN_AMPLIFICATION||action==SkillAction.REVERSE||action==SkillAction.GUARDIAN_REVERSE)return true;
         var d=selected(p);if(d==null||action==SkillAction.CANCEL_CHARGE)return true;
         if(toji(p))return false;
         int skill=switch(action){
@@ -110,6 +113,7 @@ public final class CharacterService {
         if(!oldId.isEmpty())profiles.put(oldId,snapshot);
         CompoundTag next=profiles.contains(id)?profiles.getCompound(id).copy():initial(definition);
         for(String key:SHARED){next.remove(key);if(current.contains(key))next.put(key,current.get(key).copy());}
+        character.mainline.Mainline.copyShared(current,next);
         // 回程坐标属于玩家所在世界，不属于角色，换线后仍能回原地。
         for(String key:current.getAllKeys())if(key.startsWith("SoulReturn")||key.startsWith("VoidReturn"))next.put(key,current.get(key).copy());
         if(definition.family()==CharacterDefinition.Family.SHRINE)next.putBoolean("Memory",true);

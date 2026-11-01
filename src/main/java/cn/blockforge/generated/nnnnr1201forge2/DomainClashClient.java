@@ -36,7 +36,11 @@ public final class DomainClashClient {
     }
     private static void release(){if(held&&state!=null){Network.CHANNEL.sendToServer(new Network.ClashPress(state.id(),false));held=false;}}
     @SubscribeEvent public static void key(InputEvent.Key event){
-        if(!active()||event.getKey()!=GLFW.GLFW_KEY_SPACE)return;
+        if(!active())return;
+        if(event.getKey()==GLFW.GLFW_KEY_BACKSPACE&&event.getAction()==GLFW.GLFW_PRESS&&Minecraft.getInstance().screen==null){
+            release();Network.CHANNEL.sendToServer(new Network.ClashWithdraw(state.id()));return;
+        }
+        if(event.getKey()!=GLFW.GLFW_KEY_SPACE)return;
         if(event.getAction()==GLFW.GLFW_RELEASE){release();return;}
         // 忽略系统长按重复；必须松开再按，长按不算连点。
         if(event.getAction()!=GLFW.GLFW_PRESS||held||Minecraft.getInstance().screen!=null)return;
@@ -52,7 +56,7 @@ public final class DomainClashClient {
         Minecraft mc=Minecraft.getInstance();if(mc.player==null||state==null)return;
         var g=event.getGuiGraphics();int w=g.guiWidth(),h=g.guiHeight(),cx=w/2,y=Math.max(64,h/3);
         if(!active()){
-            if(tick<resultUntil){String text=state.result()>0?"对拼获胜 · 领域延长20秒":state.result()<0?"对拼失败 · 熔断2分钟 · 治疗55%咒力":"对拼结束 · 双方领域解除";g.drawCenteredString(mc.font,text,cx,y,state.result()>0?0xFF67CEFF:0xFFFF8792);}return;
+            if(tick<resultUntil){String text=state.result()>0?"对拼获胜 · 完全展开并延长30秒":state.result()<0?"对拼失败 · 熔断2分钟 · 治疗55%咒力":"对拼结束 · 双方领域解除";g.drawCenteredString(mc.font,text,cx,y,state.result()>0?0xFF67CEFF:0xFFFF8792);}return;
         }
         int width=Math.max(100,Math.min(300,w-36)),left=cx-width/2;
         g.fill(left-9,y-28,left+width+9,y+66,0xDB11131B);
@@ -65,7 +69,7 @@ public final class DomainClashClient {
         g.drawString(mc.font,"自己 "+state.percent()+"%",left,y+23,0xFF69C9FF);
         String enemy="对方 "+(100-state.percent())+"%";
         g.drawString(mc.font,enemy,left+width-mc.font.width(enemy),y+23,0xFFFF7582);
-        String instruction=state.ready()>0?"准备…… "+((state.ready()+19)/20):"连续点按空格 · 蓝色达到75%获胜";
+        String instruction=state.ready()>0?"准备…… "+((state.ready()+19)/20):"点按空格争夺 · 退格键收起本方领域";
         g.drawCenteredString(mc.font,instruction,cx,y+37,0xFFFFFFFF);
         String detail=state.bossCps()>0?"对手手速 "+state.bossCps()+" 次/秒":"对手："+state.opponent();
         g.drawCenteredString(mc.font,detail+" · 剩余 "+((state.remaining()+19)/20)+"秒",cx,y+51,0xFFBBC5D9);

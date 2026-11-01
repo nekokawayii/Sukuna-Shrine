@@ -52,7 +52,8 @@ public final class HigurumaCombat {
         // NBT 绑定：该法槌属于这名玩家，不可丢弃、不可被清除/复制
         gavel.getOrCreateTag().putBoolean("GavelLock", true);
         gavel.getOrCreateTag().putString("GavelOwner", p.getUUID().toString());
-        if (!p.getInventory().add(gavel)) p.drop(gavel, false);
+        if(p instanceof cn.blockforge.generated.nnnnr1201forge2.NpcBridge.NpcActor)p.setItemSlot(EquipmentSlot.MAINHAND,gavel);
+        else if (!p.getInventory().add(gavel)) p.drop(gavel, false);
         p.sendSystemMessage(Component.literal("诛伏赐死：法槌已授予（不可丢弃）").withStyle(ChatFormatting.GOLD));
     }
 
@@ -93,7 +94,8 @@ public final class HigurumaCombat {
         if (!(p.level() instanceof ServerLevel level)) return;
         ItemStack thrown = gavel.copy();
         thrown.enchant(Enchantments.LOYALTY, 3);
-        ThrownTrident trident = new ThrownTrident(level, p, thrown);
+        ThrownTrident trident = new ThrownTrident(level, cn.blockforge.generated.nnnnr1201forge2.MaidBridge.body(p), thrown);
+        if(p instanceof cn.blockforge.generated.nnnnr1201forge2.NpcBridge.NpcActor){trident.pickup=net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;RETURNS.add(new Return(p,trident,thrown.copy(),level.getGameTime()+40));}
         trident.setPos(p.getX(), p.getEyeY() - 0.2, p.getZ());
         trident.shootFromRotation(p, p.getXRot(), p.getYRot(), 0f, 2.2f, 0.5f);
         level.addFreshEntity(trident);
@@ -105,13 +107,30 @@ public final class HigurumaCombat {
     public static void domain(ServerPlayer p) { HigurumaDomain.toggle(p); }
 
     @SubscribeEvent public static void hit(LivingHurtEvent e) {
-        if (!(e.getSource().getEntity() instanceof ServerPlayer p) || e.getAmount() <= 0) return;
+        ServerPlayer p=cn.blockforge.generated.nnnnr1201forge2.CombatSettings.caster(e.getSource());if(p==null||e.getAmount()<=0)return;
+        if(!(e.getSource().is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK)||e.getSource().is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)))return;
+        if(e.getSource().getDirectEntity()!=cn.blockforge.generated.nnnnr1201forge2.MaidBridge.body(p)&&e.getSource().getDirectEntity()!=p)return;
         ItemStack main = p.getMainHandItem();
+        if(p instanceof cn.blockforge.generated.nnnnr1201forge2.NpcBridge.NpcActor&&main.is(cn.blockforge.generated.nnnnr1201forge2.Content.EXECUTIONER_SWORD.get())&&cn.blockforge.generated.nnnnr1201forge2.CombatSettings.canHit(p,e.getEntity())){e.setAmount(Math.max(e.getAmount(),e.getEntity().getMaxHealth()*100+1000));return;}
         if (main.getItem() != GAVEL.get() || main.getTag() == null) return;
         if (main.getTag().contains(GavelItem.SEAL_DAMAGE)) e.setAmount(main.getTag().getFloat(GavelItem.SEAL_DAMAGE));
     }
 
+    @SubscribeEvent public static void executed(net.minecraftforge.event.entity.living.LivingDamageEvent e){
+        var p=cn.blockforge.generated.nnnnr1201forge2.CombatSettings.caster(e.getSource());
+        if(p instanceof cn.blockforge.generated.nnnnr1201forge2.NpcBridge.NpcActor&&e.getAmount()>0&&e.getSource().getDirectEntity()==cn.blockforge.generated.nnnnr1201forge2.MaidBridge.body(p)&&p.getMainHandItem().is(cn.blockforge.generated.nnnnr1201forge2.Content.EXECUTIONER_SWORD.get()))p.getMainHandItem().shrink(1);
+    }
+    private record Return(ServerPlayer owner,ThrownTrident projectile,ItemStack item,long at) { }
+    private static final java.util.List<Return> RETURNS=new java.util.ArrayList<>();
+    public static boolean returning(ServerPlayer p){return RETURNS.stream().anyMatch(r->r.owner==p);}
+    @SubscribeEvent public static void returns(TickEvent.ServerTickEvent event){
+        if(event.phase!=TickEvent.Phase.END)return;
+        for(var it=RETURNS.iterator();it.hasNext();){var r=it.next();if(r.owner.isAlive()&&r.projectile.level().getGameTime()<r.at)continue;
+            r.projectile.discard();if(r.owner.isAlive()&&r.owner.getMainHandItem().isEmpty())r.owner.setItemSlot(EquipmentSlot.MAINHAND,r.item);it.remove();}
+    }
+    @SubscribeEvent public static void stop(net.minecraftforge.event.server.ServerStoppingEvent event){for(var r:RETURNS){r.projectile.discard();if(r.owner.isAlive()&&r.owner.getMainHandItem().isEmpty())r.owner.setItemSlot(EquipmentSlot.MAINHAND,r.item);}RETURNS.clear();}
     private static ItemStack findGavel(ServerPlayer p) {
+        if(p.getMainHandItem().is(GAVEL.get()))return p.getMainHandItem();
         for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
             ItemStack st = p.getInventory().getItem(i);
             if (st.getItem() == GAVEL.get()) return st;

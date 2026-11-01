@@ -29,7 +29,7 @@ public final class CharacterCasting {
     private static final java.util.Set<String> MIND_LOCK_CASTABLE=new java.util.HashSet<>();
     public static void allowWhileMindLocked(String character,int skill) { MIND_LOCK_CASTABLE.add(character+"#"+skill); }
     private static boolean mindLockAllowed(CharacterDefinition d,int skill) {
-        return d!=null&&MIND_LOCK_CASTABLE.contains(d.id()+"#"+skill);
+        return d!=null&&(MIND_LOCK_CASTABLE.contains(d.id()+"#"+skill)||character.mainline.Mainline.domainSkill(d.id(),skill));
     }
     /**
      * NPC「借用玩家技能」的统一入口：把生物包装成施术者，交给注册的 provider 走**同一套技能分派**。
@@ -46,16 +46,19 @@ public final class CharacterCasting {
     /** 生物的施法入口：找不到对应 provider 时返回 false（不会悄悄扣费）。 */
     public static boolean castFor(net.minecraft.world.entity.LivingEntity caster,int skill){
         if(caster instanceof ServerPlayer p){cast(p,skill);return true;}
+        if(caster instanceof net.minecraft.world.entity.Mob mob&&NpcBridge.supports(mob))return character.npc.NpcCombatCasting.cast(mob,mob.getTarget(),skill);
         for(var e:NPC_PROVIDERS.entrySet())if(e.getKey().isInstance(caster))return e.getValue().cast(caster,skill);
         return false;
     }
 
     /** 以指定角色身份施放其自定义技能（乙骨复制来的漏壶术式走这里）。 */
-    public static boolean castAs(ServerPlayer p,String character,int id,int rank){
-        var def=CharacterRegistry.get(character);
+    public static boolean castAs(ServerPlayer p,String role,int id,int rank){
+        if(Curse.severed(p))return false;
+        var def=CharacterRegistry.get(role);
         if(def==null)return false;
+        if(character.mainline.Mainline.domainSkill(def.id(),id)&&!character.mainline.Mainline.requireDomain(p))return false;
         CharacterSkill skill=def.config().skill(id);
-        var effect=EFFECTS.get(new Key(character,id));
+        var effect=EFFECTS.get(new Key(role,id));
         if(skill==null||effect==null)return false;
         effect.apply(p,skill,rank);
         return true;
@@ -69,8 +72,18 @@ public final class CharacterCasting {
         if(EFFECTS.putIfAbsent(new Key(character,skill),effect)!=null)throw new IllegalArgumentException("重复的角色技能效果");
     }
     public static void cast(ServerPlayer p,int id) {
+        if(character.mainline.Mainline.domainSkill(p,id)&&DomainClash.registered(p)&&DomainClash.withdraw(p))return;
+        // 主动收起先于熔断、控制、资格、咒力和冷却门槛；不能让已有赌场无法取消。
+        if(character.CharacterService.hakari(p)&&id==character.hakari.HakariSkills.DOMAIN&&character.hakari.HakariDomain.active(p)){
+            character.hakari.HakariDomain.close(p,"主动解除");return;
+        }
+        if(character.CharacterService.hakari(p)&&id==character.hakari.HakariSkills.DOMAIN&&character.hakari.HakariCombat.jackpot(p))return;
+        if(character.mainline.Mainline.domainSkill(p,id)&&!DomainClash.counterCasting(p)){
+            DomainClash.counterCast(p,()->{cast(p,id);return true;});return;
+        }
+        if(character.mainline.Mainline.domainSkill(p,id)&&!character.mainline.Mainline.requireDomain(p))return;
         var definition=CharacterService.selected(p);
-        if(definition==null)return;
+        if(definition==null||Curse.severed(p))return;
         if(!CharacterService.allowsSkill(p,id)){
             p.sendSystemMessage(Component.literal("无法施放：技能"+id+" 未解锁（"+definition.name()+" 阶段"+CharacterService.rank(p)+"，需求"+definition.config().unlockChapter(id)+"，已注册"+(definition.config().skill(id)==null?"否":"是")+"）"));
             return;
@@ -148,9 +161,14 @@ public final class CharacterCasting {
             p.displayClientMessage(Component.literal(text),true);
             return;
         }
-        if(!Curse.spend(p,skill.cost()))return;
+        int cost=skill.cost();
+        if(p instanceof NpcBridge.NpcActor&&cost==0){
+            if(character.mainline.Mainline.domainSkill(p,id))cost=300;
+            else if("yuta".equals(definition.id())&&id==character.yuta.YutaSkills.RIKA)cost=150;
+        }
+        if(!Curse.spend(p,cost))return;
         double cdScale=COOLDOWN_SCALES.getOrDefault(definition.id(),pl->1.0).scale(p);
-        Curse.status(p,cooldown,(int)Math.max(1,Math.round(skill.cooldown()*cdScale)));Curse.status(p,"CharacterGlobalCooldown",4);
+        Curse.status(p,cooldown,p instanceof NpcBridge.NpcActor&&character.mainline.Mainline.domainSkill(p,id)?character.npc.NpcBattleRules.DOMAIN_COOLDOWN:(int)Math.max(1,Math.round(skill.cooldown()*cdScale)));Curse.status(p,"CharacterGlobalCooldown",4);
         MeleeCombo.cancel(p);
         int rank=CharacterService.rank(p); // 先固定本次阶段，击杀升级不会在同次施法中再增伤。
         var effect=EFFECTS.get(new Key(definition.id(),id));

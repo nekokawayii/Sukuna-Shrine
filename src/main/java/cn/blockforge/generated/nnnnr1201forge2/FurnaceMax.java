@@ -208,11 +208,8 @@ public final class FurnaceMax {
     public static void tick(TickEvent.ServerTickEvent e){
         if(e.phase!=TickEvent.Phase.END)return;
         var server=e.getServer();if(server==null)return;
-        for(ServerPlayer p:server.getPlayerList().getPlayers()){
-            Charge c=charges.get(p.getUUID());
-            if(c==null){unfreeze(MaidBridge.body(p));continue;}   // 兜底：异常路径漏下的"不能移动"在这里摘掉
-            tickCharge(p,c);
-        }
+        for(Charge c:java.util.List.copyOf(charges.values()))tickCharge(c.p,c);
+        for(ServerPlayer p:server.getPlayerList().getPlayers())if(!charges.containsKey(p.getUUID()))unfreeze(MaidBridge.body(p));
         tickShots();
         tickPillars();
     }

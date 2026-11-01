@@ -46,7 +46,9 @@ public final class YukiDomain {
         final UUID owner;
         final ServerLevel level;
         final BlockPos center;
-        final List<Rec> saved = new ArrayList<>();
+        final character.domain.DomainTerrain.Handle terrain;
+        final Map<UUID,Long> crushing=new HashMap<>();
+        final java.util.Set<UUID> suppressed=new java.util.HashSet<>();
         long extra;
         final List<Rec> plan = new ArrayList<>();
         int cursor;
@@ -55,6 +57,7 @@ public final class YukiDomain {
 
         Job(UUID owner, ServerLevel level, BlockPos center) {
             this.owner = owner;
+            this.terrain=character.domain.DomainTerrain.begin(level,owner);
             this.level = level;
             this.center = center;
         }
@@ -65,6 +68,7 @@ public final class YukiDomain {
     public static boolean active(ServerPlayer p) { return p != null && JOBS.containsKey(p.getUUID()); }
 
     public static void open(ServerPlayer p) {
+        if(!character.mainline.Mainline.requireDomain(p))return;
         if (!(p.level() instanceof ServerLevel level)) return;
         if (active(p)) { close(p, "已收起"); return; }
         Job job = new Job(p.getUUID(), level, p.blockPosition());
@@ -115,7 +119,7 @@ public final class YukiDomain {
                     BlockPos pos = c.offset(x, y, z);
                     if (d2 > inner2) {
                         job.plan.add(new Rec(pos, star));
-                    } else if (!job.level.getBlockState(pos).isAir()) {
+                    } else {
                         job.plan.add(new Rec(pos, Blocks.AIR.defaultBlockState()));
                     }
                 }
@@ -132,7 +136,7 @@ public final class YukiDomain {
         if (JOBS.isEmpty()) return;
         for (Iterator<Job> it = JOBS.values().iterator(); it.hasNext(); ) {
             Job job = it.next();
-            ServerPlayer p = server.getPlayerList().getPlayer(job.owner);
+            ServerPlayer p = cn.blockforge.generated.nnnnr1201forge2.MaidBridge.find(job.level,job.owner);
             if (p == null || !p.isAlive() || p.level() != job.level) {
                 restore(job);
                 it.remove();
@@ -144,10 +148,7 @@ public final class YukiDomain {
                 int budget = BATCH;
                 while (job.cursor < job.plan.size() && budget-- > 0) {
                     Rec e = job.plan.get(job.cursor++);
-                    BlockState now = job.level.getBlockState(e.pos());
-                    if (now == e.state()) continue;
-                    job.saved.add(new Rec(e.pos(), now));
-                    job.level.setBlock(e.pos(), e.state(), 3);
+                    job.terrain.place(e.pos(),e.state());
                 }
                 if (job.cursor >= job.plan.size()) {
                     job.built = true;
@@ -156,12 +157,15 @@ public final class YukiDomain {
                 continue;
             }
 
-            if (age > MAX_TICKS + job.extra) { close(p, "星轨散尽"); it.remove(); continue; }
+            if (age > MAX_TICKS + job.extra) { restore(job); it.remove(); continue; }
+            if(cn.blockforge.generated.nnnnr1201forge2.DomainClash.active(p)){clearEffects(job);continue;}
             if (age > 0 && age % 20 == 0
                 && !cn.blockforge.generated.nnnnr1201forge2.Curse.spend(p, DRAIN_PER_SECOND)) {
-                close(p, "咒力耗尽"); it.remove(); continue;
+                restore(job); it.remove(); continue;
             }
 
+            for(UUID id:java.util.List.copyOf(job.suppressed))if(job.level.getEntity(id) instanceof LivingEntity target&&(character.mainline.Mainline.simpleProtected(target)||target.position().distanceToSqr(Vec3.atCenterOf(job.center))>=RADIUS*RADIUS))clearSuppression(job,target);
+            finishCrush(job,p);
             suppress(job, p);
             if (age % SPAWN_INTERVAL == 0) spawn(job);
             if (age % 10 == 0) {
@@ -176,7 +180,8 @@ public final class YukiDomain {
     private static void suppress(Job job, ServerPlayer owner) {
         double hp = owner.getHealth();
         for (LivingEntity e : inside(job)) {
-            if (!(e instanceof Enemy)) continue;
+            if(!cn.blockforge.generated.nnnnr1201forge2.CombatSettings.canHit(owner,e)||character.mainline.Mainline.simpleProtected(e)||cn.blockforge.generated.nnnnr1201forge2.DomainClash.active(owner)){clearSuppression(job,e);continue;}
+            job.suppressed.add(e.getUUID());
             e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 6, false, false, false));
             e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 30, 2, false, false, false));
             e.setDeltaMovement(0, Math.min(0, e.getDeltaMovement().y), 0);
@@ -200,17 +205,24 @@ public final class YukiDomain {
         job.level.sendParticles(ParticleTypes.CRIT, e.getX(), e.getY() + 0.2, e.getZ(), 12, 0.4, 0.1, 0.4, 0.05);
         job.level.playSound(null, e.blockPosition(), net.minecraft.sounds.SoundEvents.SLIME_SQUISH,
             net.minecraft.sounds.SoundSource.PLAYERS, 0.9f, 0.5f);
-        owner.server.tell(new TickTask(6, () -> {
-            if (e.isAlive()) {
-                e.hurt(owner.damageSources().magic(), e.getMaxHealth() + 200f);
-                job.level.sendParticles(ParticleTypes.EXPLOSION, e.getX(), e.getY() + 0.2, e.getZ(), 1, 0, 0, 0, 0);
+        job.crushing.put(e.getUUID(),job.level.getGameTime()+6);
+    }
+
+    private static void finishCrush(Job job,ServerPlayer owner){
+        for(var it=job.crushing.entrySet().iterator();it.hasNext();){
+            var entry=it.next();if(job.level.getGameTime()<entry.getValue())continue;it.remove();
+            if(job.level.getEntity(entry.getKey()) instanceof LivingEntity target){
+                target.getPersistentData().remove("YukiCrushed");
+                cn.blockforge.generated.nnnnr1201forge2.Network.send(job.level,new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(303,target.getId(),target.position(),Vec3.ZERO,1f,1000,0));
+                if(target.isAlive()&&!character.mainline.Mainline.simpleProtected(target)&&target.position().distanceToSqr(Vec3.atCenterOf(job.center))<RADIUS*RADIUS)
+                    cn.blockforge.generated.nnnnr1201forge2.CombatSettings.hurt(owner,target,owner.damageSources().indirectMagic(owner,owner),target.getMaxHealth()+200f);
             }
-        }));
+        }
     }
 
     private static List<LivingEntity> inside(Job job) {
         return job.level.getEntitiesOfClass(LivingEntity.class,
-            new AABB(job.center).inflate(RADIUS - 1), e -> e.isAlive() && !e.isSpectator());
+            new AABB(job.center).inflate(RADIUS - 1), e -> e.isAlive() && !e.isSpectator() && e.position().distanceToSqr(Vec3.atCenterOf(job.center))<RADIUS*RADIUS);
     }
 
     private static void spawn(Job job) {
@@ -229,12 +241,17 @@ public final class YukiDomain {
         }
     }
 
+    private static void clearSuppression(Job job,LivingEntity target){
+        if(!job.suppressed.remove(target.getUUID()))return;
+        var slow=target.getEffect(MobEffects.MOVEMENT_SLOWDOWN);if(slow!=null&&slow.getAmplifier()==6&&slow.getDuration()<=30)target.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
+        var weak=target.getEffect(MobEffects.WEAKNESS);if(weak!=null&&weak.getAmplifier()==2&&weak.getDuration()<=30)target.removeEffect(MobEffects.WEAKNESS);
+        if(job.crushing.remove(target.getUUID())!=null){target.getPersistentData().remove("YukiCrushed");cn.blockforge.generated.nnnnr1201forge2.Network.send(job.level,new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(303,target.getId(),target.position(),Vec3.ZERO,1f,1000,0));}
+    }
+    private static void clearEffects(Job job){for(UUID id:java.util.List.copyOf(job.suppressed))if(job.level.getEntity(id) instanceof LivingEntity target)clearSuppression(job,target);job.suppressed.clear();job.crushing.clear();}
+    public static void reset(){for(Job job:JOBS.values())restore(job);JOBS.clear();}
     private static void restore(Job job) {
-        for (int i = job.saved.size() - 1; i >= 0; i--) {
-            Rec r = job.saved.get(i);
-            job.level.setBlock(r.pos(), r.state(), 3);
-        }
-        job.saved.clear();
+        clearEffects(job);
+        job.terrain.close();
         job.plan.clear();
     }
 

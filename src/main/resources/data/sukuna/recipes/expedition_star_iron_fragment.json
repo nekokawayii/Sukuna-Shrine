@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "sukuna:nether_star_fragment"
+    },
+    {
+      "item": "sukuna:residue_high"
+    }
+  ],
+  "result": {
+    "item": "sukuna:star_iron_fragment",
+    "count": 1
+  }
+}

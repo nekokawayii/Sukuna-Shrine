@@ -12,7 +12,7 @@ import net.minecraftforge.eventbus.api.*;
 /** 只主动寻找玩家；保留受伤或外部模组赋予的生物仇恨。 */
 public final class BossTargets {
     public static boolean managed(LivingEntity e){return e instanceof GuardianEntity||e instanceof YujiEntity||e instanceof BrokenMahitoEntity||e instanceof BuddhaEntity||e instanceof DaitianEntity||e instanceof ParasiteEntity||e instanceof GojoEntity||e instanceof MahoragaEntity;}
-    public static boolean valid(Mob boss,LivingEntity target){if(Legion.member(boss)){ServerPlayer owner=Legion.owner(boss);return owner!=null&&target!=null&&target!=boss&&CombatSettings.canHit(owner,target)&&target.level()==boss.level();}return target!=null&&target!=boss&&target.isAlive()&&!target.isRemoved()&&target.level()==boss.level()&&!target.isSpectator()&&!(target instanceof Player p&&p.isCreative())&&!(target instanceof GuardianEntity g&&g.friendly())&&!(target instanceof YujiEntity y&&y.familyMember());}
+    public static boolean valid(Mob boss,LivingEntity target){if(CurseHostility.truce(boss,target))return false;if(Legion.member(boss)){ServerPlayer owner=Legion.owner(boss);return owner!=null&&target!=null&&target!=boss&&CombatSettings.canHit(owner,target)&&target.level()==boss.level();}return target!=null&&target!=boss&&target.isAlive()&&!target.isRemoved()&&target.level()==boss.level()&&!target.isSpectator()&&!(target instanceof Player p&&p.isCreative())&&!(target instanceof GuardianEntity g&&g.friendly())&&!(target instanceof YujiEntity y&&y.familyMember());}
     /** 友方魔虚罗的主人（给其他系统判断"别打自己人"用）。 */
     public static java.util.UUID allyOwner(LivingEntity e){return e instanceof MahoragaEntity m&&m.ally()?m.allyOwner():null;}
     /** 魔虚罗不分敌我：谁都打，召唤者也打。 */
@@ -26,21 +26,26 @@ public final class BossTargets {
             if(target==boss.getTarget()||target==boss.getLastHurtByMob())return true;
             return false;
         }
-        return boss instanceof MahoragaEntity||BossControl.war(boss)||target instanceof Player||MaidBridge.isMaid(target)||target==boss.getTarget()||target==boss.getLastHurtByMob();
+        return CurseHostility.enemy(boss,target)||boss instanceof MahoragaEntity||BossControl.war(boss)||target instanceof Player||MaidBridge.isMaid(target)||target==boss.getTarget()||target==boss.getLastHurtByMob();
     }
     public static LivingEntity select(Mob boss,double radius){
         if(Legion.member(boss)){LivingEntity target=Legion.commanded(boss);boss.setTarget(target);return target;}
-        if(boss instanceof GuardianEntity g&&g.friendly()||boss instanceof YujiEntity y&&y.familyMember()){boss.setTarget(null);return null;}
+        if(boss instanceof GuardianEntity g&&g.friendly()||boss instanceof YujiEntity y&&y.familyMember()){
+            if(valid(boss,boss.getTarget())&&CurseHostility.enemy(boss,boss.getTarget())&&boss.distanceToSqr(boss.getTarget())<=radius*radius)return boss.getTarget();
+            if((boss.tickCount+boss.getId())%10!=0)return null;
+            LivingEntity curse=boss.level().getEntitiesOfClass(LivingEntity.class,boss.getBoundingBox().inflate(radius),t->CurseHostility.enemy(boss,t)&&boss.distanceToSqr(t)<=radius*radius).stream().min(Comparator.comparingDouble(boss::distanceToSqr)).orElse(null);boss.setTarget(curse);return curse;
+        }
         LivingEntity current=boss.getTarget();
         if(valid(boss,current)&&boss.distanceToSqr(current)<=radius*radius)return current;
         LivingEntity attacker=boss.getLastHurtByMob();
         if(valid(boss,attacker)&&boss.distanceToSqr(attacker)<=radius*radius){boss.setTarget(attacker);return attacker;}
-        LivingEntity next=boss.level().getEntitiesOfClass(LivingEntity.class,boss.getBoundingBox().inflate(radius),p->(p instanceof Player||MaidBridge.isMaid(p)||BossControl.war(boss))&&valid(boss,p)&&boss.distanceToSqr(p)<=radius*radius).stream().min(Comparator.comparingDouble(boss::distanceToSqr)).orElse(null);
+        if((boss.tickCount+boss.getId())%10!=0){boss.setTarget(null);return null;}
+        LivingEntity next=boss.level().getEntitiesOfClass(LivingEntity.class,boss.getBoundingBox().inflate(radius),p->(CurseHostility.enemy(boss,p)||p instanceof Player||MaidBridge.isMaid(p)||BossControl.war(boss))&&valid(boss,p)&&boss.distanceToSqr(p)<=radius*radius).stream().min(Comparator.comparingDouble(boss::distanceToSqr)).orElse(null);
         boss.setTarget(next);return next;
     }
     public static List<LivingEntity> nearby(Mob boss,double radius){return around(boss,boss.position(),radius,false);}
     public static List<LivingEntity> around(Mob boss,Vec3 center,double radius,boolean domain){return boss.level().getEntitiesOfClass(LivingEntity.class,new AABB(center,center).inflate(radius),e->(domain?valid(boss,e):hostile(boss,e))&&e.position().distanceToSqr(center)<=radius*radius);}
-    public static void move(LivingEntity target,Vec3 point){if(target instanceof net.minecraft.server.level.ServerPlayer p)p.teleportTo((ServerLevel)p.level(),point.x,point.y,point.z,p.getYRot(),p.getXRot());else target.teleportTo(point.x,point.y,point.z);}
+    public static void move(LivingEntity target,Vec3 point){if(target instanceof net.minecraft.server.level.ServerPlayer p)target=MaidBridge.body(p);target.teleportTo(point.x,point.y,point.z);}
     // 只在最终伤害未被取消时建立仇恨，避免免伤/挚爱保护也激怒首领。
     @SubscribeEvent(priority=EventPriority.LOWEST) public static void retaliate(LivingDamageEvent event){
         if(event.getAmount()<=0||event.getEntity().level().isClientSide||!(event.getEntity() instanceof Mob boss)||!managed(boss)||boss instanceof GuardianEntity g&&g.friendly()||boss instanceof YujiEntity y&&y.familyMember())return;

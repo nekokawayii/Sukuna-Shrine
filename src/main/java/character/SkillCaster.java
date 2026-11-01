@@ -35,7 +35,7 @@ public interface SkillCaster {
 
     /** 玩家施术者：咒力与伤害都走既有玩家系统。 */
     record PlayerCaster(ServerPlayer player) implements SkillCaster {
-        @Override public LivingEntity body() { return player; }
+        @Override public LivingEntity body() { return cn.blockforge.generated.nnnnr1201forge2.MaidBridge.body(player); }
         @Override public Level level() { return player.level(); }
         @Override public Vec3 eye() { return player.getEyePosition(); }
         @Override public String character() {
@@ -50,13 +50,13 @@ public interface SkillCaster {
         @Override public void message(String text) { player.displayClientMessage(Component.literal(text), true); }
     }
 
-    /** 生物施术者：咒力池 + 伤害兜底，全部归属这只生物。 */
+    /** 生物施术者：独立咒力池 + 单次可取消伤害，全部归属本体。 */
     record MobCaster(LivingEntity entity) implements SkillCaster {
         @Override public LivingEntity body() { return entity; }
         @Override public Level level() { return entity.level(); }
         @Override public Vec3 eye() { return entity.getEyePosition(); }
-        @Override public String character() { return ""; }
-        @Override public int rank() { return 1; }
+        @Override public String character() { return cn.blockforge.generated.nnnnr1201forge2.NpcBridge.character(entity); }
+        @Override public int rank() { var actor=cn.blockforge.generated.nnnnr1201forge2.NpcBridge.actorFor(entity);return actor==null?1:CharacterService.rank(actor); }
         @Override public boolean spend(double amount) { return NpcCurse.spend(entity, amount); }
         @Override public boolean hurt(LivingEntity target, float amount) {
             return entity instanceof Mob mob && NpcCombat.hurt(mob, target, amount);

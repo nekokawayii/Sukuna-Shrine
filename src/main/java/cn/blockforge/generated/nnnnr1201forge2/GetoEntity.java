@@ -86,8 +86,8 @@ public final class GetoEntity extends Monster {
         goalSelector.addGoal(0, new FloatGoal(this));
         // 阶段一不下场：MeleeAttackGoal 自己判断阶段，避免阶段一追着玩家跑。
         goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.0, true) {
-            @Override public boolean canUse() { return phase2() && super.canUse(); }
-            @Override public boolean canContinueToUse() { return phase2() && super.canContinueToUse(); }
+            @Override public boolean canUse() { return (phase2()||getTarget()!=null&&CurseHostility.enemy(GetoEntity.this,getTarget())) && super.canUse(); }
+            @Override public boolean canContinueToUse() { return (phase2()||getTarget()!=null&&CurseHostility.enemy(GetoEntity.this,getTarget())) && super.canContinueToUse(); }
         });
         goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 32));
         goalSelector.addGoal(7, new RandomLookAroundGoal(this));
@@ -122,7 +122,7 @@ public final class GetoEntity extends Monster {
         bar.setProgress(getMaxHealth() <= 0 ? 0 : getHealth() / getMaxHealth());
 
         // 阶段一固定在场：不主动移动，只维持朝向。
-        if (!phase2() && action() == 0) {
+        if (!phase2() && action() == 0 && (getTarget()==null||!CurseHostility.enemy(this,getTarget()))) {
             getNavigation().stop();
             setDeltaMovement(getDeltaMovement().x * 0.5, getDeltaMovement().y, getDeltaMovement().z * 0.5);
         }
@@ -179,7 +179,7 @@ public final class GetoEntity extends Monster {
     // ---------- 咒灵操术·群袭 ----------
 
     private List<LowCurseEntity> nearbyCurses(ServerLevel server) {
-        return server.getEntitiesOfClass(LowCurseEntity.class, getBoundingBox().inflate(48), LowCurseEntity::isAlive);
+        return server.getEntitiesOfClass(LowCurseEntity.class, getBoundingBox().inflate(48), c->c.isAlive()&&getUUID().equals(c.summoner()));
     }
 
     private void summonCurses(ServerLevel server, int wanted) {
@@ -188,12 +188,14 @@ public final class GetoEntity extends Monster {
         if (room <= 0) return;
         int count = Math.min(wanted, room);
         for (int i = 0; i < count; i++) {
-            LowCurseEntity curse = Content.LOW_CURSE.get().create(server);
+            LowCurseEntity curse = CurseRoster.create(server,CurseCatalog.choose(random,!phase2()));
             if (curse == null) continue;
             double angle = random.nextDouble() * Math.PI * 2;
             double radius = 3 + random.nextDouble() * 4;
             double x = getX() + Math.cos(angle) * radius, z = getZ() + Math.sin(angle) * radius;
             curse.moveTo(x, getY(), z, random.nextFloat() * 360, 0);
+            if(!server.noCollision(curse))continue;
+            curse.summonedBy(this);
             curse.emergeFrom(position());
             server.addFreshEntity(curse);
             if (getTarget() != null) curse.setTarget(getTarget());
@@ -226,7 +228,7 @@ public final class GetoEntity extends Monster {
         double damage = VORTEX_BASE + VORTEX_PER_CURSE * absorbed;
         for (LivingEntity victim : server.getEntitiesOfClass(LivingEntity.class,
                 new AABB(impact, impact).inflate(VORTEX_RADIUS),
-                e -> e != this && e.isAlive() && e instanceof Player)) {
+                e -> e != this && e.isAlive() && (e instanceof Player||CurseHostility.enemy(this,e)))) {
             victim.hurt(damageSources().indirectMagic(this, this), (float) damage);
             Vec3 push = victim.position().subtract(impact).normalize().scale(0.6);
             victim.push(push.x, 0.35, push.z);

@@ -10,9 +10,9 @@ public final class MahitoCharacter {
     public static CharacterDefinition create() {
         return new CharacterDefinition(
             "mahito", "真人", "无为转变",
-            "由人类恐惧诞生的特级咒灵，能随意改变灵魂的形态。轮盘：无为转变 / 自闭圆盾裹。",
+            "由人类恐惧诞生的特级咒灵。灵魂触碰、改造人偶、淀月、肉体崩坏、地刺、灵魂闪避与重铸，领域自闭圆顿裹。",
             Family.CUSTOM, Resource.CURSED_ENERGY, 0xFF9FD7E8,
-            List.of(MahitoSkills.TRANSMUTE, MahitoSkills.SELF_EMBRYO),
+            List.of(MahitoSkills.TRANSMUTE,MahitoSkills.TAIL,MahitoSkills.COLLAPSE,MahitoSkills.ARMS,MahitoSkills.DODGE,MahitoSkills.REFORGE,MahitoSkills.SELF_EMBRYO),
             MahitoStory.chapters(), MahitoStyle.config());
     }
     private MahitoCharacter() {}

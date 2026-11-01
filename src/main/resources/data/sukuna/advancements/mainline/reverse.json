@@ -1,0 +1,1 @@
+{"parent":"sukuna:mainline/sorcerer","display":{"icon":{"item":"minecraft:ghast_tear"},"title":"反转术式","description":"生命降至5%以下时有50%概率领悟；轮盘左侧使用反转术式自疗。每次降入濒死状态判定一次","frame":"task","show_toast":true,"announce_to_chat":true,"hidden":false},"criteria":{"learned":{"trigger":"minecraft:impossible"}}}

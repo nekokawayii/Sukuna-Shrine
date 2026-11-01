@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:blaze_powder"
+    },
+    {
+      "item": "minecraft:ghast_tear"
+    },
+    {
+      "item": "sukuna:residue_high"
+    }
+  ],
+  "result": {
+    "item": "sukuna:curse_concentrate",
+    "count": 1
+  }
+}

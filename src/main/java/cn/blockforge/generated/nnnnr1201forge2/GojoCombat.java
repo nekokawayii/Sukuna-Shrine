@@ -132,6 +132,7 @@ public final class GojoCombat {
     public static Vec3 domainCenter(ServerPlayer p){State s=states.get(p.getUUID());return s==null?Vec3.ZERO:s.center;}
     /** 无量空处此刻能不能展开：不能就**逐条说清原因**（不再静默失败）。返回 true = 可以继续 cast。 */
     private static boolean domainReady(ServerPlayer p){
+        if(!character.mainline.Mainline.requireDomain(p))return false;
         if(!GojoPlayer.unlocked(p)){CastFeedback.tell(p,"尚未睁开六眼：右键使用六眼即可，无需任何阶段");return false;}
         if(!p.isAlive()||p.isSpectator()){CastFeedback.tell(p,"当前状态无法展开领域");return false;}
         if(DomainClash.active(p)){CastFeedback.tell(p,"领域对拼中，无法展开无量空处");return false;}
@@ -161,6 +162,7 @@ public final class GojoCombat {
     }
     /** 第 80 刻（4 秒）：领域真正生成——原 case 7 的整段逻辑原样搬到这里。 */
     public static void openVoidDomain(ServerPlayer p){
+        if(!character.mainline.Mainline.requireDomain(p))return;
         State s=states.computeIfAbsent(p.getUUID(),k->new State(p));
         if(s.p!=p||s.level!=p.level())states.put(p.getUUID(),s=new State(p));
         s.controlOnly=false;   // 新一次展开：伤害恢复
@@ -366,7 +368,7 @@ public final class GojoCombat {
         p.hurt(p.serverLevel().damageSources().indirectMagic(p,p),Math.max(1,p.getMaxHealth()*0.4f));
         p.displayClientMessage(Component.literal(reason+" · 无限制茈（反噬 40% 最大生命）"),true);
     }
-    public static boolean sustaining(ServerPlayer p){State s=states.get(p.getUUID());return s!=null&&s.domainUntil>p.level().getGameTime();}
+    public static boolean sustaining(ServerPlayer p){State s=states.get(p.getUUID());return s!=null&&s.domainUntil>0&&(DomainClash.active(p)||s.domainUntil>p.level().getGameTime());}
     /** 无量空处只要被关闭（主动收起 / 到时 / 对拼结束）就进入术式熔断，与对拼败北同为 120 秒。 */
     public static void closeDomain(ServerPlayer p){
         State s=states.get(p.getUUID());
@@ -375,10 +377,12 @@ public final class GojoCombat {
         Skills.endVoidSeal(p); // 领域关闭：无量空处的结印状态（解冻/手势/放下标记）一并清掉
         fx(p,GojoFx.DOMAIN_CLOSE,s.center,Vec3.ZERO,1,4,0);
         // 只进入普通熔断：不写 DomainClashPenaltyUntil，因此可以用"修复熔断"解除
-        Curse.enterBurnout(p,DomainClashRules.BURNOUT_TICKS);
-        p.sendSystemMessage(Component.literal("无量空处关闭 · 术式熔断 "+BalanceRules.number(DomainClashRules.BURNOUT_TICKS/20)+" 秒（可用修复熔断解除）"));
+        if(!TechniqueSeverance.severing()){
+            Curse.enterBurnout(p,DomainClashRules.BURNOUT_TICKS);
+            p.sendSystemMessage(Component.literal("无量空处关闭 · 术式熔断 "+BalanceRules.number(DomainClashRules.BURNOUT_TICKS/20)+" 秒（可用修复熔断解除）"));
+        }
     }
-    public static void clashVisual(ServerPlayer p,boolean show){State s=states.get(p.getUUID());if(s==null||s.domainUntil<=0)return;if(show)fx(p,GojoFx.DOMAIN,s.center,p.getLookAngle(),GojoFx.DOMAIN_RADIUS,400,0);else fx(p,GojoFx.DOMAIN_CLOSE,s.center,Vec3.ZERO,1,4,0);}
+    public static void clashVisual(ServerPlayer p,boolean show){State s=states.get(p.getUUID());if(s==null||s.domainUntil<=0)return;if(show)fx(p,GojoFx.DOMAIN_OPEN,s.center,p.getLookAngle(),GojoFx.DOMAIN_RADIUS,(int)Math.max(1,s.domainUntil-p.level().getGameTime()),0);else fx(p,GojoFx.DOMAIN_CLOSE,s.center,Vec3.ZERO,1,4,0);}
     public static void extendDomain(ServerPlayer p,int ticks){State s=states.get(p.getUUID());if(s!=null&&s.domainUntil>0)s.domainUntil+=ticks;}
     /** 赫的爆炸半径（格）与范围内伤害/击退（用户指定：**半径 5 格**内都有伤害和击退）。 */
     public static final double RED_RADIUS=5.0;
@@ -543,7 +547,7 @@ public final class GojoCombat {
         for(Iterator<State> it=states.values().iterator();it.hasNext();){
             State s=it.next();ServerPlayer p=s.p;
             if(!p.isAlive()||p.isRemoved()||p.level()!=s.level){it.remove();continue;}
-            if(s.domainUntil>0&&s.domainUntil<=p.level().getGameTime())closeDomain(p);
+            if(s.domainUntil>0&&!DomainClash.active(p)&&s.domainUntil<=p.level().getGameTime())closeDomain(p);
             if(s.domainUntil>0){
                 s.center=p.position(); // 领域跟着施法者走：画布与判定半径都以他为球心
                 if(p.level().getGameTime()%20==0)fx(p,GojoFx.DOMAIN,s.center,p.getLookAngle(),GojoFx.DOMAIN_RADIUS,30,0);

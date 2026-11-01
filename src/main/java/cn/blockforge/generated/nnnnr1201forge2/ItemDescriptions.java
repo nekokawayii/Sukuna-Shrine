@@ -40,7 +40,39 @@ public final class ItemDescriptions {
             case "nether_core"->"祭坛材料；黑曜石放中央，上下左右各一份烈焰粉合成。";
             case "forbidden_fetus"->"即身佛掉落的禁忌胚胎，凝聚咒胎祭坛的核心。";
             case "cursed_altar"->"放置后右键查看当前试炼。|背包带齐九种咒胎时右键，消耗各一个凝聚九相图。";
-            default->id.getPath().startsWith("page_")?"九相试炼直接奖励的咒胎；兼容已有存档。":"";
+            case "residue_low"->"低级残渣：生物死后凝出的灰白碎屑，咒力最稀薄的一档。";
+            case "residue_medium"->"中级残渣：经过提纯的灰白碎屑，比低级更致密。";
+            case "residue_high"->"高级残渣：近乎结块的暗色晶屑，咒力浓度最高。";
+            case "curse_crystal"->"咒力结晶：咒力在密闭处析出的硬质晶体。";
+            case "jujutsu_alloy"->"咒术合金：残渣与金属压合出的暗色合金。";
+            case "seal_white"->"白符：裁成符形的纸，咒纹浅淡。";
+            case "seal_gold"->"金符：以金线锁边的符纸，咒纹更密。";
+            case "raw_jujutsu_ore"->"咒矿石：地脉里吸饱咒力的原矿。";
+            case "soul_echo"->"魂响：残魂震颤时留下的余音凝块。";
+            case "deformed_bone"->"畸骨：长期浸在咒力里变形的骨片。";
+            case "curse_concentrate"->"咒力浓缩液：暗红发黏的液体，腥味极重。";
+            case "blood_wheat"->"血麦：根部吸血的暗红麦穗。";
+            case "mutant_gland"->"变异腺体：咒灵体内鼓胀的腺体组织。";
+            case "curse_flesh"->"咒胎肉：温热尚在蠕动的肉块。";
+            case "soul_molt"->"魂蜕：灵魂脱落时留下的薄壳。";
+            case "kenjaku_thread"->"羂索丝：极细的黑色缝线，用来缝合肉体。";
+            case "heavenly_bone"->"天与骨：经千次锻打仍不碎的骨材。";
+            case "tenka_fragment"->"天逆碎片：某件咒具崩落的一角。";
+            case "star_curse_core"->"星咒核心：凝结了星之咒力的球状核。";
+            case "playful_cloud_parts"->"游云零件：三节棍的棍节与连轴。";
+            case "volcanic_core"->"火山核：火山咒灵体内最烫的一颗核。";
+            case "simple_domain_disc"->"简易领域圆盘：刻满符纹的薄盘。";
+            case "substitute_doll"->"替身人偶：用残渣拼出的人形。";
+            case "reverse_injection"->"反转注射剂：泛着白光的一管液体。";
+            case "blood_blade"->"血刃：以血凝出的直刃。";
+            case "blood_armor"->"血铠：血膜凝成的护甲。";
+            case "poison_coating"->"毒涂层：泛绿的黏稠涂液。";
+            case "incarnation_reagent"->"受肉试剂：让人格挤进肉体的药液。";
+            case "ultimate_scroll"->"极意卷轴：能承载极之番的厚卷。";
+            default->id.getPath().startsWith("page_")
+                ?"九相试炼直接奖励的咒胎；兼容已有存档。"
+                :AutoDescriptions.get(id.getPath(),
+                    "「"+event.getItemStack().getHoverName().getString()+"」：宿傩模组的物品 / 材料（详细资料见《游玩方法手册》）。");
         };
         for(String line:text.split("\\|"))if(!line.isEmpty())event.getToolTip().add(Component.literal(line).withStyle(ChatFormatting.GRAY));
     }

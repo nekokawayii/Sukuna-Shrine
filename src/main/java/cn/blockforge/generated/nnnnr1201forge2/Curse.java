@@ -36,9 +36,9 @@ public final class Curse {
     public static double attackBonus(Player p){if(character.CharacterService.toji(p))return 0;if(character.CharacterService.active(p)&&!Journey.unlocked(p))return character.CharacterService.stats(p).attack();return BalanceRules.strength(GrowthRules.attack(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p)),BalanceRules.Category.PLAYER_ATTACK);}
     public static double spellBonus(Player p){if(character.CharacterService.toji(p))return 0;if(character.CharacterService.active(p)&&!Journey.unlocked(p))return character.CharacterService.stats(p).spell();return GrowthRules.spell(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p),0);}
     public static double domainSpellBonus(Player p){return spellBonus(p)*0.5;}
-    public static double rawMaximum(Player p){if(RikaRules.infiniteEnergy(p))return RikaRules.INFINITE;if(character.CharacterService.toji(p))return 0;if(character.CharacterService.active(p)&&!Journey.unlocked(p))return character.CharacterService.stats(p).energy()+EnergyRules.fishBonus(Uraume.fish(p));ServerPlayer pool=Authority.pool(p);if(pool!=null)return rawMaximum(pool);return AuthorityRules.maximum(EnergyRules.maximum(GrowthRules.energy(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p)),Uraume.fish(p)),Authority.unlocked(p));}
+    public static double rawMaximum(Player p){if(p instanceof NpcBridge.NpcActor a)return a.characterId.equals("toji")?0:NpcCurse.max(a.mob);if(RikaRules.infiniteEnergy(p))return RikaRules.INFINITE;if(character.CharacterService.toji(p))return 0;if(character.CharacterService.active(p)&&!Journey.unlocked(p))return character.CharacterService.stats(p).energy()+EnergyRules.fishBonus(Uraume.fish(p));ServerPlayer pool=Authority.pool(p);if(pool!=null)return rawMaximum(pool);return AuthorityRules.maximum(EnergyRules.maximum(GrowthRules.energy(fingers(p),awakened(p),nine(p),soul(p),VoidController.boosted(p),GuardianCombat.awakened(p)),Uraume.fish(p)),Authority.unlocked(p));}
     public static double maximum(Player p){return rawMaximum(p);}
-    public static double rawEnergy(Player p){if(character.CharacterService.toji(p))return 0;ServerPlayer pool=Authority.pool(p);return pool!=null?rawEnergy(pool):EnergyRules.current(data(p).getDouble("Energy"),rawMaximum(p));}
+    public static double rawEnergy(Player p){if(p instanceof NpcBridge.NpcActor a)return a.characterId.equals("toji")?0:NpcCurse.energy(a.mob);if(character.CharacterService.toji(p))return 0;ServerPlayer pool=Authority.pool(p);return pool!=null?rawEnergy(pool):EnergyRules.current(data(p).getDouble("Energy"),rawMaximum(p));}
     public static double energy(Player p){return rawEnergy(p);}
     public static boolean canSpend(Player p,double rawCost){return EnergyRules.canSpend(rawEnergy(p),rawCost);}
     public static double power(Player p){return scale(p)*Journey.bonus(p)*(active(p,"Disorder")?0.8:1);}
@@ -53,17 +53,27 @@ public final class Curse {
     public static double reverseHealing(Player p){return BalanceRules.strength(ReverseRules.healing(rawHealthBonus(p)),BalanceRules.Category.HEALING);}
     public static double reverseCost(Player p){return DomainClash.penalized(p)?DomainClashRules.healCost(maximum(p)):ReverseRules.cost(rawHealthBonus(p));}
     public static boolean repaired(Player p){return active(p,"TechniqueRepairedUntil");}
-    public static boolean canUseTechnique(Player p){return !character.CharacterService.toji(p)&&!PrisonSystem.locked(p)&&!SixfoldFinale.active(p)&&!SixfoldFinale.controlled(p)&&!burnout(p)&&!DomainClash.active(p)&&!NetBranches.locked(p)&&!Uraume.locked(p)&&!CombatExpansion.controlled(p);}
+    /** 天逆蛑的「术式封印」：3 秒内任何咒术（含领域、反转、外放）都放不出来。 */
+    public static boolean severed(Player p){return active(p,"TenkaSeveredUntil");}
+    public static int severedTicks(Player p){return (int)Math.max(0,data(p).getLong("TenkaSeveredUntil")-p.level().getGameTime());}
+    public static void severTechnique(ServerPlayer p,int ticks){
+        status(p,"TenkaSeveredUntil",ticks);
+        MaidBridge.body(p).addEffect(new net.minecraft.world.effect.MobEffectInstance(
+            TechniqueEffects.TECHNIQUE_SEAL.get(),ticks,0,false,true));
+        sync(p);
+    }
+    public static boolean canUseTechnique(Player p){return !character.CharacterService.toji(p)&&!PrisonSystem.locked(p)&&!SixfoldFinale.active(p)&&!SixfoldFinale.controlled(p)&&!burnout(p)&&!severed(p)&&!DomainClash.active(p)&&!NetBranches.locked(p)&&!Uraume.locked(p)&&!CombatExpansion.controlled(p);}
     public static double damageFactor(Player p){return burnout(p)?0.7:1.0;}
     public static double residueFactor(Player p){return 1+Journey.residuePercent(p)/100.0;}
     public static void status(Player p,String key,int ticks){data(p).putLong(key,p.level().getGameTime()+ticks);}
     public static void endDomain(ServerPlayer p,boolean voluntary){enterBurnout(p,ShrineRules.burnoutTicks(voluntary));}
     /** 御厨子领域结束：**只锁领域自己 30 秒**（熔断是全局禁用术式，领域不该走它）。 */
-    public static void cooldownDomain(ServerPlayer p){status(p,"DomainCooldown",ShrineRules.DOMAIN_COOLDOWN_TICKS);}
+    public static void cooldownDomain(ServerPlayer p){if(TechniqueSeverance.severing())return;status(p,"DomainCooldown",ShrineRules.DOMAIN_COOLDOWN_TICKS);}
     public static boolean domainCooling(ServerPlayer p){return active(p,"DomainCooldown");}
     public static int domainCooldownLeft(ServerPlayer p){return (int)Math.max(0,data(p).getLong("DomainCooldown")-p.level().getGameTime());}
     private static void clearBurnout(ServerPlayer p){data(p).putBoolean("TechniqueBurnout",false);data(p).remove("TechniqueBurnoutUntil");data(p).remove("TechniqueBurnoutAt");MaidBridge.body(p).removeEffect(TechniqueEffects.BURNOUT.get());}
     public static void enterBurnout(ServerPlayer p,int ticks){
+        if(TechniqueSeverance.severing())return; // 天逆蛑切断领域时不追加长熔断，只封 3 秒
         if(SixfoldFinale.active(p))return; // 终式期间不被关闭旧领域的熔断提前削减伤害，最终统一支付。
         ticks=Math.max(ticks,DomainClash.penaltyTicks(p));data(p).putBoolean("TechniqueBurnout",true);status(p,"TechniqueBurnoutUntil",ticks);data(p).remove("TechniqueRepairedUntil");data(p).remove("TechniqueBurnoutAt");data(p).remove("Rotation");
         MaidBridge.body(p).addEffect(new net.minecraft.world.effect.MobEffectInstance(TechniqueEffects.BURNOUT.get(),ticks,0,false,true));
@@ -82,7 +92,7 @@ public final class Curse {
         target.setSecondsOnFire(8);var tag=target.getPersistentData();tag.putBoolean("SukunaSoulFire",true);tag.putUUID("SukunaSoulFireOwner",p.getUUID());tag.putBoolean("SukunaSoulFireMaid",MaidBridge.isCaster(p));tag.putBoolean("SukunaNoHeal",true);
     }
     /** 咒力的显示、存档、恢复和扣费统一用原单位，模式切换不改余额。 */
-    public static void add(Player p,double amount){if(character.CharacterService.toji(p)){data(p).putDouble("Energy",0);return;}ServerPlayer pool=Authority.pool(p);if(pool!=null){add(pool,amount);return;}if(amount>0&&active(p,"FinaleNoRecovery"))return;data(p).putDouble("Energy",EnergyRules.add(rawEnergy(p),rawMaximum(p),amount));}
+    public static void add(Player p,double amount){if(p instanceof NpcBridge.NpcActor a){NpcCurse.add(a.mob,amount);return;}if(character.CharacterService.toji(p)){data(p).putDouble("Energy",0);return;}ServerPlayer pool=Authority.pool(p);if(pool!=null){add(pool,amount);return;}if(amount>0&&active(p,"FinaleNoRecovery"))return;data(p).putDouble("Energy",EnergyRules.add(rawEnergy(p),rawMaximum(p),amount));}
     public static void addRaw(Player p,double amount){add(p,amount);}
     /** 固定消耗与按上限百分比计算的消耗均不再受伤害倍率缩放。 */
     public static boolean spend(ServerPlayer p,double amount){return spendEffective(p,amount);}
@@ -94,6 +104,7 @@ public final class Curse {
     }
     public static double drain(ServerPlayer p,double fraction){ServerPlayer pool=Authority.pool(p);if(pool!=null)return drain(pool,fraction);double n=energy(p)*fraction;add(p,-n);status(p,"Siphon",14);status(p,"RecoveryDelay",60);sync(p);return n;}
     public static void apply(Player p){
+        if(p instanceof NpcBridge.NpcActor)return; // NPC 自身属性不叠加玩家成长，也不触发飞行网络包。
         if(p instanceof MaidBridge.Actor actor){MaidBridge.apply(actor);return;}
         if(!character.CharacterService.toji(p)&&awakened(p)&&!p.getAbilities().mayfly){p.getAbilities().mayfly=true;if(p instanceof ServerPlayer sp)sp.onUpdateAbilities();}
         modifier(p.getAttribute(Attributes.MAX_HEALTH),HEALTH,healthBonus(p));
@@ -114,9 +125,9 @@ public final class Curse {
     public static void sync(ServerPlayer p){if(p instanceof net.minecraftforge.common.util.FakePlayer)return;character.CharacterPackets.sync(p,false);Network.syncCombat(p);Network.CHANNEL.send(PacketDistributor.PLAYER.with(()->p),new Network.Progress(energy(p),maximum(p),fingers(p),awakened(p),active(p,"Siphon"),active(p,"Disorder"),Journey.unlocked(p)||Uraume.unlocked(p)||GojoPlayer.unlocked(p)||character.CharacterService.active(p),Journey.nine(p),Journey.rotation(p),data(p).getBoolean("Fist"),Journey.guide(p),SoulJourney.evolved(p),VoidJourney.evolved(p),GuardianCombat.awakened(p),burnout(p),reverseHealing(p),reverseCost(p),BalanceRules.modpackMode(),DomainClash.penaltyTicks(p),Journey.unlocked(p),Uraume.unlocked(p),Uraume.fish(p),SukunaBranches.wallSpacing(p),SukunaBranches.diagonal(p),SlashForms.qi(p),DomainAmplification.active(p),GojoPlayer.unlocked(p),SukunaBranches.domainRadiusPts(p),SukunaBranches.domainDamagePts(p),SukunaBranches.domainSpeedPts(p),SukunaBranches.domainVerticalKill(p)));}
     private static String reverseBlocked(ServerPlayer p){
         if(DeathStar.anemic(p))return "严重贫血期间无法回血";
-        if(SixfoldFinale.active(p)||SixfoldFinale.controlled(p)||!p.isAlive()||p.isSpectator()||!(Journey.unlocked(p)||GojoPlayer.unlocked(p))||DomainClash.active(p)||NetBranches.locked(p)||Uraume.locked(p))return "当前无法使用反转术式";
-        if(fingers(p)<15)return "反转术式需要先吃下15根宿傩手指";
+        if(SixfoldFinale.active(p)||SixfoldFinale.controlled(p)||!p.isAlive()||p.isSpectator()||!(p instanceof net.minecraftforge.common.util.FakePlayer)&&!character.mainline.Mainline.unlocked(p,character.mainline.Mainline.REVERSE)||DomainClash.active(p)||NetBranches.locked(p)||Uraume.locked(p))return "当前无法使用反转术式";
         if(active(p,"ReverseCooldown"))return "反转术式冷却中";
+        if(severed(p))return ThousandMileChain.bound(MaidBridge.body(p))?"正被天逆蛑锁链缠绕，持续封锁咒术":"术式被天逆蛑斩断，暂时无法使用任何术式";
         var body=MaidBridge.body(p);var tag=body.getPersistentData();long now=p.level().getGameTime();
         if(active(p,"PureLandNoHeal")||active(p,"SoulGap")||tag.getBoolean("SukunaNoHeal")||tag.getLong("SoulGapUntil")>now||tag.getLong("VoidNoHeal")>now||tag.getLong("GuardianSkillNoHeal")>now||GuardianEntity.locked(body))return "当前处于禁疗状态，无法使用反转术式";
         if(body.getHealth()>=body.getMaxHealth())return "生命已满，无需使用反转术式";
@@ -138,9 +149,10 @@ public final class Curse {
         Network.send(p.serverLevel(),new Network.Effect(137,body.getId(),body.position(),net.minecraft.world.phys.Vec3.ZERO,1,20,0));return true;
     }
     public static void repairBurnout(ServerPlayer p){
+        if(severed(p)){CastFeedback.tell(p,"术式被天逆蛑封锁，暂时不能修复熔断");return;}
         if(active(p,"FinaleBurnout")){CastFeedback.tell(p,"终式代价不能提前修复，剩余"+((data(p).getLong("FinaleBurnout")-p.level().getGameTime()+19)/20)+"秒");return;}
         if(DomainClash.active(p)||DomainClash.penalized(p)){p.displayClientMessage(Component.literal("领域对拼败北熔断无法提前修复，剩余"+((DomainClash.penaltyTicks(p)+19)/20)+"秒"),true);return;}
-        if(fingers(p)<15||!burnout(p)){p.displayClientMessage(Component.literal("当前没有可修复的术式熔断"),true);return;}
+        if((!(p instanceof NpcBridge.NpcActor)&&fingers(p)<15)||!burnout(p)){p.displayClientMessage(Component.literal("当前没有可修复的术式熔断"),true);return;}
         double cost=ShrineRules.repairCost(maximum(p));if(!spendEffective(p,cost))return;
         clearBurnout(p);status(p,"TechniqueRepairedUntil",ShrineRules.REPAIR_BUFF_TICKS);sync(p);p.displayClientMessage(Component.literal("术式熔断已修复：全部伤害提升10%，持续5秒"),true);
     }
@@ -167,7 +179,7 @@ public final class Curse {
                 com.mojang.logging.LogUtils.getLogger().info("[附拳] {} 每秒消耗 10 咒力，剩余 {}",p.getScoreboardName(),(int)energy(p));
             }
         }
-        if(p.isAlive()&&!fist&&!SixfoldFinale.active(p)&&!active(p,"FinaleNoRecovery")&&!active(p,"RecoveryDelay")&&!Skills.sustaining(p)&&!GuardianPlayerSkills.sustaining(p))addRaw(p,(character.CharacterService.active(p)&&!Journey.unlocked(p)?character.CharacterService.stats(p).recovery():15)+fingers(p)*3+(awakened(p)?10:0)+(nine(p)?10:0)+(soul(p)?20:0)+(VoidController.boosted(p)?15:0)+(GuardianCombat.awakened(p)?30:0));sync(p);
+        if(!(p instanceof NpcBridge.NpcActor)&&p.isAlive()&&!fist&&!SixfoldFinale.active(p)&&!active(p,"FinaleNoRecovery")&&!active(p,"RecoveryDelay")&&!Skills.sustaining(p)&&!GuardianPlayerSkills.sustaining(p))addRaw(p,(character.CharacterService.active(p)&&!Journey.unlocked(p)?character.CharacterService.stats(p).recovery():15)+fingers(p)*3+(awakened(p)?10:0)+(nine(p)?10:0)+(soul(p)?20:0)+(VoidController.boosted(p)?15:0)+(GuardianCombat.awakened(p)?30:0));sync(p);
     }
     @SubscribeEvent public static void soulFire(TickEvent.LevelTickEvent e){if(e.phase!=TickEvent.Phase.END||!(e.level instanceof net.minecraft.server.level.ServerLevel l)||l.getGameTime()%20!=0)return;for(var entity:l.getAllEntities())if(entity instanceof net.minecraft.world.entity.LivingEntity target&&target.getPersistentData().getBoolean("SukunaSoulFire")){var tag=target.getPersistentData();ServerPlayer owner=tag.hasUUID("SukunaSoulFireOwner")?MaidBridge.find(l,tag.getUUID("SukunaSoulFireOwner")):null;if(owner==null){target.clearFire();continue;}if(!CombatSafety.canAffect(owner,target)){target.clearFire();tag.remove("SukunaSoulFire");tag.remove("SukunaSoulFireOwner");tag.remove("SukunaNoHeal");continue;}target.setSecondsOnFire(3);tag.putBoolean("SukunaNoHeal",true);}}
     @SubscribeEvent public static void noSoulHeal(net.minecraftforge.event.entity.living.LivingHealEvent e){if(e.getEntity().getPersistentData().getBoolean("SukunaNoHeal"))e.setCanceled(true);}

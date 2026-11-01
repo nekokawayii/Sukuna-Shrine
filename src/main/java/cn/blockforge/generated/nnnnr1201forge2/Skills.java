@@ -91,7 +91,7 @@ public final class Skills {
         ServerPlayer p=CombatSettings.caster(event.getSource());if(event.isCanceled()||event.getAmount()<=0||p==null)return;
         LivingEntity target=event.getEntity();if(!canHit(p,target))return;
         remember(p,target);
-        if(!(event.getSource().is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)||MaidBridge.isCaster(p)&&event.getSource().is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK))||!character.CharacterService.permits(p,character.CharacterDefinition.Family.SHRINE)||Curse.fingers(p)<5||MaidBridge.recovering(p)||SoulCombat.suppressed(p)||!Curse.canUseTechnique(p))return;
+        if(!(event.getSource().is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)||(MaidBridge.isCaster(p)||p instanceof NpcBridge.NpcActor)&&event.getSource().is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK))||!character.CharacterService.permits(p,character.CharacterDefinition.Family.SHRINE)||Curse.fingers(p)<5||MaidBridge.recovering(p)||SoulCombat.suppressed(p)||!Curse.canUseTechnique(p))return;
         // 取本次普通攻击结算伤害；附加解不再叠术式成长，不递归触发普攻事件。
         if(meleeCuts.size()<4096)meleeCuts.add(new MeleeCut(p,p.serverLevel(),target.getUUID(),p.level().getGameTime()+1,event.getAmount()*0.7f));
         if(!Journey.unlocked(p)||!Curse.data(p).getBoolean("Fist"))return;
@@ -147,7 +147,7 @@ public final class Skills {
     }
     private record Charge(ServerLevel level,long start){}
     private static final Map<UUID,Charge> charges=new HashMap<>();
-    public static boolean inDomain(ServerPlayer p,LivingEntity target){Domain d=domains.get(p.getUUID());return !DomainClash.active(p)&&target!=null&&d!=null&&d.level==target.level()&&target.position().distanceToSqr(d.center)<=d.radius*d.radius;}
+    public static boolean inDomain(ServerPlayer p,LivingEntity target){Domain d=domains.get(p.getUUID());return !DomainClash.active(p)&&target!=null&&!character.mainline.Mainline.simpleProtected(target)&&d!=null&&d.level==target.level()&&target.position().distanceToSqr(d.center)<=d.radius*d.radius;}
     public static boolean neutralizes(ServerPlayer p){return domains.values().stream().anyMatch(d->!DomainClash.active(d.owner)&&valid(d.owner,d.level)&&d.level==p.level()&&p.position().distanceToSqr(d.center)<=d.radius*d.radius);}
     private static boolean clashing(Domain d){return DomainClash.active(d.owner);}
     public static boolean domainClashing(ServerPlayer p){Domain d=domains.get(p.getUUID());return d!=null&&clashing(d);}
@@ -211,6 +211,7 @@ public final class Skills {
     }
     /** 结印起手：扣费与起手表现都在这一刻（此刻起 3 秒不能移动）。 */
     private static void startSeal(ServerPlayer p){
+        if(!character.mainline.Mainline.requireDomain(p))return;
         if(SimpleDomain.owns(p)||FurnaceMax.active(p)){note("结印被拒：简易领域/最大功率接管中");return;}
         if(!Curse.canUseTechnique(p)){p.displayClientMessage(Component.literal("术式熔断中：只能使用术式反转或修复熔断"),true);return;}
         if(GuardianPlayerSkills.sustaining(p)){GuardianPlayerSkills.closeOwnedDomain(p,true);return;}
@@ -289,6 +290,7 @@ public final class Skills {
             if(seal.type==SEAL_VOID&&seal.midAt>0&&now>=seal.midAt){seal.midAt=0;SkillSounds.play(p,"gojo_domain_mid",SkillSounds.DOMAIN_VOLUME);}
             int openAt=seal.type==SEAL_VOID?ShrineRules.VOID_OPEN_TICKS:ShrineRules.DOMAIN_OPEN_TICKS;
             if(!seal.opened&&age>=openAt){seal.opened=true;if(seal.type==SEAL_VOID)openVoidDomain(p);else openDomain(p);}
+            if(p instanceof NpcBridge.NpcActor&&seal.opened&&age>=openAt+20)release(p,seal.type);
         }
     }
     // ---------------------------------------------------------------- 五条悟技能7 · 无量空处（同一套 Seal：结印 → 80 刻展开 → 放下仅控制 → 收起）
@@ -378,7 +380,7 @@ public final class Skills {
     }
     /** 逐刻发一次传送，客户端才能平滑跟随。 */
     private static void warp(ServerPlayer p,Vec3 pos){
-        if(p.connection!=null)p.connection.teleport(pos.x,pos.y,pos.z,p.getYRot(),p.getXRot());
+        if(!(p instanceof net.minecraftforge.common.util.FakePlayer)&&p.connection!=null)p.connection.teleport(pos.x,pos.y,pos.z,p.getYRot(),p.getXRot());
         else p.teleportTo(pos.x,pos.y,pos.z);
     }
     private static void tickLeaps(){
@@ -501,7 +503,7 @@ public final class Skills {
     }
     /** 纵向伤敌：「纵向伤敌」关掉时，跳过 Y 明显低于领域中心的目标（阈值 {@link DomainOptions#VERTICAL_MARGIN} 格，
      *  {@code d.center} 是展开那一刻玩家站的位置，也是领域的垂直基准）——省下的那 1 点就是换来的补偿。 */
-    private static boolean reachable(Domain d,LivingEntity target){return d.verticalKill||target.getY()>=d.center.y-DomainOptions.VERTICAL_MARGIN;}
+    private static boolean reachable(Domain d,LivingEntity target){return !character.mainline.Mainline.simpleProtected(target)&&(d.verticalKill||target.getY()>=d.center.y-DomainOptions.VERTICAL_MARGIN);}
     /** 已经"放下"过（姿态解除、御厨子伤害 50% / 无量空处仅控制）但领域仍在的玩家：再按一次释放键即收起领域。 */
     private static final java.util.Set<UUID> released=new java.util.HashSet<>();
     /** 结印中的玩家：{@code start} 起 3 秒不能移动，{@code DOMAIN_OPEN_TICKS} 刻后领域出现。
@@ -582,7 +584,7 @@ public final class Skills {
             SdLog.w("通用冷却拦截 skill="+skill+"("+NAMES[skill]+") 剩="+String.format(Locale.ROOT,"%.2f",(times[skill]-now)/20.0)+"秒 领域接管="+SimpleDomain.owns(p)+" 维持中="+SimpleDomain.active(p));
             p.displayClientMessage(Component.literal(NAMES[skill]+" 冷却中 · "+String.format(Locale.ROOT,"%.1f",(times[skill]-now)/20.0)+" 秒"),true);return;}
         boolean awakened=Curse.awakened(p);int tier=Curse.tier(p);double scale=Curse.scale(p);
-        if(skill==4&&!awakened&&!domains.containsKey(p.getUUID())){p.displayClientMessage(Component.literal("灶需要先展开伏魔御厨子积聚粉尘"),true);return;}
+        if(skill==4&&!awakened&&!domains.containsKey(p.getUUID())&&!ExpeditionProgress.data(p).getBoolean("ExpeditionScroll_furnace_scroll")){p.displayClientMessage(Component.literal("灶需要先展开伏魔御厨子积聚粉尘"),true);return;}
         if(VoidJourney.evolved(p)&&!VoidCombat.ready(p,skill))return;
         if(!Curse.spend(p,Curse.COST[skill]))return;
         // 记下这一招的适应细分：解 / 捌 / 灵魂剥离（延迟命中的伤害靠它分类）
@@ -703,7 +705,7 @@ public final class Skills {
             }
         }
         burns.entrySet().removeIf(entry->entry.getKey().isRemoved()||!entry.getKey().isAlive()||!entry.getKey().isOnFire()||entry.getKey().level().getGameTime()>entry.getValue().until);
-        charges.entrySet().removeIf(entry->{Charge c=entry.getValue();ServerPlayer p=c.level.getServer().getPlayerList().getPlayer(entry.getKey());if(p!=null&&valid(p,c.level)&&c.level.getGameTime()-c.start==CHARGE_DELAY)SkillSounds.play(p,"space_charge");return p==null||!valid(p,c.level)||c.level.getGameTime()-c.start>200;});
+        charges.entrySet().removeIf(entry->{Charge c=entry.getValue();ServerPlayer p=MaidBridge.find(c.level,entry.getKey());if(p!=null&&valid(p,c.level)&&c.level.getGameTime()-c.start==CHARGE_DELAY)SkillSounds.play(p,"space_charge");return p==null||!valid(p,c.level)||c.level.getGameTime()-c.start>200;});
         for(Iterator<Strike> it=strikes.iterator();it.hasNext();){
             Strike s=it.next();if(!valid(s.owner,s.level)){it.remove();continue;}if(s.level.getGameTime()<s.due)continue;it.remove();
             LivingEntity target=s.target!=null&&s.level.getEntity(s.target) instanceof LivingEntity e&&canHit(s.owner,e)?e:null;

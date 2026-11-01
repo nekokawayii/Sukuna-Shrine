@@ -1,10 +1,6 @@
 {
   "type": "minecraft:jigsaw",
-  "biomes": [
-    "#minecraft:is_overworld",
-    "sukuna:cursed_wasteland",
-    "sukuna:ancient_battlefield"
-  ],
+  "biomes": "#sukuna:has_structure/kenjaku_laboratory",
   "step": "underground_structures",
   "spawn_overrides": {},
   "terrain_adaptation": "bury",

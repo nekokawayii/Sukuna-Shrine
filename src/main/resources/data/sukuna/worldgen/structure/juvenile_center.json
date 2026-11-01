@@ -1,9 +1,6 @@
 {
   "type": "minecraft:jigsaw",
-  "biomes": [
-    "minecraft:plains",
-    "#minecraft:is_forest"
-  ],
+  "biomes": "#sukuna:has_structure/juvenile_center",
   "step": "surface_structures",
   "spawn_overrides": {},
   "terrain_adaptation": "beard_thin",

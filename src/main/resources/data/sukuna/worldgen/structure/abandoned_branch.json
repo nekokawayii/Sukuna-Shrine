@@ -1,9 +1,6 @@
 {
   "type": "minecraft:jigsaw",
-  "biomes": [
-    "#minecraft:is_mountain",
-    "sukuna:ancient_battlefield"
-  ],
+  "biomes": "#sukuna:has_structure/abandoned_branch",
   "step": "surface_structures",
   "spawn_overrides": {},
   "terrain_adaptation": "beard_thin",

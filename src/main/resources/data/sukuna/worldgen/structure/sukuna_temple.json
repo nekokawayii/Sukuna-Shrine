@@ -1,5 +1,5 @@
 {
-  "type": "sukuna:overworld_temple",
+  "type": "minecraft:jigsaw",
   "biomes": "#sukuna:has_structure/land",
   "step": "surface_structures",
   "spawn_overrides": {},

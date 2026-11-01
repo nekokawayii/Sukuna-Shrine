@@ -1,6 +1,6 @@
 {
   "type": "minecraft:jigsaw",
-  "biomes": "#sukuna:has_structure/kenjaku_laboratory",
+  "biomes": "#sukuna:has_structure/land",
   "step": "underground_structures",
   "spawn_overrides": {},
   "terrain_adaptation": "bury",

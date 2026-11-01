@@ -1,8 +1,6 @@
 {
   "type": "sukuna:overworld_temple",
-  "biomes": {
-    "type": "forge:any"
-  },
+  "biomes": "#sukuna:has_structure/land",
   "step": "surface_structures",
   "spawn_overrides": {},
   "terrain_adaptation": "beard_thin",

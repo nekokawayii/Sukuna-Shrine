@@ -82,12 +82,24 @@ public final class ThousandMileChainItem extends Item {
     }
     @Override public InteractionResult useOn(UseOnContext c) {
         if (c.getHand() != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
-        if (c.getPlayer() instanceof ServerPlayer p) configure(p);
+        if (c.getPlayer() instanceof ServerPlayer p) {
+            if (p.isShiftKeyDown() && ThousandMileChain.active(p)) {
+                ThousandMileChain.pullSelf(p);
+                return InteractionResult.sidedSuccess(c.getLevel().isClientSide);
+            }
+            configure(p);
+        }
         return InteractionResult.sidedSuccess(c.getLevel().isClientSide);
     }
     @Override public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
         if (hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
-        if (player instanceof ServerPlayer p) configure(p);
+        if (player instanceof ServerPlayer p) {
+            if (p.isShiftKeyDown() && ThousandMileChain.active(p)) {
+                ThousandMileChain.pullSelf(p);
+                return InteractionResult.sidedSuccess(player.level().isClientSide);
+            }
+            configure(p);
+        }
         return InteractionResult.sidedSuccess(player.level().isClientSide);
     }
     @Override public boolean canAttackBlock(BlockState state, Level level, BlockPos pos, Player player) { return false; }

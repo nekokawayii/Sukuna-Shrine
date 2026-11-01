@@ -296,6 +296,12 @@ public final class CullingRules {
         boolean spell=e.getSource().is(net.minecraft.world.damagesource.DamageTypes.MAGIC)
             ||e.getSource().is(net.minecraft.world.damagesource.DamageTypes.INDIRECT_MAGIC)
             ||e.getSource().is(net.minecraft.world.damagesource.DamageTypes.WITHER);
+        boolean cullingMob = attacker instanceof Mob am && am.level().dimension().equals(CullingGame.DIM)
+            && am.getPersistentData().getBoolean("CullingEnemy");
+        if (cullingMob) e.setAmount((float) (e.getAmount() * CullingSpawns.npcDamageMul()));
+        boolean cullingVictim = victim instanceof Mob vm && vm.level().dimension().equals(CullingGame.DIM)
+            && vm.getPersistentData().getBoolean("CullingEnemy");
+        if (cullingVictim) e.setAmount((float) (e.getAmount() * CullingSpawns.npcTakenMul()));
         if(attacker instanceof ServerPlayer ap&&inDimension(ap)){
             double mul=(spell?mul(ap,m->m.spell):mul(ap,m->m.melee))*mul(ap,m->m.damage);
             if(special(ap,"desperado"))mul*=1+(1-ap.getHealth()/Math.max(1,ap.getMaxHealth()));

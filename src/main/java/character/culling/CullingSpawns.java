@@ -71,6 +71,7 @@ public final class CullingSpawns {
             if (kind.equals("sorcerer") && elite) role = "kenjaku";
             Mob mob = ExpeditionMobs.spawn(level, at, role, anchor.isCreative() ? null : anchor);
             if (mob == null) continue;
+            level.getScoreboard().removePlayerFromTeam(mob.getScoreboardName());
             mob.getPersistentData().putBoolean("CullingEnemy", true);
             mob.getPersistentData().putString("CullingKind", kind);
             mob.getPersistentData().putLong("ExpeditionDespawnAt", level.getGameTime() + 9600);
@@ -83,12 +84,12 @@ public final class CullingSpawns {
     private static void scale(ServerLevel level, Mob mob, String kind, int wave) {
         int stage = Math.max(0, wave / WAVE);
         double base = kind.equals("sorcerer") ? BASE_SORCERER_HP : BASE_CURSE_HP;
-        double hp = base * Math.pow(1.6, stage);
+        double hp = base * (1 + 0.25 * stage);
         if (kind.equals("curse") && "special_curse".equals(mob.getPersistentData().getString("ExpeditionRole"))) hp *= 3;
         var max = mob.getAttribute(Attributes.MAX_HEALTH);
         if (max != null) { max.setBaseValue(hp); mob.setHealth((float) hp); }
         var atk = mob.getAttribute(Attributes.ATTACK_DAMAGE);
-        if (atk != null) atk.setBaseValue(Math.min(200, 6 * Math.pow(1.5, stage)));
+        if (atk != null) atk.setBaseValue(Math.min(120, 6 * (1 + 0.15 * stage)));
         mob.getPersistentData().putInt("CullingStage", stage);
     }
 
@@ -109,6 +110,7 @@ public final class CullingSpawns {
         if (mob == null) return;
         mob.moveTo(at.getX() + .5, at.getY(), at.getZ() + .5, 0, 0);
         if (!level.noCollision(mob)) { mob.discard(); return; }
+        level.getScoreboard().removePlayerFromTeam(mob.getScoreboardName());
         mob.getPersistentData().putBoolean("CullingEnemy", true);
         mob.getPersistentData().putString("CullingKind", "sukuna");
         mob.getPersistentData().putLong("ExpeditionDespawnAt", level.getGameTime() + 9600);
@@ -147,6 +149,62 @@ public final class CullingSpawns {
             }
         }
         return null;
+    }
+
+    // ===== r220：参赛者也会攒积分制定规则 =====
+    /** NPC 已经制定过的规则（不含玩家选的）。 */
+    private static final java.util.List<Integer> NPC_RULES = new java.util.ArrayList<>();
+    private static final int NPC_RULE_COST = 100, NPC_POINTS_PER_KILL = 10;
+
+    public static java.util.List<String> npcRuleIds() {
+        java.util.List<String> ids = new java.util.ArrayList<>();
+        for (int i : NPC_RULES) if (i >= 0 && i < CullingRules.ALL.size()) ids.add(CullingRules.ALL.get(i).id());
+        return ids;
+    }
+
+    /** 怪物打人的伤害倍率（来自 NPC 制定的规则）。 */
+    public static double npcDamageMul() {
+        double v = 1;
+        for (int i : NPC_RULES) if (i >= 0 && i < CullingRules.ALL.size()) v *= CullingRules.ALL.get(i).mods().damage;
+        return v;
+    }
+
+    /** 怪物挨打的倍率（来自 NPC 制定的规则）。 */
+    public static double npcTakenMul() {
+        double v = 1;
+        for (int i : NPC_RULES) if (i >= 0 && i < CullingRules.ALL.size()) v *= CullingRules.ALL.get(i).mods().taken;
+        return v;
+    }
+
+    @SubscribeEvent
+    public static void npcKill(net.minecraftforge.event.entity.living.LivingDeathEvent e) {
+        if (!e.getEntity().level().dimension().equals(CullingGame.DIM)) return;
+        if (!(e.getSource().getEntity() instanceof Mob killer)) return;
+        if (!killer.getPersistentData().getBoolean("CullingEnemy")) return;
+        var data = killer.getPersistentData();
+        int points = data.getInt("CullingNpcPoints") + NPC_POINTS_PER_KILL;
+        if (points < NPC_RULE_COST) { data.putInt("CullingNpcPoints", points); return; }
+        data.putInt("CullingNpcPoints", points - NPC_RULE_COST);
+        pickNpcRule(killer);
+    }
+
+    private static void pickNpcRule(Mob mob) {
+        if (!(mob.level() instanceof ServerLevel level)) return;
+        java.util.List<Integer> pool = new java.util.ArrayList<>();
+        for (int i = 0; i < CullingRules.ALL.size(); i++) if (!NPC_RULES.contains(i)) pool.add(i);
+        if (pool.isEmpty()) return;
+        int index = pool.get(level.random.nextInt(pool.size()));
+        NPC_RULES.add(index);
+        var rule = CullingRules.ALL.get(index);
+        String name = mob.getCustomName() == null ? "死灭参赛者" : mob.getCustomName().getString();
+        Component message = Component.literal("【死灭规则】" + name + " 制定了规则：" + rule.name() + " · " + rule.desc())
+            .withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE);
+        for (ServerPlayer p : level.players()) {
+            p.sendSystemMessage(message);
+            p.displayClientMessage(Component.literal("【死灭规则】" + rule.name()).withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE), true);
+        }
+        level.playSound(null, mob.blockPosition(), net.minecraft.sounds.SoundEvents.BEACON_ACTIVATE,
+            net.minecraft.sounds.SoundSource.HOSTILE, 1.4f, .8f);
     }
 
     private static boolean anyRule(ServerLevel level, String special) {

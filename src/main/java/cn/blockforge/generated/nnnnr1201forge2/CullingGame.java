@@ -48,13 +48,8 @@ public final class CullingGame {
     @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent e){
         if(e.phase!=TickEvent.Phase.END||!(e.player instanceof ServerPlayer p)||!p.level().dimension().equals(DIM)||p.isSpectator())return;
         if(p.getX()< -255||p.getX()>254||p.getZ()< -255||p.getZ()>254||p.getY()<1||p.getY()>510){p.teleportTo(p.serverLevel(),.5,65,-15.5,p.getYRot(),p.getXRot());p.fallDistance=0;}
-        if(!p.isAlive()||p.isCreative()||p.tickCount%300!=0||!p.serverLevel().getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_DOMOBSPAWNING))return;
-        if(p.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.Mob.class,p.getBoundingBox().inflate(80),m->m.getPersistentData().getBoolean("CullingEnemy")).size()>28)return;
-        var r=p.getRandom();for(int i=0;i<4;i++){int x=(int)p.getX()+r.nextInt(65)-32,z=(int)p.getZ()+r.nextInt(65)-32;if(Math.abs(x)<22&&Math.abs(z)<22||Math.abs(x)>245||Math.abs(z)>245)continue;
-            String role=i<2?"mutant":switch(r.nextInt(3)){case 0->"participant_ryu";case 1->"participant_kashimo";default->"participant_mahito";};
-            var floor=new BlockPos(x,65,z);if(!p.serverLevel().hasChunkAt(floor))continue;BlockPos at=p.level().getBlockState(floor).isAir()?floor:floor.above();
-            var m=ExpeditionMobs.spawn(p.serverLevel(),at,role,p);if(m!=null){String faction=role.startsWith("participant")?role.substring("participant_".length()):"mutants";var board=p.serverLevel().getScoreboard();String teamId="culling_"+faction;var team=board.getPlayerTeam(teamId);if(team==null){team=board.addPlayerTeam(teamId);team.setAllowFriendlyFire(false);team.setDisplayName(Component.literal("死灭阵营 · "+faction));}board.addPlayerToTeam(m.getScoreboardName(),team);m.getPersistentData().putString("CullingFaction",faction);m.getPersistentData().putBoolean("CullingEnemy",true);m.getPersistentData().putLong("ExpeditionDespawnAt",p.level().getGameTime()+4800);}
-        }
+        // r220：旧刷怪逻辑已整体交给 CullingSpawns（这里原来还会把参赛者塞进同一个阵营队伍、
+        // 关掉友伤，导致「参赛者之间强制敌对」不生效，且和 CullingSpawns 重复刷怪）。此处只保留边界检查。
     }
     private CullingGame(){}
 }

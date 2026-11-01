@@ -47,16 +47,27 @@ public class TenkaSpearItem extends SwordItem {
             player.displayClientMessage(Component.literal("天逆蛑冷却中"), true);
             return InteractionResultHolder.fail(stack);
         }
-        int count = TechniqueSeverance.severAround(serverPlayer);
         player.getCooldowns().addCooldown(this, COOLDOWN_TICKS);
-        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+        severAround(serverPlayer);
+        return InteractionResultHolder.sidedSuccess(stack, false);
+    }
+
+    /**
+     * 右键「术式切断」的实际效果（不含冷却判定）：切断附近一切术式与领域并封印 3 秒。
+     * <p>r214 把这段抽出来，NPC 甚尔每 5 秒直接调这里（它拿的就是天逆蛑，但 FakePlayer 的
+     * 物品栏/CD 是另一套，走 {@code use()} 会拿不到手上的矛）。
+     */
+    public static int severAround(net.minecraft.server.level.ServerPlayer serverPlayer) {
+        int count = TechniqueSeverance.severAround(serverPlayer);
+        Level level = serverPlayer.level();
+        level.playSound(null, serverPlayer.getX(), serverPlayer.getY(), serverPlayer.getZ(),
             SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1.2f, 1.8f);
-        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+        level.playSound(null, serverPlayer.getX(), serverPlayer.getY(), serverPlayer.getZ(),
             SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 1.3f, 0.6f);
-        player.displayClientMessage(Component.literal(count > 0
+        serverPlayer.displayClientMessage(Component.literal(count > 0
             ? "天逆蛑 · 术式切断：" + count + " 处术式/领域被斩断，3 秒内无法使用咒术"
             : "天逆蛑 · 术式切断：附近没有可斩断的术式（自己的术式已终止）"), false);
-        return InteractionResultHolder.sidedSuccess(stack, false);
+        return count;
     }
 
     @Override public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {

@@ -56,15 +56,29 @@ public final class RitualBlockEntity extends BlockEntity {
         changed();p.sendSystemMessage(Component.literal("仪式开始："+r.result().getHoverName().getString()+"。材料已投入；离阵、重创或破坏阵型会失败。"));
     }
     private boolean correctBiome(){String b=ExpeditionWorldgen.biome(level,worldPosition);return b.equals("ancient_battlefield")||b.equals(tier()==1?"cursed_sakura_forest":"cursed_wasteland");}
+    /** r214：蛊毒缸判定放宽——炼药锅里装水/岩浆/细雪都算。 */
+    private static boolean cauldron(BlockState s){
+        return s.is(Blocks.CAULDRON)||s.is(Blocks.WATER_CAULDRON)||s.is(Blocks.LAVA_CAULDRON)||s.is(Blocks.POWDER_SNOW_CAULDRON);
+    }
     public String validate(){
         if(tier()==0){
             for(int x=-1;x<=1;x++)for(int z=-1;z<=1;z++)if(!level.getBlockState(worldPosition.offset(x,-1,z)).is(Blocks.OBSIDIAN))return "淬炼台下方需要3×3黑曜石底座。";
             for(int[] d:FOUR){if(!level.getBlockState(worldPosition.offset(d[0],0,d[1])).is(ExpeditionContent.block("simple_seal_pillar")))return "淬炼台东西南北各3格放一根简易封印柱。";if(!level.getBlockState(worldPosition.offset(d[0],-1,d[1])).is(Blocks.STONE_BRICKS))return "四根简易封印柱下方需要石砖。";}
             for(int x:new int[]{-1,1})for(int z:new int[]{-1,1})if(!level.getBlockState(worldPosition.offset(x,0,z)).is(Blocks.AMETHYST_BLOCK))return "淬炼台斜角的四格需要紫水晶块。";
         }else if(tier()==1){
-            for(int x=-1;x<=1;x++)for(int z=-1;z<=1;z++){if(x==0&&z==0)continue;if(!level.getBlockState(worldPosition.offset(x,0,z)).is(Blocks.CAULDRON)&&!level.getBlockState(worldPosition.offset(x,0,z)).is(Blocks.WATER_CAULDRON))return "蛊毒缸周围8格放炼药锅，组成3×3缸体。";if(!level.getBlockState(worldPosition.offset(x,-1,z)).is(ExpeditionContent.block("alloy_block")))return "3×3缸体下方需要高专合金块。";}
+            // 内圈 8 格：任意炼药锅都算（空锅/水锅/岩浆锅/细雪锅），下方高专合金块
+            for(int x=-1;x<=1;x++)for(int z=-1;z<=1;z++){if(x==0&&z==0)continue;if(!cauldron(level.getBlockState(worldPosition.offset(x,0,z))))return "蛊毒缸周围8格放炼药锅，组成3×3缸体（锅里装不装东西都行）。";if(!level.getBlockState(worldPosition.offset(x,-1,z)).is(ExpeditionContent.block("alloy_block")))return "3×3缸体下方需要高专合金块。";}
             if(!level.getBlockState(worldPosition.below()).is(ProgressionContent.TRANSFIGURED_FLESH.get()))return "蛊毒缸正下方放无为转变血肉块。";
-            for(int x=-2;x<=2;x++)for(int z=-2;z<=2;z++)if(Math.abs(x)==2||Math.abs(z)==2){boolean corner=Math.abs(x)==2&&Math.abs(z)==2;String id=corner?"curse_crystal_block":"alloy_bars";if(!level.getBlockState(worldPosition.offset(x,0,z)).is(ExpeditionContent.block(id)))return "缸外一圈用高专合金栅栏围住，四角放咒物结晶块。";}
+            // 外圈（r214 放宽）：整圈放 高专合金栅栏 / 高专合金块 / 咒物结晶块 都可以，
+            // 位置也不再强制「四角必须是结晶块」——只要圈上至少还有 2 个咒物结晶块即可。
+            int crystals=0;
+            for(int x=-2;x<=2;x++)for(int z=-2;z<=2;z++)if(Math.abs(x)==2||Math.abs(z)==2){
+                BlockState s=level.getBlockState(worldPosition.offset(x,0,z));
+                if(s.is(ExpeditionContent.block("curse_crystal_block"))){crystals++;continue;}
+                if(s.is(ExpeditionContent.block("alloy_bars"))||s.is(ExpeditionContent.block("alloy_block")))continue;
+                return "缸外一圈用高专合金栅栏围住（合金块、咒物结晶块也算），至少放 2 个咒物结晶块。";
+            }
+            if(crystals<2)return "缸外一圈至少放 2 个咒物结晶块（位置随意，不必在四角）。";
         }else{
             for(int x=-3;x<=3;x++)for(int z=-3;z<=3;z++)if(!level.getBlockState(worldPosition.offset(x,-1,z)).is(ExpeditionContent.block("alloy_block")))return "降灵核心下方需要7×7高专合金块底座。";
             if(!level.getBlockState(worldPosition.below(2)).is(ExpeditionContent.block("spirit_stone")))return "降灵核心正下方两格需要灵脉石。";

@@ -23,23 +23,16 @@ public final class DomainSafety {
     public static void watch(ServerLevel level,UUID owner,Vec3 center,double radius){
         ZONES.put(owner,new Zone(level,new AABB(center,center).inflate(radius+1)));
     }
+    /** r214：只清登记，不再疏散（安全传送已按用户要求删除）。 */
     public static void release(ServerLevel level,UUID owner,AABB fallback){
-        Zone zone=ZONES.remove(owner);
-        AABB area=zone!=null&&zone.level==level?(fallback==null?zone.box:zone.box.minmax(fallback)):fallback;
-        if(area!=null)evacuate(level,area);
+        ZONES.remove(owner);
     }
+    /**
+     * r214：用户原话「领域的安全传送删了吧，bug太多了」——这里改成空实现，不再把生物传出去。
+     * 领域收起/地形还原时，站在里面的生物就地留着（可能被还原的方块埋住，这是用户接受的代价）；
+     * 保留方法签名只是为了让 DomainTerrain / NpcDomain / Mainline 等旧调用点不用改。
+     */
     public static void evacuate(ServerLevel level,AABB area){
-        var occupants=new ArrayList<>(level.getEntitiesOfClass(LivingEntity.class,area.inflate(1),e->e.isAlive()&&!e.isSpectator()));
-        // 大生物先占位，小生物随后寻找其它落点，避免所有人叠在一起。
-        occupants.sort(Comparator.comparingDouble((LivingEntity e)->e.getBbWidth()).reversed());
-        for(var entity:occupants){
-            Vec3 safe=findExit(level,entity,area);
-            if(safe==null)safe=emergencyPlatform(level,entity,area);
-            if(safe==null)safe=carveRefuge(level,entity,area);
-            if(safe!=null)move(entity,safe);
-            // 保存短期复查标记；断线、卸载、重启后仍检查一次，避免恢复队列晚于传送。
-            entity.getPersistentData().putLong("DomainSafetyUntil",level.getGameTime()+200);
-        }
     }
     private static boolean dangerous(BlockState s){
         return s.is(Blocks.LAVA)||s.is(Blocks.FIRE)||s.is(Blocks.SOUL_FIRE)||s.is(Blocks.MAGMA_BLOCK)

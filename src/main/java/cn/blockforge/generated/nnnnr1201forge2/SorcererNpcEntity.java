@@ -26,7 +26,7 @@ public final class SorcererNpcEntity extends PathfinderMob implements character.
         super(type,level);this.role=role;setPersistenceRequired();xpReward=150;
         if(role.equals("nanami"))setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.IRON_SWORD));
         if(role.equals("yuta"))setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.IRON_SWORD));
-        if(role.equals("toji"))setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Content.YUYUN.get()));
+        if(role.equals("toji"))setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Content.TENKA_SPEAR.get()));
         setDropChance(EquipmentSlot.MAINHAND,0);
     }
     public String characterId(){return role;}

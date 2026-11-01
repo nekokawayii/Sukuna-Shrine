@@ -7,7 +7,26 @@ import java.util.List;
 
 /** 自动选择玩家连招，不再循环旧版突进/重击/跃身三招，也不向客户端伪造按键包。 */
 public final class TojiNpcCombat {
+    /** NPC 甚尔拿天逆蛑：每 5 秒放一次右键「术式切断」。 */
+    public static final int SPEAR_INTERVAL = 100;
+    private static final String SPEAR_NEXT = "TojiSpearNext";
+
+    /** 到点了就斩一次；返回 true 表示这一轮真的放了。 */
+    public static boolean spearTick(NpcBridge.NpcActor actor) {
+        if (!actor.characterId.equals("toji") || !(actor.mob instanceof Mob mob) || mob.isNoAi() || !mob.isAlive()) return false;
+        if (!mob.getMainHandItem().is(Content.TENKA_SPEAR.get())) return false;
+        long now = mob.level().getGameTime();
+        var data = Curse.data(actor);
+        if (!data.contains(SPEAR_NEXT)) { data.putLong(SPEAR_NEXT, now + SPEAR_INTERVAL); return false; }
+        if (now < data.getLong(SPEAR_NEXT)) return false;
+        data.putLong(SPEAR_NEXT, now + SPEAR_INTERVAL);
+        TenkaSpearItem.severAround(actor);
+        mob.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        return true;
+    }
+
     public static void tick(NpcBridge.NpcActor actor, LivingEntity target, List<Integer> allowed) {
+        spearTick(actor);
         TojiQte.clearExpired(actor,actor.level().getGameTime());
         if(Curse.active(actor,"TojiNpcComboCooldown") || !TojiCombat.allowed(actor))return;
         TojiQte.autoWindow(actor,target);

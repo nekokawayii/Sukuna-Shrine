@@ -7,9 +7,9 @@
   ],
   "placement": {
     "type": "minecraft:random_spread",
-    "spacing": 9999,
-    "separation": 9999,
+    "spacing": 24,
+    "separation": 8,
     "salt": 474512,
-    "frequency": 0.0
+    "frequency": 0.8
   }
 }

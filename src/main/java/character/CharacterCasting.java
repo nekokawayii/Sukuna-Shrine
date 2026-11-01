@@ -167,8 +167,9 @@ public final class CharacterCasting {
             else if("yuta".equals(definition.id())&&id==character.yuta.YutaSkills.RIKA)cost=150;
         }
         if(!Curse.spend(p,cost))return;
-        double cdScale=COOLDOWN_SCALES.getOrDefault(definition.id(),pl->1.0).scale(p);
+        double cdScale=COOLDOWN_SCALES.getOrDefault(definition.id(),pl->1.0).scale(p)*character.culling.CullingRules.cooldownMul(p);
         Curse.status(p,cooldown,p instanceof NpcBridge.NpcActor&&character.mainline.Mainline.domainSkill(p,id)?character.npc.NpcBattleRules.DOMAIN_COOLDOWN:(int)Math.max(1,Math.round(skill.cooldown()*cdScale)));Curse.status(p,"CharacterGlobalCooldown",4);
+        character.culling.CullingRules.afterCast(p);
         MeleeCombo.cancel(p);
         int rank=CharacterService.rank(p); // 先固定本次阶段，击杀升级不会在同次施法中再增伤。
         var effect=EFFECTS.get(new Key(definition.id(),id));

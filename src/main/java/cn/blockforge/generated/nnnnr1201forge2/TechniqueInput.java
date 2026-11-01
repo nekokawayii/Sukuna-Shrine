@@ -31,6 +31,12 @@ public final class TechniqueInput {
     public static Input intent(ServerPlayer p){return intents.getOrDefault(p.getUUID(),new Input(0,0,false,false,false));}
     public static boolean holding(ServerPlayer p,int skill){Hold h=holds.get(p.getUUID());return h!=null&&h.skill==skill;}
     public static void receive(ServerPlayer p,Input input){
+        // 死灭洄游规则面板：99=请求打开，0~4=选候选，5=脱离（走 phase=7，不受任何术式门禁影响）
+        if(input.skill()==character.culling.CullingRules.SKILL&&input.phase()==7){
+            if(input.motion()==character.culling.CullingRules.OPEN)character.culling.CullingRules.request(p);
+            else character.culling.CullingRules.choose(p,input.motion());
+            return;
+        }
         if(input.phase()==0&&character.CharacterService.hakari(p)&&input.skill()==character.hakari.HakariSkills.DOMAIN
             &&character.hakari.HakariDomain.active(p)){character.hakari.HakariDomain.close(p,"主动收起");return;}
         if(input.phase()==0&&character.mainline.Mainline.domainSkill(p,input.skill())&&!DomainClash.counterCasting(p)){

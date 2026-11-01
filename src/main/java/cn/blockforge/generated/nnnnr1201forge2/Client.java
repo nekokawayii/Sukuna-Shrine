@@ -300,6 +300,7 @@ public final class Client {
         if(e.kind()>=character.naoya.NaoyaFx.FIRST&&e.kind()<=character.naoya.NaoyaFx.LAST){NaoyaVisuals.receive(e);return;}
         if(e.kind()>=character.hakari.HakariFx.FIRST&&e.kind()<=character.hakari.HakariFx.LAST){HakariClient.receive(e);return;}
         boolean self=e.owner()==(Minecraft.getInstance().player==null?-1:Minecraft.getInstance().player.getId());
+        if(e.kind()==620){if(self)character.culling.CullingRuleScreen.open((int)e.size(),e.life(),e.seed());return;}
         if(e.kind()==300){if(self)character.mahito.TransfigureScreen.open((int)e.size());return;}
         if(e.kind()==308){return;}
         if(e.kind()==306){character.mahito.MahitoArmsClient.addHeld(e.owner(),(int)e.size(),e.life());return;}

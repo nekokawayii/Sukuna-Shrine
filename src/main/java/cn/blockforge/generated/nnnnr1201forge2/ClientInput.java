@@ -42,6 +42,11 @@ public final class ClientInput {
         cast.event(binding(Client.CAST),kind,code,down,available(Client.CAST),mods);
     }
     public static void key(int key,int scan,int action,int mods){
+        // 死灭洄游：shift+P 打开规则面板（只在结界里有效，服务端会再判一次）
+        if(key==GLFW.GLFW_KEY_P&&(mods&GLFW.GLFW_MOD_SHIFT)!=0&&action==GLFW.GLFW_PRESS){
+            Network.CHANNEL.sendToServer(new TechniqueInput.Input(character.culling.CullingRules.SKILL,7,false,false,false,false,character.culling.CullingRules.OPEN,-1));
+            return;
+        }
         // L 使用原版进度页面；G 只由可改键的 AMPLIFY 处理，避免一次按下切换两次。
         if(ThousandMileChainClient.key(key,scan,action))return;
         if(TojiQteClient.key(key,action,mods))return;

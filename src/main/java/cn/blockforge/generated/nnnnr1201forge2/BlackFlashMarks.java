@@ -66,7 +66,7 @@ public final class BlackFlashMarks {
         if(p.level().getGameTime()%ROLL_TICKS!=0)return;
         if(!Curse.data(p).getBoolean("Fist"))return;
         MARKS.values().forEach(m->m.entrySet().removeIf(e->p.level().getGameTime()>e.getValue()));
-        if(p.getRandom().nextDouble()>=CHANCE)return;
+        if(p.getRandom().nextDouble()>=CHANCE*character.culling.CullingRules.flashChanceMul(p))return;
         AABB box=p.getBoundingBox().inflate(RANGE);
         List<LivingEntity> enemies=((ServerLevel)p.level()).getEntitiesOfClass(LivingEntity.class,box,
             e->e!=p&&e.isAlive()&&e.distanceToSqr(p)<=RANGE*RANGE&&CombatSettings.canHit(p,e));
@@ -111,7 +111,7 @@ public final class BlackFlashMarks {
         p.invulnerableTime=INVULN_TICKS;                          // 无敌帧（用户要求）
         // 伤害 = 本次普攻伤害的 3 次方（封顶）
         double base=Math.max(1,p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE));
-        double damage=Math.min(MAX_DAMAGE,Math.pow(base,3));
+        double damage=Math.min(MAX_DAMAGE,Math.pow(base,3+character.culling.CullingRules.flashPowerAdd(p)));
         AttackTypes.mark(AttackTypes.LIGHTNING);
         CombatSettings.hurt(p,target,target.damageSources().playerAttack(p),(float)damage);
         fx(p,target.getEyePosition(),dir);

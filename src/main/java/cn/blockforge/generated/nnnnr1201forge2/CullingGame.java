@@ -19,10 +19,17 @@ public final class CullingGame {
         if(p.level().dimension().equals(DIM)){leave(p);return;}
         ServerLevel to=p.server.getLevel(DIM);if(to==null){p.sendSystemMessage(Component.literal("死灭回游空间尚未加载，请重新进入世界。"));return;}
         CompoundTag n=new CompoundTag();n.putString("Dim",p.level().dimension().location().toString());n.putDouble("X",p.getX());n.putDouble("Y",p.getY());n.putDouble("Z",p.getZ());ExpeditionProgress.data(p).put("ExpeditionReturn",n);
-        p.teleportTo(to,.5,65,-15.5,0,0);p.fallDistance=0;p.sendSystemMessage(Component.literal("进入512×512死灭回游结界。击杀参赛者得5分，变异咒灵得1分；中央通讯塔兑换。入口和钥匙均可返回。"));
+        p.teleportTo(to,.5,65,-15.5,0,0);p.fallDistance=0;p.sendSystemMessage(Component.literal("进入512×512死灭回游结界。击杀参赛者得5分、咒灵得1分；每 100 分可按 shift+P 制定一条规则，定满 5 条才能脱离。中央通讯塔可兑换。"));
     }
     public static void leave(ServerPlayer p){
-        if(!p.level().dimension().equals(DIM))return;var n=ExpeditionProgress.data(p).getCompound("ExpeditionReturn");
+        if(!p.level().dimension().equals(DIM))return;
+        // r218：必须制定满 5 条规则，才能在规则面板里选「脱离」离开
+        if(character.culling.CullingRules.picked(p)<character.culling.CullingRules.MAX){
+            p.sendSystemMessage(Component.literal("必须先制定 "+character.culling.CullingRules.MAX+" 条规则才能离开死灭洄游（shift+P 打开规则面板）。").withStyle(net.minecraft.ChatFormatting.GRAY));
+            return;
+        }
+        character.culling.CullingRules.onLeave(p);
+        var n=ExpeditionProgress.data(p).getCompound("ExpeditionReturn");
         ResourceLocation id=ResourceLocation.tryParse(n.getString("Dim"));ServerLevel to=id==null?null:p.server.getLevel(ResourceKey.create(Registries.DIMENSION,id));if(to==null)to=p.server.overworld();
         BlockPos desired=n.contains("X")?BlockPos.containing(n.getDouble("X"),n.getDouble("Y"),n.getDouble("Z")):to.getSharedSpawnPos();
         to.getChunk(desired);BlockPos safe=ExpeditionEvents.safePosition(to,desired,8);

@@ -38,7 +38,24 @@ public final class ExpeditionEvents {
         if(role.equals("ash_curse"))drop(e,"ash_clump",2);
         if(role.equals("mutant"))drop(e,"mutant_gland",1);
         if(role.equals("wraith")&&l.isNight())drop(e,"wraith_tear",1);
-        if(mob.getPersistentData().getBoolean("CullingEnemy")){int points=role.startsWith("participant")?5:1;var d=ExpeditionProgress.data(p);d.putInt("CullingPoints",d.getInt("CullingPoints")+points);p.displayClientMessage(Component.literal("死灭回游积分 +"+points+"，现有 "+d.getInt("CullingPoints")),true);}
+        if(mob.getPersistentData().getBoolean("CullingEnemy")){
+            // r218：丰厚掉落——参赛者/咒灵都给模组材料，积分受「古代术师觉醒/嗜血狂潮」规则加成
+            boolean sorcerer=role.startsWith("participant")||role.equals("kenjaku")||role.equals("renegade")||role.equals("toji_echo")||role.equals("naoya");
+            if(sorcerer){
+                drop(e,"special_blueprint",l.random.nextInt(3)==0?1:0);
+                drop(e,"star_iron_fragment",1+l.random.nextInt(2));
+                drop(e,"residue_high",1+l.random.nextInt(3));
+                if(l.random.nextInt(4)==0)drop(e,"curse_concentrate",1);
+            }else{
+                drop(e,"mutant_gland",1+l.random.nextInt(2));
+                drop(e,"curse_flesh",1);
+                drop(e,"residue_medium",1+l.random.nextInt(2));
+                if(l.random.nextInt(6)==0)drop(e,"star_iron_fragment",1);
+            }
+            int base=sorcerer?5:1,points=Math.max(1,(int)Math.round(base*character.culling.CullingRules.scoreMul(p)));
+            var d=ExpeditionProgress.data(p);d.putInt("CullingPoints",d.getInt("CullingPoints")+points);
+            p.displayClientMessage(Component.literal("死灭回游积分 +"+points+"，现有 "+d.getInt("CullingPoints")),true);
+        }
     }
     private static void drop(LivingDropsEvent e,String id,int count){drop(e,ExpeditionContent.item(id),count);}
     private static void drop(LivingDropsEvent e,Item item,int count){var m=e.getEntity();e.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(m.level(),m.getX(),m.getY()+.5,m.getZ(),new ItemStack(item,count)));}

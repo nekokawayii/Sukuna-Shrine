@@ -225,6 +225,9 @@ public final class GeneratedMod {
         character.CharacterCasting.registerNpcProvider(ChosoEntity.class,(e,skill)->PlayerSkillBridge.cast(character.CharacterCasting.caster(e),"choso",skill));
         character.CharacterCasting.registerNpcProvider(UraumeNpcEntity.class,(e,skill)->PlayerSkillBridge.cast(character.CharacterCasting.caster(e),"uraume",skill));
         MinecraftForge.EVENT_BUS.register(character.toji.TojiCombat.class);
+        // r218：死灭洄游规则系统（规则结算 + 刷新/敌对）
+        MinecraftForge.EVENT_BUS.register(character.culling.CullingRules.class);
+        MinecraftForge.EVENT_BUS.register(character.culling.CullingSpawns.class);
         Network.registerDrawing();
         MinecraftForge.EVENT_BUS.register(SlashForms.class);
         MinecraftForge.EVENT_BUS.register(DismantleMotion.class);

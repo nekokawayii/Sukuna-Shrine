@@ -69,8 +69,9 @@ public final class ItemDescriptions {
             case "poison_coating"->"毒涂层：泛绿的黏稠涂液。";
             case "incarnation_reagent"->"受肉试剂：让人格挤进肉体的药液。";
             case "ultimate_scroll"->"极意卷轴：能承载极之番的厚卷。";
-            default->id.getPath().startsWith("page_")?"九相试炼直接奖励的咒胎；兼容已有存档。"
-                :"宿傩模组物品｜材料 / 道具，资料见《游玩方法手册》（L 键可查主线成就）。";
+            default->id.getPath().startsWith("page_")
+                ?"九相试炼直接奖励的咒胎；兼容已有存档。"
+                :"「"+event.getItemStack().getHoverName().getString()+"」：宿傩模组的物品 / 材料（详细资料见《游玩方法手册》）。";
         };
         for(String line:text.split("\\|"))if(!line.isEmpty())event.getToolTip().add(Component.literal(line).withStyle(ChatFormatting.GRAY));
     }

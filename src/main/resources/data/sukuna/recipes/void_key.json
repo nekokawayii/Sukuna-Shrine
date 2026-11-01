@@ -7,13 +7,13 @@
   ],
   "key": {
     "A": {
-      "item": "minecraft:obsidian"
+      "item": "sukuna:residue"
     },
     "B": {
-      "item": "minecraft:ender_eye"
+      "item": "sukuna:curse_orb"
     },
     "C": {
-      "item": "minecraft:nether_star"
+      "item": "sukuna:golden_relic"
     }
   },
   "result": {

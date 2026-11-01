@@ -282,7 +282,9 @@ public final class ThousandMileChain {
         return null;
     }
     /** 落地保底：卡进方块就轻推到旁边一格，并给 1 秒无敌帧，避免窒息/挤压伤害。 */
-    private static void resolveStuck(LivingEntity target) {
+    private static void resolveStuck(ServerPlayer owner, LivingEntity target) {
+        // 只对友方做保底：敌人依旧卡在墙里（用户明确要求）
+        if (CombatSettings.canHit(owner, target)) return;
         if(target.level().noCollision(target,target.getBoundingBox()))return;
         double[][] offsets={{1,0,0},{-1,0,0},{0,0,1},{0,0,-1},{1,0,1},{-1,0,-1},{1,0,-1},{-1,0,1},{0,1,0},{0,2,0}};
         Vec3 base=target.position();
@@ -314,7 +316,7 @@ public final class ThousandMileChain {
             // 有墙或路途太远时直接放到已检查的安全落点，不让目标卡在途中。
             Vec3 at=!clear||s.returnTicks>=12?dest:step;
             s.target.teleportTo(at.x,at.y,at.z);s.target.setDeltaMovement(Vec3.ZERO);s.target.fallDistance=0;s.target.hurtMarked=true;
-            resolveStuck(s.target);
+            resolveStuck(s.owner,s.target);
             s.pin=at;s.tip=s.target.getBoundingBox().getCenter();
             if(s.armed)TechniqueSeverance.maintainSeal(s.target);
             if(at.distanceToSqr(dest)<.05){tell(s.owner,"万里之锁已收回 · 目标已拉到面前");finish(s);return;}

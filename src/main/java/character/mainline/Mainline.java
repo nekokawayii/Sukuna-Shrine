@@ -28,11 +28,27 @@ import org.joml.Vector3f;
 public final class Mainline {
     public static final int SORCERER=0,REVERSE=1,REVERSE_OUT=2,BARRIER=3,SIMPLE=4,DOMAIN=5,AMPLIFY=6;
     public static final int SKILL_REVERSE=3100,SKILL_REVERSE_OUT=3101,SKILL_BARRIER=3102,SKILL_SIMPLE=3103,SKILL_DOMAIN=3104,SKILL_AMPLIFY=3105;
-    public static final String[] NAMES={"咒术师","反转术式","反转术式外放","结界术","简易领域","领域展开","领域展延"};
-    public static final String[] IDS={"sorcerer","reverse","reverse_out","barrier","simple","domain","amplify"};
-    public static final String[] REQUIREMENTS={"使用术式选择书","生命降至 5% 以下时，有 50% 概率领悟","附近友方生命降至 15% 以下时，有 50% 概率领悟","在敌方领域内连续存活 15 秒","击败一名拥有领域的敌人","累计成功使用简易领域 15 次","累计成功展开领域 10 次"};
-    private static final int[] PARENT={-1,0,1,0,3,4,5};
-    private static final String PREFIX="MainlineUnlocked",COUNT="MainlineCount";
+    /** 「咒术师」之后的咒力总量训练：第 1 级在索引 7，共 10 级；第 n 级要 3n 只、给 300n 咒力上限。 */
+    public static final int TRAIN_FIRST=7,TRAIN_COUNT=10,TRAIN_KILLS_PER=3,TRAIN_ENERGY_PER=300;
+    public static final String[] NAMES,IDS,REQUIREMENTS;
+    private static final int[] PARENT;
+    static {
+        String[] names={"咒术师","反转术式","反转术式外放","结界术","简易领域","领域展开","领域展延"};
+        String[] ids={"sorcerer","reverse","reverse_out","barrier","simple","domain","amplify"};
+        String[] req={"使用术式选择书","生命降至 5% 以下时，有 50% 概率领悟","附近友方生命降至 15% 以下时，有 50% 概率领悟","在敌方领域内连续存活 15 秒","击败一名拥有领域的敌人","累计成功使用简易领域 15 次","累计成功展开领域 10 次"};
+        int[] parent={-1,0,1,0,3,4,5};
+        int total=names.length+TRAIN_COUNT;
+        NAMES=new String[total];IDS=new String[total];REQUIREMENTS=new String[total];PARENT=new int[total];
+        for(int i=0;i<names.length;i++){NAMES[i]=names[i];IDS[i]=ids[i];REQUIREMENTS[i]=req[i];PARENT[i]=parent[i];}
+        for(int n=1;n<=TRAIN_COUNT;n++){
+            int i=TRAIN_FIRST+n-1;
+            NAMES[i]="咒力总量训练"+n;
+            IDS[i]="energy_train_"+n;
+            REQUIREMENTS[i]="累计击杀 "+(TRAIN_KILLS_PER*n)+" 只咒灵，咒力上限 +"+(TRAIN_ENERGY_PER*n);
+            PARENT[i]=i==TRAIN_FIRST?SORCERER:i-1;
+        }
+    }
+    private static final String PREFIX="MainlineUnlocked",COUNT="MainlineCount",KILLS="MainlineKills";
     public static final int SIMPLE_RADIUS=10,SIMPLE_TICKS=200,BARRIER_RADIUS=15,BARRIER_TICKS=200;
     private record Field(ServerPlayer owner,ServerLevel level,Vec3 center,long end,Map<BlockPos,BlockState> blocks) { }
     private static final Map<UUID,Field> SIMPLE_FIELDS=new HashMap<>(),BARRIERS=new HashMap<>();
@@ -41,6 +57,34 @@ public final class Mainline {
 
     public static boolean unlocked(Player p,int id){return id>=0&&id<NAMES.length&&Curse.data(p).getBoolean(PREFIX+id);}
     public static int count(Player p,int id){return Curse.data(p).getInt(COUNT+id);}
+    /** 累计击杀的咒灵数（10 个训练节点共用这一个计数）。 */
+    public static int kills(Player p){return Curse.data(p).getInt(KILLS);}
+    /**
+     * 咒力总量训练给的额外咒力上限：按**已解锁的级数**现算 300/600/900…，不另存累加器，
+     * 所以既不会重复发放，也不会因为丢一次写入就少一截。
+     */
+    public static double energyBonus(Player p){
+        double sum=0;
+        for(int n=1;n<=TRAIN_COUNT;n++)if(unlocked(p,TRAIN_FIRST+n-1))sum+=TRAIN_ENERGY_PER*n;
+        return sum;
+    }
+    /** 「咒灵」口径：所有 Monster（含模组里的各级咒灵、首领）。玩家、NPC、友方召唤物不算。 */
+    public static boolean curseSpirit(LivingEntity e){return e instanceof net.minecraft.world.entity.monster.Monster;}
+    /** 记一次击杀并结算训练节点：3/6/9… 逐级点亮，父节点没解锁就停。 */
+    private static void addKill(ServerPlayer p,LivingEntity victim){
+        if(p instanceof FakePlayer||victim==p||ally(p,victim)||!curseSpirit(victim))return;
+        var d=Curse.data(p);int total=d.getInt(KILLS)+1;d.putInt(KILLS,total);
+        for(int n=1;n<=TRAIN_COUNT;n++){
+            int id=TRAIN_FIRST+n-1;
+            if(unlocked(p,id))continue;
+            if(total<TRAIN_KILLS_PER*n)break;
+            int before=(int)energyBonus(p);
+            unlock(p,id);
+            int after=(int)energyBonus(p);
+            if(after>before)p.sendSystemMessage(Component.literal("咒力总量上限 +"+(after-before)+"（当前 "+after+"）").withStyle(ChatFormatting.AQUA));
+        }
+        sync(p);
+    }
     public static boolean domainUnlocked(Player p){return p instanceof FakePlayer||unlocked(p,DOMAIN);}
     public static boolean requireDomain(ServerPlayer p){if(domainUnlocked(p))return true;p.displayClientMessage(Component.literal("尚未解锁领域展开：先累计使用简易领域 15 次（L 查看进度）"),true);return false;}
     public static boolean domainSkill(int id){return MainlineRules.domainSkill("",id);}
@@ -59,7 +103,7 @@ public final class Mainline {
     private static void addCount(ServerPlayer p,int id,int cap){Curse.data(p).putInt(COUNT+id,MainlineRules.nextCount(count(p,id),cap));awardCount(p,id==SIMPLE?DOMAIN:AMPLIFY,count(p,id));sync(p);}
     public static void onCharacterChosen(ServerPlayer p){unlock(p,SORCERER);}
     public static int mask(Player p){int m=0;for(int i=0;i<NAMES.length;i++)if(unlocked(p,i))m|=1<<i;return m;}
-    public static void sync(ServerPlayer p){if(p instanceof FakePlayer)return;MainlinePackets.send(p,mask(p),count(p,SIMPLE),count(p,DOMAIN));}
+    public static void sync(ServerPlayer p){if(p instanceof FakePlayer)return;MainlinePackets.send(p,mask(p),count(p,SIMPLE),count(p,DOMAIN),kills(p));}
 
     public static boolean ally(ServerPlayer p,LivingEntity e){
         if(e==p||e==null||e.isSpectator()||e.level()!=p.level()||CombatSettings.relation(p,e.getUUID())==CombatSettings.ENEMY)return false;
@@ -96,7 +140,10 @@ public final class Mainline {
         if(e.isCanceled())return;
         ServerPlayer p=CombatSettings.caster(e.getSource());
         if(p==null&&e.getEntity().getKillCredit() instanceof ServerPlayer credited)p=credited;
-        if(p!=null&&!(p instanceof FakePlayer)&&unlocked(p,BARRIER)&&!ally(p,e.getEntity())&&e.getEntity()!=p&&DomainClash.domainCapable(e.getEntity()))unlock(p,SIMPLE);
+        if(p==null||p instanceof FakePlayer)return;
+        // 咒力总量训练：任何玩家击杀咒灵都累计（不限角色、不限是否已解锁结界术）
+        addKill(p,e.getEntity());
+        if(unlocked(p,BARRIER)&&!ally(p,e.getEntity())&&e.getEntity()!=p&&DomainClash.domainCapable(e.getEntity()))unlock(p,SIMPLE);
     }
     public static void onKillDomainOwner(ServerPlayer p){unlock(p,SIMPLE);}
     public static void onDomainOpened(ServerPlayer p){

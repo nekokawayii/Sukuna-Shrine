@@ -1,0 +1,1 @@
+{"parent":"sukuna:mainline/energy_train_5","display":{"icon":{"item":"minecraft:experience_bottle"},"title":"咒力总量训练6","description":"累计击杀 18 只咒灵，永久提升 1800 点咒力上限","frame":"task","show_toast":true,"announce_to_chat":true,"hidden":false},"criteria":{"learned":{"trigger":"minecraft:impossible"}}}

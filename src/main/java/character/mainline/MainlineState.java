@@ -4,8 +4,10 @@ package character.mainline;
 public final class MainlineState {
     public static volatile int mask;
     public static volatile int simple, domain;
+    /** 累计击杀咒灵数（咒力总量训练用）。 */
+    public static volatile int kills;
 
-    public static boolean unlocked(int id) { return id >= 0 && id < 7 && (mask & (1 << id)) != 0; }
+    public static boolean unlocked(int id) { return id >= 0 && id < Mainline.NAMES.length && (mask & (1 << id)) != 0; }
 
     private MainlineState() {}
 }

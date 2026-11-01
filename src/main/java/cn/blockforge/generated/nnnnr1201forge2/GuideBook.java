@@ -28,6 +28,19 @@ public final class GuideBook {
     }
 
     /** 有帕秋莉就给帕秋莉手册，没有就给成书（帕秋莉是可选依赖，用注册表查物品，不需要编译期依赖）。 */
+    /** 兜底：登录事件之外，每 40 刻补发一次（老存档/事件时序问题都不会漏）。 */
+    @SubscribeEvent public static void tick(net.minecraftforge.event.TickEvent.PlayerTickEvent event) {
+        if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) return;
+        if (!(event.player instanceof ServerPlayer p) || p.tickCount % 40 != 0) return;
+        var data = Curse.data(p);
+        if (data.getBoolean("SukunaGuideGiven")) return;
+        data.putBoolean("SukunaGuideGiven", true);
+        p.getInventory().add(book());
+        p.sendSystemMessage(Component.literal("已获得《咒术公开玩法手册》（全部公开玩法都在里面）")
+            .withStyle(ChatFormatting.GOLD));
+        com.mojang.logging.LogUtils.getLogger().info("[手册] 已补发游玩方法手册给 {}", p.getGameProfile().getName());
+    }
+
     public static ItemStack book() {
         var patchouli = net.minecraft.core.registries.BuiltInRegistries.ITEM
             .get(new net.minecraft.resources.ResourceLocation("patchouli", "guide_book"));

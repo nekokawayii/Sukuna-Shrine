@@ -71,7 +71,13 @@ public final class ThousandMileChainItem extends Item {
     private static void tell(ServerPlayer p, String text) { p.displayClientMessage(Component.literal(text), true); }
     @Override public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         if (hand != InteractionHand.MAIN_HAND) return InteractionResultHolder.pass(player.getItemInHand(hand));
-        if (player instanceof ServerPlayer p) configure(p);
+        if (player instanceof ServerPlayer p) {
+            if (p.isShiftKeyDown() && ThousandMileChain.active(p)) {
+                ThousandMileChain.pullSelf(p);
+                return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);
+            }
+            configure(p);
+        }
         return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);
     }
     @Override public InteractionResult useOn(UseOnContext c) {

@@ -58,6 +58,7 @@ public final class ThousandMileChain {
         final UUID itemId;
         final boolean armed;
         Vec3 anchor, velocity, tip, direction = Vec3.ZERO, pin;
+        long boundAt;
         LivingEntity target;
         int phase = ANCHOR, returnTicks;
         long nextPress;
@@ -154,7 +155,13 @@ public final class ThousandMileChain {
             physics(s);
             if(!SESSIONS.containsKey(s.owner.getUUID()))continue;
             if(s.phase==EXTENDING)extend(s);
-            if(s.phase==BOUND){hold(s);if(s.armed&&s.level.getGameTime()%10==0)TechniqueSeverance.maintainSeal(s.target);}
+            if(s.phase==BOUND){
+                hold(s);
+                if(s.armed&&s.level.getGameTime()%10==0)TechniqueSeverance.maintainSeal(s.target);
+                // 持续伤害：每秒 1 点，装天逆蛑翻倍
+                if(s.target!=null&&(s.level.getGameTime()-s.boundAt)%20==0)
+                    s.target.hurt(s.owner.damageSources().magic(), s.armed ? 2f : 1f);
+            }
             if(s.level.getGameTime()%2==0)sync(s);
         }
     }
@@ -209,6 +216,9 @@ public final class ThousandMileChain {
         CAPTIVES.put(target.getUUID(),s);target.stopRiding();target.ejectPassengers();
         target.getPersistentData().putBoolean(GRAVITY,target.isNoGravity());target.setNoGravity(true);
         immobilize(target);
+        // 锁定伤害：抓到瞬间 25 点（装天逆蛑翻倍）
+        target.hurt(s.owner.damageSources().playerAttack(s.owner), s.armed ? 50f : 25f);
+        s.boundAt=s.level.getGameTime();
         hold(s);sound(s);sync(s);tell(s.owner,s.armed?"已缠绕 · 天逆蛑持续封锁咒术，左键拉回":"已缠绕定身 · 左键拉到面前");
     }
     private static void immobilize(LivingEntity target) {
@@ -236,9 +246,27 @@ public final class ThousandMileChain {
         if(target.position().distanceToSqr(s.pin)>.0025)target.teleportTo(s.pin.x,s.pin.y,s.pin.z);
         s.tip=target.getBoundingBox().getCenter();
     }
+    /** 抓住方块或敌人后「潜行 + 右键」：把自己拉到锁链另一端。 */
+    public static boolean pullSelf(ServerPlayer p) {
+        Session s = null;
+        for (Session it : SESSIONS.values()) if (it.owner == p) s = it;
+        if (s == null) return false;
+        Vec3 dest = s.target != null ? s.target.position() : s.anchor;
+        Vec3 dir = dest.subtract(p.position());
+        if (dir.lengthSqr() < 1) return false;
+        Vec3 at = dest.subtract(dir.normalize().scale(1.6));
+        p.teleportTo(at.x, at.y, at.z);
+        p.setDeltaMovement(Vec3.ZERO);
+        p.fallDistance = 0;
+        p.hurtMarked = true;
+        tell(p, "万里之锁 · 已拉到自己过去");
+        finish(s);
+        return true;
+    }
+
     private static void recall(Session s) {
         if(s.phase==RETURNING)return;
-        if(s.target!=null&&safeFront(s)==null){tell(s.owner,"面前没有容得下目标的安全位置，已原地解开锁链");finish(s);return;}
+        // 拉到敌人时不再判断安全地形：直接拉
         s.phase=RETURNING;s.returnTicks=0;sound(s);sync(s);
     }
     private static Vec3 safeFront(Session s) {
@@ -258,7 +286,9 @@ public final class ThousandMileChain {
         Vec3 hand=hand(s.owner);
         if(s.target!=null){
             Vec3 dest=safeFront(s);
-            if(dest==null){tell(s.owner,"面前落点已被挡住，锁链已安全解开");finish(s);return;}
+            if(dest==null){Vec3 lk=s.owner.getLookAngle();Vec3 fw=new Vec3(lk.x,0,lk.z).normalize();
+                if(fw.lengthSqr()<.1)fw=new Vec3(0,0,1);
+                dest=s.owner.position().add(fw.scale(Math.max(2.2,s.owner.getBbWidth()/2+s.target.getBbWidth()/2+.6)));}
             Vec3 from=s.target.position(),delta=dest.subtract(from);
             Vec3 step=from.add(delta.normalize().scale(Math.min(6,delta.length())));
             boolean clear=loaded(s.level,from,step);

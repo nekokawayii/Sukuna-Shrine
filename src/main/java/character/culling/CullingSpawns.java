@@ -28,6 +28,8 @@ public final class CullingSpawns {
     private static final String[] CURSES = {"mutant", "special_curse", "low_curse", "ash_curse", "wraith"};
     /** 波次计数：每触发一轮刷新 +1，用来抬高后续一波的数值。 */
     private static int WAVE_INDEX;
+    /** 甚尔：每三波最多一只。 */
+    private static final String TOJI_ROLE = "toji_echo";
 
     @SubscribeEvent
     public static void tick(TickEvent.ServerTickEvent e) {
@@ -38,20 +40,24 @@ public final class CullingSpawns {
         if (level == null || level.players().isEmpty()) return;
         List<Mob> all = level.getEntitiesOfClass(Mob.class, new AABB(-256, 0, -256, 256, 512, 256),
             m -> m.isAlive() && m.getPersistentData().getBoolean("CullingEnemy"));
-        int sukuna = 0, sorcerers = 0, curses = 0;
+        int sukuna = 0, sorcerers = 0, curses = 0, toji = 0;
         for (Mob m : all) {
             String kind = m.getPersistentData().getString("CullingKind");
             if ("sukuna".equals(kind)) sukuna++;
             else if ("sorcerer".equals(kind)) sorcerers++;
             else curses++;
+            if (TOJI_ROLE.equals(m.getPersistentData().getString("ExpeditionRole"))) toji++;
         }
         boolean elite = anyRule(level, "elite") || anyRule(level, "elite_law");
         boolean ancient = anyRule(level, "ancient");
         int wave = WAVE_INDEX;
+        int stage = Math.max(0, wave / WAVE);
+        // r221：甚尔每三波最多一只——场上已有就不再刷，且只允许在第 0/3/6… 波刷出来
+        boolean allowToji = toji == 0 && stage % 3 == 0;
         if (sukuna < CAP_SUKUNA) spawnSukuna(level, wave);
         if (curses < CAP_CURSE) spawn(level, CURSES, "curse", Math.min(CAP_CURSE - curses, elite ? 1 : 2), wave, elite);
         int sorcererCap = ancient ? CAP_SORCERER * 3 : CAP_SORCERER;
-        if (sorcerers < sorcererCap) spawn(level, SORCERERS, "sorcerer", Math.min(sorcererCap - sorcerers, elite ? 1 : 2), wave, elite);
+        if (sorcerers < sorcererCap) spawn(level, SORCERERS, "sorcerer", Math.min(sorcererCap - sorcerers, elite ? 1 : 2), wave, elite, allowToji);
         if (anyRule(level, "overflow") && level.getRandom().nextInt(3) == 0)
             spawn(level, CURSES, "curse", 2, wave, false);
         // 全员敌对
@@ -61,12 +67,17 @@ public final class CullingSpawns {
     }
 
     private static void spawn(ServerLevel level, String[] pool, String kind, int count, int wave, boolean elite) {
+        spawn(level, pool, kind, count, wave, elite, true);
+    }
+
+    private static void spawn(ServerLevel level, String[] pool, String kind, int count, int wave, boolean elite, boolean allowToji) {
         var rnd = level.random;
         for (int i = 0; i < count; i++) {
             ServerPlayer anchor = level.players().get(rnd.nextInt(level.players().size()));
             BlockPos at = findSpot(level, anchor, rnd);
             if (at == null) continue;
             String role = pool[rnd.nextInt(pool.length)];
+            if (kind.equals("sorcerer") && TOJI_ROLE.equals(role) && !allowToji) role = "participant_ryu";
             if (kind.equals("curse") && elite) role = "special_curse";
             if (kind.equals("sorcerer") && elite) role = "kenjaku";
             Mob mob = ExpeditionMobs.spawn(level, at, role, anchor.isCreative() ? null : anchor);

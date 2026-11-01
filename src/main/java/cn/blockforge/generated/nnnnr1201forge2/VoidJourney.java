@@ -23,8 +23,7 @@ public final class VoidJourney {
         grantKey(p);
         long keyCd=Curse.data(p).getLong("JogoKeyCooldown")-p.level().getGameTime();
         if(keyCd>0){p.sendSystemMessage(Component.literal("虚空钥匙冷却中 · "+(keyCd/20)+" 秒"));return;}
-        boolean hasKey=p.getInventory().contains(new net.minecraft.world.item.ItemStack(VoidContent.KEY.get()));
-        if(!hasKey){p.sendSystemMessage(Component.literal("虚空竞技场需要虚空钥匙：击败虎杖残影后获得，或用 /sukuna void key 补领。"));return;}
+        // 前置限制已删除：不再检查虚空钥匙，直接进入竞技场
         ServerLevel l=p.server.getLevel(ARENA);if(l==null){p.sendSystemMessage(Component.literal("虚空竞技场尚未载入，请重新打开存档。"));return;}
         var d=Curse.data(p);d.putString("VoidReturnDimension",p.level().dimension().location().toString());d.putDouble("VoidReturnX",p.getX());d.putDouble("VoidReturnY",p.getY());d.putDouble("VoidReturnZ",p.getZ());
         for(int x=-3;x<=3;x++)for(int z=-3;z<=3;z++)l.getChunk(x,z);

@@ -153,7 +153,8 @@ public final class GeneratedMod {
         }
         MinecraftForge.EVENT_BUS.register(character.naoya.NaoyaCombat.class);
         MinecraftForge.EVENT_BUS.register(character.naoya.NaoyaDomain.class);
-        MinecraftForge.EVENT_BUS.register(character.mainline.Mainline.class);   // 共同主线成就
+        MinecraftForge.EVENT_BUS.register(character.mainline.Mainline.class);
+        MinecraftForge.EVENT_BUS.register(GuideBook.class);   // 开局《游玩方法手册》   // 共同主线成就
         MinecraftForge.EVENT_BUS.register(character.TechniqueApi.class);
         MinecraftForge.EVENT_BUS.register(character.domain.DomainStyleReload.class);
         MinecraftForge.EVENT_BUS.register(character.domain.PictureDomainApi.class);

@@ -36,6 +36,11 @@ public final class ThousandMileChainItem extends Item {
             return;
         }
         if (ThousandMileChain.active(p)) {
+            // 潜行 + 右键：把自己拉到锁链另一端（所有右键入口最终都会走到这里，兜底最稳）
+            if (p.isShiftKeyDown()) {
+                ThousandMileChain.pullSelf(p);
+                return;
+            }
             tell(p, "先收回锁链，再装卸天逆蛑");
             return;
         }

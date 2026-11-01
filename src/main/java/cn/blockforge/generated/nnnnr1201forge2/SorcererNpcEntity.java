@@ -47,7 +47,8 @@ public final class SorcererNpcEntity extends PathfinderMob implements character.
                 : t instanceof Monster || t instanceof SorcererNpcEntity s&&"mahito".equals(s.role))));
     }
     public static AttributeSupplier.Builder attributes(String role){
-        double health=switch(role){case "nanami"->300;case "yuta"->700;case "yuki"->650;case "toji"->600;default->600;};
+        // r215：走 NpcBalance 统一表（整合包模式 ×30），实体进世界时还会再核一次。
+        double health=NpcBalance.health("sukuna:"+role+"_npc");
         return createMobAttributes().add(Attributes.MAX_HEALTH,health)
             .add(Attributes.ATTACK_DAMAGE,role.equals("toji")?14:8)
             .add(Attributes.ATTACK_SPEED,4).add(Attributes.MOVEMENT_SPEED,role.equals("toji")?.36:.29)

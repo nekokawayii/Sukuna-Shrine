@@ -52,29 +52,34 @@ public final class TechniqueSeverance {
      * @return 是否真的处理了这个目标
      */
     public static boolean sever(LivingEntity target, boolean seal, LivingEntity source) {
+        return sever(target, seal, source, SEAL_TICKS);
+    }
+
+    /** r215：可指定封印时长（甚尔命中要 5 秒，即 100 刻）。 */
+    public static boolean sever(LivingEntity target, boolean seal, LivingEntity source, int sealTicks) {
         if (target == null || target.level().isClientSide) return false;
         boolean outer = severing;
         severing = true;
         try {
-            return sever0(target, seal, source);
+            return sever0(target, seal, source, Math.max(1, sealTicks));
         } finally {
             severing = outer;
         }
     }
 
-    private static boolean sever0(LivingEntity target, boolean seal, LivingEntity source) {
+    private static boolean sever0(LivingEntity target, boolean seal, LivingEntity source, int ticks) {
         boolean touched = DomainClash.sever(target);
         if (target instanceof ServerPlayer p) {
             cancelCasting(p);
             touched = true;
-            if (seal) sealPlayer(p);
+            if (seal) sealPlayer(p, ticks);
         } else if (target instanceof Mob mob) {
             // NPC（含假玩家）与女仆：先走它们自己的施术上下文。
             ServerPlayer actor = NpcBridge.supports(mob) ? NpcBridge.actorFor(mob) : MaidBridge.progression(mob);
             if (actor != null) {
                 touched |= DomainClash.sever(actor);
                 cancelCasting(actor);
-                if (seal) sealPlayer(actor);
+                if (seal) sealPlayer(actor, ticks);
             }
             if (mob instanceof GojoEntity gojo) {
                 gojo.severTechnique();
@@ -86,9 +91,9 @@ public final class TechniqueSeverance {
                 yuji.clashInterrupt();
                 touched = true;
             }
-            if (seal) sealMob(mob);
+            if (seal) sealMob(mob, ticks);
         }
-        if (seal && !(target instanceof ServerPlayer) && !(target instanceof Mob)) sealMob(target);
+        if (seal && !(target instanceof ServerPlayer) && !(target instanceof Mob)) sealMob(target, ticks);
         return touched || seal;
     }
 
@@ -110,18 +115,18 @@ public final class TechniqueSeverance {
         try { if (p instanceof NpcBridge.NpcActor a && a.mob instanceof Mob npc) character.npc.NpcDomain.close(npc, "天逆蛑·术式切断"); } catch (Throwable ignored) { }
     }
 
-    private static void sealPlayer(ServerPlayer p) {
-        Curse.severTechnique(p, SEAL_TICKS);
+    private static void sealPlayer(ServerPlayer p, int ticks) {
+        Curse.severTechnique(p, ticks);
     }
 
     /** 没有玩家上下文的首领/生物：写同一个到期键，旧技能门会读它。 */
-    private static void sealMob(LivingEntity target) {
+    private static void sealMob(LivingEntity target, int ticks) {
         long now = target.level().getGameTime();
         var data = target.getPersistentData();
-        data.putLong(SEAL_KEY, now + SEAL_TICKS);
-        data.putLong("NpcLegacyBurnout", now + SEAL_TICKS);
-        data.putLong("NpcLegacyRepairAt", now + SEAL_TICKS);
-        target.addEffect(new MobEffectInstance(TechniqueEffects.TECHNIQUE_SEAL.get(), SEAL_TICKS, 0, false, true));
+        data.putLong(SEAL_KEY, now + ticks);
+        data.putLong("NpcLegacyBurnout", now + ticks);
+        data.putLong("NpcLegacyRepairAt", now + ticks);
+        target.addEffect(new MobEffectInstance(TechniqueEffects.TECHNIQUE_SEAL.get(), ticks, 0, false, true));
     }
 
     /** 持续接触天逆蛑：只续上封锁，不重复关闭领域、遍历术式或每刻同步整份角色资料。 */

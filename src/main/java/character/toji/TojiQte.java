@@ -406,6 +406,27 @@ public final class TojiQte {
         }
     }
 
+    // ===== r215：甚尔命中附带「僵直 1 秒」，手里是天逆蛑时再封 5 秒术式 =====
+    /** 命中僵直时长：1 秒。 */
+    public static final int HIT_STUN = 20;
+    /** 天逆蛑命中封印时长：5 秒。 */
+    public static final int HIT_SEAL = 100;
+
+    /** 玩家甚尔与 NPC 甚尔共用：打中谁就僵直谁，拿天逆蛑就再封谁的术式。 */
+    @SubscribeEvent public static void staggerOnHit(net.minecraftforge.event.entity.living.LivingHurtEvent e) {
+        if (e.isCanceled() || e.getAmount() <= 0) return;
+        LivingEntity victim = e.getEntity();
+        if (!(e.getSource().getEntity() instanceof LivingEntity attacker) || attacker == victim) return;
+        boolean toji = attacker instanceof ServerPlayer p && CharacterService.toji(p)
+            || attacker instanceof SorcererNpcEntity npc && "toji".equals(npc.characterId());
+        if (!toji) return;
+        if (victim instanceof Mob mob) character.npc.NpcControl.stun(mob, "toji_hit", HIT_STUN);
+        else victim.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+            net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, HIT_STUN, 5, false, true));
+        if (attacker.getMainHandItem().is(Content.TENKA_SPEAR.get()))
+            TechniqueSeverance.sever(victim, true, attacker, HIT_SEAL);
+    }
+
     /** 闪避无敌帧 + 夺命挡箭牌：伤害转移给替死鬼。 */
     @SubscribeEvent public static void hurt(net.minecraftforge.event.entity.living.LivingHurtEvent e) {
         ServerPlayer p = MaidBridge.progression(e.getEntity());

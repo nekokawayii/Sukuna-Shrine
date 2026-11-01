@@ -63,9 +63,15 @@ public final class ThousandMileChain {
         int phase = ANCHOR, returnTicks;
         long nextPress;
         boolean landed;
+        /** r215：NPC 直甩的会话（不要求主手是锁链，到期自动回收）。 */
+        boolean npc;
+        long expiresAt;
         final Set<UUID> viewers = new HashSet<>();
         Session(ServerPlayer p, UUID itemId) {
-            owner=p;level=p.serverLevel();this.itemId=itemId;armed=ThousandMileChainItem.armed(p.getMainHandItem());
+            this(p, itemId, ThousandMileChainItem.armed(p.getMainHandItem()));
+        }
+        Session(ServerPlayer p, UUID itemId, boolean armed) {
+            owner=p;level=p.serverLevel();this.itemId=itemId;this.armed=armed;
             anchor=p.getEyePosition().add(p.getLookAngle().scale(.5));tip=anchor;
             velocity=p.getLookAngle().scale(.7).add(0,.12,0);nextPress=level.getGameTime()+4;
         }
@@ -85,6 +91,29 @@ public final class ThousandMileChain {
             &&!PrisonSystem.locked(p)&&!bound(p)&&!ObserverRitual.active(p)&&!TenShadows.locked(p)
             &&!DomainClash.active(p)&&!SixfoldFinale.controlled(p)&&!NetBranches.locked(p)
             &&!Uraume.locked(p)&&!CombatExpansion.controlled(p)&&!GojoEntity.mindLocked(p);
+    }
+
+    /**
+     * r215：NPC 用——直接朝目标甩一条锁链，跳过「先抛首端、转开视线再延伸」的镜头流程。
+     * <p>{@code armed=true} 表示挂了天逆蛑：命中切断术式、锁定伤害 50、每秒 2 点、缠绕期间持续封印。
+     * NPC 不会自己收链，所以挂一个到期时间，到点自动回收（{@code recall}）。
+     */
+    public static boolean npcThrow(ServerPlayer owner, LivingEntity target, boolean armed, int ticks) {
+        if (owner == null || target == null || owner == target) return false;
+        if (SESSIONS.containsKey(owner.getUUID())) return false;
+        if (!allowed(owner) || !CombatSettings.canHit(owner, target)) return false;
+        Session s = new Session(owner, UUID.randomUUID(), armed);
+        s.npc = true;
+        s.phase = EXTENDING;
+        s.tip = owner.getEyePosition();
+        Vec3 aim = target.getBoundingBox().getCenter().subtract(s.tip);
+        if (aim.lengthSqr() < 0.01) return false;
+        s.direction = aim.normalize();
+        s.anchor = s.tip;
+        s.expiresAt = owner.level().getGameTime() + Math.max(20, ticks);
+        SESSIONS.put(owner.getUUID(), s);
+        sound(s); sync(s);
+        return true;
     }
     private static void press(ServerPlayer p, Press m) {
         if (!ThousandMileChainItem.isChain(p.getMainHandItem())) return;
@@ -141,6 +170,8 @@ public final class ThousandMileChain {
         return false;
     }
     private static boolean valid(Session s) {
+        if (s.npc) return s.owner.level()==s.level&&s.owner.isAlive()&&!s.owner.isRemoved()
+            &&!s.owner.hasDisconnected()&&!s.owner.isSpectator()&&!PrisonSystem.locked(s.owner);
         ItemStack stack=s.owner.getMainHandItem();
         return s.owner.level()==s.level&&s.owner.isAlive()&&!s.owner.isRemoved()&&!s.owner.hasDisconnected()&&!s.owner.isSpectator()
             &&ThousandMileChainItem.isChain(stack)&&stack.getCount()==1&&stack.hasTag()&&stack.getTag().hasUUID("ThousandMileId")
@@ -150,6 +181,7 @@ public final class ThousandMileChain {
         if(e.phase!=TickEvent.Phase.END)return;
         for(Session s:List.copyOf(SESSIONS.values())) {
             if(!valid(s)){finish(s);continue;}
+            if(s.expiresAt>0&&s.level.getGameTime()>=s.expiresAt){recall(s);continue;}
             if(s.target!=null&&(!s.target.isAlive()||s.target.isRemoved()||s.target.level()!=s.level||!CombatSettings.canHit(s.owner,s.target)||PrisonSystem.locked(s.target))){finish(s);continue;}
             if(s.phase==RETURNING){returnTick(s);continue;}
             physics(s);

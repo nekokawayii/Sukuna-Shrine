@@ -32,6 +32,12 @@ public final class NpcBalance {
         BASE.put("sukuna:higuruma_npc", 900.0);
         BASE.put("sukuna:sukuna_npc", 2000.0);
         BASE.put("sukuna:kashimo_npc", 1200.0);
+        // r215：五位共用 SorcererNpcEntity 的角色 NPC 之前没进这张表，整合包模式下血量还停在 300~700。
+        BASE.put("sukuna:nanami_npc", 300.0);
+        BASE.put("sukuna:yuta_npc", 700.0);
+        BASE.put("sukuna:yuki_npc", 650.0);
+        BASE.put("sukuna:toji_npc", 600.0);
+        BASE.put("sukuna:mahito_npc", 600.0);
     }
     public static final double MODPACK_MULTIPLIER = 30.0;
 

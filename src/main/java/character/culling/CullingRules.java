@@ -40,7 +40,11 @@ import net.minecraftforge.server.ServerLifecycleHooks;
  */
 public final class CullingRules {
     /** 规则面板：99=请求打开；0~4=选第 n 个候选；5=脱离。走 TechniqueInput 的 phase=7。 */
-    public static final int SKILL = 3200, OPEN = 99, ESCAPE = 5, COST = 100, MAX = 5;
+    public static final int SKILL = 3200, OPEN = 99, ESCAPE = 5, COST = 100;
+    /** 脱离门槛：制定够这么多条规则后，面板上方才出现「脱离」。选规则本身**不限条数**（r224）。 */
+    public static final int ESCAPE_AT = 5;
+    /** 兼容旧引用。 */
+    public static final int MAX = ESCAPE_AT;
     private static final String COUNT = "CullingRuleCount", OPTION = "CullingRuleOption", OPTIONS = "CullingRuleOptions", RUN = "CullingRunTicks";
     private static final UUID HEALTH = UUID.fromString("91f0c8f1-0000-4a11-9c00-00000000c001");
     private static final UUID ATTACK = UUID.fromString("91f0c8f1-0000-4a11-9c00-00000000c003");
@@ -169,7 +173,7 @@ public final class CullingRules {
         return false;
     }
     public static List<Rule> active(Player p){
-        int n=Math.min(MAX,picked(p));List<Rule> out=new ArrayList<>();
+        int n=picked(p);List<Rule> out=new ArrayList<>();
         for(int i=0;i<n;i++){
             String id=ruleData(p).getString(OPTION+i);
             for(Rule rule:ALL)if(rule.id().equals(id)){out.add(rule);break;}
@@ -210,7 +214,8 @@ public final class CullingRules {
     }
     private static long packOptions(ServerPlayer p){
         List<Integer> opts=options(p);long packed=0;
-        for(int i=0;i<5&&i<opts.size();i++)packed|=(long)opts.get(i)<<(7*i);
+        // 存 idx+1：0 表示这张卡没有候选（卡池被抽空时面板显示「—」）
+        for(int i=0;i<5&&i<opts.size();i++)packed|=(long)(opts.get(i)+1)<<(7*i);
         return packed;
     }
     private static List<Integer> options(ServerPlayer p){
@@ -237,13 +242,14 @@ public final class CullingRules {
         if(!inDimension(p))return;
         int n=picked(p);
         if(index==ESCAPE){
-            if(n<MAX){p.sendSystemMessage(Component.literal("必须先制定 "+MAX+" 条规则才能脱离死灭洄游（当前 "+n+" 条）。").withStyle(ChatFormatting.GRAY));return;}
+            if(n<ESCAPE_AT){p.sendSystemMessage(Component.literal("至少制定 "+ESCAPE_AT+" 条规则才能脱离死灭洄游（当前 "+n+" 条）。").withStyle(ChatFormatting.GRAY));return;}
             CullingGame.leave(p);return;
         }
         if(index<0||index>4)return;
         List<Integer> opts=options(p);
-        if(index>=opts.size())return;
-        if(n>=MAX){p.sendSystemMessage(Component.literal("已经制定满 "+MAX+" 条规则。").withStyle(ChatFormatting.GRAY));return;}
+        if(index>=opts.size()){
+            p.sendSystemMessage(Component.literal("已经没有可选规则了（卡池已全部制定）。").withStyle(ChatFormatting.GRAY));return;}
+
         if(points(p)<COST){p.sendSystemMessage(Component.literal("积分不足：制定规则需要 "+COST+" 分，现有 "+points(p)+"。").withStyle(ChatFormatting.GRAY));return;}
         Rule rule=ALL.get(opts.get(index));
         ExpeditionProgress.data(p).putInt("CullingPoints",points(p)-COST);

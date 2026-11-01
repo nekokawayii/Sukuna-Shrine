@@ -24,8 +24,8 @@ public final class CullingGame {
     public static void leave(ServerPlayer p){
         if(!p.level().dimension().equals(DIM))return;
         // r218：必须制定满 5 条规则，才能在规则面板里选「脱离」离开
-        if(character.culling.CullingRules.picked(p)<character.culling.CullingRules.MAX){
-            p.sendSystemMessage(Component.literal("必须先制定 "+character.culling.CullingRules.MAX+" 条规则才能离开死灭洄游（shift+P 打开规则面板）。").withStyle(net.minecraft.ChatFormatting.GRAY));
+        if(character.culling.CullingRules.picked(p)<character.culling.CullingRules.ESCAPE_AT){
+            p.sendSystemMessage(Component.literal("至少制定 "+character.culling.CullingRules.ESCAPE_AT+" 条规则才能离开死灭洄游（shift+P 打开规则面板）。").withStyle(net.minecraft.ChatFormatting.GRAY));
             return;
         }
         character.culling.CullingRules.onLeave(p);

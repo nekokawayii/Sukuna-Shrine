@@ -21,7 +21,8 @@ public final class CullingRuleScreen extends Screen {
         super(Component.literal("死灭洄游 · 规则"));
         this.picked = picked;
         this.points = points;
-        for (int i = 0; i < 5; i++) options[i] = (int) ((packed >>> (7 * i)) & 0x7F);
+        // 服务端存的是 idx+1，0 = 这张卡没有候选
+        for (int i = 0; i < 5; i++) options[i] = (int) ((packed >>> (7 * i)) & 0x7F) - 1;
     }
 
     public static void open(int picked, int points, long packed) {
@@ -41,12 +42,12 @@ public final class CullingRuleScreen extends Screen {
         g.fill(x, y, x + 1, y + height, red);
         g.fill(x + width - 1, y, x + width, y + height, red);
         g.drawString(font, "死灭洄游 · 规则制定", x + 12, y + 8, 0xFFFF8080, false);
-        String head = "积分 " + points + "   已制定 " + picked + " / " + CullingRules.MAX + "   每条消耗 " + CullingRules.COST + " 分";
+        String head = "积分 " + points + "   已制定 " + picked + " 条（可无限制定）   每条消耗 " + CullingRules.COST + " 分";
         g.drawString(font, head, x + width - 12 - font.width(head), y + 8, 0xFFE8D9B0, false);
 
         // 满 5 条：顶部出现「脱离」
         escapeHover = -1;
-        if (picked >= CullingRules.MAX) {
+        if (picked >= CullingRules.ESCAPE_AT) {
             int bw = 96, bh = 22, bx = (this.width - bw) / 2, by = y - 30;
             boolean hot = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + bh;
             escapeHover = hot ? 1 : 0;
@@ -54,7 +55,7 @@ public final class CullingRuleScreen extends Screen {
             g.fill(bx, by, bx + bw, by + bh, hot ? 0xFF3A0A0A : 0xFF1A0E0E);
             g.drawCenteredString(font, "脱 离", bx + bw / 2, by + 7, hot ? 0xFFFFFFFF : 0xFFFFB0B0);
         } else {
-            String tip = "还差 " + (CullingRules.MAX - picked) + " 条规则才能脱离";
+            String tip = "还差 " + (CullingRules.ESCAPE_AT - picked) + " 条规则才能脱离";
             g.drawString(font, tip, (this.width - font.width(tip)) / 2, y - 22, 0xFF9A9A9A, false);
         }
 
@@ -67,7 +68,7 @@ public final class CullingRuleScreen extends Screen {
             boolean hot = mouseX >= cx && mouseX <= cx + CARD_W && mouseY >= top && mouseY <= top + CARD_H;
             if (hot) hover = i;
             CullingRules.Rule rule = options[i] >= 0 && options[i] < CullingRules.ALL.size() ? CullingRules.ALL.get(options[i]) : null;
-            boolean affordable = points >= CullingRules.COST && picked < CullingRules.MAX;
+            boolean affordable = points >= CullingRules.COST;
             int border = hot && affordable ? 0xFFFFD700 : 0xFF7A2A2A;
             g.fill(cx - 1, top - 1, cx + CARD_W + 1, top + CARD_H + 1, border);
             g.fill(cx, top, cx + CARD_W, top + CARD_H, hot ? 0xFF2A1414 : 0xFF160C0C);
@@ -81,7 +82,7 @@ public final class CullingRuleScreen extends Screen {
                 lineY += 10;
             }
         }
-        String hint = "点击卡片制定规则 · Esc 关闭（未满 " + CullingRules.MAX + " 条不能脱离）";
+        String hint = "点击卡片制定规则（可无限制定）· 满 " + CullingRules.ESCAPE_AT + " 条后出现「脱离」";
         g.drawCenteredString(font, hint, this.width / 2, y + height - 14, 0xFF8A8A8A);
         super.render(g, mouseX, mouseY, partial);
     }
@@ -89,8 +90,8 @@ public final class CullingRuleScreen extends Screen {
     @Override public boolean mouseClicked(double mx, double my, int button) {
         if (button != 0) return super.mouseClicked(mx, my, button);
         int y = (this.height - 150) / 2;
-        if (picked >= CullingRules.MAX && escapeHover == 1) { send(CullingRules.ESCAPE); return true; }
-        if (hover >= 0 && points >= CullingRules.COST && picked < CullingRules.MAX) { send(hover); return true; }
+        if (picked >= CullingRules.ESCAPE_AT && escapeHover == 1) { send(CullingRules.ESCAPE); return true; }
+        if (hover >= 0 && points >= CullingRules.COST) { send(hover); return true; }
         return super.mouseClicked(mx, my, button);
     }
 

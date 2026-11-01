@@ -55,7 +55,7 @@ public final class PrisonSystem {
     }
     /** 探索合成的空狱门疆可直接封印残血敌人；复用原本的持久化牢房，不删除目标快照。 */
     public static boolean captureWeakened(ServerPlayer p,LivingEntity target,net.minecraft.world.item.ItemStack stack){
-        if(target instanceof net.minecraft.world.entity.player.Player||!target.isAlive()||target.getHealth()>target.getMaxHealth()*.15f||locked(target)||locked(p)||!CombatSettings.canHit(p,target)||stack.hasTag()&&stack.getTag().contains(PrisonRealmItem.SEAL))return false;
+        if(!target.isAlive()||locked(target)||locked(p)||stack.hasTag()&&stack.getTag().contains(PrisonRealmItem.SEAL))return false;
         ServerLevel prison=p.server.getLevel(DIMENSION);if(prison==null)return false;
         PrisonRealmEntity realm=PrisonContent.REALM.get().create(p.serverLevel());if(realm==null)return false;
         realm.moveTo(p.getX(),p.getY(),p.getZ(),p.getYRot(),0);realm.configure(p.getUUID());

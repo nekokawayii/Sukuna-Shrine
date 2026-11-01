@@ -53,6 +53,8 @@ public final class ExpeditionEvents {
                 if(l.random.nextInt(6)==0)drop(e,"star_iron_fragment",1);
             }
             int base=sorcerer?5:1,points=Math.max(1,(int)Math.round(base*character.culling.CullingRules.scoreMul(p)));
+            double lootMul=character.culling.CullingRules.lootMul(p);
+            if(lootMul>1&&l.random.nextDouble()<Math.min(.9,lootMul-1))drop(e,"residue_high",1);
             var d=ExpeditionProgress.data(p);d.putInt("CullingPoints",d.getInt("CullingPoints")+points);
             p.displayClientMessage(Component.literal("死灭回游积分 +"+points+"，现有 "+d.getInt("CullingPoints")),true);
         }

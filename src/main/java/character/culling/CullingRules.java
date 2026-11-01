@@ -53,7 +53,7 @@ public final class CullingRules {
     /** 一条规则的数值修正；没写到的字段就是 1（无变化）。 */
     public static final class Mods {
         double energy = 1, damage = 1, taken = 1, health = 1, speed = 1, atkSpeed = 1;
-        double cooldown = 1, heal = 1, spell = 1, melee = 1, score = 1;
+        double cooldown = 1, heal = 1, spell = 1, melee = 1, score = 1, loot = 1;
         double flashChance = 1, flashPower = 0;
         int jump = 0;
         boolean noEnergyRegen, noRegen, domainBanned, noFly, armorOff, noHealthBar, killFullHeal;
@@ -69,6 +69,7 @@ public final class CullingRules {
         Mods spell(double v){spell=v;return this;}
         Mods melee(double v){melee=v;return this;}
         Mods score(double v){score=v;return this;}
+        Mods loot(double v){loot=v;return this;}
         Mods flash(double chance,double power){flashChance=chance;flashPower=power;return this;}
         Mods jump(int v){jump=v;return this;}
         Mods noEnergyRegen(){noEnergyRegen=true;return this;}
@@ -140,7 +141,7 @@ public final class CullingRules {
         // 六、怪物强化与掉落反转
         r("curse_mutate","咒胎变异","怪物生命 -50%，攻击与移速 +100%","怪物",mods().special("mutate_mob")),
         r("death_split","死亡分裂","怪物死亡分裂成 2 只小怪，小怪掉极品材料","怪物",mods().special("death_split")),
-        r("blood_thirst","嗜血狂潮","敌人伤害提升，但击杀积分与残秽翻倍","怪物",mods().taken(1.3).score(2)),
+        r("blood_thirst","嗜血狂潮","敌人伤害提升，但击杀积分与残秽翻倍","怪物",mods().taken(1.3).score(2).loot(2)),
         r("berserk","狂暴法则","怪物无视距离仇恨你，但攻击前摇 +50%","怪物",mods().special("berserk")),
         r("assimilation2","同化危机·蚀","受击叠加同化值（满 10 巨额伤害），但每次受击回咒力","怪物",mods().special("assimilation2")),
         r("elite_law","精英法则","只刷高血量精英，击杀一只 +500 积分与顶级图纸","怪物",mods().special("elite_law")),
@@ -193,6 +194,7 @@ public final class CullingRules {
     }
     public static double energyMul(Player p){return mul(p,m->m.energy);}
     public static double scoreMul(Player p){return mul(p,m->m.score);}
+    public static double lootMul(Player p){return mul(p,m->m.loot);}
     public static double cooldownMul(Player p){return mul(p,m->m.cooldown);}
     public static double healMul(Player p){return mul(p,m->m.heal);}
     public static double flashChanceMul(Player p){return mul(p,m->m.flashChance);}
@@ -293,9 +295,10 @@ public final class CullingRules {
     public static void hurt(LivingHurtEvent e){
         LivingEntity victim=e.getEntity();
         var attacker=e.getSource().getEntity();
-        boolean spell=e.getSource().is(net.minecraft.world.damagesource.DamageTypes.MAGIC)
-            ||e.getSource().is(net.minecraft.world.damagesource.DamageTypes.INDIRECT_MAGIC)
-            ||e.getSource().is(net.minecraft.world.damagesource.DamageTypes.WITHER);
+        // r222：术式/平A 用模组自己的攻击类型标记判定。以前只看 damageType，
+        // 而本模组的技能大多走 playerAttack，结果「极简主义」「血肉苦弱」的分流完全错位。
+        String marked=AttackTypes.peek();
+        boolean spell=marked!=null&&!AttackTypes.UNARMED.equals(marked)&&!AttackTypes.ARROW.equals(marked);
         boolean cullingMob = attacker instanceof Mob am && am.level().dimension().equals(CullingGame.DIM)
             && am.getPersistentData().getBoolean("CullingEnemy");
         if (cullingMob) e.setAmount((float) (e.getAmount() * CullingSpawns.npcDamageMul()));

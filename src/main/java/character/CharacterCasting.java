@@ -82,6 +82,9 @@ public final class CharacterCasting {
             DomainClash.counterCast(p,()->{cast(p,id);return true;});return;
         }
         if(character.mainline.Mainline.domainSkill(p,id)&&!character.mainline.Mainline.requireDomain(p))return;
+        if(character.mainline.Mainline.domainSkill(p,id)&&character.culling.CullingRules.domainBanned(p)){
+            p.displayClientMessage(net.minecraft.network.chat.Component.literal("禁魔结界：结界内禁止领域展开"),true);return;
+        }
         var definition=CharacterService.selected(p);
         if(definition==null||Curse.severed(p))return;
         if(!CharacterService.allowsSkill(p,id)){

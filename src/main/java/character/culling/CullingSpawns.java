@@ -88,6 +88,7 @@ public final class CullingSpawns {
             mob.getPersistentData().putLong("ExpeditionDespawnAt", level.getGameTime() + 9600);
             scale(level, mob, kind, wave);
             name(level, mob, kind);
+            applyNpcRuleMods(mob);
         }
     }
 
@@ -173,6 +174,35 @@ public final class CullingSpawns {
         return ids;
     }
 
+    /** r222：NPC 制定的属性类规则直接加到界内怪物身上（伤害/生命/移速/攻速）。 */
+    private static final java.util.UUID NPC_DMG = java.util.UUID.fromString("8c11a000-0000-4a11-9c00-00000000a001");
+    private static final java.util.UUID NPC_HP = java.util.UUID.fromString("8c11a000-0000-4a11-9c00-00000000a002");
+    private static final java.util.UUID NPC_SPD = java.util.UUID.fromString("8c11a000-0000-4a11-9c00-00000000a003");
+    private static final java.util.UUID NPC_ASP = java.util.UUID.fromString("8c11a000-0000-4a11-9c00-00000000a004");
+
+    public static void applyNpcRuleMods(Mob mob) {
+        if (mob == null || NPC_RULES.isEmpty()) return;
+        double dmg = 1, hp = 1, spd = 1, asp = 1;
+        for (int i : NPC_RULES) {
+            if (i < 0 || i >= CullingRules.ALL.size()) continue;
+            var m = CullingRules.ALL.get(i).mods();
+            dmg *= m.damage; hp *= m.health; spd *= m.speed; asp *= m.atkSpeed;
+        }
+        mod(mob, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE, NPC_DMG, dmg - 1);
+        mod(mob, net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH, NPC_HP, hp - 1);
+        mod(mob, net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED, NPC_SPD, spd - 1);
+        mod(mob, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED, NPC_ASP, asp - 1);
+    }
+
+    private static void mod(Mob mob, net.minecraft.world.entity.ai.attributes.Attribute attr, java.util.UUID id, double amount) {
+        var a = mob.getAttribute(attr);
+        if (a == null) return;
+        if (Math.abs(amount) < 1e-6) { if (a.getModifier(id) != null) a.removeModifier(id); return; }
+        if (a.getModifier(id) != null) a.removeModifier(id);
+        a.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+            id, "死灭NPC规则", amount, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.MULTIPLY_TOTAL));
+    }
+
     /** 怪物打人的伤害倍率（来自 NPC 制定的规则）。 */
     public static double npcDamageMul() {
         double v = 1;
@@ -216,6 +246,8 @@ public final class CullingSpawns {
         }
         level.playSound(null, mob.blockPosition(), net.minecraft.sounds.SoundEvents.BEACON_ACTIVATE,
             net.minecraft.sounds.SoundSource.HOSTILE, 1.4f, .8f);
+        for (Mob m : level.getEntitiesOfClass(Mob.class, new AABB(-256, 0, -256, 256, 512, 256),
+            m -> m.isAlive() && m.getPersistentData().getBoolean("CullingEnemy"))) applyNpcRuleMods(m);
     }
 
     private static boolean anyRule(ServerLevel level, String special) {

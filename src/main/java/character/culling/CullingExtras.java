@@ -103,6 +103,29 @@ public final class CullingExtras {
         e.setCanceled(true);
     }
 
+    // ========== 反转剥夺：治疗减半 ==========
+    @SubscribeEvent
+    public static void healed(net.minecraftforge.event.entity.living.LivingHealEvent e) {
+        if (!(e.getEntity() instanceof ServerPlayer p) || !CullingRules.inDimension(p)) return;
+        double mul = CullingRules.healMul(p);
+        if (mul < 1) e.setAmount((float) (e.getAmount() * mul));
+    }
+
+    // ========== 万有引力 / 低空禁飞 ==========
+    private static void noFly(ServerPlayer p) {
+        var abilities = p.getAbilities();
+        if (abilities.flying || abilities.mayfly) {
+            abilities.flying = false;
+            abilities.mayfly = false;
+            p.onUpdateAbilities();
+        }
+        if (p.tickCount % 20 == 0) {
+            p.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 40, 0, false, false));
+            for (Mob mob : p.serverLevel().getEntitiesOfClass(Mob.class, p.getBoundingBox().inflate(48),
+                m -> m.isAlive() && m.isNoGravity())) mob.setNoGravity(false);
+        }
+    }
+
     // ========== 时间扭曲 ==========
     private static boolean scaling;
     @SubscribeEvent
@@ -230,6 +253,7 @@ public final class CullingExtras {
             }
         }
         if (CullingRules.special(p, "kenjaku") && p.tickCount % 200 == 0) ensurePhantom(p);
+        if (CullingRules.flag(p, m -> m.noFly)) noFly(p);
         if (p.tickCount % 100 == 0) sync(p);
     }
 

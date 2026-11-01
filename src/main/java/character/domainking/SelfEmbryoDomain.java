@@ -18,9 +18,9 @@ import java.util.*;
 
 /**
  * 真人领域「自闭圆顿裹」：
- * · 地面 = 纯黑混凝土，上方再铺一层亮度 15 的光源方块；
- * · 球壳 = 半径 50 的黑色混凝土，每 5 格嵌 2 格宽肉色（粉红）混凝土网格；
- * · 玩家身后的球壳内侧 5 格处，放一排「不可移动的圆钝果实体」（暂用无 AI 僵尸替代）。
+ * · 地面 = 改造血肉，上一层铺亮度 10 的光源方块（最外圈不放光源）；
+ * · 球壳 = 半径 30 的黑色混凝土，每 15 格嵌 2 格宽肉色（粉红）混凝土网格；
+ * · 铺完那一刻在圆心正后方 RADIUS-15 格立 1 只「圆钝果实」（sukuna:yidui，一堆手 bbmodel，渲染 3 倍、不可移动）。
  * 方块按队列逐刻施工并记录旧状态，收起/关服时整批还原。
  */
 public final class SelfEmbryoDomain {
@@ -114,13 +114,16 @@ public final class SelfEmbryoDomain {
     }
 
     private static void spawnFruits(ServerLevel level, ServerPlayer p, Build build) {
-        // 玩家身后球壳内侧 5 格，只放 1 只「圆钝果实」（一堆手模型，不可移动）
+        // 领域圆心正后方 RADIUS-15 格立 1 只「圆钝果实」（一堆手模型，渲染 3 倍、不可移动）。
+        // 锚在圆心而不是玩家脚下：铺完 3 秒内玩家可能已经跑开了，锚圆心才不会飘。
         var look = p.getLookAngle();
         var back = new net.minecraft.world.phys.Vec3(-look.x, 0, -look.z).normalize();
-        var at = p.position().add(back.scale(RADIUS - 15)).add(0, 0.2, 0);
+        double atX = build.center.getX() + 0.5 + back.x * (RADIUS - 15);
+        double atZ = build.center.getZ() + 0.5 + back.z * (RADIUS - 15);
+        double atY = build.center.getY() + 0.2;
         var fruit = cn.blockforge.generated.nnnnr1201forge2.Content.YIDUI.get().create(level);
         if (fruit == null) return;
-        fruit.moveTo(at.x, at.y, at.z, p.getYRot() + 180f, 0f);
+        fruit.moveTo(atX, atY, atZ, p.getYRot() + 180f, 0f);
         fruit.setCustomName(net.minecraft.network.chat.Component.literal("圆钝果实"));
         fruit.setCustomNameVisible(false);
         level.addFreshEntity(fruit);
@@ -182,6 +185,8 @@ public final class SelfEmbryoDomain {
                 }
                 build.terrain.place(pos,target);
             }
+            // 铺完那一刻，在圆心正后方立起 1 只「圆钝果实」（不可移动，收起/关服时一并回收）
+            if (build.cursor >= build.blocks.size() && build.fruits.isEmpty()) spawnFruits(build.level, p, build);
         }
     }
 

@@ -71,7 +71,8 @@ public final class ItemDescriptions {
             case "ultimate_scroll"->"极意卷轴：能承载极之番的厚卷。";
             default->id.getPath().startsWith("page_")
                 ?"九相试炼直接奖励的咒胎；兼容已有存档。"
-                :"「"+event.getItemStack().getHoverName().getString()+"」：宿傩模组的物品 / 材料（详细资料见《游玩方法手册》）。";
+                :AutoDescriptions.get(id.getPath(),
+                    "「"+event.getItemStack().getHoverName().getString()+"」：宿傩模组的物品 / 材料（详细资料见《游玩方法手册》）。");
         };
         for(String line:text.split("\\|"))if(!line.isEmpty())event.getToolTip().add(Component.literal(line).withStyle(ChatFormatting.GRAY));
     }

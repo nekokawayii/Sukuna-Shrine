@@ -1,0 +1,97 @@
+{
+  "name": "附表E-公开战利品说明",
+  "category": "sukuna:guide",
+  "icon": "sukuna:sukuna_memory",
+  "priority": false,
+  "sortnum": 12,
+  "pages": [
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n公开战利品表说明\n箱子一池通常会抽多次；同池条目的权重仅用于相对选择，不能直接写成掉落百分比。带 random_chance 的额外池才有直接概率条件。多个池独立运行，未写数量默认1。无掉落池＝普通破坏不产出，不是漏记录。实体掉落写在正文，不能只看本表。\nsukuna:blocks/alloy_bars\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n高专合金栅栏 / sukuna:alloy_bars / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/alloy_bars.json。\nsukuna:blocks/alloy_block\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n高专合金块 / sukuna:alloy_block / 1 / 1 / 无附加条件"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n来源：src/main/resources/data/sukuna/loot_tables/blocks/alloy_block.json。\nsukuna:blocks/barrier_trap\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n缚灵结界陷阱 / sukuna:barrier_trap / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/barrier_trap.json。\nsukuna:blocks/black_vines\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n缚灵黑绳纤维 / sukuna:black_rope_fiber / 1 / 1 / 工具条件 {\"items\": [\"minecraft:shears\"]}\n来源：src/main/resources/data/sukuna/loot_tables/blocks/black_vines.json。"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\nsukuna:blocks/blood_sakura_leaves\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n血樱树叶 / sukuna:blood_sakura_leaves / 1 / 1 / 工具条件 {\"items\": [\"minecraft:shears\"]}\n血樱花瓣 / sukuna:blood_sakura_petal / 1 / 1 / 本条件独立概率 30.0%\n来源：src/main/resources/data/sukuna/loot_tables/blocks/blood_sakura_leaves.json。\nsukuna:blocks/blood_soil\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n暗红战场土 / sukuna:blood_soil / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/blood_soil.json。"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\nsukuna:blocks/culling_barrier\n无掉落池。\n来源：src/main/resources/data/sukuna/loot_tables/blocks/culling_barrier.json。\nsukuna:blocks/culling_exchange\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n死灭回游积分兑换台 / sukuna:culling_exchange / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/culling_exchange.json。\nsukuna:blocks/culling_exit\n无掉落池。\n来源：src/main/resources/data/sukuna/loot_tables/blocks/culling_exit.json。"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\nsukuna:blocks/curse_crystal_block\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n咒物结晶块 / sukuna:curse_crystal_block / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/curse_crystal_block.json。\nsukuna:blocks/cursed_altar\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n咒胎祭坛 / sukuna:cursed_altar / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/cursed_altar.json。\nsukuna:blocks/cursed_fissure"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n高浓度咒力残秽 / sukuna:residue_high / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/cursed_fissure.json。\nsukuna:blocks/cursed_soil\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n诅咒废土 / sukuna:cursed_soil / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/cursed_soil.json。\nsukuna:blocks/eternal_flame\n池1：抽取 1 次；通过爆炸存活判定。"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n物品 / 编号 / 权重 / 数量 / 条目条件\n不灭火种 / sukuna:eternal_flame / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/eternal_flame.json。\nsukuna:blocks/gu_vat\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n蛊毒缸 / sukuna:gu_vat / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/gu_vat.json。\nsukuna:blocks/idle_transfigured_flesh\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n无为转变改造肉块 / sukuna:idle_transfigured_flesh / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/idle_transfigured_flesh.json。\nsukuna:blocks/jujutsu_ore\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n高专原矿 / sukuna:raw_jujutsu_ore / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/jujutsu_ore.json。\nsukuna:blocks/lava_obsidian\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n熔岩黑曜石 / sukuna:lava_obsidian / 1 / 1 / 工具条件 {\"enchantments\": [{\"enchantment\": \"minecraft:silk_touch\", \"levels\": {\"min\": 1}}]}"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n来源：src/main/resources/data/sukuna/loot_tables/blocks/lava_obsidian.json。\nsukuna:blocks/refining_altar\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n淬炼台 / sukuna:refining_altar / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/refining_altar.json。\nsukuna:blocks/shimenawa\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n缚灵黑绳纤维 / sukuna:black_rope_fiber / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/shimenawa.json。"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\nsukuna:blocks/simple_seal_pillar\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n简易封印柱 / sukuna:simple_seal_pillar / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/simple_seal_pillar.json。\nsukuna:blocks/site_anchor\n无掉落池。\n来源：src/main/resources/data/sukuna/loot_tables/blocks/site_anchor.json。\nsukuna:blocks/special_seal_pillar\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n特级封印柱 / sukuna:special_seal_pillar / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/special_seal_pillar.json。\nsukuna:blocks/spirit_stone\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n灵脉石 / sukuna:spirit_stone / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/spirit_stone.json。\nsukuna:blocks/tengen_core\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n降灵核心 / sukuna:tengen_core / 1 / 1 / 无附加条件"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n来源：src/main/resources/data/sukuna/loot_tables/blocks/tengen_core.json。\nsukuna:blocks/volcanic_ash\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n灰烬团 / sukuna:ash_clump / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/volcanic_ash.json。\nsukuna:blocks/volcanic_rock\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n焦黑火山岩 / sukuna:volcanic_rock / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/volcanic_rock.json。"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\nsukuna:blocks/volcano_barrier\n池1：抽取 1 次；通过爆炸存活判定。\n物品 / 编号 / 权重 / 数量 / 条目条件\n盖棺铁围山结界砖 / sukuna:volcano_barrier / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/blocks/volcano_barrier.json。\nsukuna:chests/abandoned_branch\n池1：抽取 3～6 次；无附加条件。\n物品 / 编号 / 权重 / 数量 / 条目条件\n中浓度咒力残秽 / sukuna:residue_medium / 6 / 2～5 / 无附加条件\n甚尔的旧咒具残片 / sukuna:broken_tool / 3 / 1～2 / 无附加条件\n高专合金配方 / sukuna:alloy_blueprint / 2 / 1～1 / 无附加条件"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n黑封印符纸 / sukuna:seal_black / 3 / 1～3 / 无附加条件\n池2：抽取 1 次；本条件独立概率 25.0%。\n物品 / 编号 / 权重 / 数量 / 条目条件\n简易领域阵盘 / sukuna:simple_domain_disc / 1 / 1 / 无附加条件\n池3：抽取 1 次；本条件独立概率 10.0%。\n物品 / 编号 / 权重 / 数量 / 条目条件\n甚尔的无咒之骨 / sukuna:heavenly_bone / 1 / 1 / 无附加条件\n池4：抽取 1 次；本条件独立概率 2.5%。\n物品 / 编号 / 权重 / 数量 / 条目条件\n死灭回游通行咒符 / sukuna:culling_key / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/chests/abandoned_branch.json。"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\nsukuna:chests/abandoned_shrine\n池1：抽取 3～6 次；无附加条件。\n物品 / 编号 / 权重 / 数量 / 条目条件\n缚灵黑绳纤维 / sukuna:black_rope_fiber / 6 / 2～6 / 无附加条件\n咒物结晶块 / sukuna:curse_crystal_block / 3 / 1～2 / 无附加条件\n蛊毒提炼物 / sukuna:gu_extract / 4 / 1～3 / 无附加条件\n咒物结晶 / sukuna:curse_crystal / 4 / 2～4 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/chests/abandoned_shrine.json。\nsukuna:chests/ancient_grave\n池1：抽取 3～6 次；无附加条件。\n物品 / 编号 / 权重 / 数量 / 条目条件"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n千年前的咒符 / sukuna:ancient_talisman / 4 / 1～2 / 无附加条件\n污秽骨片 / sukuna:tainted_bone / 6 / 2～5 / 无附加条件\n甚尔的无咒之骨 / sukuna:heavenly_bone / 1 / 1～1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/chests/ancient_grave.json。\nsukuna:chests/culling_city\n池1：抽取 3～6 次；无附加条件。\n物品 / 编号 / 权重 / 数量 / 条目条件\n星铁碎片 / sukuna:star_iron_fragment / 6 / 1～3 / 无附加条件\n极浓缩咒力原液 / sukuna:curse_concentrate / 3 / 1～2 / 无附加条件\n高浓度咒力残秽 / sukuna:residue_high / 5 / 1～4 / 无附加条件\n金封印符纸 / sukuna:seal_gold / 2 / 1～2 / 无附加条件"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n池2：抽取 1 次；本条件独立概率 1.5%。\n物品 / 编号 / 权重 / 数量 / 条目条件\n狱门疆的碎屑 / sukuna:prison_fragment / 1 / 1 / 无附加条件\n池3：抽取 1 次；本条件独立概率 8.0%。\n物品 / 编号 / 权重 / 数量 / 条目条件\n特级咒具图纸 / sukuna:special_blueprint / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/chests/culling_city.json。\nsukuna:chests/iwate_house\n池1：抽取 1 次；本条件独立概率 10.0%。\n物品 / 编号 / 权重 / 数量 / 条目条件\n虎杖家双人合照 / sukuna:yuji_family_photo / 1 / 1 / 无附加条件"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n池2：抽取 2～5 次；无附加条件。\n物品 / 编号 / 权重 / 数量 / 条目条件\nminecraft:bread / minecraft:bread / 6 / 1 / 无附加条件\nminecraft:wheat_seeds / minecraft:wheat_seeds / 3 / 1 / 无附加条件\n纸 / minecraft:paper / 4 / 1 / 无附加条件\n绿宝石 / minecraft:emerald / 1 / 1 / 无附加条件\n铁锭 / minecraft:iron_ingot / 2 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/chests/iwate_house.json。\nsukuna:chests/juvenile_center\n池1：抽取 3～6 次；无附加条件。\n物品 / 编号 / 权重 / 数量 / 条目条件"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n低浓度咒力残秽 / sukuna:residue_low / 8 / 2～6 / 无附加条件\n白封印符纸 / sukuna:seal_white / 4 / 1～3 / 无附加条件\nminecraft:bread / minecraft:bread / 5 / 2～5 / 无附加条件\n池2：抽取 1 次；本条件独立概率 4.0%。\n物品 / 编号 / 权重 / 数量 / 条目条件\n宿傩手指 / sukuna:sukuna_finger / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/chests/juvenile_center.json。\nsukuna:chests/kenjaku_laboratory\n池1：抽取 3～6 次；无附加条件。\n物品 / 编号 / 权重 / 数量 / 条目条件\n羂索的缝合线 / sukuna:kenjaku_thread / 5 / 2～5 / 无附加条件"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n九相图原稿 / sukuna:nine_paintings_manuscript / 2 / 1～1 / 无附加条件\n狱门疆的碎屑 / sukuna:prison_fragment / 2 / 1～2 / 无附加条件\n天元结界地图 / sukuna:tengen_map / 2 / 1～1 / 无附加条件\n特级咒具图纸 / sukuna:special_blueprint / 2 / 1～1 / 无附加条件\n星铁碎片 / sukuna:star_iron_fragment / 4 / 2～4 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/chests/kenjaku_laboratory.json。\nsukuna:chests/school\n池1：抽取 2～5 次；无附加条件。\n物品 / 编号 / 权重 / 数量 / 条目条件\n书 / minecraft:book / 6 / 1～3 / 无附加条件\n纸 / minecraft:paper / 6 / 3～8 / 无附加条件"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\nminecraft:bread / minecraft:bread / 4 / 1～3 / 无附加条件\n铁锭 / minecraft:iron_ingot / 3 / 1 / 无附加条件\n绿宝石 / minecraft:emerald / 1 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/chests/school.json。\nsukuna:chests/yuji_home\n池1：抽取 1 次；无附加条件。\n物品 / 编号 / 权重 / 数量 / 条目条件\n虎杖家双人合照 / sukuna:yuji_family_photo / 1 / 1 / 无附加条件\n池2：抽取 2～4 次；无附加条件。\n物品 / 编号 / 权重 / 数量 / 条目条件\nminecraft:bowl / minecraft:bowl / 4 / 1 / 无附加条件"
+    },
+    {
+      "type": "text",
+      "text": "$(l)附表E-公开战利品说明$(/l)\n木棍 / minecraft:stick / 4 / 1 / 无附加条件\n纸 / minecraft:paper / 2 / 1 / 无附加条件\nminecraft:bread / minecraft:bread / 2 / 1 / 无附加条件\n来源：src/main/resources/data/sukuna/loot_tables/chests/yuji_home.json。"
+    }
+  ]
+}

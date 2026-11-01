@@ -1,0 +1,37 @@
+{
+  "name": "数据-工作台配方",
+  "category": "sukuna:guide",
+  "icon": "sukuna:sukuna_memory",
+  "priority": false,
+  "sortnum": 20,
+  "pages": [
+    {
+      "type": "text",
+      "text": "$(l)数据-工作台配方$(/l)\nbuddha_incense： B  / GEG /  S （有序）\ncurse_summon_talisman： R  / RSR /  P （有序）\neternal_love： G  / ADA /  R （有序）\nalloy_bars：minecraft:crafting_shapeless\nalloy_block：minecraft:crafting_shapeless\nalloy_chestplate：minecraft:crafting_shapeless\nalloy_sword：minecraft:crafting_shapeless\nash_clump：minecraft:crafting_shapeless\nblood_sakura_wine：minecraft:crafting_shapeless\nblood_wheat：minecraft:crafting_shapeless\ncold_resistance：minecraft:crafting_shapeless"
+    },
+    {
+      "type": "text",
+      "text": "$(l)数据-工作台配方$(/l)\nculling_key：minecraft:crafting_shapeless\ncurse_concentrate：minecraft:crafting_shapeless\ncurse_crystal：minecraft:crafting_shapeless\ncurse_crystal_block：minecraft:crafting_shapeless\ncurtain_talisman：minecraft:crafting_shapeless\ndeformed_bone：minecraft:crafting_shapeless\nforbidden_armor：minecraft:crafting_shapeless\nforesight_goggles：minecraft:crafting_shapeless\nframe_boots：minecraft:crafting_shapeless\nfurnace_scroll：minecraft:crafting_shapeless\ngu_vat：minecraft:crafting_shapeless"
+    },
+    {
+      "type": "text",
+      "text": "$(l)数据-工作台配方$(/l)\nice_scroll：minecraft:crafting_shapeless\ninferno_bomb：minecraft:crafting_shapeless\njujutsu_alloy：minecraft:crafting_shapeless\nseal_gold：minecraft:crafting_shapeless\nmental_resistance：minecraft:crafting_shapeless\nfire_charge：minecraft:crafting_shapeless\nnether_star_fragment：minecraft:crafting_shapeless\novertime_binding：minecraft:crafting_shapeless\nplayful_cloud_parts：minecraft:crafting_shapeless\npoison_coating：minecraft:crafting_shapeless\nprison_fragment：minecraft:crafting_shapeless"
+    },
+    {
+      "type": "text",
+      "text": "$(l)数据-工作台配方$(/l)\nrefining_altar：minecraft:crafting_shapeless\nresidue_high：minecraft:crafting_shapeless\nresidue_medium：minecraft:crafting_shapeless\nseal_black：minecraft:crafting_shapeless\nseal_gold：minecraft:crafting_shapeless\nseal_white：minecraft:crafting_shapeless\nsimple_domain_disc：minecraft:crafting_shapeless\nsimple_seal_pillar：minecraft:crafting_shapeless\nsoul_capture_bottle：minecraft:crafting_shapeless\nsoul_edge：minecraft:crafting_shapeless\nsoul_molt：minecraft:crafting_shapeless"
+    },
+    {
+      "type": "text",
+      "text": "$(l)数据-工作台配方$(/l)\nspecial_seal_pillar：minecraft:crafting_shapeless\nspirit_stone：minecraft:crafting_shapeless\nstar_curse_core：minecraft:crafting_shapeless\nstar_iron_fragment：minecraft:crafting_shapeless\nblack_rope：minecraft:crafting_shapeless\nidle_transfigured_flesh：minecraft:crafting_shapeless\nprison_realm：minecraft:crafting_shapeless\ntransfigured_sword：minecraft:crafting_shapeless\ntengen_core：minecraft:crafting_shapeless\ntenka_fragment：minecraft:crafting_shapeless\nthousand_mile_chain：minecraft:crafting_shapeless"
+    },
+    {
+      "type": "text",
+      "text": "$(l)数据-工作台配方$(/l)\nvolcano_barrier：minecraft:crafting_shapeless\nhiten： F  / FBF /  L （有序）\nice_fish：sukuna:ice_fish\njacobs_ladder：AGA / GNG / ABA（有序）\nmegumi_seance：minecraft:crafting_shapeless\nnether_core： B  / BOB /  B （有序）\nnine_death_paintings：minecraft:crafting_shapeless\nprison_realm：OEO / GNG / OEO（有序）\nseverance_seal：minecraft:crafting_shapeless\nshinbuke： C  / CBC /  O （有序）\nsoul_separation_needle：FCD / NNN /  E （有序）"
+    },
+    {
+      "type": "text",
+      "text": "$(l)数据-工作台配方$(/l)\nsukuna_memory：minecraft:crafting_shapeless\ntrue_false_love：ADA / DHD / ADA（有序）\nuraume_memory：minecraft:crafting_shapeless\nvoid_controller：DDD / DDD / DDD（有序）"
+    }
+  ]
+}

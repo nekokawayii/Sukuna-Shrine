@@ -1,0 +1,85 @@
+{
+  "name": "06-帕秋莉与独立手册实现",
+  "category": "sukuna:guide",
+  "icon": "sukuna:sukuna_memory",
+  "priority": false,
+  "sortnum": 6,
+  "pages": [
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\n可选帕秋莉、独立玩法书、开局发书：实现方案\n1．最终玩家体验\n- 首次进入一个存档/服务器，拿到一本本模组自己的 《咒术公开玩法手册》，建议ID sukuna:gameplay_manual，不是原版成书/书与笔。\n- 已装 Patchouli（帕秋莉，一种能呈现图文、配方与3D方块结构的手册模组）：右键同一本书打开帕秋莉版。\n- 没装 Patchouli：右键打开本模组独立GUI，仍有全部公开角色、步骤、术式、物品来源/用途、NPC和祭坛3D预览。\n- 增删 Patchouli 后旧书不变成空气、不用重新领。既有咒术选择书照常发放，两本用途不同；选择书不承担手册UI。\n- 所有公开知识从开局可读；“你的完成进度”单独显示，不靠锁书页伪装玩法解锁。隐藏支线根本不进这份资源。\n推荐一个自有物品＋两个呈现后端，不推荐发两个不同物品。 这样角色切换、联机、删除前置和存档迁移最简单。\n2．接入前固定版本与文件范围\n后续代码建议分层：\ntext"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\nmanual/\nManualItem 始终注册的书物品\nManualGrantService 首入发书、补领、迁移\nManualOpenService 服务端开书许可/发自有通知\nManualContent 与任何GUI无关的公开内容模型\nManualProgressSnapshot 服务端只读的角色/仪式进度投影\nclient/ManualClientRouter 客户端选择显示后端\nclient/StandaloneScreen 独立目录、搜索、分页、书签\nclient/StructurePreview 独立3D与逐层预览\ncompat/patchouli/ 只有这里引用Patchouli API\n不要在通用 Content、静态字段、网络DTO、方法参数或父类里暴露 PatchouliAPI/Minecraft/Screen。单写 mandatory=false 不能防止可选类被提前链接。"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\n3．同源内容，不维护两套文字\n建立公开内容源，例如 manual_src/public/zh_cn/*.json（开发输入，不必原样打进成品）。发布时验证并生成：\n1. Patchouli entries/categories/templates；\n2. 独立手册的 assets/sukuna/manual/zh_cn/*.json；\n3. 公开检索索引和物品→用途反向索引。\n[共享内容示例](示例/共享内容示例.json)给出形状。建议字段：\n字段 / 意义\nid / 稳定条目路径，如 characters/yuta/progression；改标题不改ID\ntitle/category/icon/keywords / 目录、图标、关键词；支持中文名称/物品ID搜索\npublic / 构建输入明确允许，禁止默认为全部公开\nsource_refs / 对应玩法类/资源，更新时可审查"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\npages[].kind / text、crafting、ritual_recipe、multiblock、entity、skill、table、progress\nrecipe_id / 真实工作台配方资源ID，非输出物品ID\nritual_id / Java仪式目录中的内部ID，需自己的仪式模板解释\nrole_id + skill_id / 技能复合主键，同号角色不能串招\nstructure_id / 同一坐标/状态模型驱动两个3D后端\n内容分类至少：入门、公共成长、19角色（各流程/术式）、世界探索、祭坛、材料、装备咒具、消耗品、NPC咒灵、联机/女仆、故障排查。由基100章和秤10章用分页表，不把110章挤成一个滚动长段。\n公开允许列表优先于黑名单：本次物品索引可作为初始人工审定名单，构建时只生成名单中内容；未知新增条目必须人工批准。对标题、关键词、配方原料/输出、正文链接、entity SNBT、翻译键、源映射同时审查。不要生成全量JSON再设隐藏advancement，资源包仍能解压看到。\n4．可选依赖怎样接\n以下是未来 build.gradle 的增量设计，不要本次直接写进工程：\ngroovy\nrepositories {"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\nmaven { url = 'https://maven.blamejared.com' }\n}\ndependencies {\ncompileOnly fg.deobf('vazkii.patchouli:Patchouli:1.20.1-84-FORGE')\n// 仅有帕秋莉的开发运行配置使用，不能让“无依赖”测试也带它。\n// runtimeOnly fg.deobf('vazkii.patchouli:Patchouli:1.20.1-84-FORGE')\n}\n这是完整Forge构件坐标，不要猜 :api classifier 一定存在。不要shade进本模组JAR；发布说明单独给可选前置下载链接。\n未来 mods.toml 增量：\ntoml\n[[dependencies.sukuna]]"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\nmodId=\"patchouli\"\nmandatory=false\nversionRange=\"[1.20.1-84-FORGE,)\"\nordering=\"AFTER\"\nside=\"BOTH\"\n版本范围须以选定构件实际 modVersion 再核对，不支持跨Minecraft大版本；游戏版本仍由主模组元数据限制。若服务器策略要求双方均装才能用帕秋莉，握手中明确声明并降级，不让服务器安装状态代替客户端安装状态。\n无依赖开书路由（推荐）\n物品服务端 use 只验证活着、非旁观、手里确为本书，然后发自己的 OpenManual 客户端消息；消息只带 bookId/entryId/page 和有限只读进度，不带奖励命令。客户端在主线程收到后：\ntext\n如果本机有Patchouli，且桥已初始化、书定义加载成功：\nPatchouliClientBridge.open(公开书ID、允许条目ID、页码)"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\n否则：\nStandaloneScreen.open(相同ID、页码)\n桥工厂只在 ModList.get().isLoaded(\"patchouli\") 的客户端分支装配；按Dist注册客户端初始化/消息处理入口，专服类加载路径不得触到客户端类。桥调用失败可捕获具体资源缺失/加载失败并降级与记录一次日志，不用吞所有 Throwable 隐藏真正错误。\n原版客户端没有本模组不在支持范围；“双方不装Patchouli”必须可用。只有客户端装、只有服务端装两种组合也要验证：本方案自有包不依赖Patchouli网络通道，客户端如不能加载对应书/标签就退独立版，不由服务端直接发Patchouli包冒险断线。\n5．Patchouli 1.20.1资源目录\n最容易写错的地方：book.json在data，正文在assets。 普通模组书必须 use_resource_pack:true。\ntext\nsrc/main/resources/\ndata/sukuna/patchouli_books/public_manual/book.json\ndata/sukuna/tags/blocks/manual_gu_cauldron.json\nassets/sukuna/patchouli_books/public_manual/zh_cn/"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\ncategories/rituals.json\nentries/rituals/refining.json\nentries/rituals/gu.json\nentries/rituals/tengen.json\ntemplates/ritual_recipe.json 后续自定义模板\nassets/sukuna/models/item/gameplay_manual.json\nassets/sukuna/textures/item/gameplay_manual.png\nassets/sukuna/lang/zh_cn.json\n本次可检查示例根目录：示例/patchouli/src/main/resources/。书ID为 sukuna:public_manual，类别ID为 sukuna:rituals，条目ID为 sukuna:rituals/refining，不是文件系统绝对路径。\nbook.json关键部分：\njson"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\n{\n\"name\": \"咒术公开玩法手册\",\n\"landing_text\": \"公开角色、术式、材料与祭坛。\",\n\"version\": 1,\n\"use_resource_pack\": true,\n\"dont_generate_book\": true,\n\"custom_book_item\": \"sukuna:gameplay_manual\",\n\"i18n\": false\n}\n- dont_generate_book不自动注册自定义物品。\n- custom_book_item是关联已经注册的物品，不实现右键、不替你发书。"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\n- getBookStack(bookId)仍生成Patchouli自身的guide_book栈，不返回上述自有书；发放请显式创建自己的ItemStack。\n- 示例用中文直接字符串与 i18n:false；完整发布补语言回退，选其他语言时不能空书。可同时生成 en_us 回退内容或改用翻译键策略，两个后端一致处理。\n- 开局全部公开页可读，示例不设置advancement锁，不把章节奖励搬进书页动作。\n核对过的Patchouli API签名\n这些在嵌套接口 vazkii.patchouli.api.PatchouliAPI.IPatchouliAPI，通过 PatchouliAPI.get() 调用：\njava\nvoid openBookGUI(ServerPlayer player, ResourceLocation book);\nvoid openBookGUI(ResourceLocation book);\nvoid openBookEntry(ServerPlayer player, ResourceLocation book,\nResourceLocation entry, int page);\nvoid openBookEntry(ResourceLocation book, ResourceLocation entry, int page);"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\nItemStack getBookStack(ResourceLocation book);\n无ServerPlayer的开书重载仅客户端调用；带ServerPlayer重载服务端发包，仅在确认接收端支持Patchouli时使用。页码从0开始。示意调用（桥内，不是可直接编译的完整类）：\njava\nPatchouliAPI.get().openBookEntry(\nnew ResourceLocation(\"sukuna\", \"public_manual\"),\nnew ResourceLocation(\"sukuna\", \"rituals/refining\"), 0);\n采用上节自有客户端路由时，用客户端重载即可。后续真正编码前仍应以本工程解析到的依赖查验API并编译，不把本次文档核对冒充集成测试。\n6．三种祭坛的3D页\n帕秋莉 patchouli:multiblock 支持书内3D模型与世界投影；示例已经给三种结构各一页，并附[坐标对照](示例/结构坐标对照.json)。\n正确坐标与字符规则\n- pattern[y][x][z]：外层最高层在前；一层的字符串从西到东；每串字符从北到南。不是常见的“每字符串是一条东西向行”的想当然。"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\n- 每层行数、每行宽度必须一致；0恰好一个，为投影锚点，在mapping映射到中心祭坛。\n- 默认空格匹配空气，_通配任何方块（含空气）。本工程验证器不检查的格子统一用 _，不能用空格强迫玩家挖空整块底土。\n- mapping值为字符串，不能填候选数组。炼药锅接受空锅/水锅，所以示例新增只包含这两种方块的tag，用 #sukuna:manual_gu_cauldron；不能让tag扩到岩浆或细雪锅。\n- 裸方块ID忽略未指定状态，因此栅栏连接、柱朝向不误锁；顶柱明确写 sukuna:special_seal_pillar[inlaid=true]。中下两层不能误要求 inlaid=false，服务端也接受被镶嵌的下层。\n- 三阵水平对称，示例 symmetrical:true；这不是关闭书内旋转动画。普通非对称结构使用false保留方向匹配。\n- 页 enable_visualize 默认true，示例显式写true；不代表投影能自动放方块。\n精确一致性测试\n不能只数总方块：对每个 (x,y,z) 解码JSON并比对验证器规则。一级22个受约束位置；二级34；三级75。三级底板49、柱24、核心1、灵脉石1；星铁8是柱状态消耗，不另占8个方块。\n对结构做破坏式测试：每次去掉一个必需方块应失败；所有不约束格填任意安全方块仍可过结构检查；锅替换水锅可过、岩浆锅失败；一根顶柱未镶失败；未加载不读取/强载大量区块。\n服务端仍是仪式权威：书内绿框不能证明地形正确、现在是夜晚、施术者有血量/材料/图纸，启动必须继续调用原来的validate/资格逻辑。书不直接扣材料或产出。\n配方页怎么做"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\n普通配方用 patchouli:crafting，recipe填真实资源ID，例如 sukuna:expedition_refining_altar，可带 recipe2/title/text。冰鱼/控制器属于自定义配方类型，普通crafting页可能不能展示输入，另做说明/自定义页，不说所有70条都自动可渲染。\n14条仪式是Java配方，不注册在原版RecipeManager。用自定义模板/页面组件显示材料格、数量、产出、时长、咒力/生命消耗、允许群系、图纸前置，再放结构页链接。最小实现可生成text＋spotlight，完整自定义格子后续开发，不虚构 recipe:\"sukuna:ritual/alloy\"。\nNPC展示用 patchouli:entity，必填 entity，可选 name/text/scale/offset/rotate/default_rotation；SNBT只放公开且渲染必需状态，不序列化真实玩家/首领存档。个别复杂实体渲染失败就静态图标＋机制，不让整个书崩溃。\n7．无Patchouli的自定义书必须真正可用\n不是换封面的原版成书，不使用WrittenBookItem/book GUI充数。 注册自有 ManualItem，客户端独立Screen；内容从自己的资源模型加载，不import Patchouli类，也不要求它的素材。\n推荐布局：左侧目录与搜索，右侧双页/单页自适应；顶部章节路径、返回、书签；底部上一页/下一页。最小可交付功能：\n- 支持中文搜索、输入法、物品ID/角色名/术式名；结果显示来源章节，点击直达页。\n- 条目互链、材料→所有制作用途、配方→来源、NPC→掉落、角色→完整流程；前进后退栈，不只换一张图片。\n- 成长表分页，长段落按字体实际宽度折行，GUI缩放/屏幕变更重新排版；不用固定字符串长度裁剪中文。\n- 鼠标滚轮/点击与键盘翻页、Esc退出、可见焦点；打开时释放施法按键持有态，关书不误触长按技能。\n- 多人打开不暂停服务器；没有读书扣血/发奖逻辑。客户端书签按服务器/存档隔离，可保存条目ID而非页像素位置。"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\n- 资源缺失降级页说明“内容未加载”，保留目录与退出键；坏一个实体模型不能崩整书。\n独立3D结构预览\n共用结构坐标模型，逐个读取方块默认状态/指定state，用游戏已有方块模型渲染。不要截图假装可旋转3D。需要开发隔离的只读预览世界/方块访问适配，防止构建真实世界实体或触发仪式tick。\n提供拖动旋转、滚轮缩放、重置视角、全体/逐层、中心锚点、材料计数；tag候选可循环展示或允许选空锅/水锅。连通栅栏需邻居状态计算，柱顶状态有明显区分。默认渲染普通块模型，对需要方块实体渲染的核心设置安全回退，不尝试运行真正祭坛逻辑。\n世界投影是第二阶段增强项：纯客户端画缺块/错块框，限定选中结构范围、只读已加载区块、不自动放/拆；结构状态正确显示绿色，环境/图纸等另显示文字待检。独立版基础交付必须至少有可旋转、逐层的书内3D，不能只有文字而让无依赖玩家缺玩法。\n封面和GUI背景后续要做原创资源；本次不附PNG或假装已有美术。可先用本模组已有物品图标与程序画边框完成开发验证，再补正式书皮。\n8．首次入世发书：服务端状态机\nPatchouli本身没有“首次登录自动赠送此书”的通用开关。可用隐藏进度奖励，但满背包/旧档/补领不好精细控制，本工程推荐Forge登录事件＋自己的持久服务。\n不要复用 ChoiceBookGiven / MemoryGiven，它们是角色选择体系；也不要放进被角色快照替换的 Curse.data 子树。建议玩家持久根下单独命名空间：\ntext\nSukunaManual {"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\nschema: 1,\ngrantState: \"pending\" / \"delivered\",\ngrantId: 稳定UUID,\nfirstGrantedVersion: 1,\nlastSeenContentVersion: 1\n}\n建议逻辑（伪代码，不是本次新增Java）\ntext\n玩家登录服务端:\n忽略FakePlayer，确认当前连接有效\n读取/迁移自己的手册状态"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\n若已delivered：不再自动发\n若本书已在背包/副手等受支持持有位置：标delivered并保存\n否则创建一次grantId，置pending，进入下一刻安全队列\n处理pending:\n若玩家离线、死亡、旁观：保留pending，下次再尝试\n若已存在同grantId的书：标delivered（处理崩溃重试）\n否则尝试插入一份自有ManualItem（ItemStack带grantId和内容版本）\n插入成功且剩余栈为空：标delivered，通知玩家\n背包满：保持pending，提示腾出一格；限频重试，不每tick刷提示\n优先“满包待领”而不是直接掉地上：避免新人一出生在岩浆/虚空或队友捡走，仍被标成领过。若坚持掉落方案，必须校验实体加入成功、设置归属、记录未领取与补偿，不能把 drop() 调用等同玩家收到。\n- 死亡克隆/末地返回：Forge玩家Clone处理只复制这棵手册数据（包括非死亡克隆），不要整包复制临时战斗数据；Respawn/Dimension事件只补pending，不另发新书。"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\n- 换角色：根状态不参与角色快照，切19角色不发19本。\n- 旧档升级：无标记旧玩家每UUID领一次；不依赖第一次创建世界。内容版本升级只提示“有更新”，不每版本发新物品。\n- 多世界/多服务器：状态属于该服务端玩家存档，不能存在客户端全局配置导致另一个服收不到。\n- 操作许可：自动发书不执行 /give，也不要求OP；服务端直接给予。客户端不能发“我已领/替别人发”任意UUID。\n- 崩溃一致性：玩家背包与标记尽量同一保存边界；grantId用于重试去重。玩家存档与地面实体跨文件并非事务，不能承诺任何崩溃时刻绝不重复；采用待领方案缩小风险并测试断电恢复。\n- 网络重连：事件可重入，pending任务按UUID去重；物品发放不取决于客户端装没装Patchouli。\n9．丢书、补领、书签与联机同步\n建议增加便宜无序配方：纸＋书→自有玩法手册（待新增，不是现有配方）；选择书继续纸＋腐肉，不冲突。另提供普通玩家 /sukuna manual 只补自己的书，短冷却、已有书提示不重复；OP /sukuna manual grant <player>独立权限并写日志。不用反复清首次标记补领。\n书掉落/死亡丢失是正常物品行为；能合成/命令补领即可，别为了教程书改全局死亡保留。内容版本保存在资源而非将全书写进NBT，旧书自动读新内容；NBT只放少量ID/版本/来源，不发几MB文章网络包。\n服务端进度包只包含当前角色ID、公共已解锁位、公开章节号、探索图纸/积分等白名单字段。严禁把整棵玩家NBT/隐藏任务状态发给书界面。客户端显示“完成”不反向给予奖励；看攻略不改变游戏进度。\n跨语言书签用稳定条目ID，失效页码夹到范围；删条目时重定向或目录页提示，不崩溃。多人进度互不串，账号B不能靠A的书NBT获得A的完成状态。"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\n10．实施顺序与交付门槛\n1. 冻结公开内容允许列表、修正文档中列明的旧提示差异；不擅自修玩法。\n2. 实现自有书注册、独立内容加载、最小目录/搜索/文本；加首次发书与补领，先无Patchouli专服通过。\n3. 实现共用结构模型＋独立3D；把三座坛完整测试。\n4. 加隔离桥、可选构件和Patchouli内容生成，接入已有书右键。\n5. 将19角色、222公开登记物品、70配方、14仪式、全部NPC/咒灵和技能分支逐项转成页，不只交付三座坛演示。\n11．公开核对来源\n- [Patchouli官方1.20迁移指南](https://vazkiimods.github.io/Patchouli/docs/upgrading/upgrade-guide-120/)：data/assets拆分、use_resource_pack。\n- [Patchouli 1.20.1源码](https://github.com/VazkiiMods/Patchouli/tree/1.20.1)：以目标分支为准，不套用1.21/NeoForge指南。\n- [PatchouliAPI.java](https://github.com/VazkiiMods/Patchouli/blob/1.20.1/Xplat/src/main/java/vazkii/patchouli/api/PatchouliAPI.java)：开书重载、嵌套接口、getBookStack。\n- [Book.java](https://github.com/VazkiiMods/Patchouli/blob/1.20.1/Xplat/src/main/java/vazkii/patchouli/common/book/Book.java)、[BookRegistry.java](https://github.com/VazkiiMods/Patchouli/blob/1.20.1/Xplat/src/main/java/vazkii/patchouli/common/book/BookRegistry.java)：书定义与资源加载。"
+    },
+    {
+      "type": "text",
+      "text": "$(l)06-帕秋莉与独立手册实现$(/l)\n- [多方块实现目录](https://github.com/VazkiiMods/Patchouli/tree/1.20.1/Xplat/src/main/java/vazkii/patchouli/common/multiblock)：DenseMultiblock、SerializedMultiblock、StringStateMatcher。\n- [页面实现目录](https://github.com/VazkiiMods/Patchouli/tree/1.20.1/Xplat/src/main/java/vazkii/patchouli/client/book/page)：multiblock/crafting/entity字段及默认行为。\n- [1.20.1-84-FORGE Maven目录](https://maven.blamejared.com/vazkii/patchouli/Patchouli/1.20.1-84-FORGE/)、[对应源码JAR](https://maven.blamejared.com/vazkii/patchouli/Patchouli/1.20.1-84-FORGE/Patchouli-1.20.1-84-FORGE-sources.jar)：锁定候选构件复核。\n以上是接口/文档研究，不是本项目安装Patchouli后的运行报告。"
+    }
+  ]
+}

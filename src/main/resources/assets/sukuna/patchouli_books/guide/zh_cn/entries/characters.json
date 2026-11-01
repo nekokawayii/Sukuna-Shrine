@@ -1,0 +1,13 @@
+{
+  "name": "角色一览",
+  "category": "sukuna:guide",
+  "icon": "sukuna:sukuna_memory",
+  "priority": true,
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "text",
+      "text": "$(l)角色一览$(/l)\n§l宿傩§l：解 / 捌 / 开 / 灶 / 伏魔御厨子\n§l五条悟§l：六眼九式 / 无量空处\n§l里梅§l：冰凝咒法\n§l虎杖§l：咒力强化 + 赤血\n§l赤血操术§l：20 招\n§l伏黑甚尔§l：纯 QTE 连招"
+    }
+  ]
+}

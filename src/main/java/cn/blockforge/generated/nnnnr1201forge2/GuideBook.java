@@ -27,7 +27,16 @@ public final class GuideBook {
             .withStyle(ChatFormatting.GOLD));
     }
 
+    /** 有帕秋莉就给帕秋莉手册，没有就给成书（帕秋莉是可选依赖，用注册表查物品，不需要编译期依赖）。 */
     public static ItemStack book() {
+        var patchouli = net.minecraft.core.registries.BuiltInRegistries.ITEM
+            .get(new net.minecraft.resources.ResourceLocation("patchouli", "guide_book"));
+        if (patchouli != net.minecraft.world.item.Items.AIR
+            && net.minecraftforge.fml.ModList.get().isLoaded("patchouli")) {
+            ItemStack stack = new ItemStack(patchouli);
+            stack.getOrCreateTag().putString("patchouli:book", "sukuna:guide");
+            return stack;
+        }
         ItemStack stack = new ItemStack(Items.WRITTEN_BOOK);
         CompoundTag tag = stack.getOrCreateTag();
         tag.putString("title", "游玩方法手册");

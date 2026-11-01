@@ -18,8 +18,8 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty;
  * 所以不同领域可以长出完全不同的外观（`assets/sukuna/textures/effect/domain_*.png` 或复用的特效图）。
  * 不可破坏、无掉落；领域收起时由 {@code RyuDomain} 逐格还原。
  */
-public class DomainScreenBlock extends Block {
-    /** 0=落日云海 1=无量空处 2=银河 3=血海 4=火焰 5=虚空裂隙 6=尘埃 7=光斑 */
+public class DomainScreenBlock extends DomainMaskBlock {
+    /** 0=落日云海 1=旧云图兼容位（显示晚霞） 2=银河 3=血海 4=火焰 5=虚空裂隙 6=尘埃 7=光斑 */
     public static final IntegerProperty IMAGE = IntegerProperty.create("image", 0, DomainScreenItem.IMAGES - 1);
 
     public DomainScreenBlock(Properties properties) {

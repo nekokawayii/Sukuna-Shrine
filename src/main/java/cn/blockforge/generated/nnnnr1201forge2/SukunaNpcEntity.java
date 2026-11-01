@@ -10,9 +10,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
 /**
- * 两面宿傩 NPC（r399）：**全部术式与领域、无冷却**。
- * <p>招式与领域都由 {@link character.npc.NpcCombatCasting} 结算（每 10 刻一次），
- * 领域按「伏魔御厨子 → 盖棺铁围山 → 时胞月宫殿 → 打上花火…」轮换。
+ * 两面宿傩 NPC：御厨子本体与全部斩击、灶、动作分支。
+ * <p>招式与领域由 {@link character.npc.NpcCombatCasting} 调用真正技能；
+ * 咒力、冷却、结印和持续技能归属独立，不再借用其他角色的领域。
  */
 public class SukunaNpcEntity extends PathfinderMob {
     public SukunaNpcEntity(EntityType<? extends SukunaNpcEntity> type, Level level) {

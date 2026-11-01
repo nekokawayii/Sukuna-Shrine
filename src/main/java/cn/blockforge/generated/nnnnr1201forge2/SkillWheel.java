@@ -8,7 +8,7 @@ import org.lwjgl.glfw.GLFW;
 
 /** 里梅独立固定在屏幕最左侧；宿傩使用完整圆环并独立翻页。 */
 public final class SkillWheel extends Screen {
-    private int page,current,branchHover=-1;
+    private int page,current,branchHover=-1,mainlineHover=-1;
     private boolean repairHover,outputHover,reverseHover,confirmed,finaleHover,fistHover,starHover;
     private double mouseX,mouseY;
     private static final int[] GUARDIAN_WHEEL={0,1,2,3,4,5,6,8,9};
@@ -44,22 +44,24 @@ public final class SkillWheel extends Screen {
     private int[] branches(){if(page!=0||!Client.progress.sukuna())return new int[0];
         // 「咒力附拳」不占分支：它是轮盘右上角的固定格（见 {@link WheelSideSlots#fist}），始终显示。
         if(current==0)return Client.progress.awakened()?new int[]{18,24,26,27,28,29}:new int[]{24,26,28,29};if(current==1&&Client.progress.awakened())return new int[]{17,21};if(current==2&&Client.progress.fingers()>=5)return new int[]{19,20,25,32,SimpleDomain.SKILL};if(current==3&&Client.voidStage())return new int[]{30,FurnaceMax.SKILL};if(current==5&&Client.progress.awakened())return new int[]{31};return new int[0];}
-    private WheelSideSlots.Box branchBox(int i){int n=branches().length,step=Math.min(34,Math.max(18,(height-94)/Math.max(1,n)));return new WheelSideSlots.Box(centerX()+outerRadius()+4,height/2-n*step/2+i*step,74,step-3);}
+    private WheelSideSlots.Box branchBox(int i){int n=branches().length,step=Math.min(30,Math.max(14,(height-140)/Math.max(1,n)));return new WheelSideSlots.Box(centerX()+outerRadius()+4,48+i*step,74,step-2);}
     private int centerRadius(){return page==2?(int)(outerRadius()*.32):outerRadius()/2;}
     private int skillAt(double x,double y){if(page==2)return global(BloodRules.wheelSlot(x,y,outerRadius()));return BranchRules.wheelSkill(true,false,page,count(),x,y);}
     private boolean starCenter(){return Client.progress.nine()&&BloodClient.ownDomain();}
     private void updateHover(double mx,double my){
+        mainlineHover=character.mainline.MainlineWheel.hover(width,height,mx,my);
         starHover=starCenter()&&Math.pow(mx-centerX(),2)+Math.pow(my-height/2.0,2)<Math.pow(centerRadius()-3,2);
         finaleHover=!starCenter()&&page==0&&FinaleClient.ready()&&Math.pow(mx-centerX(),2)+Math.pow(my-height/2.0,2)<Math.pow(centerRadius()-3,2);
-        mouseX=mx;mouseY=my;reverseHover=Client.progress.sukuna()&&WheelSideSlots.reverse(width,height,ice()).contains(mx,my);
+        mouseX=mx;mouseY=my;reverseHover=false;
         // 右上角固定格：咒力附拳（5 根手指起显示/可用）
         fistHover=Client.progress.sukuna()&&Client.progress.fingers()>=5&&WheelSideSlots.fist(width,height,ice()).contains(mx,my);
         repairHover=Client.progress.sukuna()&&Client.progress.fingers()>=15&&Client.progress.burnout()&&Client.progress.clashPenaltyTicks()==0&&WheelSideSlots.repair(width,height,ice()).contains(mx,my);
-        outputHover=Client.progress.sukuna()&&page==1&&mx>=centerX()+outerRadius()+4&&mx<centerX()+outerRadius()+78&&my>=height/2-24&&my<height/2+24;
+        outputHover=false; // 反转外放统一移到共同主线左侧格
         branchHover=-1;int[] branches=branches();for(int i=0;i<branches.length;i++)if(branchBox(i).contains(mx,my))branchHover=branches[i];
     }
     private void confirm(){
         if(confirmed||minecraft==null||minecraft.screen!=this)return;confirmed=true;updateHover(mouseX,mouseY);
+        if(character.mainline.MainlineWheel.cast(mainlineHover)){minecraft.setScreen(null);return;}
         if(minecraft.player!=null&&minecraft.player.isAlive()&&!minecraft.player.isSpectator()&&Client.progress.unlocked()){
             if(starHover){if(!DeathStarClient.anemic())Client.selected=BloodRules.DEATH_STAR;}
             else if(finaleHover)Client.selected=FinaleRules.SKILL;
@@ -67,7 +69,7 @@ public final class SkillWheel extends Screen {
             else if(reverseHover){if(Client.progress.fingers()>=15)Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.REVERSE));}
             else if(repairHover)Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.REPAIR_BURNOUT));
             else if(outputHover)Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.GUARDIAN_REVERSE));
-            else {Client.selected=branchHover>=0?branchHover:current;if(Client.selected==BranchRules.WALL){minecraft.setScreen(new WallOptionsScreen());return;}}
+            else {int choice=branchHover>=0?branchHover:current;if(Client.availableSkill(choice))Client.selected=choice;if(Client.selected==BranchRules.WALL){minecraft.setScreen(new WallOptionsScreen());return;}}
         }
         minecraft.setScreen(null);
     }
@@ -152,7 +154,8 @@ public final class SkillWheel extends Screen {
                 for(int y=-inner+3;y<=inner-3;y++){int x=(int)Math.sqrt(Math.max(0,(inner-3)*(inner-3)-y*y));g.fill(cx-x,cy+y,cx+x,cy+y+1,finaleHover?0xEEA88736:0xDC45331C);}
                 g.drawCenteredString(font,"終式",cx,cy-16,0xFFFFE49A);g.drawCenteredString(font,"六道連斬",cx,cy-2,0xFFFFFFFF);g.drawCenteredString(font,"长按8秒",cx,cy+13,0xFFFFE1B8);
             }else{g.drawCenteredString(font,page>=2?"赤血操术":page==1?"守护者":"宿 傩",cx,cy-14,0xFFDFBACF);g.drawCenteredString(font,current<22||BloodRules.skill(current)?shortName(current):"",cx,cy+4,0xFFFFFFFF);}
-            reverse(g);fist(g);
+            fist(g);
+            if(Client.progress.fingers()>=15&&Client.progress.burnout()){var b=WheelSideSlots.repair(width,height,ice());g.fill(b.x(),b.y(),b.x()+b.width(),b.y()+b.height(),0xDD321722);g.drawCenteredString(font,Client.progress.clashPenaltyTicks()>0?"对拼熔断 · 禁修复":"修复熔断",b.x()+b.width()/2,b.y()+5,0xFFFFE6DE);g.drawCenteredString(font,"35%咒力",b.x()+b.width()/2,b.y()+20,0xFFD9B8C4);}
         }
         if(ice()){
             int ix=WheelSideSlots.iceX(width,height),ir=WheelSideSlots.iceRadius(width,height);
@@ -180,7 +183,6 @@ public final class SkillWheel extends Screen {
             g.drawCenteredString(font,"五条悟技能",gx,cy-gr-14,0xFFBEE0FF);
             g.drawCenteredString(font,"碎片已食用 · 7 式（苍/赫长按为最大功率）",gx,cy+gr+7,0xFFA9C8F1);
         }
-        if(Client.progress.sukuna()&&page==1){int x=cx+outer+4,y=cy-24;g.fill(x,y,x+74,y+48,outputHover?0xD6348A74:0xCC17322B);g.drawCenteredString(font,"术式反转",x+37,y+7,0xFFE2FFF2);g.drawCenteredString(font,"外放 · "+Client.energyText(100),x+37,y+25,0xFFA9DBC8);}
         int[] branches=branches();for(int i=0;i<branches.length;i++){var box=branchBox(i);int id=branches[i];g.fill(box.x(),box.y(),box.x()+box.width(),box.y()+box.height(),branchHover==id?0xEE9D263B:0xDD321722);g.drawCenteredString(font,shortName(id),box.x()+37,box.y()+(box.height()<27?3:4),0xFFFFE6DE);if(box.height()>=27)g.drawCenteredString(font,id==21?Client.wallSize()+"×"+Client.wallSize()+"格":id==26?"1咒力/像素":id==SimpleDomain.SKILL?Client.energyText(cost(id))+"咒力/秒":Client.energyText(cost(id))+"咒力",box.x()+37,box.y()+17,0xFFDCC1F4);}
         int detailX=Client.progress.sukuna()?cx:width/2;
         g.drawCenteredString(font,Client.skillName(skill),detailX,Math.max(28,cy-outer-23),0xFFFFDDD1);
@@ -188,7 +190,7 @@ public final class SkillWheel extends Screen {
         g.drawCenteredString(font,desc(skill),width/2,height-40,0xFFE8D8DA);
         String pageText=pages()?(page>=2?"赤血操术 · 单页双环 19招":page==1?"守护者技能页":"宿傩技能页")+" · 滚轮或左右方向键翻页":Client.progress.sukuna()?"吞噬咒胎九相图后解锁赤血操术翻页":gojo()?"五条悟技能轮盘已解锁":"冰伤 +"+Client.progress.iceFish()+"%";
         g.drawCenteredString(font,pageText,width/2,height-26,0xFFAEE3F1);
-        g.drawCenteredString(font,"长按 "+Client.WHEEL.getTranslatedKeyMessage().getString()+" 移动选择，松手确定 · "+Client.CAST.getTranslatedKeyMessage().getString()+" 释放",width/2,height-14,0xFFE2D7DC);super.render(g,mx,my,partial);
+        g.drawCenteredString(font,"长按 "+Client.WHEEL.getTranslatedKeyMessage().getString()+" 移动选择，松手确定 · "+Client.CAST.getTranslatedKeyMessage().getString()+" 释放",width/2,height-14,0xFFE2D7DC);character.mainline.MainlineWheel.render(g,font,width,height,mx,my);super.render(g,mx,my,partial);
     }
     private void bloodLabel(GuiGraphics g,int id,int cx,int cy,double radius,double angle){
         String name=switch(id){case BloodRules.FLOW->"赤鳞跃动";case BloodRules.VISION->"跃动·载";case BloodRules.SENBON->"血刃千本";default->shortName(id);};

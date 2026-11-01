@@ -53,6 +53,7 @@ public class UraumeNpcEntity extends Monster {
 
     @Override public void tick() {
         super.tick();
+        if (NpcBridge.supports(this)) return; // 霜凪与直瀑使用玩家实现。
         if (level().isClientSide) return;
         if (!(level() instanceof ServerLevel world)) return;
         LivingEntity target = getTarget();

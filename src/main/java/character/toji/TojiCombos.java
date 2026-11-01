@@ -62,6 +62,7 @@ public final class TojiCombos {
 
     /** 匹配并执行。返回是否命中某招。 */
     public static boolean tryMatch(ServerPlayer p) {
+        if(!TojiCombat.allowed(p)||!TojiQte.inCombo(p))return false;
         java.util.List<Integer> seq = TojiQte.sequence(p);
         if (seq.isEmpty()) return false;
         java.util.List<Recipe> hits = new java.util.ArrayList<>();
@@ -73,6 +74,11 @@ public final class TojiCombos {
             if (fire(p, recipe.combo())) { TojiQte.resetSequence(p); return true; }
         }
         return false;
+    }
+
+    /** 自动输入适配：只跳过人类按键，连招的窗口、条件、数值、命中与特效完全共用。 */
+    public static boolean automatic(NpcBridge.NpcActor actor,int combo) {
+        return combo>=1&&combo<=20&&TojiQte.inCombo(actor)&&TojiCombat.allowed(actor)&&fire(actor,combo);
     }
 
     /** 按顺序出现过即可（允许中间夹着别的按键）。 */
@@ -117,7 +123,7 @@ public final class TojiCombos {
             case 15 -> { return !p.onGround() && parkourKick(p); }
             case 16 -> { return deflect(p); }
             case 17 -> { return disarm(p); }
-            case 18 -> { return bat(p, target); }
+            case 18 -> { return target!=null&&target.getDeltaMovement().horizontalDistanceSqr()>.04&&bat(p, target); }
             case 19 -> { return !p.onGround() && aerialCombo(p); }
             case 20 -> {
                 if (TojiQte.perfectCount(p) < TojiQte.PERFECT_PER_EXECUTE) return false;
@@ -373,9 +379,9 @@ public final class TojiCombos {
         if (target == null) return false;
         double amount = Math.max(1, target.getMaxHealth() * C20);
         Curse.data(p).putInt(TojiQte.K_COUNT, 0);
+        float before=target.getHealth();
         hit(p, target, amount, 1.2, 1.0, 60);
-        TojiQte.data(target).putLong("TojiNoHeal", TojiQte.now(target) + 200);
-        target.setHealth(Math.min(target.getHealth(), Math.max(0.5f, target.getHealth() * 0.05f)));
+        if(target.getHealth()<before)TojiQte.data(target).putLong("TojiNoHeal", TojiQte.now(target) + 200);
         fx(p, 20, target.position());
         say(p, "暴君处决 · 封回复");
         return true;
@@ -407,11 +413,11 @@ public final class TojiCombos {
     /** 命中结算：伤害 ×完美闪避倍率，可选破甲（按当前护甲的比例）。 */
     public static void hit(ServerPlayer p, LivingEntity target, double damage, double knockback,
                            double armorIgnore, int stun) {
-        if (!CombatSettings.canHit(p, target)) return;
+        if (!CombatSettings.canHit(p, target)||DomainClash.active(p)||DomainClash.active(target)) return;
         double mult = TojiQte.consumeNextHit(p);
         double amount = damage * mult;
         if (armorIgnore > 0) armorBreak(target, armorIgnore, 60);
-        CombatSettings.hurt(p, target, p.damageSources().playerAttack(p), (float) amount);
+        if(!CombatSettings.hurt(p, target, p.damageSources().playerAttack(p), (float) amount))return;
         if (knockback > 0) {
             Vec3 push = target.position().subtract(p.position()).multiply(1, 0, 1).normalize().scale(knockback);
             target.setDeltaMovement(target.getDeltaMovement().add(push.x, Math.max(0.15, push.y + 0.3), push.z));

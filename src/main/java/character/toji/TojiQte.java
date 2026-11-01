@@ -44,8 +44,6 @@ public final class TojiQte {
     public static final double BACKSTEP_DISTANCE = 2.0; // 后撤步 2 格
     public static final int IFRAMES = 12;               // 闪避无敌帧 0.6 秒
     public static final int PERFECT_PER_EXECUTE = 3;    // 暴君处决需要的完美闪避次数
-    private record Stunned(LivingEntity target, long until) {}
-    private static final java.util.List<Stunned> STUNNED = new java.util.ArrayList<>();
     public static final double NEXT_HIT_MULTIPLIER = 2.0;
 
     // ── 输入 token ────────────────────────────────────────
@@ -107,6 +105,17 @@ public final class TojiQte {
         if (threat != null) openWindow(p, threat, n);
     }
 
+    /** NPC 自动闪避/起手，仍使用玩家的窗口、位移、完美闪避计数。 */
+    static void autoWindow(NpcBridge.NpcActor p, LivingEntity target) {
+        long n=now(p);clearExpired(p,n);
+        if(inCombo(p))return;
+        Curse.data(p).putInt(K_TARGET,target.getId());
+        Entity threat=findThreat(p);
+        if(threat!=null){openWindow(p,threat,n);input(p,DODGE);}
+        else if(p.distanceToSqr(target)<=64&&MaidBridge.body(p).hasLineOfSight(target))input(p,MOBILITY);
+        resetSequence(p);
+    }
+
     /** 半径 2 格内的威胁：敌对生物（正在锁定玩家/怪物）、朝玩家飞的弹幕与箭。 */
     private static Entity findThreat(ServerPlayer p) {
         if (!(p.level() instanceof ServerLevel level)) return null;
@@ -114,8 +123,10 @@ public final class TojiQte {
         Entity found = null;
         for (Entity entity : level.getEntitiesOfClass(Entity.class,
                 new AABB(p.position(), p.position()).inflate(THREAT_RADIUS),
-                t -> t != p && t.isAlive() && !(t instanceof ItemEntity))) {
+                t -> t != p && t != MaidBridge.body(p) && t.isAlive() && !(t instanceof ItemEntity))) {
             if (entity instanceof Projectile projectile) {
+                if(projectile.getOwner()==p||projectile.getOwner()==MaidBridge.body(p)
+                    ||projectile.getOwner() instanceof LivingEntity shooter&&!CombatSettings.canHit(p,shooter))continue;
                 Vec3 to = p.getEyePosition().subtract(projectile.position());
                 if (to.lengthSqr() < 0.0001 || projectile.getDeltaMovement().dot(to.normalize()) <= 0.25) continue;
                 double distance = projectile.distanceToSqr(p);
@@ -124,7 +135,8 @@ public final class TojiQte {
             }
             if (!(entity instanceof LivingEntity living)) continue;
             boolean hostile = living instanceof Monster
-                || (living instanceof Mob mob && mob.getTarget() == p)
+                || (living instanceof Mob mob && mob.getTarget() == MaidBridge.body(p))
+                || (MaidBridge.body(p) instanceof Mob self && self.getTarget() == living)
                 || living.getLastHurtByMob() == p
                 || (living instanceof Player other && other != p && CombatSettings.canHit(p, other));   // 被标敌的玩家也当敌人
             if (!hostile || !CombatSettings.canHit(p, living)) continue;
@@ -149,7 +161,7 @@ public final class TojiQte {
 
     // ── 输入分派（客户端在窗口内接管后发来） ──────────────
     public static void input(ServerPlayer p, int token) {
-        if (!CharacterService.toji(p) || !p.isAlive() || p.isSpectator()) return;
+        if (!TojiCombat.allowed(p)) return;
         long n = now(p);
         CompoundTag d = Curse.data(p);
         switch (token) {
@@ -270,11 +282,12 @@ public final class TojiQte {
             var box = p.getBoundingBox().move(next.subtract(start));
             if (!p.serverLevel().hasChunkAt(net.minecraft.core.BlockPos.containing(next))
                 || !p.level().getWorldBorder().isWithinBounds(box)
-                || !p.level().noCollision(p, box)) break;
+                || !p.level().noCollision(MaidBridge.body(p), box)) break;
             destination = next;
         }
         p.teleportTo(destination.x, destination.y, destination.z);
-        p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket(p));
+        if (!(p instanceof net.minecraftforge.common.util.FakePlayer))
+            p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket(p));
         p.hurtMarked = true;
     }
 
@@ -348,7 +361,8 @@ public final class TojiQte {
         int id = Curse.data(p).getInt(K_TARGET);
         if (id == 0) return null;
         if (!(p.serverLevel().getEntity(id) instanceof LivingEntity living) || !living.isAlive()) return null;
-        return living.distanceToSqr(p) <= 144 ? living : null;
+        return living.distanceToSqr(p) <= 144 && CombatSettings.canHit(p,living)
+            && MaidBridge.body(p).hasLineOfSight(living) ? living : null;
     }
 
     /** 连招出手前把施术者拉到目标身边（闪身 5 格后够不着的问题）。 */
@@ -363,7 +377,7 @@ public final class TojiQte {
             Vec3 step = to.normalize().scale(Math.max(0, distance - reach * 0.6));
             teleportAlong(p, step, step.length());
         }
-        return remembered;
+        return p.distanceToSqr(remembered)<=reach*reach && MaidBridge.body(p).hasLineOfSight(remembered) ? remembered : null;
     }
 
     /** 连招要打的目标：先看准星前方 4 格，其次用 QTE 标记过的目标。 */
@@ -373,7 +387,8 @@ public final class TojiQte {
         double bestScore = -1;
         for (LivingEntity living : p.serverLevel().getEntitiesOfClass(LivingEntity.class,
                 new AABB(p.position(), p.position()).inflate(reach + 2),
-                t -> t != p && t.isAlive() && !t.isSpectator() && CombatSettings.canHit(p, t))) {
+                t -> t != p && t.isAlive() && !t.isSpectator() && CombatSettings.canHit(p, t)
+                     && p.distanceToSqr(t)<=reach*reach && MaidBridge.body(p).hasLineOfSight(t))) {
             Vec3 delta = living.getBoundingBox().getCenter().subtract(eye);
             double along = delta.dot(look);
             if (along < 0 || along > reach + 2) continue;
@@ -387,30 +402,14 @@ public final class TojiQte {
     public static void stun(LivingEntity target, int ticks) {
         data(target).putLong(K_STUN, now(target) + ticks);
         if (target instanceof Mob mob) {
-            mob.setTarget(null);
-            mob.getNavigation().stop();
-            mob.setNoAi(true);
-            STUNNED.removeIf(stunned -> stunned.target() == mob);
-            STUNNED.add(new Stunned(mob, now(target) + ticks));
+            character.npc.NpcControl.stun(mob, "toji_combo", ticks);
         }
-    }
-
-    /** 服务端每刻：解除到期的眩晕。 */
-    @SubscribeEvent public static void serverTick(TickEvent.ServerTickEvent e) {
-        if (e.phase != TickEvent.Phase.END || STUNNED.isEmpty()) return;
-        STUNNED.removeIf(stunned -> {
-            LivingEntity target = stunned.target();
-            if (target == null || !target.isAlive() || now(target) >= stunned.until()) {
-                if (target instanceof Mob mob && target.isAlive()) mob.setNoAi(false);
-                return true;
-            }
-            return false;
-        });
     }
 
     /** 闪避无敌帧 + 夺命挡箭牌：伤害转移给替死鬼。 */
     @SubscribeEvent public static void hurt(net.minecraftforge.event.entity.living.LivingHurtEvent e) {
-        if (!(e.getEntity() instanceof ServerPlayer p) || !CharacterService.toji(p)) return;
+        ServerPlayer p = MaidBridge.progression(e.getEntity());
+        if (p == null || !CharacterService.toji(p)) return;
         if (invulnerable(p)) { e.setCanceled(true); return; }
         int hostage = Curse.data(p).getInt("TojiHostage");
         if (hostage != -1 && e.getAmount() > 0 && p.serverLevel().getEntity(hostage) instanceof LivingEntity shield

@@ -34,7 +34,7 @@ public final class BloodClient {
         if(e.kind()==BloodExpansion.FX_OCEAN_CLOSE){oceans.remove(e.seed());return true;}
         if(e.kind()==BloodExpansion.FX_OCEAN){oceans.put(e.seed(),new Visual(e,(long)e.direction().x,tick+e.life()));return true;}
         if(e.kind()==BloodDomain.FX_CLOSE){domains.remove(e.seed());return true;}
-        if(e.kind()==BloodDomain.FX_DOMAIN){Visual old=domains.get(e.seed());domains.put(e.seed(),new Visual(e,old==null?tick:old.born,tick+e.life()));return true;}
+        if(e.kind()==BloodDomain.FX_DOMAIN){if(DomainWorldRenderer.clashing(e.owner()))return true;Visual old=domains.get(e.seed());domains.put(e.seed(),new Visual(e,old==null?tick:old.born,tick+e.life()));return true;}
         if(e.life()<=0)return true;
         if(e.kind()==BloodArts.FX+2)GojoOpticsClient.receive(e);
         if(e.kind()==BloodArts.FX+4||e.kind()==BloodArts.FX+5&&e.seed()==0||e.kind()==BloodArts.FX+7||e.kind()==BloodArts.FX+10||e.kind()==BloodArts.FX+13&&e.seed()==0||e.kind()==BloodArts.FX+2||e.kind()==BloodArts.FX_HEART||e.kind()==BloodArts.FX_READY)visuals.removeIf(v->v.e.kind()==e.kind()&&v.e.owner()==e.owner()&&v.e.seed()==e.seed());

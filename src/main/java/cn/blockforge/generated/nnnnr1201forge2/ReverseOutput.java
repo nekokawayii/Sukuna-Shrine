@@ -22,8 +22,15 @@ public final class ReverseOutput {
         Network.send(p.serverLevel(),new Network.Effect(137,target.getId(),target.position(),Vec3.ZERO,1,20,0));
     }
     public static void cast(ServerPlayer p){
+        if(!(p instanceof net.minecraftforge.common.util.FakePlayer)){character.mainline.Mainline.reverseOut(p);return;}
         if(!p.isAlive()||p.isSpectator()||DomainClash.active(p)||!GuardianCombat.awakened(p)||Curse.active(p,"ReverseOutputCooldown"))return;
         if(p instanceof MaidBridge.Actor actor){if(maidReady(actor))healTarget(p,MaidBridge.owner(actor));return;}
+        if(p instanceof NpcBridge.NpcActor npc){
+            LivingEntity ally=p.level().getEntitiesOfClass(LivingEntity.class,npc.mob.getBoundingBox().inflate(16),
+                e->e!=npc.mob&&e.isAlive()&&e.getHealth()<e.getMaxHealth()&&npc.mob.isAlliedTo(e)&&!NpcBridge.canHit(npc,e)&&npc.mob.hasLineOfSight(e))
+                .stream().min(Comparator.comparingDouble(e->e.getHealth()/e.getMaxHealth())).orElse(null);
+            if(ally!=null)healTarget(p,ally);return;
+        }
         Vec3 eye=p.getEyePosition(),dir=p.getLookAngle();
         LivingEntity target=p.serverLevel().getEntitiesOfClass(LivingEntity.class,p.getBoundingBox().inflate(32),e->e!=p&&e.isAlive()&&p.hasLineOfSight(e)&&e.getBoundingBox().getCenter().distanceToSqr(eye)<=1024&&e.getBoundingBox().getCenter().subtract(eye).normalize().dot(dir)>=Math.cos(Math.toRadians(12))).stream().min(Comparator.<LivingEntity>comparingDouble(e->1-e.getBoundingBox().getCenter().subtract(eye).normalize().dot(dir)).thenComparingDouble(p::distanceToSqr)).orElse(null);
         if(target==null){if(Curse.spend(p,100)){Curse.status(p,"ReverseOutputCooldown",20);Network.send(p.serverLevel(),new Network.Effect(137,p.getId(),Skills.aimPoint(p,16),Vec3.ZERO,1,20,0));}return;}

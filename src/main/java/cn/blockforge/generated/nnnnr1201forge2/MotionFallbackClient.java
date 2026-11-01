@@ -60,6 +60,12 @@ public final class MotionFallbackClient {
         // 资源/姿态函数坏掉时仍有完整起手收招，绝不把 NaN 写入共用模型。
         return emergency(age,c.definition.duration());
     }
+    /** 同一姿态采样供人形 NPC 使用；不创建玩家剪辑，不依赖 AbstractClientPlayer。 */
+    public static Frame sampleDefinition(String name,double age){
+        var definition=definitions.get(name);
+        if(definition==null||!Double.isFinite(age)||age<0||age>=definition.duration())return null;
+        Frame frame=definition.sampler().apply(age);return frame!=null&&frame.valid()?frame:null;
+    }
     public static Frame emergency(double age,int duration){
         double p=MotionSafety.age(age,0,duration)/Math.max(1,duration),weight=Math.sin(p*Math.PI);
         return new Frame(new DismantlePose.Pose(.12*weight,14*weight,-8*weight,-55*weight,-105*weight,

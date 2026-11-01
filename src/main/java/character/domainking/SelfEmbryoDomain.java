@@ -32,18 +32,16 @@ public final class SelfEmbryoDomain {
     private static final int BUILD_TICKS = 60;       // 3 秒铺完（20 刻/秒）
     private static final int MAX_BLOCKS = 260000;    // 上限保护
 
-    private record Edit(BlockPos pos, BlockState old) {}
-
     private static final class Build {
         final ServerLevel level;
         final BlockPos center;
         long end;
-        final List<Edit> journal = new ArrayList<>();
+        final character.domain.DomainTerrain.Handle terrain;
         final List<BlockPos> blocks = new ArrayList<>();
         final List<UUID> fruits = new ArrayList<>();
         int cursor;
         int rate;
-        Build(ServerLevel level, BlockPos center, long end) { this.level = level; this.center = center; this.end = end; }
+        Build(ServerLevel level, UUID owner, BlockPos center, long end) { this.level = level; this.center = center; this.end = end; this.terrain=character.domain.DomainTerrain.begin(level,owner); }
     }
 
     private static final Map<UUID, Build> ACTIVE = new HashMap<>();
@@ -51,13 +49,15 @@ public final class SelfEmbryoDomain {
     public static boolean active(ServerPlayer p) { return ACTIVE.containsKey(p.getUUID()); }
 
     public static void open(ServerPlayer p) {
+        if(!character.mainline.Mainline.requireDomain(p))return;
         if (!(p.level() instanceof ServerLevel level)) return;
         if (active(p)) return;
         BlockPos center = p.blockPosition();
-        Build build = new Build(level, center, level.getGameTime() + LIFE_TICKS);
+        Build build = new Build(level, p.getUUID(), center, level.getGameTime() + LIFE_TICKS);
         plan(level, center, build);
         ACTIVE.put(p.getUUID(), build);
         cn.blockforge.generated.nnnnr1201forge2.DomainClash.opened(p, net.minecraft.world.phys.Vec3.atCenterOf(center), RADIUS);
+        if(!active(p))return;
         spawnFruits(level, p, build);
         level.playSound(null, center, net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE,
             net.minecraft.sounds.SoundSource.HOSTILE, 1.8f, 0.4f);
@@ -139,32 +139,29 @@ public final class SelfEmbryoDomain {
     }
 
     private static void restore(Build build) {
-        for (int i = build.journal.size() - 1; i >= 0; i--) {
-            Edit e = build.journal.get(i);
-            build.level.setBlock(e.pos(), e.old(), 2);
-        }
+        build.terrain.close();
         for (UUID id : build.fruits) {
             var entity = build.level.getEntity(id);
             if (entity != null) entity.discard();
         }
-        build.journal.clear();
+        build.fruits.clear();
         build.blocks.clear();
     }
 
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         for (UUID id : new ArrayList<>(ACTIVE.keySet())) {
-            ServerPlayer p = event.getServer().getPlayerList().getPlayer(id);
+            ServerPlayer p = cn.blockforge.generated.nnnnr1201forge2.NpcBridge.find(event.getServer(),id);
             Build build = ACTIVE.get(id);
+            if(build==null)continue;
             if (p == null || !p.isAlive() || p.level() != build.level) { ACTIVE.remove(id); if (build != null) restore(build); continue; }
             if (build.level.getGameTime() >= build.end) { ACTIVE.remove(id); restore(build); p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域 · 自闭圆盾裹 已收起")); continue; }
+            if(!cn.blockforge.generated.nnnnr1201forge2.DomainClash.active(p))character.mahito.MahitoBattle.domainTick(p,net.minecraft.world.phys.Vec3.atCenterOf(build.center),RADIUS);
+            if(!ACTIVE.containsKey(id))continue;
             int done = 0;
             while (build.cursor < build.blocks.size() && done < build.rate) {
                 BlockPos pos = build.blocks.get(build.cursor++);
                 done++;   // 跳过的方块也计入进度，保证整体仍是 3 秒
-                BlockState old = build.level.getBlockState(pos);
-                if (build.level.getBlockEntity(pos) != null) continue;
-                if (old.getDestroySpeed(build.level, pos) < 0) continue;   // 基岩等不可破坏方块
                 BlockState target;
                 if (pos.getY() == build.center.getY() - 1) {
                     target = Blocks.MAGENTA_CONCRETE.defaultBlockState();    // 地面：淡紫色混凝土（最近的浅紫）
@@ -181,15 +178,13 @@ public final class SelfEmbryoDomain {
                     if (d2 > in2 && d2 <= r2) target = shellState(pos, build.center);
                     else target = Blocks.AIR.defaultBlockState();
                 }
-                if (old == target) continue;
-                build.journal.add(new Edit(pos.immutable(), old));
-                build.level.setBlock(pos, target, 2);
+                build.terrain.place(pos,target);
             }
         }
     }
 
     /** 关服兜底：未收起的领域全部还原，避免方块永久留在存档。 */
-    @SubscribeEvent public static void stop(ServerStoppedEvent event) {
+    @SubscribeEvent public static void stop(net.minecraftforge.event.server.ServerStoppingEvent event) {
         for (Build build : ACTIVE.values()) restore(build);
         ACTIVE.clear();
     }

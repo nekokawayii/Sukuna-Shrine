@@ -109,7 +109,7 @@ public final class SukunaBranches {
     private static void hit(ServerPlayer p,LivingEntity target,double fraction){if(!CombatSettings.canHit(p,target)||DomainClash.active(p)||DomainClash.active(target))return;target.invulnerableTime=0;AttackTypes.mark(AttackTypes.pending()!=null?AttackTypes.pending():AttackTypes.NET_BRANCH);CombatSettings.hurt(p,target,p.damageSources().sonicBoom(p),(float)(NetBranches.dismantleDamage(p,target)*fraction));}
     @SubscribeEvent(priority=EventPriority.LOWEST) public static void melee(LivingDamageEvent e){
         ServerPlayer p=CombatSettings.caster(e.getSource());if(p==null||e.isCanceled()||e.getAmount()<=0||!Curse.data(p).getBoolean("MultiArmed")||!Curse.canUseTechnique(p)||!CombatSettings.canHit(p,e.getEntity()))return;
-        if(!e.getSource().is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)&&!(MaidBridge.isCaster(p)&&e.getSource().is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK)))return;
+        if(!e.getSource().is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)&&!((MaidBridge.isCaster(p)||p instanceof NpcBridge.NpcActor)&&e.getSource().is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK)))return;
         Curse.data(p).putBoolean("MultiArmed",false);if(multis.size()<1024)multis.add(new Multi(p,p.serverLevel(),e.getEntity().getUUID(),p.level().getGameTime()+1,BranchRules.cuts(stage(p))));
     }
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e){

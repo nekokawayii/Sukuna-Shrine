@@ -55,7 +55,7 @@ public class TodoNpcEntity extends PathfinderMob {
 
     @Override public void tick() {
         super.tick();
-        if (level().isClientSide()) return;
+        if (level().isClientSide() || NpcBridge.supports(this)) return;
         long now = level().getGameTime();
         LivingEntity target = getTarget();
         if (target == null || !target.isAlive()) {
@@ -81,10 +81,12 @@ public class TodoNpcEntity extends PathfinderMob {
 
     /** 被打时用换位闪避；返回 true 表示已经换位（这一次伤害要取消）。 */
     public boolean tryDodge() {
-        if (level().isClientSide()) return false;
+        if (level().isClientSide()||DomainClash.active(this)||DomainClash.stunned(this)) return false;
+        var actor=NpcBridge.actorFor(this);if(actor==null||!Curse.canUseTechnique(actor)||NpcCurse.energy(this)<30)return false;
         long now = level().getGameTime();
         if (now < getPersistentData().getLong(SWAP_READY)) return false;
         if (!TodoMarks.swapFree(this, getTarget())) return false;
+        NpcCurse.spend(this,30);
         getPersistentData().putLong(SWAP_READY, now + TodoCombat.NPC_SWAP_INTERVAL);
         level().playSound(null, blockPosition(), net.minecraft.sounds.SoundEvents.ENDERMAN_TELEPORT,
             net.minecraft.sounds.SoundSource.HOSTILE, 0.9f, 1.4f);

@@ -19,11 +19,7 @@ public final class PlayerSkillBridge {
             return castPlayer(p, characterId, skill);
         }
         if (body instanceof Mob mob) {
-            // 照军团/女仆的路：包成假玩家再交给玩家技能入口（技能代码零改动）
-            var actor = NpcBridge.actorFor(mob);
-            if (actor == null) return false;
-            if (!NpcCurse.spend(mob, 30)) return false;   // 先扣生物咒力，再让玩家入口跑
-            return castPlayer(actor, characterId, skill);
+            return character.npc.NpcCombatCasting.cast(mob,mob.getTarget(),skill);
         }
         return false;
     }

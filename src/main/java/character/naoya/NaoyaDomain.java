@@ -53,7 +53,7 @@ public final class NaoyaDomain {
             light = new ArrayList<>(), decor = new ArrayList<>();
         /** 与 decor 一一对应的方块状态（来自用户改好的结构）。 */
         final List<BlockState> decorStates = new ArrayList<>();
-        final Map<BlockPos, BlockState> before = new LinkedHashMap<>();
+        final character.domain.DomainTerrain.Handle terrain;
         int cursor, total;
         boolean closing;
         boolean done;                                    // 结构是否已经全部铺完
@@ -63,6 +63,7 @@ public final class NaoyaDomain {
         int group;
         Realm(ServerLevel level, UUID owner, BlockPos center) {
             this.level = level; this.owner = owner; this.center = center;
+            this.terrain=character.domain.DomainTerrain.begin(level,owner);
         }
     }
 
@@ -83,6 +84,7 @@ public final class NaoyaDomain {
     }
 
     public static void open(ServerPlayer p) {
+        if(!character.mainline.Mainline.requireDomain(p))return;
         if (!(p.level() instanceof ServerLevel level) || ACTIVE.containsKey(p.getUUID())) return;
         Realm realm = new Realm(level, p.getUUID(), p.blockPosition());
         build(realm);
@@ -107,7 +109,7 @@ public final class NaoyaDomain {
     public static void close(ServerPlayer p, String reason) {
         Realm realm = ACTIVE.get(p.getUUID());
         if (realm == null || realm.closing) return;
-        realm.closing = true;
+        realm.closing = true;realm.terrain.close();
         realm.closeAt = realm.level.getGameTime();
         Network.send(realm.level, new Network.Effect(NaoyaFx.DOMAIN, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));
         com.mojang.logging.LogUtils.getLogger().info("[直哉领域] 收起（{}）", reason);
@@ -169,7 +171,7 @@ public final class NaoyaDomain {
         Vec3 middle = Vec3.atCenterOf(realm.center);
         for (LivingEntity entity : realm.level.getEntitiesOfClass(LivingEntity.class,
                 new AABB(middle, middle).inflate(RADIUS), t -> t.isAlive() && !t.isSpectator())) {
-            if (entity.getY() >= floor) continue;
+            if (entity.getY() >= floor||character.mainline.Mainline.simpleProtected(entity)||DomainClash.active(owner)||!CombatSettings.canHit(owner,entity)) continue;
             BlockPos seat = realm.seat;
             double x = seat.getX() + 0.5 + (realm.level.random.nextDouble() - 0.5) * 3.0;
             double z = seat.getZ() + 0.5 + (realm.level.random.nextDouble() - 0.5) * 3.0;
@@ -177,7 +179,7 @@ public final class NaoyaDomain {
             entity.setDeltaMovement(0, 0, 0);
             entity.fallDistance = 0;
             entity.hurtMarked = true;
-            if (entity != owner) NaoyaCombat.freeze(owner, entity);
+            if (entity != owner) NaoyaCombat.freezeDomain(owner, entity);
             Network.send(realm.level, new Network.Effect(NaoyaFx.SHATTER, entity.getId(), entity.position(),
                 Vec3.ZERO, 1f, 10, 0));
         }
@@ -204,15 +206,15 @@ public final class NaoyaDomain {
         long now = server.overworld().getGameTime();
         for (var iterator = ACTIVE.entrySet().iterator(); iterator.hasNext(); ) {
             Realm realm = iterator.next().getValue();
-            ServerPlayer owner = server.getPlayerList().getPlayer(realm.owner);
-            if (owner == null || !owner.isAlive()) { forceRestore(realm); iterator.remove(); continue; }
+            ServerPlayer owner = MaidBridge.find(realm.level,realm.owner);
+            if (owner == null || !owner.isAlive()||owner.level()!=realm.level) { forceRestore(realm); iterator.remove(); continue; }
             if (!realm.closing && now >= realm.closeAt) { realm.closing = true; realm.closeAt = now; }
             if (realm.closing) {
                 if (!restoreStep(realm)) iterator.remove();
                 continue;
             }
             placeStep(realm);
-            if (realm.done) seat(owner, realm);
+            if (realm.done&&!realm.seated&&!DomainClash.active(owner)&&realm.terrain.ready()) seat(owner, realm);
             catchFalling(owner, realm, now);
             tickAuto(owner, realm, now);
         }
@@ -242,31 +244,17 @@ public final class NaoyaDomain {
                 pos = realm.decor.get(decorIndex);
                 target = realm.decorStates.get(decorIndex);
             }
-            if (!realm.level.hasChunkAt(pos)) continue;
-            realm.before.putIfAbsent(pos, realm.level.getBlockState(pos));
-            if (!realm.level.getBlockState(pos).equals(target)) realm.level.setBlock(pos, target, 2);
+            realm.terrain.place(pos,target);
             if (index + 1 >= realm.total) realm.done = true;
         }
     }
 
     private static boolean restoreStep(Realm realm) {
-        int budget = Math.max(600, realm.total / CLOSE_TICKS);
-        int done = 0;
-        while (done < budget && !realm.before.isEmpty()) {
-            var iterator = realm.before.entrySet().iterator();
-            var entry = iterator.next();
-            if (realm.level.hasChunkAt(entry.getKey())) realm.level.setBlock(entry.getKey(), entry.getValue(), 2);
-            iterator.remove();
-            done++;
-        }
-        return !realm.before.isEmpty();
+        realm.terrain.close();return false;
     }
 
     private static void forceRestore(Realm realm) {
-        for (var entry : realm.before.entrySet()) {
-            if (realm.level.hasChunkAt(entry.getKey())) realm.level.setBlock(entry.getKey(), entry.getValue(), 2);
-        }
-        realm.before.clear();
+        realm.terrain.close();
     }
 
     public static void forceClose(ServerPlayer p) {
@@ -279,9 +267,11 @@ public final class NaoyaDomain {
         ACTIVE.clear();
     }
 
+    private static boolean echoing;
     // ── 领域效果①：影子复制动作（每 3 次命中一组，必中结算） ──
     @SubscribeEvent public static void hurt(LivingHurtEvent e) {
-        if (!(e.getSource().getEntity() instanceof ServerPlayer p) || !NaoyaDomain.active(p)) return;
+        ServerPlayer p=CombatSettings.caster(e.getSource());
+        if(echoing||p==null||!NaoyaDomain.active(p)||DomainClash.active(p)||character.mainline.Mainline.simpleProtected(e.getEntity()))return;
         Realm realm = ACTIVE.get(p.getUUID());
         if (realm == null) return;
         if (++realm.group < GROUP_SIZE) return;
@@ -295,10 +285,10 @@ public final class NaoyaDomain {
             at.subtract(p.position()), 3f, 20, 0));
         for (var other : realm.level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
                 new AABB(at, at).inflate(SHADOW_RADIUS),
-                t -> t != p && t.isAlive() && CombatSettings.canHit(p, t))) {
+                t -> t != p && t.isAlive() && !character.mainline.Mainline.simpleProtected(t) && !DomainClash.active(p) && CombatSettings.canHit(p, t))) {
             other.invulnerableTime = 0;
-            CombatSettings.hurt(p, other, p.damageSources().playerAttack(p), (float) damage);
-            NaoyaCombat.freeze(p, other);
+            echoing=true;try{CombatSettings.hurt(p, other, p.damageSources().playerAttack(p), (float) damage);}finally{echoing=false;}
+            NaoyaCombat.freezeDomain(p, other);
             Network.send(realm.level, new Network.Effect(NaoyaFx.HIT, other.getId(), other.position(),
                 Vec3.ZERO, 1f, 6, 0));
         }
@@ -310,20 +300,20 @@ public final class NaoyaDomain {
     }
 
     private static void tickAuto(ServerPlayer p, Realm realm, long now) {
-        if (!Curse.data(p).getBoolean("NaoyaAutoAttack")) return;
+        if (DomainClash.active(p)||!Curse.data(p).getBoolean("NaoyaAutoAttack")) return;
         if (now < realm.nextAuto) return;
         realm.nextAuto = now + AUTO_INTERVAL;
         ServerLevel level = realm.level;
         var targets = level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
             p.getBoundingBox().inflate(AUTO_RANGE),
-            t -> t != p && t.isAlive() && !t.isSpectator() && CombatSettings.canHit(p, t));
+            t -> t != p && t.isAlive() && !t.isSpectator() && !character.mainline.Mainline.simpleProtected(t) && CombatSettings.canHit(p, t));
         if (targets.isEmpty()) return;
         var random = level.random;
         for (var target : targets) {
             target.invulnerableTime = 0;                 // 无视无敌帧：每一刻都真正结算
             CombatSettings.hurt(p, target, p.damageSources().playerAttack(p), (float) AUTO_DAMAGE);
             target.invulnerableTime = 0;
-            if (random.nextDouble() < AUTO_PLANE_CHANCE) NaoyaCombat.freeze(p, target);
+            if (random.nextDouble() < AUTO_PLANE_CHANCE) NaoyaCombat.freezeDomain(p, target);
             Network.send(level, new Network.Effect(NaoyaFx.HIT, target.getId(), target.position(),
                 Vec3.ZERO, 1f, 4, 0));
         }

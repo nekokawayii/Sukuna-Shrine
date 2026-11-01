@@ -69,6 +69,7 @@ public final class GojoVoidClient {
     public static void tick(){
         time++;
         if(center==null){if(canvas!=null)dropCanvas();return;}
+        if(DomainWorldRenderer.clashing(ownerId)){dropCanvas();return;}
         if(time>end){close();return;}
         updateAnchor();
         // 兜底：施法者本人都从客户端世界里没了（死亡/换维度/下线），画布不许挂在天上
@@ -99,7 +100,7 @@ public final class GojoVoidClient {
     @SubscribeEvent public static void render(RenderLevelStageEvent e){
         // 【已回退】回到原来的阶段：黑色领域底衬在方块之后、实体之前画，并清掉地形深度，
         // 这样"纯黑底衬 + 黑洞 + 银河"的黑色领域画面与之前完全一致（实体仍然压在画布之上）。
-        if(anchor==null||e.getStage()!=RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS)return;
+        if(anchor==null||DomainWorldRenderer.clashing(ownerId)||e.getStage()!=RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS)return;
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         PoseStack ps=e.getPoseStack();Vec3 cam=e.getCamera().getPosition();
         if(cam.distanceTo(anchor)>radius*1.35){ // 远远超出边界就不再铺底（只在领域附近生效）

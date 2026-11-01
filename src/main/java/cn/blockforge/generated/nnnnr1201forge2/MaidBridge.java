@@ -91,8 +91,8 @@ public final class MaidBridge {
         a.getAttribute(Attributes.MAX_HEALTH).setBaseValue(a.maid.getMaxHealth());
         if(a.maid.getAttribute(Attributes.ATTACK_DAMAGE)!=null)a.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(a.maid.getAttributeValue(Attributes.ATTACK_DAMAGE));
     }
-    public static ServerPlayer progression(LivingEntity living){return living instanceof ServerPlayer p?p:isMaid(living)&&living.level() instanceof ServerLevel?actor(living):null;}
-    public static ServerPlayer find(ServerLevel level,UUID id){ServerPlayer player=level.getServer().getPlayerList().getPlayer(id);if(player!=null)return player;var entity=level.getEntity(id);return entity instanceof LivingEntity living&&(isMaid(living)||Legion.member(living)||Authority.echo(living))?actor(living):null;}
+    public static ServerPlayer progression(LivingEntity living){if(NpcBridge.supports(living))return NpcBridge.actorFor(living);return living instanceof ServerPlayer p?p:isMaid(living)&&living.level() instanceof ServerLevel?actor(living):null;}
+    public static ServerPlayer find(ServerLevel level,UUID id){ServerPlayer p=NpcBridge.find(level.getServer(),id);return p!=null&&p.level()==level?p:null;}
     public static final class Actor extends FakePlayer {
         public final LivingEntity maid;
         public LivingEntity aim;

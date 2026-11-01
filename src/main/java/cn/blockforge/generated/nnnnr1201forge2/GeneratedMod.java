@@ -67,6 +67,7 @@ public final class GeneratedMod {
         character.CharacterCasting.registerEffect("higuruma", character.higuruma.HigurumaSkills.ENHANCE, (character.CharacterCasting.Effect) (p, s2, r) -> character.higuruma.HigurumaCombat.enhanceThrow(p));
         character.CharacterCasting.registerEffect("higuruma", character.higuruma.HigurumaSkills.DOMAIN, (character.CharacterCasting.Effect) (p, s2, r) -> character.higuruma.HigurumaCombat.domain(p));
         MinecraftForge.EVENT_BUS.register(character.higuruma.HigurumaCombat.class);
+        MinecraftForge.EVENT_BUS.register(character.higuruma.HigurumaDomain.class);
         MinecraftForge.EVENT_BUS.addListener(character.higuruma.HigurumaDomain::serverTick);
         MinecraftForge.EVENT_BUS.addListener(character.higuruma.HigurumaDomain::serverStopped);
         // 鹿紫云一 · 幻兽琥珀：电荷 / 必中落雷 / 终奥
@@ -139,9 +140,12 @@ public final class GeneratedMod {
         MinecraftForge.EVENT_BUS.register(character.naoya.NaoyaCombat.class);
         MinecraftForge.EVENT_BUS.register(character.naoya.NaoyaDomain.class);
         MinecraftForge.EVENT_BUS.register(character.mainline.Mainline.class);   // 共同主线成就
-        MinecraftForge.EVENT_BUS.register(character.npc.NpcDomain.class);      // NPC 真领域
+        MinecraftForge.EVENT_BUS.register(character.TechniqueApi.class);
+        MinecraftForge.EVENT_BUS.register(character.domain.DomainStyleReload.class);
+        MinecraftForge.EVENT_BUS.register(character.domain.PictureDomainApi.class);
+        MinecraftForge.EVENT_BUS.register(character.npc.NpcControl.class);
         MinecraftForge.EVENT_BUS.register(character.npc.NpcCombatCasting.class); // NPC 咒术
-        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent event) -> {
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppingEvent event) -> {
             character.kashimo.KashimoCharges.reset();
             character.kashimo.KashimoZones.reset();
             character.todo.TodoMarks.reset();
@@ -149,6 +153,8 @@ public final class GeneratedMod {
             character.ryu.RyuCombat.reset();
             character.ryu.RyuDomain.reset();
             character.naoya.NaoyaDomain.reset();
+            character.yuki.YukiDomain.reset();
+            character.hakari.HakariDomain.reset();
         });
         character.CharacterCasting.registerEffect("megumi", character.megumi.MegumiSkills.TEN_SHADOWS, (net.minecraft.server.level.ServerPlayer p, character.CharacterSkill skill, int rank) -> Network.sendTo(p, new Network.Effect(308, p.getId(), p.position(), net.minecraft.world.phys.Vec3.ZERO, 0f, 0, 0)));
         // 九十九由基·星之怒：四招全部原版伤害实现
@@ -197,6 +203,7 @@ public final class GeneratedMod {
         MinecraftForge.EVENT_BUS.register(character.domainking.SelfEmbryoDomain.class);
         MinecraftForge.EVENT_BUS.register(NpcCurse.class);
         MinecraftForge.EVENT_BUS.addListener((TickEvent.ServerTickEvent e)->{if(e.phase==TickEvent.Phase.END)NpcBridge.tick();});
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppingEvent e)->NpcBridge.clear());
         character.CharacterCasting.registerNpcProvider(JogoNpcEntity.class,(e,skill)->PlayerSkillBridge.cast(character.CharacterCasting.caster(e),"jogo",skill));
         character.CharacterCasting.registerNpcProvider(ChosoEntity.class,(e,skill)->PlayerSkillBridge.cast(character.CharacterCasting.caster(e),"choso",skill));
         character.CharacterCasting.registerNpcProvider(UraumeNpcEntity.class,(e,skill)->PlayerSkillBridge.cast(character.CharacterCasting.caster(e),"uraume",skill));

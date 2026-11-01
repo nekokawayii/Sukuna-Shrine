@@ -45,6 +45,11 @@ public final class EntityRendererRegistry {
     private static final java.util.List<Entry<?>> ENTRIES=java.util.List.of(
         entry(VoidContent.GOJO,GojoRenderer.class,GojoRenderer::new),
         entry(Content.CHOSO,ChosoRenderer.class,ChosoRenderer::new),
+        entry(Content.NANAMI_NPC,SorcererNpcRenderer.class,SorcererNpcRenderer::new),
+        entry(Content.YUTA_NPC,SorcererNpcRenderer.class,SorcererNpcRenderer::new),
+        entry(Content.YUKI_NPC,SorcererNpcRenderer.class,SorcererNpcRenderer::new),
+        entry(Content.TOJI_NPC,SorcererNpcRenderer.class,SorcererNpcRenderer::new),
+        entry(Content.MAHITO_NPC,SorcererNpcRenderer.class,SorcererNpcRenderer::new),
         entry(Content.TODO_NPC,TodoNpcRenderer.class,TodoNpcRenderer::new),
         entry(Content.RYU_NPC,RyuNpcRenderer.class,RyuNpcRenderer::new),
         entry(Content.HAKARI_NPC,HakariNpcRenderer.class,HakariNpcRenderer::new),
@@ -84,6 +89,7 @@ public final class EntityRendererRegistry {
 
     public static void register(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(Content.YUTA_GRAVE_BE.get(), character.yuta.YutaGraveRenderer::new);
+        event.registerBlockEntityRenderer(Content.DOMAIN_MASK_BE.get(), DomainMaskRenderer::new);
         for(var entry:ENTRIES)entry.register(event);
         Set<EntityType<?>> covered=new HashSet<>();
         for(var entry:ENTRIES) {

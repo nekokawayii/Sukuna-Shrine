@@ -33,7 +33,7 @@ public class YujiEntity extends Monster {
     private Vec3 dash=Vec3.ZERO,domainCenter=Vec3.ZERO,threadTarget=Vec3.ZERO,cutPoint=Vec3.ZERO,cutDir=Vec3.ZERO;
     private long cutAngle;
     public boolean domainOverlaps(Vec3 center,double radius){return domainTicks>0&&domainCenter.distanceToSqr(center)<Math.pow(radius+48,2);}
-    private boolean domainContains(LivingEntity p){return !DomainClash.active(this)&&domainTicks>0&&BossTargets.valid(this,p)&&p.position().distanceToSqr(domainCenter)<48*48;}
+    private boolean domainContains(LivingEntity p){return !character.mainline.Mainline.simpleProtected(p)&&!DomainClash.active(this)&&domainTicks>0&&BossTargets.valid(this,p)&&p.position().distanceToSqr(domainCenter)<48*48;}
     private boolean sureHit(LivingEntity p){ServerPlayer caster=MaidBridge.progression(p);return domainContains(p)&&!(caster!=null&&Skills.neutralizes(caster));}
     private boolean dashHit,rageUsed,comboFinisher;
     public YujiEntity(EntityType<? extends Monster> type,Level level){super(type,level);setPersistenceRequired();xpReward=500;}
@@ -64,7 +64,7 @@ public class YujiEntity extends Monster {
         if(hit){fx(81,p.position().add(0,1,0),position(),1,8,p.getId());if(flash)fx(58,p.position(),Vec3.ZERO,dealt,10,p.getId());if(flash)SkillSounds.play(this,"black_flash");else sound(soul?SoundEvents.NOTE_BLOCK_BASEDRUM.value():SoundEvents.PLAYER_ATTACK_STRONG,soul?0.5f:0.8f);}return hit;
     }
     private boolean inReach(LivingEntity p){return sureHit(p)||distanceToSqr(p)<3.4*3.4&&hasLineOfSight(p);}
-    private void begin(int skill){entityData.set(ACTION,skill);entityData.set(AGE,0);getNavigation().stop();dashHit=false;comboFinisher=false;lastSkill=skill;castBonus=BossRevelation.roll(this,BossRevelation.yuji(skill));if(skill==6)domainBonus=castBonus;
+    private void begin(int skill){if(skill!=1&&!character.npc.NpcLegacyCombat.pay(this,skill==6?1200:60,skill==6))return;entityData.set(ACTION,skill);entityData.set(AGE,0);getNavigation().stop();dashHit=false;comboFinisher=false;lastSkill=skill;castBonus=BossRevelation.roll(this,BossRevelation.yuji(skill));if(skill==6)domainBonus=castBonus;
         if(skill!=7)SkillSounds.play(this,"yuji_"+skill);fx(80,position(),getLookAngle(),skill,skill==6?40:20,0);
         if(skill==5){comboCount=RevelationRules.quantity(5+random.nextInt(3),castBonus>0,20);for(ServerPlayer p:players(12))SoulCombat.suppress(p,20+comboCount*3);}
         if(skill==3&&getTarget()!=null)threadTarget=getTarget().position();
@@ -81,13 +81,14 @@ public class YujiEntity extends Monster {
         if(DomainClash.active(this)||DomainClash.stunned(this)){DomainClash.hold(this);bar.setName(Component.literal("虎杖残影 · "+(int)getHealth()+" / "+(int)getMaxHealth()+(DomainClash.stunned(this)?" · 对拼败北僵直":" · 领域对拼")));return;}
         processDelayed();tickDomain();
         LivingEntity target=BossTargets.select(this,128);
+        character.npc.NpcLegacyCombat.tick(this,target!=null);
         if(target==null){if(action()!=0){finish(30);clearEchoes();}return;}
         getLookControl().setLookAt(target,35,35);Vec3 face=target.position().subtract(position());setYRot((float)Math.toDegrees(Math.atan2(-face.x,face.z)));yBodyRot=getYRot();
         if(action()==0){
             rest-=Math.max(1,(int)Math.ceil(BossControl.value(this,"YujiFrequency",1)));
             if(rest>0){getNavigation().stop();return;}
             if(comboFinisher){begin(2);return;}
-            if(getHealth()<getMaxHealth()*0.5f&&level().getGameTime()>=nextDomain&&domainTicks==0){begin(6);return;}
+            if(getHealth()<getMaxHealth()*0.5f&&level().getGameTime()>=nextDomain&&domainTicks==0&&character.npc.NpcLegacyCombat.domainReady(this)&&NpcCurse.energy(this)>=1200&&getPersistentData().getLong("NpcLegacyBurnout")<=level().getGameTime()){begin(6);return;}
             if(getHealth()<getMaxHealth()*0.3f&&!rageUsed){rageUsed=true;begin(4);return;}
             if(distanceToSqr(target)>18*18){getNavigation().moveTo(target,1.2);return;}
             int[] choices={1,2,3,5,7};int choice=choices[random.nextInt(choices.length)];if(choice==lastSkill)choice=choices[(java.util.stream.IntStream.range(0,choices.length).filter(i->choices[i]==lastSkill).findFirst().orElse(0)+1+random.nextInt(choices.length-1))%choices.length];begin(choice);return;
@@ -120,7 +121,7 @@ public class YujiEntity extends Monster {
             }
             case 6 -> {
                 setDeltaMovement(0,getDeltaMovement().y,0);
-                if(t==40){domainCenter=position();domainTicks=castBonus>0?600:300;nextDomain=level().getGameTime()+3600;sound(SoundEvents.BELL_BLOCK,0.55f);fx(90,domainCenter,Vec3.ZERO,48,300,level().getGameTime());DomainClash.opened(this,domainCenter,48);if(!DomainClash.active(this))for(ServerPlayer p:players(48))SoulCombat.iwate(p,3);}
+                if(t==40){domainCenter=position();domainTicks=castBonus>0?600:300;nextDomain=level().getGameTime()+character.npc.NpcBattleRules.DOMAIN_COOLDOWN;sound(SoundEvents.BELL_BLOCK,0.55f);fx(90,domainCenter,Vec3.ZERO,48,300,level().getGameTime());DomainClash.opened(this,domainCenter,48);if(!DomainClash.active(this))for(ServerPlayer p:players(48))SoulCombat.iwate(p,3);}
                 if(t>=42)finish(18);
             }
             case 7 -> {
@@ -140,6 +141,7 @@ public class YujiEntity extends Monster {
         // 持续补发剩余时间，支持玩家中途进场和客户端重新载入。
         if(domainTicks%20==0)fx(90,domainCenter,Vec3.ZERO,48,domainTicks,level().getGameTime());
         for(LivingEntity p:BossTargets.around(this,domainCenter,48,true)){
+            if(character.mainline.Mainline.simpleProtected(p))continue;
             if(p instanceof YujiEntity echo&&getUUID().equals(echo.original))continue;
             ServerPlayer caster=MaidBridge.progression(p);if(caster!=null){SoulCombat.iwate(caster,3);if(Skills.neutralizes(caster))continue;}
             if(domainTicks%10==0&&p.getDeltaMovement().horizontalDistanceSqr()>0.002)server().playSound(null,p.blockPosition(),SoundEvents.GRASS_STEP,SoundSource.PLAYERS,0.35f,0.85f);
@@ -148,7 +150,7 @@ public class YujiEntity extends Monster {
         }
         if(domainTicks%60==0){SkillSounds.play(this,"iwate_wind");sound(SoundEvents.PARROT_AMBIENT,0.7f);}
     }
-    private void endDomain(){domainTicks=0;fx(91,domainCenter,Vec3.ZERO,48,1,0);}
+    private void endDomain(){character.npc.NpcLegacyCombat.burnout(this);domainTicks=0;fx(91,domainCenter,Vec3.ZERO,48,1,0);}
     public boolean clashDomainActive(){return domainTicks>0&&!decoy()&&!familyMember;}
     public void extendDomain(int ticks){if(domainTicks>0)domainTicks+=ticks;}
     public void clashCloseDomain(){endDomain();}

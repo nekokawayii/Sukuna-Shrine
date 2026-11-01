@@ -25,16 +25,18 @@ public final class CombatSafety {
         if(entity instanceof MahoragaEntity m)return m.ally()?m.allyOwner():null;
         if(entity instanceof TamableAnimal tame)return tame.getOwnerUUID();
         if(entity instanceof JacobsLadderEntity ladder)return ladder.ownerId();
+        if(entity instanceof RikaEntity rika)return rika.ownerId();
         return Legion.ownerId(entity);
     }
     public static ServerPlayer owner(Entity entity) {
         for(int depth=0;entity!=null&&depth<8;depth++) {
             if(entity instanceof ServerPlayer p)return p;
             if(entity instanceof Projectile projectile){entity=projectile.getOwner();continue;}
-            ServerPlayer actor=MaidBridge.caster(entity);
+            ServerPlayer actor=NpcBridge.existing(entity);
+            if(actor==null)actor=MaidBridge.caster(entity);
             if(actor!=null)return actor;
             UUID id=ownerId(entity);
-            return id!=null&&entity.level() instanceof ServerLevel level?level.getServer().getPlayerList().getPlayer(id):null;
+            return id!=null&&entity.level() instanceof ServerLevel level?NpcBridge.find(level.getServer(),id):null;
         }
         return null;
     }

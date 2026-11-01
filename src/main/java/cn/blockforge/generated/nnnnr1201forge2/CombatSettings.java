@@ -73,6 +73,10 @@ public final class CombatSettings {
             source=new net.minecraft.world.damagesource.DamageSource(source.typeHolder(),source.getDirectEntity()!=null?source.getDirectEntity():owner,null,owner.position());
             target.setLastHurtByPlayer(owner);
         }
+        if(owner instanceof NpcBridge.NpcActor npc){
+            // NPC 不是玩家 PvP：直接伤害来源绑定真正生物，避免和平/队伍玩家规则吞掉命中。
+            source=new net.minecraft.world.damagesource.DamageSource(source.typeHolder(),npc.mob,npc.mob,npc.mob.position());
+        }
         if(owner instanceof MaidBridge.Actor actor){
             // 已由canHit授权的玩家命中不能再被驯养生物友伤或难度缩放吞掉；
             // 保留直接命中者和独立施术归属，不解除其他模组主动取消的伤害事件。

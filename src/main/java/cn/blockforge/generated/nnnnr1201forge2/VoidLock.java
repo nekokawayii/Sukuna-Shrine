@@ -13,6 +13,7 @@ import net.minecraft.world.entity.*;
 public final class VoidLock {
     /** true = 这个目标不能被无量空处抓住。 */
     public static boolean immune(LivingEntity caster,LivingEntity victim){
+        if(victim!=null&&character.mainline.Mainline.simpleProtected(victim)){free(victim);return true;}
         if(victim==null||victim==caster||!victim.isAlive()||victim.isRemoved()||victim.isSpectator())return true;
         if(caster instanceof ServerPlayer cp&&victim==MaidBridge.body(cp))return true; // 自己的女仆本体
         if(MaidBridge.isMaid(victim))return true;                          // 女仆：一个都不控

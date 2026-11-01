@@ -107,7 +107,8 @@ public final class KashimoCombat {
     // ------------------------------------------------------------ 事件：命中挂电 / 格挡 / 反射 / 连打
     @SubscribeEvent public static void hit(LivingHurtEvent e) {
         if (e.getAmount() <= 0) return;
-        if (e.getEntity() instanceof ServerPlayer victim && isKashimo(victim)) {
+        ServerPlayer victim=e.getEntity() instanceof ServerPlayer player?player:cn.blockforge.generated.nnnnr1201forge2.NpcBridge.existing(e.getEntity());
+        if(victim!=null&&isKashimo(victim)){
             // 幻兽·琥珀：肉体已转化为能量，免疫一切非机制伤害。
             if (ultimate(victim) && !unavoidable(e.getSource())) { e.setCanceled(true); return; }
             CompoundTag vd = data(victim);
@@ -135,7 +136,7 @@ public final class KashimoCombat {
             }
         }
         if (striking) return;
-        if (!(e.getSource().getEntity() instanceof ServerPlayer p) || !isKashimo(p)) return;
+        ServerPlayer p=CombatSettings.caster(e.getSource());if(p==null||!isKashimo(p))return;
         LivingEntity target = e.getEntity();
         if (target == p || !CombatSettings.canHit(p, target)) return;
         CompoundTag data = data(p);
@@ -237,8 +238,7 @@ public final class KashimoCombat {
         attacker.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, GUARD_STUN, 6, false, false));
         attacker.addEffect(new MobEffectInstance(MobEffects.CONFUSION, GUARD_STUN, 0, false, false));
         if (attacker instanceof Mob mob) {
-            mob.setTarget(null);
-            mob.getNavigation().stop();
+            character.npc.NpcControl.stun(mob,"kashimo_guard",GUARD_STUN);
         }
         if (victim.level() instanceof ServerLevel level) {
             Network.send(level, new Network.Effect(KashimoFx.GUARD, victim.getId(), victim.position(),

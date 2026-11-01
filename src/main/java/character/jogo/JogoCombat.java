@@ -127,13 +127,13 @@ public final class JogoCombat {
     private static final Map<UUID,Long> PILLAR_STAMP=new HashMap<>();
     /** 盖棺铁围山：界内敌人只要受伤，脚下就窜出一根火柱（同一目标 8 刻内不重复）。 */
     @SubscribeEvent public static void domainPillar(LivingDamageEvent e) {
-        LivingEntity victim=e.getEntity();if(victim instanceof ServerPlayer)return;
+        LivingEntity victim=e.getEntity();
         if(DOMAINS.isEmpty())return;
         ServerLevel level=null;ServerPlayer owner=null;
         for(var d:DOMAINS){
             if(victim.level()!=d.owner().level())continue;
             if(victim.position().distanceToSqr(d.center())>d.radius()*d.radius())continue;
-            if(victim==d.owner())continue;
+            if(!CombatSettings.canHit(d.owner(),victim)||character.mainline.Mainline.simpleProtected(victim)||DomainClash.active(d.owner()))continue;
             level=(ServerLevel)victim.level();owner=d.owner();break;
         }
         if(level==null||owner==null)return;
@@ -146,7 +146,7 @@ public final class JogoCombat {
 
     /** 被动「火焰附着」：漏壶造成的伤害附带火焰；隐身后的第一击额外 50% 暴击伤害。 */
     @SubscribeEvent public static void jogoDamage(LivingDamageEvent e) {
-        if(!(e.getSource().getEntity() instanceof ServerPlayer caster))return;
+        ServerPlayer caster=CombatSettings.caster(e.getSource());if(caster==null)return;
         var target=e.getEntity();if(target==caster)return;
         var d=CharacterService.selected(caster);if(d==null||!d.id().equals("jogo"))return;
         target.setSecondsOnFire(4);
@@ -168,7 +168,7 @@ public final class JogoCombat {
         var server=net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();if(server==null)return;
         for(var it=BEAM_EXPIRE.entrySet().iterator();it.hasNext();){
             var entry=it.next();
-            var owner=server.getPlayerList().getPlayer(entry.getKey());
+            var owner=NpcBridge.find(server,entry.getKey());
             if(owner==null)continue;
             if(owner.serverLevel().getGameTime()<entry.getValue())continue;
             var journal=BEAM_JOURNAL.remove(entry.getKey());
@@ -177,19 +177,13 @@ public final class JogoCombat {
         }
     }
 
-    /** 领域对拼获胜（由 DomainClash 回调）：五条悟会用茈打碎领域，算主动收回，并开始 3 分钟生存计时。 */
+    /** 领域对拼获胜：仅记录章节并开始生存计时，保留胜方完整领域与统一追加的30秒。 */
     public static void onClashWon(ServerPlayer p) {
         var data=Curse.data(p);
         data.putBoolean(CLASH_DONE,true);
         data.putLong(CLASH_AT,p.level().getGameTime());
-        closeDomain(p);
-        // 五条悟立刻开虚式茈打碎领域（不再等 AI 自己选招）
-        for(var boss:p.serverLevel().getEntitiesOfClass(GojoEntity.class,
-                new net.minecraft.world.phys.AABB(p.position(),p.position()).inflate(160),GojoEntity::isAlive)){
-            boss.clashPurpleInstant(p);
-            break;
-        }
-        p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域对拼获胜：五条悟秒开虚式「茈」击碎了盖棺铁围山 · 三分钟内再完成一次对拼即可通关"));
+        // 只推进章节，不再由旧剧情强制销毁胜方领域。
+        p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域对拼获胜：章节已记录，盖棺铁围山保持完全展开并延长30秒。"));
     }
 
     // ---------------------------------------------------------------- 技能 1：火砾虫
@@ -216,6 +210,8 @@ public final class JogoCombat {
     /** 火焰喷发：每刻前进 1.6 格的快速岩浆柱，8 刻飞完 12 格；沿途命中即结算。 */
     public static void castPillars(ServerPlayer p,CharacterSkill skill,int rank) {
         float damage=CombatSettings.spellDamage(p,skill.damageAt(rank));
+        // 每位施术者只保留一道持续喷流，刷新而非叠加 15 秒特效。
+        FANS.removeIf(f->f.owner().equals(p.getUUID()));
         FANS.add(new Fan(p.serverLevel(),p.getUUID(),p.getEyePosition(),p.getLookAngle(),damage,p.getServer().getTickCount()+PILLAR_LIFE,0));
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.FIRECHARGE_USE,SoundSource.PLAYERS,1.3f,0.8f);
     }
@@ -227,9 +223,9 @@ public final class JogoCombat {
         for(Iterator<Bug> it=BUGS.iterator();it.hasNext();){
             Bug bug=it.next();Vec3 next=bug.pos().add(bug.dir().scale(BUG_SPEED));
             ServerLevel level=bug.level();int life=bug.life()-1;
-            Network.send(level,new Network.Effect(JogoFx.BUG,0,bug.pos(),Vec3.ZERO,1,6,0));
+            if(life%4==0)Network.send(level,new Network.Effect(JogoFx.BUG,0,bug.pos(),Vec3.ZERO,1,6,0));
             var hit=level.getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(next,next).inflate(1.2),
-                t->t.getUUID().equals(bug.owner())?false:t instanceof ServerPlayer sp?CombatSettings.canHit(level.getServer().getPlayerList().getPlayer(bug.owner()),t):true);
+                t->t.getUUID().equals(bug.owner())?false:t instanceof ServerPlayer sp?CombatSettings.canHit(MaidBridge.find(level,bug.owner()),t):true);
             boolean blocked=!level.getBlockState(BlockPos.containing(next)).isAir();
             if(life<=0||blocked||!hit.isEmpty()){
                 explode(level,bug.owner(),next);it.remove();continue;
@@ -239,7 +235,7 @@ public final class JogoCombat {
     }
     private static void explode(ServerLevel level,UUID owner,Vec3 at) {
         Network.send(level,new Network.Effect(JogoFx.BUG_BURST,0,at,Vec3.ZERO,3,10,0));
-        ServerPlayer caster=level.getServer().getPlayerList().getPlayer(owner);if(caster==null)return;
+        ServerPlayer caster=MaidBridge.find(level,owner);if(caster==null)return;
         float damage=CombatSettings.spellDamage(caster,8);
         for(var target:level.getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(at,at).inflate(3),t->CombatSettings.canHit(caster,t))){
             AttackTypes.mark(AttackTypes.MAGIC);
@@ -274,7 +270,7 @@ public final class JogoCombat {
     private static void impact(ServerLevel level,UUID owner,Vec3 at,float damage) {
         Network.send(level,new Network.Effect(JogoFx.METEOR_IMPACT,0,at,Vec3.ZERO,5f,14,0));
         level.playSound(null,BlockPos.containing(at),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.4f,0.7f);
-        ServerPlayer caster=level.getServer().getPlayerList().getPlayer(owner);if(caster==null)return;
+        ServerPlayer caster=MaidBridge.find(level,owner);if(caster==null)return;
         for(var target:level.getEntitiesOfClass(LivingEntity.class,new net.minecraft.world.phys.AABB(at,at).inflate(4.5),t->CombatSettings.canHit(caster,t))){
             AttackTypes.mark(AttackTypes.MAGIC);
             try{CombatSettings.hurt(caster,target,caster.damageSources().indirectMagic(caster,caster),damage);}
@@ -291,7 +287,7 @@ public final class JogoCombat {
             if(ticks%2==0)Network.send(level,new Network.Effect(JogoFx.PILLAR,0,next,pillar.dir(),1,6,0));
             if(ticks%10==0){
                 pillar.hit().clear();   // 停留期允许重复灼烧
-                ServerPlayer caster=level.getServer().getPlayerList().getPlayer(pillar.owner());
+                ServerPlayer caster=MaidBridge.find(level,pillar.owner());
                 if(caster!=null)for(var target:level.getEntitiesOfClass(LivingEntity.class,
                         new net.minecraft.world.phys.AABB(next,next).inflate(1.8),
                         t->CombatSettings.canHit(caster,t)&&pillar.hit().add(t.getUUID()))){
@@ -313,11 +309,12 @@ public final class JogoCombat {
         if(FANS.isEmpty())return;
         for(Iterator<Fan> it=FANS.iterator();it.hasNext();){
             Fan fan=it.next();ServerLevel level=fan.level();
-            ServerPlayer owner=level.getServer().getPlayerList().getPlayer(fan.owner());
+            ServerPlayer owner=MaidBridge.find(level,fan.owner());
             if(owner==null||level.getServer().getTickCount()>=fan.end()){it.remove();continue;}
-            if(level.getServer().getTickCount()%2!=0)continue;
+            if(DomainClash.active(owner)||level.getServer().getTickCount()%5!=0)continue;
             Vec3 side=fan.dir().cross(new Vec3(0,1,0)).normalize();
-            int count=Math.max(3,Math.min(15,1+CharacterService.rank(owner)*5));
+            int count=Math.max(3,Math.min(5,1+CharacterService.rank(owner)));
+            Set<UUID> hit=new HashSet<>();
             double reach=6+(level.getServer().getTickCount()%60)*0.35;
             for(int i=0;i<count;i++){
                 double angle=Math.toRadians(-22+44.0*(count==1?0.5:i/(double)(count-1)));
@@ -325,7 +322,7 @@ public final class JogoCombat {
                 Vec3 at=fan.origin().add(dir.scale(reach));
                 Network.send(level,new Network.Effect(JogoFx.PILLAR,0,at,dir,1,6,0));
                 for(var target:level.getEntitiesOfClass(LivingEntity.class,
-                        new net.minecraft.world.phys.AABB(at,at).inflate(2.2),t->CombatSettings.canHit(owner,t))){
+                        new net.minecraft.world.phys.AABB(at,at).inflate(2.2),t->CombatSettings.canHit(owner,t)&&hit.add(t.getUUID()))){
                     AttackTypes.mark(AttackTypes.MAGIC);
                     try{CombatSettings.hurt(owner,target,owner.damageSources().indirectMagic(owner,owner),fan.damage());}
                     finally{AttackTypes.clear();}
@@ -339,7 +336,7 @@ public final class JogoCombat {
         if(COLUMNS.isEmpty())return;
         for(Iterator<Column> it=COLUMNS.iterator();it.hasNext();){
             Column c=it.next();ServerLevel level=c.level();
-            ServerPlayer owner=level.getServer().getPlayerList().getPlayer(c.owner());
+            ServerPlayer owner=MaidBridge.find(level,c.owner());
             if(owner==null||c.traveled()>=40){it.remove();continue;}
             Vec3 next=c.pos().add(c.dir().scale(2.5));
             Network.send(level,new Network.Effect(JogoFx.PILLAR,0,next,c.dir(),2,8,0));
@@ -380,6 +377,7 @@ public final class JogoCombat {
         return removed;
     }
     public static void castDomain(ServerPlayer p,CharacterSkill skill,int rank) {
+        if(!character.mainline.Mainline.requireDomain(p))return;
         if(closeDomain(p)){p.sendSystemMessage(net.minecraft.network.chat.Component.literal("盖棺铁围山 · 收"));return;}
         Vec3 center=p.position();
         DOMAINS.removeIf(d->d.owner()==p);
@@ -390,8 +388,9 @@ public final class JogoCombat {
         }
         DOMAINS.add(new Domain(p,center,p.getServer().getTickCount()+DOMAIN_LIFE,DOMAIN_RADIUS,captives));
         JogoTerrain.open(p,center,DOMAIN_RADIUS);
-        // 只有身处五条悟「无量空处」范围里才能开领域进入对拼；其他情况不登记对拼。
-        if(insideVoidDomain(p))DomainClash.opened(p,center,DOMAIN_RADIUS);
+        // 每次真正展开都登记，玩家与NPC的领域共享重叠对拼。
+        DomainClash.opened(p,center,DOMAIN_RADIUS);
+        if(!inDomain(p))return;
         Network.send(p.serverLevel(),new Network.Effect(JogoFx.DOMAIN,p.getId(),center,Vec3.ZERO,(float)DOMAIN_RADIUS,DOMAIN_LIFE,0));
         p.serverLevel().playSound(null,p.blockPosition(),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.6f,0.45f);
         p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域展开 · 盖棺铁围山"));
@@ -445,7 +444,7 @@ public final class JogoCombat {
         if(DOMAINS.isEmpty())return;
         for(Iterator<Domain> it=DOMAINS.iterator();it.hasNext();){
             Domain d=it.next();ServerPlayer owner=d.owner();
-            if(owner==null||!owner.isAlive()||owner.level()!=owner.serverLevel()){it.remove();if(owner!=null)JogoTerrain.restore(owner);continue;}
+            if(owner==null||!owner.isAlive()||owner.hasDisconnected()||!JogoTerrain.sameLevel(owner)){it.remove();if(owner!=null)JogoTerrain.restore(owner);continue;}
             if(owner.getServer().getTickCount()>=d.end()){
                 JogoTerrain.restore(owner);
                 Network.send(owner.serverLevel(),new Network.Effect(JogoFx.DOMAIN_END,owner.getId(),d.center(),Vec3.ZERO,0,0,0));
@@ -456,6 +455,8 @@ public final class JogoCombat {
             for(var it2=d.captives().entrySet().iterator();it2.hasNext();){
                 var entry=it2.next();var raw=level.getEntity(entry.getKey());
                 if(!(raw instanceof LivingEntity living)||!living.isAlive()||living.isSpectator()){it2.remove();continue;}
+                if(character.mainline.Mainline.simpleProtected(living)||!CombatSettings.canHit(owner,living)){it2.remove();continue;}
+                if(DomainClash.active(owner))continue;
                 double dx=living.getX()-d.center().x,dy=living.getY()-d.center().y,dz=living.getZ()-d.center().z;
                 if(dx*dx+dy*dy+dz*dz<=limit*limit){entry.setValue(living.position());continue;}
                 Vec3 back=entry.getValue();
@@ -469,7 +470,7 @@ public final class JogoCombat {
             for(var target:level.getEntitiesOfClass(LivingEntity.class,
                     new net.minecraft.world.phys.AABB(d.center(),d.center()).inflate(d.radius()),
                     t->t!=owner&&t.isAlive()&&t.position().distanceToSqr(d.center())<=d.radius()*d.radius()&&CombatSettings.canHit(owner,t))){
-                if(target.fireImmune()||!target.onGround())continue;
+                if(character.mainline.Mainline.simpleProtected(target)||DomainClash.active(owner)||target.fireImmune()||!target.onGround())continue;
                 Network.send(level,new Network.Effect(JogoFx.PILLAR,owner.getId(),target.position(),Vec3.ZERO,1.6f,10,0));
                 AttackTypes.mark(AttackTypes.MAGIC);
                 try{CombatSettings.hurt(owner,target,owner.damageSources().indirectMagic(owner,owner),damage);}
@@ -480,8 +481,8 @@ public final class JogoCombat {
     }
 
     /** 关服/退存档兜底：把没结束的领域地形还原，避免残留。 */
-    @SubscribeEvent public static void serverStopped(net.minecraftforge.event.server.ServerStoppedEvent e) {
-        for(ServerPlayer p:e.getServer().getPlayerList().getPlayers())JogoTerrain.restore(p);
+    @SubscribeEvent public static void serverStopped(net.minecraftforge.event.server.ServerStoppingEvent e) {
+        JogoTerrain.reset();
         DOMAINS.clear();BUGS.clear();METEORS.clear();FALLING.clear();PILLARS.clear();
     }
 

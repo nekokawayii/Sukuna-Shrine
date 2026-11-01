@@ -46,7 +46,7 @@ public final class YukiCombat {
 
     private static List<LivingEntity> around(ServerPlayer p, Vec3 center, double radius) {
         return p.level().getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(radius),
-            e -> e != p && e.isAlive() && !(e instanceof Player q && q.isCreative()));
+            e -> cn.blockforge.generated.nnnnr1201forge2.CombatSettings.canHit(p,e)&&p.hasLineOfSight(e));
     }
 
     /** 质量拳：前方锥形，重击 + 强击退，吃加重层数。 */
@@ -67,7 +67,7 @@ public final class YukiCombat {
             // 先按正常伤害结算（magic：无视护甲）
             float floor = e.getMaxHealth() * 0.20f;                    // 保底 20% 目标生命上限
             float before = e.getHealth();
-            e.hurt(p.damageSources().magic(), Math.max(base, floor));
+            if(!cn.blockforge.generated.nnnnr1201forge2.CombatSettings.hurt(p,e,p.damageSources().indirectMagic(p,p),Math.max(base,floor)))continue;
             // 保底优先级最高：不足 20% 就用「真伤」补足，绕过一切限伤/防御/减伤。
             float lost = before - e.getHealth();
             if (e.isAlive() && lost < floor) {
@@ -97,7 +97,7 @@ public final class YukiCombat {
             Vec3 to = e.getBoundingBox().getCenter().subtract(eye);
             if (to.length() > range) continue;
             if (to.normalize().dot(dir) < Math.cos(Math.toRadians(skill.halfAngle()))) continue;
-            e.hurt(p.damageSources().playerAttack(p), damage);
+            cn.blockforge.generated.nnnnr1201forge2.CombatSettings.hurt(p,e,p.damageSources().playerAttack(p),damage);
             Vec3 kb = to.normalize().scale(2.0);
             e.push(kb.x, 0.6, kb.z);
             e.hurtMarked = true;
@@ -121,7 +121,7 @@ public final class YukiCombat {
             hit.addAll(around(p, eye.add(dir.scale(t)), skill.radius()));
         }
         for (LivingEntity e : hit) {
-            e.hurt(p.damageSources().playerAttack(p), damage);
+            cn.blockforge.generated.nnnnr1201forge2.CombatSettings.hurt(p,e,p.damageSources().playerAttack(p),damage);
             e.hurtMarked = true;
         }
         if (p.level() instanceof ServerLevel level) {
@@ -191,13 +191,13 @@ public final class YukiCombat {
         float damage = (float) ((1200 + 300 * Math.max(0, rank)) * multiplier);
         Vec3 center = p.position();
         for (LivingEntity e : around(p, center, 24)) {
-            if (!(e instanceof Enemy) && !(e instanceof net.minecraft.world.entity.Mob m && m.getTarget() == p)) continue;
+            if(!cn.blockforge.generated.nnnnr1201forge2.CombatSettings.canHit(p,e))continue;
             Vec3 pull = center.subtract(e.position());
             double dist = Math.max(0.4, pull.length());
             Vec3 v = pull.normalize().scale(1.8 / dist);
             e.push(v.x * 8, 0.6, v.z * 8);
             e.hurtMarked = true;
-            e.hurt(p.damageSources().magic(), damage);
+            cn.blockforge.generated.nnnnr1201forge2.CombatSettings.hurt(p,e,p.damageSources().indirectMagic(p,p),damage);
         }
         if (p.level() instanceof ServerLevel level) {
             for (int i = 0; i < 160; i++) {
@@ -217,7 +217,8 @@ public final class YukiCombat {
      * 普通写血会被夹到 HitCap；这里用反射临时把开关打开再写，写完整回原值。
      */
     public static void trueDamage(ServerPlayer p, LivingEntity e, double amount) {
-        if (e == null || amount <= 0) return;
+        if(e==null||amount<=0||!cn.blockforge.generated.nnnnr1201forge2.CombatSafety.canAffect(p,e)
+            ||cn.blockforge.generated.nnnnr1201forge2.DomainClash.active(p)||cn.blockforge.generated.nnnnr1201forge2.DomainClash.active(e))return;
         float want = (float) Math.max(0.0, e.getHealth() - amount);
         try {
             var field = findField(e.getClass(), "internalHealth");

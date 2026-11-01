@@ -1,0 +1,1 @@
+{"parent":"sukuna:mainline/sorcerer","display":{"icon":{"item":"minecraft:ender_pearl"},"title":"结界术","description":"在任意敌方领域内连续存活15秒；轮盘左侧释放半径15格、持续10秒的球壳，结束还原","frame":"task","show_toast":true,"announce_to_chat":true,"hidden":false},"criteria":{"learned":{"trigger":"minecraft:impossible"}}}

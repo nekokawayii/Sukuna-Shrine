@@ -150,7 +150,7 @@ public final class VoidCombat {
     }
     private static void furnaceBlast(ServerPlayer p,Vec3 center){
         ServerLevel level=p.serverLevel();
-        if(!MaidBridge.isCaster(p)){
+        if(!(p instanceof net.minecraftforge.common.util.FakePlayer)){
             // 玩家原有爆炸行为不变；女仆绝不把FakePlayer交给第三方爆炸监听器。
             ServerPlayer previous=playerBlast;playerBlast=p;
             try{level.explode(p,center.x,center.y,center.z,2.5f,false,net.minecraft.world.level.Level.ExplosionInteraction.NONE);}finally{playerBlast=previous;}
@@ -213,7 +213,7 @@ public final class VoidCombat {
         }
     }
     @SubscribeEvent public static void melee(LivingDamageEvent e){
-        ServerPlayer p=CombatSettings.caster(e.getSource());if(dealing||e.getAmount()<=0||p==null||!VoidJourney.evolved(p)||!Curse.data(p).getBoolean("Fist")||!(e.getSource().is(DamageTypes.PLAYER_ATTACK)||MaidBridge.isCaster(p)&&e.getSource().is(DamageTypes.MOB_ATTACK))||SoulCombat.suppressed(p)||!Curse.canUseTechnique(p))return;
+        ServerPlayer p=CombatSettings.caster(e.getSource());if(dealing||e.getAmount()<=0||p==null||!VoidJourney.evolved(p)||!Curse.data(p).getBoolean("Fist")||!(e.getSource().is(DamageTypes.PLAYER_ATTACK)||(MaidBridge.isCaster(p)||p instanceof NpcBridge.NpcActor)&&e.getSource().is(DamageTypes.MOB_ATTACK))||SoulCombat.suppressed(p)||!Curse.canUseTechnique(p))return;
         if(p.distanceToSqr(e.getEntity())>16||!CombatSettings.canHit(p,e.getEntity()))return;
         long now=p.level().getGameTime();if(now<p.getPersistentData().getLong("VoidContactCooldown")||!Curse.spend(p,30))return;
         p.getPersistentData().putLong("VoidContactCooldown",now+20);contacts.add(new ContactHit(p,e.getEntity()));
@@ -227,6 +227,7 @@ public final class VoidCombat {
     }
     /** {@code scale} = 御厨子的伤害倍率（结印"放下"后 0.5），虚空阶段的领域伤害也要乘它。 */
     public static void domainHit(ServerPlayer p,LivingEntity t,float scale){
+        if(character.mainline.Mainline.simpleProtected(t))return;
         Vec3 end=t.getBoundingBox().getCenter();Wound local=wounds.get(new Key(p.getUUID(),t.getUUID()));
         int angleCount=local==null?1:Math.max(1,local.cuts.size());double angle=p.getRandom().nextInt(angleCount)*Math.PI*2/angleCount;
         Vec3 origin=end.add(Math.cos(angle)*2,Math.sin(angle*1.3),Math.sin(angle)*2);
@@ -246,7 +247,7 @@ public final class VoidCombat {
         delayedDismantles.add(new DelayedDismantle(p,p.serverLevel(),null,end,direction,size,p.level().getGameTime()+6,cutAngle));
     }
     public static void closeDomain(ServerPlayer p,boolean burst){
-        for(Iterator<Wound> it=wounds.values().iterator();it.hasNext();){Wound w=it.next();if(w.owner!=p||!w.domain)continue;if(burst&&valid(w)){damage(p,w.target,VoidTechniqueRules.closure(w.cuts.size()),false,true);fx(p,118,w.target.getBoundingBox().getCenter(),Vec3.ZERO,Math.min(10,w.cuts.size()),20,w.target.getId());}remove(w);it.remove();}
+        for(Iterator<Wound> it=wounds.values().iterator();it.hasNext();){Wound w=it.next();if(w.owner!=p||!w.domain)continue;if(burst&&valid(w)&&!character.mainline.Mainline.simpleProtected(w.target)){damage(p,w.target,VoidTechniqueRules.closure(w.cuts.size()),false,true);fx(p,118,w.target.getBoundingBox().getCenter(),Vec3.ZERO,Math.min(10,w.cuts.size()),20,w.target.getId());}remove(w);it.remove();}
     }
     public static void cancelCombat(ServerPlayer p){
         for(Iterator<Wound> it=wounds.values().iterator();it.hasNext();){Wound w=it.next();if(w.owner==p){w.burning=false;saveFire(w);remove(w);it.remove();}}
@@ -262,7 +263,7 @@ public final class VoidCombat {
             Wound w=it.next();long now=w.level.getGameTime();
             if(!valid(w)){remove(w);it.remove();continue;}
             // 永久裂隙不再定身；它只记录宿傩下一次攻击可以出现的角度。
-            boolean muted=DomainClash.active(w.owner)||w.domain&&!w.manual&&Skills.domainClashing(w.owner);
+            boolean muted=DomainClash.active(w.owner)||w.domain&&!w.manual&&(Skills.domainClashing(w.owner)||character.mainline.Mainline.simpleProtected(w.target));
             // 裂隙不持续伤害，只有灶点燃后才造成虚空火焰伤害。
             if(!muted&&w.burning&&now>=w.nextDamage){w.nextDamage=now+20;saveFire(w);damage(w.owner,w.target,(float)(VoidTechniqueRules.FIRE_DAMAGE*VoidController.voidDamage(w.owner))*MahoragaRules.bossDamage(w.target,MahoragaRules.FURNACE_MULTIPLIER),true);}
             // cuts 永久保留，直到领域闭合或玩家关系保护主动清理。

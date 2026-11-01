@@ -62,6 +62,7 @@ public class ChosoEntity extends PathfinderMob {
 
     @Override public void tick() {
         super.tick();
+        if (NpcBridge.supports(this)) return; // 统一驱动真实玩家技能，不再叠加旧简化伤害。
         if (level().isClientSide) return;
         LivingEntity target = getTarget();
         if (target == null || !target.isAlive()) {

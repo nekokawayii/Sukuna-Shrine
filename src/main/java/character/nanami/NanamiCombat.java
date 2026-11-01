@@ -62,15 +62,17 @@ public final class NanamiCombat {
         if (e.getAmount() <= 0) return;
         LivingEntity victim = e.getEntity();
         // 瓦落瓦落：架刀窗口内被打 → 完美格挡（不掉血）+ 强力反击
-        if (victim instanceof ServerPlayer p && isNanami(p) && NanamiRatio.guarding(p)
-            && e.getSource().getEntity() instanceof LivingEntity attacker && attacker != p) {
-            NanamiRatio.clearGuard(p);
+        ServerPlayer defender=MaidBridge.progression(victim);
+        if (defender != null && isNanami(defender) && NanamiRatio.guarding(defender)
+            && e.getSource().getEntity() instanceof LivingEntity attacker && CombatSettings.canHit(defender,attacker)) {
+            NanamiRatio.clearGuard(defender);
             e.setCanceled(true);
-            counter(p, attacker);
+            counter(defender, attacker);
             return;
         }
         if (NanamiRatio.critting()) return;
-        if (!(e.getSource().getEntity() instanceof ServerPlayer p) || !isNanami(p)) return;
+        ServerPlayer p=CombatSettings.caster(e.getSource());
+        if(p==null||!isNanami(p))return;
         if (victim == p || !CombatSettings.canHit(p, victim)) return;
         if (!NanamiRatio.marked(p, victim)) return;
         if (!NanamiRatio.onWeakLine(p, victim)) return;
@@ -94,8 +96,7 @@ public final class NanamiCombat {
         attacker.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, VALOR_STUN, 6, false, false));
         attacker.addEffect(new MobEffectInstance(MobEffects.CONFUSION, VALOR_STUN, 0, false, false));
         if (attacker instanceof Mob mob) {
-            mob.setTarget(null);
-            mob.getNavigation().stop();
+            character.npc.NpcControl.stun(mob,"nanami_guard",VALOR_STUN);
         }
         if (p.level() instanceof ServerLevel level) {
             Network.send(level, new Network.Effect(NanamiFx.CLOCK, p.getId(), p.position(), Vec3.ZERO, -2f, 14, 0));

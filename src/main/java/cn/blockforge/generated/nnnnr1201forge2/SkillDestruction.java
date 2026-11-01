@@ -137,7 +137,7 @@ public final class SkillDestruction {
     public static void impact(ServerPlayer p,Vec3 point,double radius){line(p,point,point,radius);}
     public static void effect(ServerLevel level,Network.Effect e){
         if(!enabled(level)||e.life()<=0)return;
-        var entity=level.getEntity(e.owner());ServerPlayer p=entity instanceof ServerPlayer sp?sp:MaidBridge.caster(entity);
+        var entity=level.getEntity(e.owner());ServerPlayer p=entity instanceof ServerPlayer sp?sp:NpcBridge.existing(entity)!=null?NpcBridge.existing(entity):MaidBridge.caster(entity);
         if(p==null)return;
         switch(e.kind()){
             case 0,12,51,59,64,72,92,93,96,115,118,119,122,123,126,130,131,132,133,134,135,141 -> {

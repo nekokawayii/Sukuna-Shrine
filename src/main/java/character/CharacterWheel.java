@@ -9,10 +9,10 @@ import org.lwjgl.glfw.GLFW;
 /** 非宿傩角色的中央轮盘，直接读取角色模板；赤血保持19招双环和领域中央死胎星。 */
 public final class CharacterWheel extends Screen {
     private final CharacterDefinition definition;
-    private int current;
+    private int current,mainlineHover=-1;
     private boolean confirmed,starHover,ultHover;
     public CharacterWheel() { super(Component.literal("角色术式轮盘"));definition=CharacterClient.selected();current=definition!=null&&CharacterClient.skills().contains(Client.selected)?Client.selected:definition==null?0:definition.firstSkill(); }
-    private int radius() { return Math.max(42,Math.min(156,Math.min(width/2-12,(height-92)/2))); }
+    private int radius() { return Math.max(42,Math.min(156,Math.min(width/2-100,(height-92)/2))); }
     private boolean blood() { return definition!=null&&definition.family()==CharacterDefinition.Family.BLOOD; }
     private boolean star() { return blood()&&BloodClient.ownDomain(); }
     /** 鹿紫云一：轮盘中心是终奥「幻兽·琥珀」。 */
@@ -25,6 +25,8 @@ public final class CharacterWheel extends Screen {
     }
     private int inner() { return (int)(radius()*(blood()?.31:.46)); }
     private void hover(double mx,double my) {
+        mainlineHover=character.mainline.MainlineWheel.hover(width,height,mx,my);
+        if(mainlineHover>=0){starHover=false;ultHover=false;return;}
         double x=mx-width/2.0,y=my-height/2.0,r=x*x+y*y;
         starHover=star()&&r<inner()*inner();
         ultHover=kashimo()&&r<inner()*inner();
@@ -32,6 +34,7 @@ public final class CharacterWheel extends Screen {
     }
     private void confirm() {
         if(confirmed)return;confirmed=true;
+        if(character.mainline.MainlineWheel.cast(mainlineHover)){minecraft.setScreen(null);return;}
         // 鹿紫云一：轮盘中心 = 终奥「幻兽·琥珀」（phase=7 直接请求，不走技能表）
         if(kashimo()&&ultHover){
             Network.CHANNEL.sendToServer(new TechniqueInput.Input(character.kashimo.KashimoCombat.ULT,7,false,false,false,false,0,0));
@@ -81,9 +84,10 @@ public final class CharacterWheel extends Screen {
         if(star()&&DeathStarClient.anemic())g.drawCenteredString(font,"贫血禁用",cx,cy+14,0xFFFF7480);
         int skill=starHover?BloodRules.DEATH_STAR:current;
         g.drawCenteredString(font,CharacterClient.name(skill),cx,12,definition.color());
-        g.drawCenteredString(font,!CharacterClient.allows(skill)?"完成第"+definition.config().unlockChapter(skill)+"章后解锁":skill==BloodRules.DEATH_STAR?"献祭90%当前生命与全部咒力":"消耗 "+CharacterClient.cost(skill)+" 咒力",cx,25,0xFFDEE2EE);
+        g.drawCenteredString(font,!CharacterClient.allows(skill)?character.mainline.Mainline.domainSkill(definition.id(),skill)?"完成共同主线的领域展开成就后解锁":"完成对应个人线后解锁":skill==BloodRules.DEATH_STAR?"献祭90%当前生命与全部咒力":"消耗 "+CharacterClient.cost(skill)+" 咒力",cx,25,0xFFDEE2EE);
         int ly=height-43;for(var line:font.split(Component.literal(CharacterClient.description(skill)),Math.max(80,width-28))){if(ly>=height-15)break;g.drawString(font,line,14,ly,0xFFDADBE0);ly+=10;}
         g.drawCenteredString(font,"长按 "+Client.WHEEL.getTranslatedKeyMessage().getString()+" 移动选择，松手确认 · "+Client.CAST.getTranslatedKeyMessage().getString()+" 释放",cx,height-12,0xFFF1DADE);
+        character.mainline.MainlineWheel.render(g,font,width,height,mx,my);
         super.render(g,mx,my,partial);
     }
 }

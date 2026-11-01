@@ -19,6 +19,7 @@ public final class YutaEffects {
 
     /** 1001 复制术式入口：未召唤里香时不可用；分支列表与施放在下一步接入。 */
     public static void copyMenu(ServerPlayer p, CharacterSkill skill, int rank) {
+        if(p instanceof cn.blockforge.generated.nnnnr1201forge2.NpcBridge.NpcActor npc){character.npc.YutaNpcCombat.copy(npc);return;}
         if (!RikaRules.active(p)) {
             p.displayClientMessage(Component.literal("未召唤里香，无法使用复制术式"), true);
             return;

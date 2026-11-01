@@ -1,5 +1,5 @@
 plugins { id 'java'; id 'net.minecraftforge.gradle' version '[6.0,6.2)' }
-version = '1.6.0-r288-high-2-r406'
+version = '1.6.0-r293-clash-winner-sunset-r161'
 group = 'cn.blockforge.generated.nnnnr1201forge2'
 base { archivesName = "sukuna-forge-1.20.1" }
 // 产物文件名固定为 sukuna-forge-1.20.1（不带版本号），版本号只保留在 jar 内部的 mods.toml 里。
@@ -287,6 +287,41 @@ tasks.register('checkClientWiring', JavaExec) {
                  autoShareJar.get().archiveFile.get().asFile.absolutePath])
     }
 }
+
+// 本轮新增的主线/NPC规则与接线断言，正式打包必须执行。
+def mainlineNpcClasses = layout.buildDirectory.dir('mainline-npc-check')
+tasks.register('compileMainlineNpcCheck', JavaCompile) {
+    source = files('tools/CheckMainlineNpc.java', 'src/main/java/character/mainline/MainlineRules.java', 'src/main/java/character/npc/NpcBattleRules.java', 'src/main/java/character/domain/DomainVisualRules.java')
+    classpath = files()
+    destinationDirectory = mainlineNpcClasses
+}
+tasks.register('checkMainlineNpc', JavaExec) {
+    dependsOn 'compileMainlineNpcCheck'
+    classpath = files(mainlineNpcClasses)
+    mainClass = 'CheckMainlineNpc'
+    workingDir = projectDir
+}
+tasks.named('check') { dependsOn 'checkMainlineNpc' }
+tasks.named('jar') { dependsOn 'checkMainlineNpc' }
+
+// 双侧领域、30秒延长及重叠地形恢复：正式打包必须通过。
+def domainClashClasses = layout.buildDirectory.dir('domain-clash-check')
+tasks.register('compileDomainClashCheck', JavaCompile) {
+    source = files('tools/CheckDomainClash.java',
+        'src/main/java/character/domain/DomainTerrainLayers.java',
+        'src/main/java/character/domain/DomainVisualRules.java',
+        'src/main/java/cn/blockforge/generated/nnnnr1201forge2/DomainClashRules.java')
+    classpath = files()
+    destinationDirectory = domainClashClasses
+}
+tasks.register('checkDomainClash', JavaExec) {
+    dependsOn 'compileDomainClashCheck'
+    classpath = files(domainClashClasses)
+    mainClass = 'CheckDomainClash'
+    workingDir = projectDir
+}
+tasks.named('check') { dependsOn 'checkDomainClash' }
+tasks.named('jar') { dependsOn 'checkDomainClash' }
 
 // tools/ 无游戏回归源文件在本工作树里缺失：缺失时编译任务会“静默产出空目录”，随后 JavaExec
 // 因“找不到主类”让 jar/build 失败。这里统一加闸：源文件不在就跳过该回归任务并在日志里明示

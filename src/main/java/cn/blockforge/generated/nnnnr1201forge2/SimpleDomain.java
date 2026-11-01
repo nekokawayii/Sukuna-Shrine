@@ -132,7 +132,7 @@ public final class SimpleDomain {
         for(LivingEntity t:Skills.targets(f.level,p,center,RADIUS+1)){
             Vec3 rel=t.position().subtract(center);
             double flat=Math.hypot(rel.x,rel.z);
-            if(flat>RADIUS||rel.y<-1||rel.y>HEIGHT)continue;
+            if(flat>RADIUS||rel.y<-1||rel.y>HEIGHT||character.mainline.Mainline.simpleProtected(t))continue;
             // 击退 6 格：直接位移 + 速度补偿，做到"被推出去 6 格"而不是轻轻一推
             Vec3 push=new Vec3(rel.x,0,rel.z);
             if(push.lengthSqr()<1e-4)push=new Vec3(Math.cos(p.getRandom().nextDouble()*6.283),0,Math.sin(p.getRandom().nextDouble()*6.283));
@@ -190,9 +190,8 @@ public final class SimpleDomain {
     public static void tick(net.minecraftforge.event.TickEvent.ServerTickEvent e){
         if(e.phase!=net.minecraftforge.event.TickEvent.Phase.END)return;
         var server=e.getServer();if(server==null)return;
-        for(ServerPlayer p:server.getPlayerList().getPlayers()){
-            Field f=fields.get(p.getUUID());
-            if(f==null){clearSlow(MaidBridge.body(p));continue;} // 兜底：任何异常路径漏下的减速在这里被摘掉
+        for(Field f:java.util.List.copyOf(fields.values())){
+            ServerPlayer p=f.p;
             LivingEntity body=MaidBridge.body(p);
             boolean gone=!body.isAlive()||body.level()!=f.level||f.level.getGameTime()-f.start>MAX_HOLD||f.released;
             if(gone){release(p,"tick alive="+body.isAlive()+" 跨维度="+(body.level()!=f.level)+" 松手="+f.released);continue;}

@@ -56,6 +56,7 @@ public class JogoNpcEntity extends Monster {
 
     @Override public void tick() {
         super.tick();
+        if (NpcBridge.supports(this)) return; // 真实技能由统一驱动维护。
         if (level().isClientSide || !(level() instanceof ServerLevel world)) return;
         long now = world.getGameTime();
         LivingEntity target = getTarget();

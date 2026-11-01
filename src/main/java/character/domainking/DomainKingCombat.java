@@ -48,13 +48,7 @@ public final class DomainKingCombat {
         // ---- 直接转调各条线已有的领域实现（真实效果）----
         switch (skill.id()) {
             case DomainKingSkills.JOGO_DOMAIN -> {   // 盖棺铁围山：真实方块清场 + 岩浆地板
-                character.jogo.JogoTerrain.open(p, p.position(), 27);
-                Network.send((ServerLevel) p.level(), new Network.Effect(character.jogo.JogoFx.DOMAIN, p.getId(),
-                    p.position(), Vec3.ZERO, 27f, 600, 0));
-                p.level().playSound(null, p.blockPosition(), net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE,
-                    net.minecraft.sounds.SoundSource.PLAYERS, 1.6f, 0.45f);
-                p.sendSystemMessage(Component.literal("领域展开 · 盖棺铁围山（地形改造）"));
-                FIELDS.add(new Field(p, name, color, 27, p.level().getGameTime() + 600, 0f, 0));
+                character.jogo.JogoCombat.castDomain(p,skill,rank);
                 return;
             }
             case DomainKingSkills.VOID -> {           // 无量空处：五条线原实现
@@ -105,7 +99,8 @@ public final class DomainKingCombat {
 
     /** 只负责盖棺铁围山的地形按时还原；其它领域的伤害/特效全由各条线自己的系统处理。 */
     @SubscribeEvent public static void tick(TickEvent.ServerTickEvent e) {
-        if (e.phase != TickEvent.Phase.END || FIELDS.isEmpty()) return;
+        if (e.phase != TickEvent.Phase.END) return;
+        ACTIVE.entrySet().removeIf(entry->{var owner=cn.blockforge.generated.nnnnr1201forge2.NpcBridge.find(e.getServer(),entry.getKey());return owner==null||!live(owner,entry.getValue());});
         for (var it = FIELDS.iterator(); it.hasNext(); ) {
             Field f = it.next();
             ServerPlayer owner = f.owner();
@@ -120,8 +115,19 @@ public final class DomainKingCombat {
     /** 该技能是否是玩家当前展开中的领域。 */
     public static boolean isActive(ServerPlayer p, int skill) {
         Integer id = ACTIVE.get(p.getUUID());
-        return id != null && id == skill;
+        return id != null && id == skill && live(p,skill);
     }
+
+    private static boolean live(ServerPlayer p,int id){return switch(id){
+        case DomainKingSkills.JOGO_DOMAIN -> character.jogo.JogoCombat.inDomain(p);
+        case DomainKingSkills.VOID -> cn.blockforge.generated.nnnnr1201forge2.GojoCombat.domainOpen(p);
+        case DomainKingSkills.SHRINE -> cn.blockforge.generated.nnnnr1201forge2.Skills.domainActive(p);
+        case DomainKingSkills.BLOOD -> cn.blockforge.generated.nnnnr1201forge2.BloodDomain.active(p);
+        case DomainKingSkills.YUTA -> character.yuta.YutaDomain.active(p);
+        case DomainKingSkills.SELF_EMBRYO -> SelfEmbryoDomain.active(p);
+        case DomainKingSkills.SIMPLE -> cn.blockforge.generated.nnnnr1201forge2.SimpleDomain.active(p);
+        default -> false;
+    };}
 
     /** 从施法入口直接收起（绕开"领域维持中不能施法"的门禁）。 */
     public static boolean toggleClose(ServerPlayer p, int skill) {
@@ -137,9 +143,7 @@ public final class DomainKingCombat {
     private static void close(ServerPlayer p, int id) {
         switch (id) {
             case DomainKingSkills.JOGO_DOMAIN -> {
-                character.jogo.JogoTerrain.restore(p);
-                Network.send((ServerLevel) p.level(), new Network.Effect(character.jogo.JogoFx.DOMAIN_END,
-                    p.getId(), p.position(), Vec3.ZERO, 0, 0, 0));
+                character.jogo.JogoCombat.closeDomain(p);
             }
             case DomainKingSkills.VOID -> cn.blockforge.generated.nnnnr1201forge2.GojoCombat.closeDomain(p);
             case DomainKingSkills.SHRINE -> cn.blockforge.generated.nnnnr1201forge2.Skills.closeDomain(p);

@@ -151,13 +151,14 @@ public final class RyuCombat {
         }
         double reach = end.distanceTo(origin);
         for (var target : level.getEntitiesOfClass(LivingEntity.class, new AABB(origin, end).inflate(width + 2),
-                t -> t != caster && t.isAlive() && !t.isSpectator())) {
+                t -> t != caster && t.isAlive() && !t.isSpectator() && (caster instanceof ServerPlayer p?CombatSettings.canHit(p,t):NpcBridge.canHit(caster,t)))) {
             Vec3 delta = target.getBoundingBox().getCenter().subtract(origin);
             double along = delta.dot(dir);
             if (along < -0.5 || along > reach + 1) continue;
             double radius = width * 0.5 + Math.max(0, along) * BLAST_SPREAD;
             double perpendicular = delta.subtract(dir.scale(along)).length();
             if (perpendicular > radius + Math.max(target.getBbWidth(), 0.6) * 0.5) continue;
+            if(pierce&&character.mainline.Mainline.simpleProtected(target)&&level.clip(new ClipContext(origin,target.getEyePosition(),ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,caster)).getType()!=HitResult.Type.MISS)continue;
             if (damage > 0) hurt(level, caster, owner, target, damage);
             if (knockback) {
                 Vec3 push = dir.scale(BLAST_KNOCKBACK).add(0, 0.3, 0);
@@ -235,7 +236,7 @@ public final class RyuCombat {
             Network.send(level, new Network.Effect(RyuFx.MISSILE, ownerEntity.getId(), pos, dir, 1f, 4, 0));
             LivingEntity hit = null;
             for (var candidate : level.getEntitiesOfClass(LivingEntity.class, new AABB(pos, pos).inflate(1.0),
-                    t -> t != ownerEntity && t.isAlive() && !t.isSpectator() && t.getBoundingBox().inflate(0.4).contains(pos))) {
+                    t -> t != ownerEntity && t.isAlive() && !t.isSpectator() && (ownerEntity instanceof ServerPlayer p?CombatSettings.canHit(p,t):NpcBridge.canHit(ownerEntity,t)) && t.getBoundingBox().inflate(0.4).contains(pos))) {
                 hit = candidate;
                 break;
             }
@@ -257,7 +258,7 @@ public final class RyuCombat {
         LivingEntity best = null;
         double bestDistance = range * range;
         for (var candidate : level.getEntitiesOfClass(LivingEntity.class, new AABB(around, around).inflate(range),
-                t -> t != caster && t.isAlive() && !t.isSpectator())) {
+                t -> t != caster && t.isAlive() && !t.isSpectator() && (caster instanceof ServerPlayer p?CombatSettings.canHit(p,t):NpcBridge.canHit(caster,t)))) {
             double d = candidate.position().distanceToSqr(around);
             if (d < bestDistance) { bestDistance = d; best = candidate; }
         }
@@ -277,7 +278,7 @@ public final class RyuCombat {
         Network.send(level, new Network.Effect(RyuFx.BURST, caster.getId(), caster.position(), Vec3.ZERO,
             (float) radius, 12, 0));
         for (var target : level.getEntitiesOfClass(LivingEntity.class, caster.getBoundingBox().inflate(radius),
-                t -> t != caster && t.isAlive() && !t.isSpectator())) {
+                t -> t != caster && t.isAlive() && !t.isSpectator() && (caster instanceof ServerPlayer p?CombatSettings.canHit(p,t):NpcBridge.canHit(caster,t)))) {
             if (target.distanceToSqr(caster) > radius * radius) continue;
             hurt(level, caster, owner, target, damage);
             Vec3 push = target.position().subtract(caster.position());

@@ -54,6 +54,7 @@ public class RyuNpcEntity extends PathfinderMob {
 
     @Override public void tick() {
         super.tick();
+        if (NpcBridge.supports(this)) return; // 统一咒力池与真实术式驱动。
         if (level().isClientSide()) return;
         long now = level().getGameTime();
         // 咒力：每秒 +5；吃甜品时翻倍
@@ -95,7 +96,7 @@ public class RyuNpcEntity extends PathfinderMob {
     /** 被近身或掉血时：没别的办法就喷涌一下。 */
     @Override public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
         boolean hurt = super.hurt(source, amount);
-        if (hurt && !level().isClientSide() && !RyuCombat.npcDessertActive(this)
+        if (hurt && !NpcBridge.supports(this) && !level().isClientSide() && !RyuCombat.npcDessertActive(this)
             && level().getGameTime() >= getPersistentData().getLong(BURST_READY)) {
             getPersistentData().putLong(BURST_READY, level().getGameTime() + 200);
             RyuCombat.npcBurst(this);

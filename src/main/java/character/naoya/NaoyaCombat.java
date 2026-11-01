@@ -417,6 +417,8 @@ public final class NaoyaCombat {
     private record Plane(LivingEntity target, long until, java.util.UUID owner) {}
     private static final java.util.List<Plane> PLANES = new java.util.ArrayList<>();
 
+    public static void freezeDomain(ServerPlayer p,LivingEntity target){if(character.mainline.Mainline.simpleProtected(target))return;boolean fresh=target.getPersistentData().getLong(K_PLANE)<=now(target);freeze(p,target);if(fresh)target.getPersistentData().putBoolean("NaoyaDomainPlane",true);}
+    private static void clearDomainPlane(LivingEntity target){target.setInvisible(false);target.getPersistentData().remove(K_PLANE);target.getPersistentData().remove("NaoyaDomainPlane");target.getPersistentData().remove("NaoyaLock");PLANES.removeIf(plane->plane.target()==target);if(target instanceof Mob mob)character.npc.NpcControl.release(mob,"naoya_frame");}
     /** 把目标压成「二次元平面」：隐形 + 定身 5 秒，四周由客户端画玻璃。 */
     public static void freeze(ServerPlayer p, LivingEntity target) {
         CompoundTag data = target.getPersistentData();
@@ -437,6 +439,8 @@ public final class NaoyaCombat {
 
     /** 打破平面：一次高额伤害 + 再定身 1 秒。 */
     public static void shatter(LivingEntity target, ServerPlayer source) {
+        if(target.getPersistentData().getBoolean("NaoyaDomainPlane")&&character.mainline.Mainline.simpleProtected(target)){clearDomainPlane(target);return;}
+        target.getPersistentData().remove("NaoyaDomainPlane");
         CompoundTag data = target.getPersistentData();
         long n = now(target);
         if (data.getLong(K_PLANE) == 0 || data.getLong(K_PLANE) <= n || data.getBoolean(K_PLANE_SHATTER)) return;
@@ -459,9 +463,8 @@ public final class NaoyaCombat {
         LivingEntity target = (LivingEntity) e.getEntity();
         long plane = target.getPersistentData().getLong(K_PLANE);
         if (plane == 0 || plane <= now(target)) return;
-        ServerPlayer source = e.getSource().getEntity() instanceof ServerPlayer player
-            && CharacterService.naoya(player) ? player : null;
-        if (source == null) return;
+        ServerPlayer source=CombatSettings.caster(e.getSource());
+        if(source==null||!CharacterService.naoya(source))return;
         e.setCanceled(true);
         shatter(target, source);
     }
@@ -472,6 +475,7 @@ public final class NaoyaCombat {
         // 注意：shatter() 自己会动 PLANES，这里必须遍历副本，否则 ConcurrentModificationException 直接崩服
         for (Plane plane : new java.util.ArrayList<>(PLANES)) {
             LivingEntity target = plane.target();
+            if(target!=null&&target.getPersistentData().getBoolean("NaoyaDomainPlane")&&character.mainline.Mainline.simpleProtected(target)){clearDomainPlane(target);continue;}
             if (target == null || !target.isAlive() || now(target) >= plane.until()) {
                 if (target != null) {
                     target.setInvisible(false);
@@ -483,7 +487,7 @@ public final class NaoyaCombat {
             final LivingEntity frozen = target;
             if (!frozen.level().getEntitiesOfClass(LivingEntity.class, frozen.getBoundingBox().inflate(0.35),
                     e -> e != frozen && e.isAlive() && !e.isSpectator()).isEmpty()) {
-                ServerPlayer source = server.getPlayerList().getPlayer(plane.owner());
+                ServerPlayer source = cn.blockforge.generated.nnnnr1201forge2.NpcBridge.find(server,plane.owner());
                 if (source != null) shatter(frozen, source);
                 else PLANES.remove(plane);
             }
@@ -495,29 +499,14 @@ public final class NaoyaCombat {
         target.setDeltaMovement(0, target.getDeltaMovement().y, 0);
         target.getPersistentData().putLong("NaoyaLock", now(target) + ticks);
         if (target instanceof Mob mob) {
-            mob.setTarget(null);
-            mob.getNavigation().stop();
-            mob.setNoAi(true);
-            LOCKS.removeIf(entry -> entry.target == mob);
-            LOCKS.add(new Lock(mob, now(target) + ticks));
+            character.npc.NpcControl.stun(mob, "naoya_frame", ticks);
         }
     }
-
-    private record Lock(Mob target, long until) {}
-    private static final java.util.List<Lock> LOCKS = new java.util.ArrayList<>();
 
     @SubscribeEvent public static void serverTick(TickEvent.ServerTickEvent e) {
         if (e.phase != TickEvent.Phase.END) return;
         NaoyaDomain.tick(e.getServer());
         tickPlanes(e.getServer());
-        if (LOCKS.isEmpty()) return;
-        LOCKS.removeIf(lock -> {
-            if (!lock.target().isAlive() || now(lock.target()) >= lock.until()) {
-                if (lock.target().isAlive()) lock.target().setNoAi(false);
-                return true;
-            }
-            return false;
-        });
     }
 
     // ── 每刻：推进穿梭 / 记录节点 / 残影跟随 ──────────────

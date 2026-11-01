@@ -39,11 +39,14 @@ public final class MahitoTransfigure {
     private static final Map<UUID, Armed> ARMED = new HashMap<>();
 
     public static void arm(ServerPlayer p) {
+        if(p instanceof cn.blockforge.generated.nnnnr1201forge2.NpcBridge.NpcActor){MahitoBattle.strike(p);return;}
+        // 战斗目标优先灵魂打击，保留非战斗生物原有的贮存玩法。
+        if(MahitoBattle.strike(p))return;
         if (character.domainking.SelfEmbryoDomain.active(p)) {
             Vec3 look = p.getLookAngle();
             LivingEntity inDomain = p.level().getEntitiesOfClass(LivingEntity.class,
                     new AABB(p.position(), p.position()).inflate(30),
-                    e -> e != p && e.isAlive() && !(e instanceof Player))
+                    e -> e != p && e.isAlive() && !(e instanceof Player) && cn.blockforge.generated.nnnnr1201forge2.CombatSettings.canHit(p,e))
                 .stream()
                 .min(java.util.Comparator.comparingDouble(e -> {
                     Vec3 to = e.getBoundingBox().getCenter().subtract(p.getEyePosition());
@@ -58,7 +61,7 @@ public final class MahitoTransfigure {
         }
         boolean noneAround = p.level().getEntitiesOfClass(LivingEntity.class,
                 new AABB(p.position(), p.position()).inflate(16),
-                e -> e != p && e.isAlive() && !(e instanceof Player)).isEmpty();
+                e -> e != p && e.isAlive() && !(e instanceof Player) && cn.blockforge.generated.nnnnr1201forge2.CombatSettings.canHit(p,e)).isEmpty();
         if (noneAround) {
             cn.blockforge.generated.nnnnr1201forge2.Network.sendTo(p,
                 new cn.blockforge.generated.nnnnr1201forge2.Network.Effect(300, p.getId(), p.position(),
@@ -68,7 +71,7 @@ public final class MahitoTransfigure {
         }
         LivingEntity target = p.level().getEntitiesOfClass(LivingEntity.class,
                 p.getBoundingBox().inflate(1.0),
-                e -> e != p && e.isAlive() && !(e instanceof Player))
+                e -> e != p && e.isAlive() && !(e instanceof Player) && cn.blockforge.generated.nnnnr1201forge2.CombatSettings.canHit(p,e))
             .stream().min(java.util.Comparator.comparingDouble(p::distanceToSqr)).orElse(null);
         if (target == null) {
             p.sendSystemMessage(Component.literal("无为转变：需要 1 格内有敌人").withStyle(ChatFormatting.GRAY));
@@ -103,6 +106,7 @@ public final class MahitoTransfigure {
     }
 
     private static void store(ServerPlayer p, LivingEntity target) {
+        if(target instanceof Player||!cn.blockforge.generated.nnnnr1201forge2.CombatSettings.canHit(p,target))return;
         CompoundTag snap = snapshot(target);
         p.getPersistentData().put(PENDING, snap);
         p.getPersistentData().putUUID(PENDING_TARGET, target.getUUID());
@@ -255,7 +259,11 @@ public final class MahitoTransfigure {
         if (p.getPersistentData().hasUUID(PENDING_TARGET)
             && p.level() instanceof net.minecraft.server.level.ServerLevel level) {
             var e = level.getEntity(p.getPersistentData().getUUID(PENDING_TARGET));
-            if (e != null) e.discard();
+            if(!(e instanceof LivingEntity living)||living instanceof Player||!living.isAlive()||p.distanceToSqr(living)>10000
+                ||!cn.blockforge.generated.nnnnr1201forge2.CombatSettings.canHit(p,living)){
+                p.getPersistentData().remove(PENDING);p.getPersistentData().remove(PENDING_TARGET);return;
+            }
+            living.discard();
         }
         p.getPersistentData().remove(PENDING_TARGET);
         body.getOrCreateTag().put(BASE_TAG, snap);

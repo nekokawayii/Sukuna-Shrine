@@ -42,6 +42,14 @@ public final class TojiCombat {
         modifier(p,Attributes.KNOCKBACK_RESISTANCE,RESIST,active?.2+.1*r:0);
         if(p.getHealth()>p.getMaxHealth())p.setHealth(p.getMaxHealth());
     }
+    /** 体术不用 Curse.canUseTechnique：该方法本来就禁止零咒力角色。 */
+    public static boolean allowed(ServerPlayer p) {
+        return CharacterService.toji(p)&&p.isAlive()&&!p.isSpectator()&&!p.isPassenger()&&!p.isSleeping()&&!p.isUsingItem()
+            &&!(MaidBridge.body(p) instanceof net.minecraft.world.entity.Mob mob&&mob.isNoAi())
+            &&!PrisonSystem.locked(p)&&!ObserverRitual.active(p)&&!GojoEntity.mindLocked(p)&&!GuardianPlayerSkills.locked(p)
+            &&!SixfoldFinale.controlled(p)&&!DomainClash.active(p)&&!DomainClash.stunned(MaidBridge.body(p))
+            &&!Uraume.locked(p)&&!NetBranches.locked(p)&&!CombatExpansion.controlled(p)&&!DismantleMotion.active(p);
+    }
     public static void cast(ServerPlayer p,int kind) {
         if(kind>=100){TojiQte.input(p,kind-100);return;}
         if(!CharacterService.toji(p)||kind<0||kind>2||!p.isAlive()||p.isSpectator()||p.isPassenger()||p.isSleeping()||p.isUsingItem())return;
@@ -57,7 +65,7 @@ public final class TojiCombat {
             Vec3 step=direction.scale(.25);
             for(int i=0;i<(int)(TojiRules.dash(rank)*4);i++){
                 Vec3 next=destination.add(step);var box=p.getBoundingBox().move(next.subtract(start));
-                if(!p.serverLevel().hasChunkAt(net.minecraft.core.BlockPos.containing(next))||!p.level().getWorldBorder().isWithinBounds(box)||!p.level().noCollision(p,box))break;
+                if(!p.serverLevel().hasChunkAt(net.minecraft.core.BlockPos.containing(next))||!p.level().getWorldBorder().isWithinBounds(box)||!p.level().noCollision(MaidBridge.body(p),box))break;
                 destination=next;
             }
             if(destination.distanceToSqr(start)<.04){p.displayClientMessage(Component.literal("前方被挡住，未消耗体术"),true);return;}
@@ -72,7 +80,7 @@ public final class TojiCombat {
             strike(p,rank,direction,false);
         }else if(kind==1){strike(p,rank,direction,true);}
         else {
-            p.setDeltaMovement(direction.scale(.65+.1*rank).add(0,.65+.08*rank,0));p.hurtMarked=true;p.connection.send(new ClientboundSetEntityMotionPacket(p));
+            p.setDeltaMovement(direction.scale(.65+.1*rank).add(0,.65+.08*rank,0));p.hurtMarked=true;if(!(p instanceof net.minecraftforge.common.util.FakePlayer))p.connection.send(new ClientboundSetEntityMotionPacket(p));
             Curse.data(p).putBoolean("TojiAirUsed",true);Curse.status(p,"TojiLeapLock",10);p.fallDistance=0;
             p.serverLevel().sendParticles(ParticleTypes.CLOUD,p.getX(),p.getY(),p.getZ(),18,.45,.1,.45,.04);
         }
@@ -97,7 +105,8 @@ public final class TojiCombat {
     }
     @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent e) {
         if(e.phase!=TickEvent.Phase.END||!(e.player instanceof ServerPlayer p)||p.tickCount%10!=0)return;
-        attributes(p);if(!CharacterService.toji(p)||!p.isAlive())return;
+        tickBuffs(p);
+        if(!(p instanceof NpcBridge.NpcActor))attributes(p);if(!CharacterService.toji(p)||!p.isAlive())return;
         if(p.onGround()&&!Curse.active(p,"TojiLeapLock"))Curse.data(p).remove("TojiAirUsed");
         if(!Curse.active(p,"TojiRecoveryDelay"))Curse.data(p).putDouble("TojiStamina",Math.min(maximum(p),stamina(p)+TojiRules.recover(CharacterService.rank(p))*.5));
         CharacterPackets.sync(p,false);

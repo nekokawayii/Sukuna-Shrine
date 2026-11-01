@@ -68,6 +68,7 @@ public class HakariNpcEntity extends PathfinderMob {
 
     @Override public void tick() {
         super.tick();
+        if (NpcBridge.supports(this)) return; // 中奖与全部招式使用玩家实现。
         if (level().isClientSide()) return;
         LivingEntity target = getTarget();
         var data = getPersistentData();

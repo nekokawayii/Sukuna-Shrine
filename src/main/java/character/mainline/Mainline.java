@@ -1,263 +1,179 @@
 package character.mainline;
 
 import cn.blockforge.generated.nnnnr1201forge2.*;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.*;
+import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
+import net.minecraftforge.eventbus.api.*;
+import org.joml.Vector3f;
 
-/**
- * 共同主线（r381）：所有角色共享的成就线，在 L 键成就面板里以"成就"形式展示。
- *
- * <p>反转术式分支：咒术师 → 反转术式（血量 5% 以下 50% 领悟）→ 反转术式外放（友方 15% 以下 50% 领悟）。
- * <p>结界术分支：结界术（在敌方领域里存活 15 秒）→ 简易领域（击败 1 个有领域的敌人）→
- * 领域展开（累计用简易领域 15 次）→ 领域展延（累计用领域展开 10 次）。
- */
+/** 所有术式共用的服务端成长线；永久状态随玩家保存，临时领域不写进角色快照。 */
 public final class Mainline {
-    // ── 成就 id ──
-    public static final int SORCERER = 0;          // 咒术师：使用术式选择书
-    public static final int REVERSE = 1;           // 反转术式
-    public static final int REVERSE_OUT = 2;       // 反转术式外放
-    public static final int BARRIER = 3;           // 结界术
-    public static final int SIMPLE = 4;            // 简易领域
-    public static final int DOMAIN = 5;            // 领域展开
-    public static final int AMPLIFY = 6;           // 领域展延
+    public static final int SORCERER=0,REVERSE=1,REVERSE_OUT=2,BARRIER=3,SIMPLE=4,DOMAIN=5,AMPLIFY=6;
+    public static final int SKILL_REVERSE=3100,SKILL_REVERSE_OUT=3101,SKILL_BARRIER=3102,SKILL_SIMPLE=3103,SKILL_DOMAIN=3104,SKILL_AMPLIFY=3105;
+    public static final String[] NAMES={"咒术师","反转术式","反转术式外放","结界术","简易领域","领域展开","领域展延"};
+    public static final String[] IDS={"sorcerer","reverse","reverse_out","barrier","simple","domain","amplify"};
+    public static final String[] REQUIREMENTS={"使用术式选择书","生命降至 5% 以下时，有 50% 概率领悟","附近友方生命降至 15% 以下时，有 50% 概率领悟","在敌方领域内连续存活 15 秒","击败一名拥有领域的敌人","累计成功使用简易领域 15 次","累计成功展开领域 10 次"};
+    private static final int[] PARENT={-1,0,1,0,3,4,5};
+    private static final String PREFIX="MainlineUnlocked",COUNT="MainlineCount";
+    public static final int SIMPLE_RADIUS=10,SIMPLE_TICKS=200,BARRIER_RADIUS=15,BARRIER_TICKS=200;
+    private record Field(ServerPlayer owner,ServerLevel level,Vec3 center,long end,Map<BlockPos,BlockState> blocks) { }
+    private static final Map<UUID,Field> SIMPLE_FIELDS=new HashMap<>(),BARRIERS=new HashMap<>();
+    private static final Map<UUID,Set<UUID>> LOW_ALLIES=new HashMap<>();
+    private static final DustParticleOptions BLUE=new DustParticleOptions(new Vector3f(.12f,.48f,1f),1.3f);
 
-    // ── 术式编号（轮盘外的方形格 / G 键用） ──
-    public static final int SKILL_REVERSE = 3100, SKILL_REVERSE_OUT = 3101, SKILL_BARRIER = 3102,
-        SKILL_SIMPLE = 3103, SKILL_DOMAIN = 3104, SKILL_AMPLIFY = 3105;
-
-    public static final String[] NAMES = {"咒术师", "反转术式", "反转术式外放", "结界术", "简易领域",
-        "领域展开", "领域展延"};
-    public static final String[] REQUIREMENTS = {
-        "使用一次《咒术选择书》",
-        "血量降到 5% 以下时，50% 概率领悟",
-        "附近友方血量降到 15% 以下时，50% 概率领悟",
-        "在任意敌方的领域内累计存活 15 秒",
-        "击败 1 个拥有领域的敌人",
-        "累计使用简易领域 15 次",
-        "累计使用领域展开 10 次"};
-
-    private static final String K_PREFIX = "MainlineUnlocked", C_PREFIX = "MainlineCount";
-    private static final int SURVIVE_TICKS = 300;      // 15 秒
-    private static final int SIMPLE_NEED = 15, DOMAIN_NEED = 10;
-    private static final double REVERSE_CHANCE = 0.5, OUT_CHANCE = 0.5;
-
-    // ── 简易领域 / 结界术 的运行时状态 ──
-    public static final int SIMPLE_RADIUS = 10, SIMPLE_TICKS = 200;
-    public static final int BARRIER_RADIUS = 15, BARRIER_TICKS = 200;
-    private static final String K_SIMPLE_UNTIL = "MainlineSimpleUntil", K_BARRIER_UNTIL = "MainlineBarrierUntil";
-    private static long surviveTicks;                   // 当前连续待在敌方领域的刻数（全局，单服务器足够）
-
-    public static boolean unlocked(Player p, int id) {
-        return id >= 0 && id < NAMES.length && Curse.data(p).getBoolean(K_PREFIX + id);
+    public static boolean unlocked(Player p,int id){return id>=0&&id<NAMES.length&&Curse.data(p).getBoolean(PREFIX+id);}
+    public static int count(Player p,int id){return Curse.data(p).getInt(COUNT+id);}
+    public static boolean domainUnlocked(Player p){return p instanceof FakePlayer||unlocked(p,DOMAIN);}
+    public static boolean requireDomain(ServerPlayer p){if(domainUnlocked(p))return true;p.displayClientMessage(Component.literal("尚未解锁领域展开：先累计使用简易领域 15 次（L 查看进度）"),true);return false;}
+    public static boolean domainSkill(int id){return MainlineRules.domainSkill("",id);}
+    public static boolean domainSkill(String role,int id){return MainlineRules.domainSkill(role,id);}
+    public static boolean domainSkill(Player p,int id){var d=character.CharacterService.selected(p);String role=d==null?"":d.id();
+        if(d!=null&&role.equals("yuta")&&d.config().skill(id)==null&&p instanceof ServerPlayer sp&&character.yuta.YutaCopies.has(sp,id))role=character.yuta.YutaCopies.ownerOf(id);
+        return domainSkill(role,id);
     }
-
-    public static int count(Player p, int id) { return Curse.data(p).getInt(C_PREFIX + id); }
-
-    public static void unlock(ServerPlayer p, int id) {
-        if (id < 0 || id >= NAMES.length || unlocked(p, id)) return;
-        Curse.data(p).putBoolean(K_PREFIX + id, true);
-        Network.sendTo(p, new Network.Effect(character.ryu.RyuFx.DOMAIN, p.getId(), p.position(),
-            Vec3.ZERO, 0f, 0, 0));
-        p.sendSystemMessage(Component.literal("【成就解锁】" + NAMES[id] + " —— " + REQUIREMENTS[id])
-            .withStyle(ChatFormatting.GOLD));
-        p.displayClientMessage(Component.literal("成就解锁：" + NAMES[id]).withStyle(ChatFormatting.GOLD), true);
-        if (id == DOMAIN) unlockAllDomains(p);
-        sync(p);
+    public static void unlock(ServerPlayer p,int id){
+        if(p instanceof FakePlayer||id<0||id>=NAMES.length||unlocked(p,id)||(PARENT[id]>=0&&!unlocked(p,PARENT[id])))return;
+        Curse.data(p).putBoolean(PREFIX+id,true);award(p,id);
+        p.sendSystemMessage(Component.literal("【成就解锁】"+NAMES[id]).withStyle(ChatFormatting.GOLD));sync(p);
     }
+    private static void award(ServerPlayer p,int id){var a=p.server.getAdvancements().getAdvancement(new ResourceLocation("sukuna","mainline/"+IDS[id]));if(a!=null)for(String criterion:a.getCriteria().keySet())p.getAdvancements().award(a,criterion);}
+    private static void awardCount(ServerPlayer p,int id,int count){var a=p.server.getAdvancements().getAdvancement(new ResourceLocation("sukuna","mainline/"+IDS[id]));if(a!=null)for(int i=1;i<=count;i++)p.getAdvancements().award(a,"use_"+i);}
+    private static void addCount(ServerPlayer p,int id,int cap){Curse.data(p).putInt(COUNT+id,MainlineRules.nextCount(count(p,id),cap));awardCount(p,id==SIMPLE?DOMAIN:AMPLIFY,count(p,id));sync(p);}
+    public static void onCharacterChosen(ServerPlayer p){unlock(p,SORCERER);}
+    public static int mask(Player p){int m=0;for(int i=0;i<NAMES.length;i++)if(unlocked(p,i))m|=1<<i;return m;}
+    public static void sync(ServerPlayer p){if(p instanceof FakePlayer)return;MainlinePackets.send(p,mask(p),count(p,SIMPLE),count(p,DOMAIN));}
 
-    private static void addCount(ServerPlayer p, int id, int amount) {
-        Curse.data(p).putInt(C_PREFIX + id, count(p, id) + amount);
+    public static boolean ally(ServerPlayer p,LivingEntity e){
+        if(e==p||e==null||e.isSpectator()||e.level()!=p.level()||CombatSettings.relation(p,e.getUUID())==CombatSettings.ENEMY)return false;
+        UUID owner=CombatSafety.ownerId(e);
+        return CombatSettings.relation(p,e.getUUID())==CombatSettings.ALLY||p.isAlliedTo(e)
+            ||p.getUUID().equals(owner)||owner!=null&&CombatSettings.relation(p,owner)==CombatSettings.ALLY
+            ||Legion.allied(p,e)||ShadowSystem.friendly(p,e)||MahoragaAdaptStore.friendlyTo(p,e);
     }
-
-    /** 咒术师：第一次选角色（吃下咒术选择书）时解锁。 */
-    public static void onCharacterChosen(ServerPlayer p) {
-        unlock(p, SORCERER);
-    }
-
-    /** 领域展开：解锁各角色轮盘里自己的领域技能（这类技能都在角色技能表里，标记位用于放行）。 */
-    private static void unlockAllDomains(ServerPlayer p) {
-        Curse.data(p).putBoolean("MainlineDomainUnlocked", true);
-        p.sendSystemMessage(Component.literal("所有术式的领域展开已解锁（轮盘里的领域格可用）")
-            .withStyle(ChatFormatting.AQUA));
-    }
-
-    public static boolean domainUnlocked(Player p) { return unlocked(p, DOMAIN); }
-
-    // ── 成就条件：受击时判定反转术式分支 ──
-    @SubscribeEvent public static void hurt(LivingHurtEvent e) {
-        if (e.getEntity() instanceof ServerPlayer p) {
-            if (!unlocked(p, REVERSE) && p.getHealth() - e.getAmount() <= p.getMaxHealth() * 0.05f
-                && p.level().random.nextDouble() < REVERSE_CHANCE) unlock(p, REVERSE);
-            return;
+    /** 实际血量判定，越过阈值才抽一次；满血恢复后下一次濒死可再次尝试。 */
+    @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent e){
+        if(e.phase!=TickEvent.Phase.END||!(e.player instanceof ServerPlayer p)||p instanceof FakePlayer)return;
+        var d=Curse.data(p);
+        if(!p.isAlive()||p.isSpectator()){d.remove("MainlineSurviveTicks");return;}
+        if(!unlocked(p,SORCERER))return;
+        boolean low=MainlineRules.below(p.getHealth(),p.getMaxHealth(),.05f);
+        if(low&&!d.getBoolean("MainlineLowHealth")&&!unlocked(p,REVERSE)&&p.getRandom().nextBoolean())unlock(p,REVERSE);
+        d.putBoolean("MainlineLowHealth",low);
+        if(unlocked(p,REVERSE)&&!unlocked(p,REVERSE_OUT)){
+            Set<UUID> before=LOW_ALLIES.computeIfAbsent(p.getUUID(),k->new HashSet<>()),current=new HashSet<>();
+            for(LivingEntity friend:p.serverLevel().getEntitiesOfClass(LivingEntity.class,p.getBoundingBox().inflate(12),t->t.isAlive()&&ally(p,t))){
+                if(!MainlineRules.below(friend.getHealth(),friend.getMaxHealth(),.15f))continue;
+                current.add(friend.getUUID());
+                if(!before.contains(friend.getUUID())&&p.getRandom().nextBoolean())unlock(p,REVERSE_OUT);
+            }
+            LOW_ALLIES.put(p.getUUID(),current);
         }
-        // 反转术式外放：附近友方（其他玩家/自己的召唤物）血量掉到 15% 以下
-        if (!(e.getEntity() instanceof LivingEntity)) return;
-        LivingEntity victim = (LivingEntity) e.getEntity();
-        if (!(victim.level() instanceof ServerLevel level)) return;
-        for (ServerPlayer p : level.getPlayers(player -> player.isAlive()
-            && player.distanceToSqr(victim) <= 12 * 12)) {
-            if (p == victim || unlocked(p, REVERSE_OUT) || !unlocked(p, REVERSE)) continue;
-            if (victim.getHealth() - e.getAmount() > victim.getMaxHealth() * 0.15f) continue;
-            if (p.level().random.nextDouble() < OUT_CHANCE) unlock(p, REVERSE_OUT);
+        if(!unlocked(p,BARRIER)){
+            int ticks=DomainClash.inEnemyDomain(p)?d.getInt("MainlineSurviveTicks")+1:0;
+            d.putInt("MainlineSurviveTicks",ticks);if(ticks>=300)unlock(p,BARRIER);
         }
+        if(p.tickCount%100==0){for(int i=0;i<NAMES.length;i++)if(unlocked(p,i))award(p,i);awardCount(p,DOMAIN,count(p,SIMPLE));awardCount(p,AMPLIFY,count(p,DOMAIN));sync(p);}
     }
-
-    // ── 每刻：结界术（在敌方领域里存活 15 秒）与结界持续时间 ──
-    @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent e) {
-        if (e.phase != TickEvent.Phase.END || !(e.player instanceof ServerPlayer p)) return;
-        CompoundTag data = Curse.data(p);
-        long now = p.level().getGameTime();
-        // 咒术师：只要已经选了角色（吃了咒术选择书）就解锁
-        if(!unlocked(p,SORCERER)&&character.CharacterService.active(p))unlock(p,SORCERER);
-        // 敌方的领域：用现有的领域状态判断（自己开的除外）
-        boolean insideEnemy = false;
-        for (ServerPlayer other : p.serverLevel().getPlayers(o -> o != p && o.isAlive())) {
-            if (character.CharacterService.hakari(other)) continue;
-            if (character.ryu.RyuDomain.active(other) || character.naoya.NaoyaDomain.active(other)
-                || character.yuta.YutaDomain.active(other) || character.yuki.YukiDomain.active(other)
-                || character.higuruma.HigurumaDomain.active(other)
-                || character.domainking.SelfEmbryoDomain.active(other)) {
-                if (p.distanceToSqr(other) <= 30 * 30) { insideEnemy = true; break; }
+    @SubscribeEvent(priority=EventPriority.LOWEST) public static void killed(LivingDeathEvent e){
+        if(e.isCanceled())return;
+        ServerPlayer p=CombatSettings.caster(e.getSource());
+        if(p==null&&e.getEntity().getKillCredit() instanceof ServerPlayer credited)p=credited;
+        if(p!=null&&!(p instanceof FakePlayer)&&unlocked(p,BARRIER)&&!ally(p,e.getEntity())&&e.getEntity()!=p&&DomainClash.domainCapable(e.getEntity()))unlock(p,SIMPLE);
+    }
+    public static void onKillDomainOwner(ServerPlayer p){unlock(p,SIMPLE);}
+    public static void onDomainOpened(ServerPlayer p){
+        if(p instanceof FakePlayer||!unlocked(p,DOMAIN))return;
+        addCount(p,DOMAIN,10);if(count(p,DOMAIN)>=10)unlock(p,AMPLIFY);
+    }
+    private static boolean ready(ServerPlayer p,int id,int cooldown,double cost){
+        if(!unlocked(p,id)){p.displayClientMessage(Component.literal("尚未解锁"+NAMES[id]+"（L 查看进度）"),true);return false;}
+        if(!p.isAlive()||p.isSpectator()||PrisonSystem.locked(p)||DomainClash.active(p)||SixfoldFinale.active(p)||SixfoldFinale.controlled(p)||DeathStar.anemic(p))return false;
+        if(id!=REVERSE&&id!=REVERSE_OUT&&id!=SIMPLE&&!Curse.canUseTechnique(p))return false;
+        String key="MainlineCooldown_"+id;
+        if(Curse.active(p,key)){p.displayClientMessage(Component.literal(NAMES[id]+" 冷却中"),true);return false;}
+        if(!Curse.spend(p,cost))return false;
+        Curse.status(p,key,cooldown);return true;
+    }
+    public static void reverse(ServerPlayer p){if(unlocked(p,REVERSE))Curse.reverse(p);}
+    public static void reverseOut(ServerPlayer p){
+        Vec3 eye=p.getEyePosition(),end=eye.add(p.getLookAngle().scale(16));
+        var wall=p.level().clip(new ClipContext(eye,end,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,p));
+        if(wall.getType()!=HitResult.Type.MISS)end=wall.getLocation();
+        LivingEntity target=null;double best=eye.distanceToSqr(end);final Vec3 rayEnd=end;
+        for(var t:p.serverLevel().getEntitiesOfClass(LivingEntity.class,new AABB(eye,end).inflate(1),t->t!=p&&t.isAlive()&&!t.isSpectator())){
+            var hit=t.getBoundingBox().inflate(.15).clip(eye,rayEnd);
+            if(hit.isPresent()&&eye.distanceToSqr(hit.get())<=best){target=t;best=eye.distanceToSqr(hit.get());}
+        }
+        if(target==null||!ally(p,target)){p.displayClientMessage(Component.literal("请用准星对准 16 格内的友方，不能隔墙治疗"),true);return;}
+        if(target.getHealth()>=target.getMaxHealth())return;
+        if(!ready(p,REVERSE_OUT,100,100))return;
+        target.heal(target.getMaxHealth()*.35f);
+        Network.send(p.serverLevel(),new Network.Effect(137,target.getId(),target.position(),Vec3.ZERO,1,20,0));
+    }
+    public static void barrier(ServerPlayer p){
+        if(BARRIERS.containsKey(p.getUUID())||!ready(p,BARRIER,240,80))return;
+        var saved=new LinkedHashMap<BlockPos,BlockState>();BlockPos c=p.blockPosition();int r=BARRIER_RADIUS;
+        for(int x=-r;x<=r;x++)for(int y=-r;y<=r;y++)for(int z=-r;z<=r;z++){
+            int d=x*x+y*y+z*z;if(d>r*r||d<=(r-1)*(r-1))continue;
+            BlockPos at=c.offset(x,y,z);if(!p.serverLevel().hasChunkAt(at)||p.level().isOutsideBuildHeight(at))continue;
+            BlockState old=p.level().getBlockState(at);if(old.hasBlockEntity()||old.getDestroySpeed(p.level(),at)<0)continue;
+            // 不覆盖正在借用的球壳，防止两个结界互相还原错位。
+            if(BARRIERS.values().stream().anyMatch(f->f.level==p.level()&&f.blocks.containsKey(at)))continue;
+            saved.put(at,old);p.serverLevel().setBlock(at,Blocks.BLACK_CONCRETE.defaultBlockState(),2);
+        }
+        BARRIERS.put(p.getUUID(),new Field(p,p.serverLevel(),Vec3.atCenterOf(c),p.level().getGameTime()+BARRIER_TICKS,saved));
+    }
+    public static void simple(ServerPlayer p){
+        if(SIMPLE_FIELDS.containsKey(p.getUUID())||!ready(p,SIMPLE,240,60))return;
+        SIMPLE_FIELDS.put(p.getUUID(),new Field(p,p.serverLevel(),p.position(),p.level().getGameTime()+SIMPLE_TICKS,Map.of()));
+        addCount(p,SIMPLE,15);if(count(p,SIMPLE)>=15)unlock(p,DOMAIN);
+    }
+    public static boolean simpleProtected(LivingEntity e){
+        if(e==null)return false;
+        for(Field f:SIMPLE_FIELDS.values())if(f.level==e.level()&&f.owner.isAlive()&&f.end>f.level.getGameTime()){
+            Vec3 delta=e.position().subtract(f.center);
+            if(MainlineRules.inSimple(delta.x,delta.y,delta.z))return true;
+        }
+        return false;
+    }
+    public static void cast(ServerPlayer p,int skill){switch(skill){
+        case SKILL_REVERSE->reverse(p);case SKILL_REVERSE_OUT->reverseOut(p);case SKILL_BARRIER->barrier(p);case SKILL_SIMPLE->simple(p);
+        case SKILL_AMPLIFY->DomainAmplification.toggle(p);case SKILL_DOMAIN->requireDomain(p);default->{} }
+    }
+    private static void restore(Field f){for(var e:f.blocks.entrySet())if(f.level.getBlockState(e.getKey()).is(Blocks.BLACK_CONCRETE))f.level.setBlock(e.getKey(),e.getValue(),2);}
+    @SubscribeEvent public static void fields(TickEvent.ServerTickEvent e){
+        if(e.phase!=TickEvent.Phase.END)return;
+        for(var map:List.of(BARRIERS,SIMPLE_FIELDS))for(var it=map.values().iterator();it.hasNext();){
+            Field f=it.next();if(!f.owner.isAlive()||f.owner.hasDisconnected()||f.owner.level()!=f.level||f.level.getGameTime()>=f.end){restore(f);it.remove();continue;}
+            if(map==SIMPLE_FIELDS&&f.level.getGameTime()%4==0)for(int i=0;i<96;i++){
+                double a=i*Math.PI*2/96;f.level.sendParticles(BLUE,f.center.x+Math.cos(a)*SIMPLE_RADIUS,f.center.y+.08,f.center.z+Math.sin(a)*SIMPLE_RADIUS,1,0,0,0,0);
             }
         }
-        if (insideEnemy && !unlocked(p, BARRIER)) {
-            if (++surviveTicks >= SURVIVE_TICKS) unlock(p, BARRIER);
-        } else surviveTicks = 0;
-        // 结界术球壳结束
-        long barrier = data.getLong(K_BARRIER_UNTIL);
-        if (barrier != 0 && now >= barrier) {
-            data.remove(K_BARRIER_UNTIL);
-            Network.sendTo(p, new Network.Effect(character.ryu.RyuFx.DOMAIN, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));
-        }
     }
-
-    // ── 术式 ──
-    /** 反转术式：治疗自己。 */
-    public static void reverse(ServerPlayer p) {
-        if (!unlocked(p, REVERSE)) return;
-        p.setHealth((float) Math.min(p.getMaxHealth(), p.getHealth() + p.getMaxHealth() * 0.4));
-        p.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 60, 1, false, false));
-        Network.send(p.serverLevel(), new Network.Effect(character.ryu.RyuFx.BURST, p.getId(), p.position(),
-            Vec3.ZERO, 1.5f, 20, 0));
-        p.serverLevel().playSound(null, p.blockPosition(), net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP,
-            net.minecraft.sounds.SoundSource.PLAYERS, 0.8f, 1.6f);
-    }
-
-    /** 反转术式外放：治疗准星对准的友方。 */
-    public static void reverseOut(ServerPlayer p) {
-        if (!unlocked(p, REVERSE_OUT)) return;
-        LivingEntity target = null;
-        Vec3 eye = p.getEyePosition(), look = p.getLookAngle();
-        double best = 0.9;
-        for (LivingEntity living : p.serverLevel().getEntitiesOfClass(LivingEntity.class,
-                new AABB(p.position(), p.position()).inflate(16), t -> t != p && t.isAlive())) {
-            Vec3 to = living.getBoundingBox().getCenter().subtract(eye);
-            if (to.length() > 16) continue;
-            double dot = to.normalize().dot(look);
-            if (dot > best) { best = dot; target = living; }
-        }
-        if (target == null) { p.displayClientMessage(Component.literal("准星没有对准目标").withStyle(ChatFormatting.GRAY), true); return; }
-        target.setHealth((float) Math.min(target.getMaxHealth(), target.getHealth() + target.getMaxHealth() * 0.35));
-        target.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 60, 0, false, false));
-        Network.send(p.serverLevel(), new Network.Effect(character.ryu.RyuFx.BURST, target.getId(),
-            target.position(), Vec3.ZERO, 1.2f, 18, 0));
-    }
-
-    /** 结界术：释放一个纯领域球壳（10 秒、半径 15）。 */
-    public static void barrier(ServerPlayer p) {
-        if (!unlocked(p, BARRIER)) return;
-        long now = p.level().getGameTime();
-        Curse.data(p).putLong(K_BARRIER_UNTIL, now + BARRIER_TICKS);
-        Network.send(p.serverLevel(), new Network.Effect(character.ryu.RyuFx.DOMAIN, p.getId(), p.position(),
-            Vec3.ZERO, BARRIER_RADIUS, BARRIER_TICKS, 0));
-        p.displayClientMessage(Component.literal("结界术 · 半径 15 的球壳 10 秒").withStyle(ChatFormatting.AQUA), true);
-    }
-
-    /** 简易领域：脚下蓝色圆圈（半径 10），圈内免疫一切领域效果。 */
-    public static void simple(ServerPlayer p) {
-        if (!unlocked(p, SIMPLE)) return;
-        Curse.data(p).putLong(K_SIMPLE_UNTIL, p.level().getGameTime() + SIMPLE_TICKS);
-        addCount(p, SIMPLE, 1);
-        if (count(p, SIMPLE) >= SIMPLE_NEED) unlock(p, DOMAIN);
-        Network.send(p.serverLevel(), new Network.Effect(character.naoya.NaoyaFx.NODE, p.getId(), p.position(),
-            Vec3.ZERO, SIMPLE_RADIUS, 20, 0));
-        p.displayClientMessage(Component.literal("简易领域 · 半径 10 的蓝色圆（圈内免疫领域）")
-            .withStyle(ChatFormatting.AQUA), true);
-    }
-
-    /** 玩家此刻是否被简易领域保护（圈内免疫领域效果）。 */
-    public static boolean simpleProtected(Player p) {
-        long until = Curse.data(p).getLong(K_SIMPLE_UNTIL);
-        return until > p.level().getGameTime();
-    }
-
-    /** 领域展开计数（各角色领域成功展开时调用）。 */
-    public static void onDomainOpened(ServerPlayer p) {
-        if (!unlocked(p, DOMAIN)) return;
-        addCount(p, DOMAIN, 1);
-        if (count(p, DOMAIN) >= DOMAIN_NEED && !unlocked(p, AMPLIFY)) unlock(p, AMPLIFY);
-    }
-
-    /** 击败有领域的敌人 → 简易领域。 */
-    public static void onKillDomainOwner(ServerPlayer p) { unlock(p, SIMPLE); }
-
-    /** 统一入口：轮盘外方形格 / G 键都发这个编号。 */
-    public static void cast(ServerPlayer p, int skill) {
-        switch (skill) {
-            case SKILL_REVERSE -> reverse(p);
-            case SKILL_REVERSE_OUT -> reverseOut(p);
-            case SKILL_BARRIER -> barrier(p);
-            case SKILL_SIMPLE -> simple(p);
-            case SKILL_DOMAIN -> {
-                p.displayClientMessage(Component.literal(domainUnlocked(p)
-                    ? "领域展开已解锁：在角色轮盘里使用各角色自己的领域"
-                    : "先用简易领域 15 次解锁领域展开").withStyle(ChatFormatting.GRAY), true);
-            }
-            case SKILL_AMPLIFY -> p.displayClientMessage(Component.literal(unlocked(p, AMPLIFY)
-                ? "领域展延 · 罩已展开（对拼/领域内必中）" : "先解锁领域展延：累计用领域展开 10 次")
-                .withStyle(ChatFormatting.AQUA), true);
-            default -> { }
-        }
-        sync(p);
-    }
-
-    /** 把成就状态同步给客户端（L 面板显示用）。 */
-    public static void sync(ServerPlayer p) {
-        Network.sendTo(p, new Network.Effect(character.ryu.RyuFx.DESSERT, p.getId(), p.position(),
-            Vec3.ZERO, mask(p), 0, 0));
-    }
-
-    /** 成就面板数据（客户端只读）。 */
-    public static Map<String, Object> snapshot(Player p) {
-        Map<String, Object> map = new LinkedHashMap<>();
-        for (int i = 0; i < NAMES.length; i++) {
-            map.put(NAMES[i], new Object[]{unlocked(p, i), i == SIMPLE ? count(p, SIMPLE) + "/" + SIMPLE_NEED
-                : i == DOMAIN ? count(p, DOMAIN) + "/" + DOMAIN_NEED : ""});
-        }
-        return map;
-    }
-
-    /** 客户端用：已解锁位掩码 + 计数（走 Progress 包之外的简易同步）。 */
-    public static int mask(Player p) {
-        int mask = 0;
-        for (int i = 0; i < NAMES.length; i++) if (unlocked(p, i)) mask |= 1 << i;
-        return mask;
-    }
-
-    private Mainline() {}
+    public static void copyShared(CompoundTag from,CompoundTag to){for(String k:new ArrayList<>(to.getAllKeys()))if(k.startsWith("Mainline"))to.remove(k);for(String k:from.getAllKeys())if(k.startsWith("Mainline"))to.put(k,from.get(k).copy());}
+    @SubscribeEvent public static void login(PlayerEvent.PlayerLoggedInEvent e){if(e.getEntity() instanceof ServerPlayer p){for(int i=0;i<NAMES.length;i++)if(unlocked(p,i))award(p,i);awardCount(p,DOMAIN,count(p,SIMPLE));awardCount(p,AMPLIFY,count(p,DOMAIN));sync(p);}}
+    @SubscribeEvent public static void respawn(PlayerEvent.PlayerRespawnEvent e){if(e.getEntity() instanceof ServerPlayer p)sync(p);}
+    @SubscribeEvent public static void logout(PlayerEvent.PlayerLoggedOutEvent e){LOW_ALLIES.remove(e.getEntity().getUUID());Curse.data(e.getEntity()).remove("MainlineSurviveTicks");}
+    @SubscribeEvent(priority=EventPriority.LOWEST) public static void clone(PlayerEvent.Clone e){Curse.data(e.getEntity()).remove("MainlineSurviveTicks");Curse.data(e.getEntity()).remove("MainlineLowHealth");}
+    @SubscribeEvent public static void dimension(PlayerEvent.PlayerChangedDimensionEvent e){Curse.data(e.getEntity()).remove("MainlineSurviveTicks");}
+    @SubscribeEvent public static void stop(ServerStoppingEvent e){BARRIERS.values().forEach(Mainline::restore);BARRIERS.clear();SIMPLE_FIELDS.clear();LOW_ALLIES.clear();}
+    private Mainline() { }
 }

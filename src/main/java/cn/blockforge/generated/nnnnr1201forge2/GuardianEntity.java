@@ -97,8 +97,8 @@ public final class GuardianEntity extends Monster {
     private ServerLevel server(){return (ServerLevel)level();}
     private boolean valid(LivingEntity p){return !friendly()&&BossTargets.valid(this,p);}
     private List<ServerPlayer> players(double radius){return server().getEntitiesOfClass(ServerPlayer.class,getBoundingBox().inflate(radius),p->valid(p)&&distanceToSqr(p)<=radius*radius);}
-    public boolean contains(LivingEntity p){return !DomainClash.active(this)&&domain>0&&valid(p)&&p.position().distanceToSqr(center)<=v("DomainRadius")*v("DomainRadius");}
-    public static boolean locked(LivingEntity p){return p.level() instanceof ServerLevel l&&!l.getEntitiesOfClass(GuardianEntity.class,p.getBoundingBox().inflate(512),g->g.isAlive()&&g.contains(p)).isEmpty();}
+    public boolean contains(LivingEntity p){return !character.mainline.Mainline.simpleProtected(p)&&!DomainClash.active(this)&&domain>0&&valid(p)&&p.position().distanceToSqr(center)<=v("DomainRadius")*v("DomainRadius");}
+    public static boolean locked(LivingEntity p){return !DomainClash.counterCasting(p)&&p.level() instanceof ServerLevel l&&!l.getEntitiesOfClass(GuardianEntity.class,p.getBoundingBox().inflate(512),g->g.isAlive()&&g.contains(p)).isEmpty();}
     private void fx(int kind,Vec3 p,Vec3 q,float size,int life,long seed){Network.send(server(),new Network.Effect(kind,getId(),p,q,size,life,seed));}
     private boolean reach(LivingEntity p){return contains(p)||distanceToSqr(p)<=v("Reach")*v("Reach")&&hasLineOfSight(p);}
     private boolean hit(LivingEntity p,double base,boolean punch){return hit(p,base,punch,castBonus);}
@@ -114,12 +114,13 @@ public final class GuardianEntity extends Monster {
     private int interval(String k){return Math.max(1,ticks(k)-(boost>0?(int)v("AttackSpeedMultiplier"):0));}
     private void moveToward(LivingEntity p){Vec3 d=p.position().subtract(position()).multiply(1,0,1).normalize();double speed=v("MoveSpeed")+(boost>0?v("SpeedMultiplier"):0);setDeltaMovement(d.x*speed,getDeltaMovement().y,d.z*speed);}
     private void begin(int skill,LivingEntity p){
+        if(skill!=1&&!character.npc.NpcLegacyCombat.pay(this,skill==8?1500:100,skill==8))return;
         entityData.set(ACTION,skill);entityData.set(AGE,0);getNavigation().stop();castBonus=BossRevelation.roll(this,BossRevelation.guardian(skill));SkillSounds.play(this,"guardian_"+skill);
         if(skill==1&&reach(p))hit(p,v("Punch"),true);
         if(skill==4){List<LivingEntity> targets=BossTargets.nearby(this,128);if(targets.isEmpty())targets=List.of(p);for(int i=0;i<RevelationRules.quantity(count("BloodCount",512),castBonus>0,512);i++){double a=i*Math.PI*2/Math.max(1,RevelationRules.quantity(count("BloodCount",512),castBonus>0,512));blood.add(new Blood(getEyePosition(),new Vec3(Math.cos(a),((i%5)-2)*0.12,Math.sin(a)).scale(v("BloodSpeed")),targets.get(i%targets.size()).getUUID(),castBonus));}}
         if(skill==5){boost=ticks("BoostSeconds")+(castBonus>0?400:0);fx(136,position(),Vec3.ZERO,1,24,0);}
         if(skill==6){gridBonus=castBonus;float radius=(float)Math.min(512,v("GridRadius")*(castBonus>0?1.5:1));grid.start(position(),radius,castBonus>0?GuardianGridSlash.LIFETIME*2:GuardianGridSlash.LIFETIME);fx(126,position(),Vec3.ZERO,radius,castBonus>0?GuardianGridSlash.LIFETIME*2:GuardianGridSlash.LIFETIME,0);tickGrid();}
-        if(skill==8){domainBonus=castBonus;center=position();domain=ticks("DomainSeconds")*(castBonus>0?2:1);nextDomain=level().getGameTime()+GuardianRules.DOMAIN_COOLDOWN_TICKS;domainVisual();DomainClash.opened(this,center,Math.min(512,v("DomainRadius")));}
+        if(skill==8){domainBonus=castBonus;center=position();domain=ticks("DomainSeconds")*(castBonus>0?2:1);nextDomain=level().getGameTime()+character.npc.NpcBattleRules.DOMAIN_COOLDOWN;domainVisual();DomainClash.opened(this,center,Math.min(512,v("DomainRadius")));}
         if(skill==9){Vec3 side=p.getLookAngle().cross(new Vec3(0,1,0)).normalize();Vec3 q=p.position().add(side.scale(v("TeleportDistance")));if(level().noCollision(this,getBoundingBox().move(q.subtract(position()))))setPos(q.x,q.y,q.z);dash=p.position().subtract(position()).multiply(1,0,1).normalize();fx(84,position().add(0,1,0),p.position(),1,Math.max(1,ticks("DashWindup")),0);}
         if(skill==11)nextGuard=level().getGameTime()+ticks("GuardCooldown");
         if(skill==12){nextBeam=level().getGameTime()+ticks("BeamCooldown");aimHistory.clear();aimTarget=p.getUUID();}
@@ -139,9 +140,10 @@ public final class GuardianEntity extends Monster {
         bar.setProgress(Math.max(0,Math.min(1,getHealth()/getMaxHealth())));bar.setName(Component.literal("虎杖悠仁·净土守护者 · "+(long)getHealth()+" / "+(long)getMaxHealth()+(stun>0?" · 僵直":"")));
         if(stun>0){stun--;getNavigation().stop();setDeltaMovement(0,getDeltaMovement().y,0);return;}
         LivingEntity p=BossTargets.select(this,256);
+        character.npc.NpcLegacyCombat.tick(this,p!=null);
         if(p==null){if(action()!=0)finish();return;}
         if(action()!=12)face(p.getEyePosition());
-        if(action()==0){if(rest>0){rest--;return;}int[] cycle={1,3,11,4,9,5,6,12,1,8,3,9,4,10};int next=cycle[sequence++%cycle.length];if(next==8&&!GuardianRules.domainReady(domain,level().getGameTime(),nextDomain))next=6;if(next==5&&boost>0)next=1;if(next==11&&(guard>0||level().getGameTime()<nextGuard))next=1;if(next==12&&level().getGameTime()<nextBeam)next=4;begin(next,p);}
+        if(action()==0){if(rest>0){rest--;return;}int[] cycle={1,3,11,4,9,5,6,12,1,8,3,9,4,10};int next=cycle[sequence++%cycle.length];if(next==8&&(!GuardianRules.domainReady(domain,level().getGameTime(),nextDomain)||!character.npc.NpcLegacyCombat.domainReady(this)))next=1;if(next==5&&boost>0)next=1;if(next==11&&(guard>0||level().getGameTime()<nextGuard))next=1;if(next==12&&level().getGameTime()<nextBeam)next=4;begin(next,p);}
         if(DomainClash.active(this)){DomainClash.hold(this);return;}
         int t=actionAge()+1;entityData.set(AGE,t);
         switch(action()){
@@ -176,10 +178,10 @@ public final class GuardianEntity extends Monster {
     private void domainVisual(){fx(90,center,Vec3.ZERO,(float)Math.min(512,v("DomainRadius")),domain,1);}
     public boolean clashDomainActive(){return domain>0&&!friendly();}
     public void extendDomain(int ticks){if(domain>0)domain+=ticks;}
-    public void clashCloseDomain(){domain=0;fx(91,center,Vec3.ZERO,1,1,0);}
+    public void clashCloseDomain(){if(domain>0)character.npc.NpcLegacyCombat.burnout(this);domain=0;fx(91,center,Vec3.ZERO,1,1,0);}
     public void clashInterrupt(){blood.clear();impacts.clear();grid.clear();aimHistory.clear();guard=0;finish();}
     public void clashVisual(boolean show){if(show&&domain>0)domainVisual();else fx(91,center,Vec3.ZERO,1,1,0);}
-    private void tickDomain(){if(domain<=0||DomainClash.active(this))return;if(--domain==0){fx(91,center,Vec3.ZERO,1,1,0);return;}if(domain%20==0)domainVisual();double r=Math.min(512,v("DomainRadius"));for(LivingEntity p:BossTargets.around(this,center,r,true)){ServerPlayer caster=MaidBridge.progression(p);if(caster!=null){if(MaidBridge.isCaster(caster)){Skills.closeDomain(caster);GuardianPlayerSkills.closeOwnedDomain(caster,false);}Curse.status(caster,"PureLandNoHeal",3);}if(domain%Math.max(1,ticks("DomainInterval"))==0)hit(p,v("DomainDamage"),false,domainBonus);}}
+    private void tickDomain(){if(domain<=0||DomainClash.active(this))return;if(--domain==0){character.npc.NpcLegacyCombat.burnout(this);fx(91,center,Vec3.ZERO,1,1,0);return;}if(domain%20==0)domainVisual();double r=Math.min(512,v("DomainRadius"));for(LivingEntity p:BossTargets.around(this,center,r,true)){if(character.mainline.Mainline.simpleProtected(p))continue;ServerPlayer caster=MaidBridge.progression(p);if(caster!=null){if(MaidBridge.isCaster(caster)){Skills.closeDomain(caster);GuardianPlayerSkills.closeOwnedDomain(caster,false);}Curse.status(caster,"PureLandNoHeal",3);}if(domain%Math.max(1,ticks("DomainInterval"))==0)hit(p,v("DomainDamage"),false,domainBonus);}}
     @Override public boolean hurt(DamageSource source,float damage){
         if(friendly()){if(!level().isClientSide&&dialogueFinished()&&source.getEntity() instanceof Player p)p.sendSystemMessage(Component.literal("虎天帝：别闹"));return false;}
         if(level().isClientSide||completingDeath||Float.isNaN(damage)||damage<=0)return false;

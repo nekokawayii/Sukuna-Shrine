@@ -14,9 +14,9 @@ import net.minecraft.world.phys.Vec3;
 /**
  * 石流龙 · 领域展开「打上花火」。
  *
- * <p>结构：外侧一层**基岩**球壳（半径 65）、里面一层**纯黑混凝土**（半径 64）；
- * 4 秒展开完（80 刻分批施工），5 秒收起（100 刻分批还原），打开 30 秒后自动收；
- * 内部天空换成 {@code textures/environment/ryu_domain_sky.png}（客户端画）。
+ * <p>结构：外侧一层基岩球壳（半径 35）、里面一层落日晚霞蒙版与地板；
+ * 4 秒提交展开计划，收起后交给共用队列还原；基础寿命 30 秒，对拼暂停、获胜额外加 30 秒；
+ * 内部天空与蒙版统一使用 {@code textures/effect/domain_sunset.png}。
  *
  * <p>领域效果：①自己所有招式**必中**（冲击波不再被方块截断、追踪弹穿墙）；
  * ②随机放烟花：小特效上升 5~15 格后炸成 15~45 发各色追踪弹幕。
@@ -40,7 +40,7 @@ public final class RyuDomain {
         final BlockPos center;
         final List<BlockPos> outer = new ArrayList<>(), inner = new ArrayList<>(), floor = new ArrayList<>(),
             fill = new ArrayList<>();
-        final Map<BlockPos, BlockState> before = new LinkedHashMap<>();
+        final character.domain.DomainTerrain.Handle terrain;
         int image;
         int cursor;            // 已施工/已还原的块数
         int total;
@@ -50,6 +50,7 @@ public final class RyuDomain {
         long nextFirework;
         Fract(ServerLevel level, UUID owner, BlockPos center) {
             this.level = level; this.owner = owner; this.center = center;
+            this.terrain=character.domain.DomainTerrain.begin(level,owner);
         }
     }
 
@@ -89,9 +90,11 @@ public final class RyuDomain {
     }
 
     public static void open(ServerPlayer p) {
+        if(!character.mainline.Mainline.requireDomain(p))return;
         if (!(p.level() instanceof ServerLevel level) || ACTIVE.containsKey(p.getUUID())) return;
         Fract f = new Fract(level, p.getUUID(), p.blockPosition());
-        f.image = cn.blockforge.generated.nnnnr1201forge2.DomainScreenItem.imageOf(p);
+        // 石流龙固定使用用户指定的落日晚霞，不再读取旧存档里误选的其它领域图片。
+        f.image = 0;
         buildShell(f);
         f.total = f.outer.size() + f.inner.size() + f.fill.size() + f.floor.size();
         f.openedAt = level.getGameTime();
@@ -107,7 +110,7 @@ public final class RyuDomain {
         level.playSound(null, p.blockPosition(), net.minecraft.sounds.SoundEvents.FIREWORK_ROCKET_LAUNCH,
             net.minecraft.sounds.SoundSource.PLAYERS, 1f, 0.7f);
         p.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-            "领域展开·打上花火：半径 65 格 · 4 秒展开 · 所有招式必中").withStyle(net.minecraft.ChatFormatting.AQUA));
+            "领域展开·打上花火：半径 35 格 · 4 秒展开 · 所有招式必中").withStyle(net.minecraft.ChatFormatting.AQUA));
         com.mojang.logging.LogUtils.getLogger().info("[石流龙] 领域展开 {} 中心 {} 总方块 {}", p.getScoreboardName(), f.center, f.total);
     }
 
@@ -120,13 +123,14 @@ public final class RyuDomain {
     public static void close(ServerPlayer p, String reason) {
         Fract f = ACTIVE.get(p.getUUID());
         if (f == null || f.closing) return;
-        f.closing = true;
+        f.closing = true;f.terrain.close();
+        ROCKETS.removeIf(r->r.owner().equals(p.getUUID()));SHELLS.removeIf(s->s.owner().equals(p.getUUID()));
         f.closeAt = f.level.getGameTime();
         Network.send(f.level, new Network.Effect(RyuFx.DOMAIN, p.getId(), p.position(), Vec3.ZERO, 0f, 0, 0));
         com.mojang.logging.LogUtils.getLogger().info("[石流龙] 领域收起 {}（{}）", p.getScoreboardName(), reason);
     }
 
-    /** 球壳位置表：外层半径 65 基岩、内层半径 64 黑混凝土；按"绕 Y 扫一圈、由上往下"的顺序施工。 */
+    /** 球壳位置表：外层半径 35 基岩、内层半径 34 晚霞蒙版；按"绕 Y 扫一圈、由上往下"的顺序施工。 */
     private static void buildShell(Fract f) {
         int outerSq = (int) (RADIUS * RADIUS), innerSq = (int) ((RADIUS - 1) * (RADIUS - 1));
         List<BlockPos> outer = new ArrayList<>(), inner = new ArrayList<>();
@@ -137,7 +141,7 @@ public final class RyuDomain {
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {
                     int d = dx * dx + dy * dy + dz * dz;
-                    if (d > outerSq || d < innerSq) continue;
+                    if (d > outerSq || d <= (RADIUS-2)*(RADIUS-2)) continue;
                     BlockPos pos = f.center.offset(dx, dy, dz);
                     if (pos.getY() < floorY) continue;
                     if (d > innerSq) outer.add(pos);
@@ -167,7 +171,7 @@ public final class RyuDomain {
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {
                     int d = dx * dx + dy * dy + dz * dz;
-                    if (d > fillSq) continue;
+                    if (d >= fillSq) continue;
                     BlockPos pos = f.center.offset(dx, dy, dz);
                     if (pos.getY() <= floorY) continue;   // 地板本身要保持黑混凝土
                     fill.add(pos);
@@ -186,8 +190,8 @@ public final class RyuDomain {
         long now = server.overworld().getGameTime();
         for (Iterator<Map.Entry<UUID, Fract>> it = ACTIVE.entrySet().iterator(); it.hasNext(); ) {
             Fract f = it.next().getValue();
-            ServerPlayer owner = server.getPlayerList().getPlayer(f.owner);
-            if (owner == null || !owner.isAlive()) { forceRestore(f); it.remove(); continue; }
+            ServerPlayer owner = NpcBridge.find(server,f.owner);
+            if (owner == null || !owner.isAlive()||owner.level()!=f.level) { forceRestore(f); it.remove(); continue; }
             if (!f.closing && now >= f.closeAt) { f.closing = true; f.closeAt = now; }
             if (f.closing) {
                 if (!restoreStep(f)) it.remove();
@@ -216,44 +220,30 @@ public final class RyuDomain {
             BlockState target;
             if (index < outerStart) {
                 pos = f.floor.get(index);
-                target = Blocks.BLACK_CONCRETE.defaultBlockState();
+                target = Content.DOMAIN_SCREEN.get().defaultBlockState().setValue(DomainScreenBlock.IMAGE,f.image);
             } else if (index < innerStart) {
                 pos = f.outer.get(index - outerStart);
                 target = Blocks.BEDROCK.defaultBlockState();
             } else if (index < fillStart) {
                 pos = f.inner.get(index - innerStart);
-                target = Blocks.BLACK_CONCRETE.defaultBlockState();
+                target = Content.DOMAIN_SCREEN.get().defaultBlockState().setValue(DomainScreenBlock.IMAGE,f.image);
             } else {
                 pos = f.fill.get(index - fillStart);
                 target = Blocks.LIGHT.defaultBlockState()
                     .setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 13);
             }
-            if (!f.level.hasChunkAt(pos)) continue;
-            f.before.putIfAbsent(pos, f.level.getBlockState(pos));
-            if (!f.level.getBlockState(pos).equals(target)) f.level.setBlock(pos, target, 2);
+            f.terrain.place(pos,target);
         }
     }
 
-    /** 收起：每刻还原一批（总量/100 刻，最少 600）。返回 false 表示已全部还原。 */
+    /** 逻辑立即收起，实际方块交给共用恢复队列，不阻止下一次开域。 */
     private static boolean restoreStep(Fract f) {
-        int budget = Math.max(600, f.total / CLOSE_TICKS);
-        int done = 0;
-        while (done < budget && !f.before.isEmpty()) {
-            var iterator = f.before.entrySet().iterator();
-            var entry = iterator.next();
-            if (f.level.hasChunkAt(entry.getKey())) f.level.setBlock(entry.getKey(), entry.getValue(), 2);
-            iterator.remove();
-            done++;
-        }
-        return !f.before.isEmpty();
+        f.terrain.close();return false;
     }
 
-    /** 立刻整批还原（关服/死亡/切角色/恢复符兜底）。 */
+    /** 关服/死亡/切角色/恢复符兜底：停止施工并释放地形事务。 */
     private static void forceRestore(Fract f) {
-        for (var entry : f.before.entrySet()) {
-            if (f.level.hasChunkAt(entry.getKey())) f.level.setBlock(entry.getKey(), entry.getValue(), 2);
-        }
-        f.before.clear();
+        f.terrain.close();
     }
 
     public static void forceClose(ServerPlayer p) {
@@ -272,8 +262,8 @@ public final class RyuDomain {
     /** 一枚小火箭：位置随机落在领域内，上升 5~15 格后炸开。 */
     private static void firework(Fract f, long now) {
         ServerPlayer owner = f.level.getServer() == null ? null
-            : f.level.getServer().getPlayerList().getPlayer(f.owner);
-        if (owner == null) return;
+            : MaidBridge.find(f.level,f.owner);
+        if (owner == null||!active(owner)) return;
         double angle = f.level.random.nextDouble() * Math.PI * 2;
         double distance = 8 + f.level.random.nextDouble() * (RADIUS - 18);
         Vec3 pos = Vec3.atCenterOf(f.center)
@@ -302,8 +292,8 @@ public final class RyuDomain {
         List<Shell> keep = new ArrayList<>();
         for (Shell shell : SHELLS) {
             if (now - shell.born() > SHELL_LIFE) continue;
-            ServerPlayer owner = server.getPlayerList().getPlayer(shell.owner());
-            if (owner == null) continue;
+            ServerPlayer owner = NpcBridge.find(server,shell.owner());
+            if (owner == null || DomainClash.active(owner) || !active(owner)) continue;
             LivingEntity target = nearestTarget(shell.level(), owner, shell.pos());
             Vec3 dir = shell.dir();
             if (target != null) {
@@ -318,7 +308,7 @@ public final class RyuDomain {
             LivingEntity hit = null;
             for (var candidate : shell.level().getEntitiesOfClass(LivingEntity.class,
                     new AABB(pos, pos).inflate(1.1),
-                    t -> t != owner && t.isAlive() && !t.isSpectator()
+                    t -> t != owner && t.isAlive() && !t.isSpectator() && CombatSettings.canHit(owner,t) && !character.mainline.Mainline.simpleProtected(t)
                         && t.getBoundingBox().inflate(0.5).contains(pos))) {
                 hit = candidate;
                 break;
@@ -334,7 +324,7 @@ public final class RyuDomain {
     }
 
     private static void burst(net.minecraft.server.MinecraftServer server, Rocket rocket, long now) {
-        ServerPlayer owner = server.getPlayerList().getPlayer(rocket.owner());
+        ServerPlayer owner = NpcBridge.find(server,rocket.owner());
         if (owner == null) return;
         int count = SHELL_MIN + rocket.level().random.nextInt(SHELL_MAX - SHELL_MIN + 1);
         int color = rocket.level().random.nextInt(COLOR_COUNT);
@@ -358,8 +348,8 @@ public final class RyuDomain {
         double bestDistance = RADIUS * RADIUS;
         for (var candidate : level.getEntitiesOfClass(LivingEntity.class,
                 new AABB(around, around).inflate(RADIUS),
-                t -> t != owner && t.isAlive() && !t.isSpectator() && CombatSettings.canHit(owner, t))) {
-            if (candidate.position().distanceToSqr(Vec3.atCenterOf(owner.blockPosition())) > RADIUS * RADIUS) continue;
+                t -> t != owner && t.isAlive() && !t.isSpectator() && !character.mainline.Mainline.simpleProtected(t) && CombatSettings.canHit(owner, t))) {
+            if (!inside(owner,candidate.position())) continue;
             double d = candidate.position().distanceToSqr(around);
             if (d < bestDistance) { bestDistance = d; best = candidate; }
         }

@@ -1,0 +1,1 @@
+{"parent":"sukuna:mainline/barrier","display":{"icon":{"item":"minecraft:lapis_lazuli"},"title":"简易领域","description":"击败一名拥有领域的敌人；轮盘右侧在脚下生成半径10格的蓝圈，圈内免疫领域效果","frame":"task","show_toast":true,"announce_to_chat":true,"hidden":false},"criteria":{"learned":{"trigger":"minecraft:impossible"}}}

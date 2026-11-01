@@ -35,9 +35,7 @@ public final class YutaTerrain {
         final ServerLevel level;
         final BlockPos center;
         final int radius;
-        final List<Rec> saved = new ArrayList<>();
-        /** 被覆盖的方块实体（箱子等）内容，结束后原样还原。 */
-        final java.util.Map<BlockPos, net.minecraft.nbt.CompoundTag> blockEntities = new java.util.HashMap<>();
+        final character.domain.DomainTerrain.Handle terrain;
         /** 施工清单（state 为目标状态）。 */
         final List<Rec> plan = new ArrayList<>();
         int floorEnd;
@@ -48,6 +46,7 @@ public final class YutaTerrain {
 
         Job(UUID owner, ServerLevel level, BlockPos center, int radius) {
             this.owner = owner;
+            this.terrain=character.domain.DomainTerrain.begin(level,owner);
             this.level = level;
             this.center = center;
             this.radius = radius;
@@ -103,7 +102,7 @@ public final class YutaTerrain {
                     BlockPos pos = c.offset(x, y, z);
                     if (d2 > shell2) {
                         job.plan.add(new Rec(pos, Blocks.BLACK_CONCRETE.defaultBlockState()));
-                    } else if (!job.level.getBlockState(pos).is(Blocks.LIGHT)) {
+                    } else {
                         job.plan.add(new Rec(pos, light));
                     }
                 }
@@ -115,7 +114,7 @@ public final class YutaTerrain {
         if (JOBS.isEmpty()) return;
         for (Iterator<Job> it = JOBS.values().iterator(); it.hasNext(); ) {
             Job job = it.next();
-            ServerPlayer p = server.getPlayerList().getPlayer(job.owner);
+            ServerPlayer p = cn.blockforge.generated.nnnnr1201forge2.NpcBridge.find(server,job.owner);
             if (p == null || !p.isAlive() || p.level() != job.level) {
                 restore(job);
                 it.remove();
@@ -161,26 +160,22 @@ public final class YutaTerrain {
         net.minecraft.core.Vec3i size = t.getSize();
         BlockPos origin = job.center.offset(-size.getX() / 2, 0, -size.getZ() / 2);
 
-        // 先快照模板影响范围，再放置，最后只记录发生了变化的格子（避免上万个空气记录）。
-        Map<BlockPos, BlockState> before = new HashMap<>();
-        for (int x = 0; x < size.getX(); x++)
-            for (int y = 0; y < size.getY(); y++)
-                for (int z = 0; z < size.getZ(); z++) {
-                    BlockPos pos = origin.offset(x, y, z);
-                    before.put(pos, job.level.getBlockState(pos));
-                    var be = job.level.getBlockEntity(pos);
-                    if (be != null) {
-                        job.blockEntities.putIfAbsent(pos.immutable(), be.saveWithoutMetadata());
-                        job.level.removeBlockEntity(pos);
-                    }
-                }
-        var settings = new StructurePlaceSettings().setIgnoreEntities(true).setKnownShape(true);
-        t.placeInWorld(job.level, origin, origin, settings, job.level.random, 3);
-        for (var e : before.entrySet()) {
-            BlockState now = job.level.getBlockState(e.getKey());
-            if (now != e.getValue()) {
-            job.saved.add(new Rec(e.getKey(), e.getValue()));
+        // 保留用户 NBT 原格式；逐格读取原模板并交给同一个事务，不能绕过日志直接 placeInWorld。
+        var tag=t.save(new net.minecraft.nbt.CompoundTag());
+        var palette=tag.getList("palette",net.minecraft.nbt.Tag.TAG_COMPOUND);
+        if(palette.isEmpty()){
+            var palettes=tag.getList("palettes",net.minecraft.nbt.Tag.TAG_LIST);
+            if(!palettes.isEmpty())palette=(net.minecraft.nbt.ListTag)palettes.get(0);
         }
+        var blocks=tag.getList("blocks",net.minecraft.nbt.Tag.TAG_COMPOUND);
+        var lookup=job.level.holderLookup(net.minecraft.core.registries.Registries.BLOCK);
+        for(int i=0;i<blocks.size();i++){
+            var block=blocks.getCompound(i);int index=block.getInt("state");
+            if(index<0||index>=palette.size())continue;
+            var xyz=block.getList("pos",net.minecraft.nbt.Tag.TAG_INT);if(xyz.size()!=3)continue;
+            var state=net.minecraft.nbt.NbtUtils.readBlockState(lookup,palette.getCompound(index));
+            if(state.hasBlockEntity())continue; // 容器与机器不覆盖，也不生成物品副本。
+            apply(job,new Rec(origin.offset(xyz.getInt(0),xyz.getInt(1),xyz.getInt(2)),state));
         }
     }
 
@@ -189,7 +184,7 @@ public final class YutaTerrain {
 
     /** 摆坟：最多 3 座、固定点位；只要还有已复制术式，拔走后会在 refresh 中重新长出。 */
     private static void placeGraves(Job job) {
-        ServerPlayer owner = job.level.getServer().getPlayerList().getPlayer(job.owner);
+        ServerPlayer owner = cn.blockforge.generated.nnnnr1201forge2.NpcBridge.find(job.level.getServer(),job.owner);
         if (owner == null || YutaCopies.copies(owner).isEmpty()) return;
         BlockState grave = cn.blockforge.generated.nnnnr1201forge2.Content.YUTA_GRAVE.get().defaultBlockState();
         for (int[] spot : GRAVE_SPOTS) {
@@ -199,21 +194,7 @@ public final class YutaTerrain {
     }
 
     private static void apply(Job job, Rec e) {
-        BlockState now = job.level.getBlockState(e.pos());
-        if (now == e.state()) return;
-        // 覆盖前先把方块实体（箱子/熔炉等）的内容存下来，结束后连内容一起还原。
-        var be = job.level.getBlockEntity(e.pos());
-        if (be != null) {
-            if (!job.blockEntities.containsKey(e.pos())) {
-                job.blockEntities.put(e.pos().immutable(), be.saveWithoutMetadata());
-            }
-            // 关键：先摘掉方块实体再换方块。否则 ChestBlock.onRemove 会把里面的东西
-            // 全部喷到地上，而我们又保存了 NBT 用于还原 —— 一份物品变两份（刷物品）。
-            job.level.removeBlockEntity(e.pos());
-        }
-        job.saved.add(new Rec(e.pos(), now));
-        int flags = e.state().is(Blocks.LIGHT) ? 2 : 3;
-        job.level.setBlock(e.pos(), e.state(), flags);
+        job.terrain.place(e.pos(),e.state());
     }
 
     public static void restore(ServerPlayer p) {
@@ -223,21 +204,7 @@ public final class YutaTerrain {
     }
 
     private static void restore(Job job) {
-        for (int i = job.saved.size() - 1; i >= 0; i--) {
-            Rec r = job.saved.get(i);
-            job.level.setBlock(r.pos(), r.state(), 3);
-        }
-        // 方块复原后，把容器内容写回去（箱子里的东西不丢）。
-        for (var e : job.blockEntities.entrySet()) {
-            var be = job.level.getBlockEntity(e.getKey());
-            if (be != null) {
-                be.load(e.getValue().copy());
-                be.setChanged();
-                job.level.sendBlockUpdated(e.getKey(), job.level.getBlockState(e.getKey()), job.level.getBlockState(e.getKey()), 3);
-            }
-        }
-        job.blockEntities.clear();
-        job.saved.clear();
+        job.terrain.close();
         job.plan.clear();
     }
 

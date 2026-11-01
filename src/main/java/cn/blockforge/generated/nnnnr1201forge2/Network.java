@@ -12,7 +12,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.function.Consumer;
 
 public final class Network {
-    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation("sukuna", "skills"), () -> "sukuna-character-r139", "sukuna-character-r139"::equals, "sukuna-character-r139"::equals);
+    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation("sukuna", "skills"), () -> "sukuna-domain-clash-r292", "sukuna-domain-clash-r292"::equals, "sukuna-domain-clash-r292"::equals);
     public static Consumer<Effect> clientReceiver = e -> {};
     public static Boolean clientModpackMode;
     public static double tooltipFactor(BalanceRules.Category category){return BalanceRules.factor(clientModpackMode!=null?clientModpackMode:BalanceRules.modpackMode(),category);}
@@ -24,7 +24,7 @@ public final class Network {
     public static Runnable testResetReceiver=()->{};
     public static Consumer<CombatState> combatReceiver=s->{};
     public record CombatState(boolean finaleReady,int lingers,boolean stream,int noRecovery,int finaleBurnout){}
-    public static void syncCombat(ServerPlayer p){if(MaidBridge.isCaster(p))return;long now=p.level().getGameTime();CHANNEL.send(PacketDistributor.PLAYER.with(()->p),new CombatState(SixfoldFinale.ready(p),CombatExpansion.lingerCount(p),CombatExpansion.streaming(p),(int)Math.max(0,Curse.data(p).getLong("FinaleNoRecovery")-now),(int)Math.max(0,Curse.data(p).getLong("FinaleBurnout")-now)));}
+    public static void syncCombat(ServerPlayer p){if(p instanceof net.minecraftforge.common.util.FakePlayer)return;long now=p.level().getGameTime();CHANNEL.send(PacketDistributor.PLAYER.with(()->p),new CombatState(SixfoldFinale.ready(p),CombatExpansion.lingerCount(p),CombatExpansion.streaming(p),(int)Math.max(0,Curse.data(p).getLong("FinaleNoRecovery")-now),(int)Math.max(0,Curse.data(p).getLong("FinaleBurnout")-now)));}
     public static Consumer<MotionState> motionReceiver=m->{};
     public record MotionState(int owner,java.util.UUID token,int kind,int age,float yaw,Vec3 position,boolean end){
         static MotionState read(FriendlyByteBuf b){return new MotionState(b.readVarInt(),b.readUUID(),b.readVarInt(),b.readVarInt(),b.readFloat(),vec(b),b.readBoolean());}
@@ -32,6 +32,7 @@ public final class Network {
     }
     public static Consumer<ClashState> clashReceiver = p -> {};
     public record ClashPress(java.util.UUID id,boolean down) {}
+    public record ClashWithdraw(java.util.UUID id) {}
     public record ClashState(java.util.UUID id,boolean active,int percent,int ready,int remaining,int bossCps,String opponent,int result) {
         static ClashState read(FriendlyByteBuf b){return new ClashState(b.readUUID(),b.readBoolean(),b.readVarInt(),b.readVarInt(),b.readVarInt(),b.readVarInt(),b.readUtf(128),b.readInt());}
         void write(FriendlyByteBuf b){b.writeUUID(id);b.writeBoolean(active);b.writeVarInt(percent);b.writeVarInt(ready);b.writeVarInt(remaining);b.writeVarInt(bossCps);b.writeUtf(opponent,128);b.writeInt(result);}
@@ -109,6 +110,8 @@ public final class Network {
     static Vec3 vec(FriendlyByteBuf b) { return new Vec3(b.readDouble(),b.readDouble(),b.readDouble()); }
     static void vec(FriendlyByteBuf b,Vec3 v) { b.writeDouble(v.x);b.writeDouble(v.y);b.writeDouble(v.z); }
     public static void init() {
+        character.domain.DomainPresentation.registerPackets();
+        character.mainline.MainlinePackets.register();
         ObserverPackets.register();
         AuthorityPackets.register();
         SlashTerrain.register();
@@ -193,6 +196,7 @@ public final class Network {
         CHANNEL.messageBuilder(ControllerState.class,8,NetworkDirection.PLAY_TO_CLIENT).encoder(ControllerState::write).decoder(ControllerState::read).consumerMainThread((m,c)->{controllerReceiver.accept(m);c.get().setPacketHandled(true);}).add();
         CHANNEL.messageBuilder(ControllerValueRequest.class,9,NetworkDirection.PLAY_TO_SERVER).encoder((m,b)->{b.writeVarInt(m.field());b.writeUtf(m.value(),256);}).decoder(b->new ControllerValueRequest(b.readVarInt(),b.readUtf(256))).consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null)VoidController.setValue(p,m.field(),m.value());c.get().setPacketHandled(true);}).add();
         CHANNEL.messageBuilder(ClashPress.class,10,NetworkDirection.PLAY_TO_SERVER).encoder((m,b)->{b.writeUUID(m.id());b.writeBoolean(m.down());}).decoder(b->new ClashPress(b.readUUID(),b.readBoolean())).consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null)DomainClash.press(p,m.id(),m.down());c.get().setPacketHandled(true);}).add();
+        CHANNEL.messageBuilder(ClashWithdraw.class,47,NetworkDirection.PLAY_TO_SERVER).encoder((m,b)->b.writeUUID(m.id())).decoder(b->new ClashWithdraw(b.readUUID())).consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null)DomainClash.withdraw(p,m.id());c.get().setPacketHandled(true);}).add();
         CHANNEL.messageBuilder(ClashState.class,11,NetworkDirection.PLAY_TO_CLIENT).encoder(ClashState::write).decoder(ClashState::read).consumerMainThread((m,c)->{clashReceiver.accept(m);c.get().setPacketHandled(true);}).add();
         CHANNEL.messageBuilder(WallOptions.class,12,NetworkDirection.PLAY_TO_SERVER).encoder((m,b)->{b.writeVarInt(m.halfBlocks());b.writeBoolean(m.diagonal());}).decoder(b->new WallOptions(b.readVarInt(),b.readBoolean())).consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null&&Journey.unlocked(p)&&Curse.awakened(p)){SukunaBranches.configure(p,m.halfBlocks(),m.diagonal());Curse.sync(p);}c.get().setPacketHandled(true);}).add();
         // 24 = 空格三击跳上神龛（0-23 已被占用，见上面各处 messageBuilder 的 ID）。
@@ -221,13 +225,14 @@ public final class Network {
      * 用 {@link #send(ServerLevel, Effect)} 广播的话，附近所有玩家的客户端都会打开同一块界面。
      */
     public static void sendTo(ServerPlayer p, Effect e) {
+        if(p instanceof net.minecraftforge.common.util.FakePlayer)return;
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> p), e);
     }
     public static void send(ServerLevel level, Effect e) {
         // 东堂葵：登记这条特效的位置，之后"纯客户端特效"能被注入成实体（不义游戏换位用）
         character.todo.TodoMarks.anchor(level, e);
         SkillDestruction.effect(level,e);
-        var entity=level.getEntity(e.owner());ServerPlayer caster=entity instanceof ServerPlayer p?p:MaidBridge.caster(entity);
+        var entity=level.getEntity(e.owner());ServerPlayer caster=entity instanceof ServerPlayer p?p:NpcBridge.existing(entity)!=null?NpcBridge.existing(entity):MaidBridge.caster(entity);
         // 定位在受击者身上的消息必须由发送点明确提供施术者，不在这里猜测。
         boolean targetEffect=e.kind()==7||e.kind()==10||e.kind()==11||e.kind()==FinaleRules.FX_SCAR||e.kind()==93&&e.direction().lengthSqr()<.01;
         Effect visual=e.wallpaperOwner()==null&&!e.desktopSlashes()&&caster!=null&&!targetEffect?e.fromCaster(caster):e;
@@ -235,7 +240,7 @@ public final class Network {
         if(e.size()==SlashReach.INFINITE){for(ServerPlayer listener:level.players()){var audience=PacketDistributor.PLAYER.with(()->listener);if(tint!=null)CHANNEL.send(audience,tint);CHANNEL.send(audience,visual);}return;}
         var audience=PacketDistributor.NEAR.with(()->new PacketDistributor.TargetPoint(e.position.x,e.position.y,e.position.z,512,level.dimension()));if(tint!=null)CHANNEL.send(audience,tint);CHANNEL.send(audience,visual);
     }
-    public static void sendController(ServerPlayer p) { if(MaidBridge.isCaster(p))return;CHANNEL.send(PacketDistributor.PLAYER.with(()->p),VoidController.state(p)); }
+    public static void sendController(ServerPlayer p) { if(p instanceof net.minecraftforge.common.util.FakePlayer)return;CHANNEL.send(PacketDistributor.PLAYER.with(()->p),VoidController.state(p)); }
     public static void sendControllerRequest(int field, int delta) { CHANNEL.sendToServer(new ControllerRequest(field,delta)); }
     public static void sendControllerValue(int field,String value) { CHANNEL.sendToServer(new ControllerValueRequest(field,value)); }
 }

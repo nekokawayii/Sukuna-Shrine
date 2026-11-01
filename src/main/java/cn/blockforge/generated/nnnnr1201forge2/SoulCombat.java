@@ -17,7 +17,7 @@ public final class SoulCombat {
     public static int layers(Player p){return Journey.nine(p)?(Curse.data(p).contains("SoulLayers")?Math.max(0,Curse.data(p).getInt("SoulLayers")):9):0;}
     public static int stacks(Player p){return Curse.active(p,"SoulStiffUntil")?Math.min(5,Curse.data(p).getInt("SoulStiffStacks")):0;}
     public static double cooldown(Player p){return (1+stacks(p)*0.10)*GuardianCombat.cooldown(p);}
-    public static boolean suppressed(Player p){return p.getPersistentData().getLong("VoidCaptured")>p.level().getGameTime()||p.getPersistentData().getLong("SoulGapUntil")>p.level().getGameTime()||Curse.active(p,"SoulSuppressed")||Curse.active(p,"SoulGap")||p.getPersistentData().getLong("SukunaSoulPeelUntil")>p.level().getGameTime();}
+    public static boolean suppressed(Player p){return !DomainClash.counterCasting(p)&&p.getPersistentData().getLong("VoidCaptured")>p.level().getGameTime()||p.getPersistentData().getLong("SoulGapUntil")>p.level().getGameTime()||Curse.active(p,"SoulSuppressed")||Curse.active(p,"SoulGap")||p.getPersistentData().getLong("SukunaSoulPeelUntil")>p.level().getGameTime();}
     public static void suppress(ServerPlayer p,int ticks){Curse.status(p,"SoulSuppressed",ticks);Skills.closeDomain(p);}
     public static void stiff(ServerPlayer p){Curse.data(p).putInt("SoulStiffStacks",Math.min(5,stacks(p)+1));Curse.status(p,"SoulStiffUntil",100);applySlow(p);sync(p);}
     public static void peelTarget(ServerPlayer owner,net.minecraft.world.entity.LivingEntity target){
@@ -39,7 +39,7 @@ public final class SoulCombat {
     }
     public static void soulHit(ServerPlayer owner,net.minecraft.world.entity.LivingEntity target){target.getPersistentData().putBoolean("SukunaNoHeal",true);}
     public static void iwate(ServerPlayer p,int ticks){Curse.status(p,"Iwate",ticks);}
-    private static void direct(ServerPlayer p,int kind,int life,long seed){if(MaidBridge.isCaster(p))return;Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(()->p),new Network.Effect(kind,p.getId(),p.position(),net.minecraft.world.phys.Vec3.ZERO,layers(p),life,seed));}
+    private static void direct(ServerPlayer p,int kind,int life,long seed){if(p instanceof net.minecraftforge.common.util.FakePlayer)return;Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(()->p),new Network.Effect(kind,p.getId(),p.position(),net.minecraft.world.phys.Vec3.ZERO,layers(p),life,seed));}
     public static void sync(ServerPlayer p){direct(p,89,stacks(p),layers(p));}
     private static void applySlow(ServerPlayer p){var a=MaidBridge.body(p).getAttribute(Attributes.MOVEMENT_SPEED);if(a==null)return;int n=stacks(p);var old=a.getModifier(SLOW);if(old!=null&&Math.abs(old.getAmount()+n*0.15)<0.001)return;a.removeModifier(SLOW);if(n>0)a.addTransientModifier(new AttributeModifier(SLOW,"灵魂僵直",-n*0.15,AttributeModifier.Operation.MULTIPLY_TOTAL));}
     public static void clearOwnedEffects(ServerPlayer owner,net.minecraft.world.entity.LivingEntity target){

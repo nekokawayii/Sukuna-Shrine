@@ -1,6 +1,6 @@
 package character.mainline;
 
-/** 双端共享的主线状态（服务端写入、客户端由特效同步）。 */
+/** 客户端主线快照（由专用服务端状态包更新）。 */
 public final class MainlineState {
     public static volatile int mask;
     public static volatile int simple, domain;

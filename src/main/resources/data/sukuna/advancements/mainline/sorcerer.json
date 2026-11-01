@@ -1,0 +1,1 @@
+{"display":{"icon":{"item":"sukuna:sukuna_memory"},"title":"咒术师","description":"使用术式选择书，踏上所有术式共用的修行之路","background":"minecraft:textures/block/deepslate_tiles.png","frame":"task","show_toast":true,"announce_to_chat":true,"hidden":false},"criteria":{"learned":{"trigger":"minecraft:impossible"}}}

@@ -2,12 +2,10 @@ package cn.blockforge.generated.nnnnr1201forge2;
 
 import net.minecraftforge.client.settings.KeyConflictContext;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.vertex.*;
 import com.mojang.math.Axis;
 import net.minecraft.client.*;
 import net.minecraft.client.renderer.*;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.*;
@@ -194,7 +192,7 @@ public final class Client {
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut e){clear();character.CharacterClient.clear();world=null;}
     static void watchRenderers(Minecraft mc){EntityRendererRegistry.ensureOwn(mc);}
     private static void testReset(){DeathStarClient.clear();BloodClient.clear();FinaleClient.clear();TechniqueInputClient.clear();DomainClashClient.clear();DismantleMotionClient.clear();FreehandClient.clear();NetBranchVisuals.clear();SoulClient.clear();CastHands.clear();MeleeComboClient.clear();charging=cleaveHeld=false;}
-    private static void clear(){AimAssistClient.clear();FinaleClient.clear();TechniqueInputClient.clear();ExpansionVisuals.clear();ClientInput.clear();DomainClashClient.clear();DismantleMotionClient.clear();FreehandClient.clear();SlashFormVisuals.clear();SlashTerrainClient.clear();BranchVisuals.clear();NetBranchVisuals.clear();Network.clientModpackMode=null;selected=0;wheelPage=0;VoidTechniqueClient.clear();VoidBossClient.clear();GojoFx.clear();CastHands.clear();MeleeComboClient.clear();RuinClient.clear();SoulClient.clear();FistFlameClient.clear();FistAura.clear();character.jogo.JogoFxClient.clear();cleaveHeld=false;VoidVisuals.clear();supreme.clear();FurnaceMaxClient.clear();for(Visual v:visuals)PhotonBridge.stop(v.handle);for(Transient t:transients)PhotonBridge.stop(t.handle);visuals.clear();transients.clear();domains.clear();auras.clear();heldLast=false;castHeld=false;charging=false;generated=0;window=0;shakeUntil=flashUntil=transitionUntil=eyesUntil=0;progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false,false,false,DomainOptions.DEFAULT_RADIUS,DomainOptions.DEFAULT_DAMAGE,DomainOptions.DEFAULT_SPEED,true);jumpPress=0;jumpHeld=false;}
+    private static void clear(){character.mainline.MainlineState.mask=0;character.mainline.MainlineState.simple=0;character.mainline.MainlineState.domain=0;AimAssistClient.clear();FinaleClient.clear();TechniqueInputClient.clear();ExpansionVisuals.clear();ClientInput.clear();DomainClashClient.clear();DismantleMotionClient.clear();FreehandClient.clear();SlashFormVisuals.clear();SlashTerrainClient.clear();BranchVisuals.clear();NetBranchVisuals.clear();Network.clientModpackMode=null;selected=0;wheelPage=0;VoidTechniqueClient.clear();VoidBossClient.clear();GojoFx.clear();CastHands.clear();MeleeComboClient.clear();RuinClient.clear();SoulClient.clear();FistFlameClient.clear();FistAura.clear();character.jogo.JogoFxClient.clear();cleaveHeld=false;VoidVisuals.clear();supreme.clear();FurnaceMaxClient.clear();for(Visual v:visuals)PhotonBridge.stop(v.handle);for(Transient t:transients)PhotonBridge.stop(t.handle);visuals.clear();transients.clear();domains.clear();auras.clear();heldLast=false;castHeld=false;charging=false;generated=0;window=0;shakeUntil=flashUntil=transitionUntil=eyesUntil=0;progress=new Network.Progress(1000,1000,0,false,false,false,false,false,false,false,"",false,false,false,false,1,300,false,0,false,false,0,4,false,false,false,false,DomainOptions.DEFAULT_RADIUS,DomainOptions.DEFAULT_DAMAGE,DomainOptions.DEFAULT_SPEED,true);jumpPress=0;jumpHeld=false;}
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent e){
         if(e.phase!=TickEvent.Phase.END)return;
         Minecraft mc=Minecraft.getInstance();if(world!=mc.level){clear();world=mc.level;}watchRenderers(mc);ClientInput.tick();character.CharacterClient.tick();character.jogo.JogoFxClient.tick();TechniqueInputClient.tick();ExpansionVisuals.tick();
@@ -352,6 +350,7 @@ public final class Client {
         if(e.kind()==25){var d=domains.get(e.owner());if(d!=null)d.voidFloor=e.size()>0;return;}
         if(e.kind()==21||e.kind()==68)return;
         if(e.kind()==1){
+            if(DomainWorldRenderer.clashing(e.owner()))return;
             DomainVisual d=domains.get(e.owner());
             if(d==null||d.start!=Math.abs(e.seed())){
                 visuals.removeIf(v->v.background&&v.e.owner()==e.owner());
@@ -601,40 +600,9 @@ public final class Client {
             ribbon(b,ps,p,q,0.16,blueSky?0x6530B6FF:voidSky?0x657637A9:0x65FFB7B7,eye);
         }
         BufferUploader.drawWithShader(b.end());
-        // ---- 内层天空盒（用户给的无量空处云图）：套在原有星河天空盒**里面**的一层 ----
-        // 这张图是"黑底(71%)+白云(23%)+蓝雾"，黑底是不透明黑，直接当半透明天空盒会糊成一块黑，
-        // 所以走**加法混合**：黑加 0 不改变画面、白云与蓝雾自然发光，正好是"里层云海"的观感。
-        if(voidSky){
-            RenderSystem.setShader(GameRenderer::getPositionTexShader);RenderSystem.setShaderTexture(0,VOID_SKY_TEXTURE);
-            RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA,GlStateManager.DestFactor.ONE);   // 加法
-            BufferBuilder s2=Tesselator.getInstance().getBuilder();
-            s2.begin(VertexFormat.Mode.QUADS,DefaultVertexFormat.POSITION_TEX_COLOR);
-            float t=(float)((tick+e.getPartialTick())*0.0006),pulse=(float)(0.72+0.28*Math.sin((tick+e.getPartialTick())*0.012));
-            int col=((int)(140*pulse)<<24)|0xFFFFFF;
-            double ir=118,iy0=-25,iy1=70;int sides=48;
-            for(int i=0;i<sides;i++){                                  // 内层筒壁：UV 横向叠 3 次 + 随时间漂移
-                double a0=i*Math.PI*2/sides,a1=(i+1)*Math.PI*2/sides;
-                float u0=(float)(i*3.0/sides)+t,u1=(float)((i+1)*3.0/sides)+t;
-                s2.vertex((float)(Math.cos(a0)*ir),(float)iy0,(float)(Math.sin(a0)*ir)).uv(u0,0f).color(col).endVertex();
-                s2.vertex((float)(Math.cos(a1)*ir),(float)iy0,(float)(Math.sin(a1)*ir)).uv(u1,0f).color(col).endVertex();
-                s2.vertex((float)(Math.cos(a1)*ir),(float)iy1,(float)(Math.sin(a1)*ir)).uv(u1,1f).color(col).endVertex();
-                s2.vertex((float)(Math.cos(a0)*ir),(float)iy1,(float)(Math.sin(a0)*ir)).uv(u0,1f).color(col).endVertex();
-            }
-            for(int i=0;i<sides;i++){                                  // 内层顶盖（云海顶）：UV 按 xz 展开并叠 2 次
-                double a0=i*Math.PI*2/sides,a1=(i+1)*Math.PI*2/sides;
-                double x0=Math.cos(a0)*ir,z0=Math.sin(a0)*ir,x1=Math.cos(a1)*ir,z1=Math.sin(a1)*ir;
-                s2.vertex(0f,(float)iy1,0f).uv(0.5f+t*0.3f,0.5f).color(col).endVertex();
-                s2.vertex((float)x0,(float)iy1,(float)z0).uv((float)(0.5+x0/ir*0.5+t*0.3f),(float)(0.5+z0/ir*0.5)).color(col).endVertex();
-                s2.vertex((float)x1,(float)iy1,(float)z1).uv((float)(0.5+x1/ir*0.5+t*0.3f),(float)(0.5+z1/ir*0.5)).color(col).endVertex();
-                s2.vertex((float)x0,(float)iy1,(float)z0).uv((float)(0.5+x0/ir*0.5+t*0.3f),(float)(0.5+z0/ir*0.5)).color(col).endVertex();
-            }
-            BufferUploader.drawWithShader(s2.end());
-            RenderSystem.defaultBlendFunc();
-        }
+        // 无量空处的照片覆盖层已移除；保留上面的动态底色、星环和光带。
         RenderSystem.depthMask(true);RenderSystem.enableCull();RenderSystem.disableBlend();ps.popPose();
     }
-    /** 用户提供的无量空处云图（`assets/sukuna/textures/effect/unlimited_void_sky.png`）：黑底不透明，故用加法层。 */
-    private static final ResourceLocation VOID_SKY_TEXTURE=new ResourceLocation("sukuna","textures/effect/unlimited_void_sky.png");
     private static void aura(BufferBuilder b,PoseStack ps,AuraVisual a,Vec3 cam,float partial){
         double age=tick-a.born+partial,fade=Math.min(1,(a.end-tick-partial)/15.0),pulse=0.5+0.5*Math.sin(age*0.22);
         Vec3 c=a.position.add(0,0.12,0);

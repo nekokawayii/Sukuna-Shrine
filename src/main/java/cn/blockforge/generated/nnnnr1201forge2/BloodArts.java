@@ -65,7 +65,7 @@ public final class BloodArts {
         if(s.charge>=0||s.cooldown[skill-BloodRules.FIRST]>now||skill==BloodRules.OCEAN&&!BloodExpansion.canOcean(p)||skill==BloodRules.COMPRESS&&s.compressed>now)return false;
         if(skill==BloodRules.VISION&&(s.flow<=now||s.vision)||skill==BloodRules.SENBON&&s.blade<=now)return false;
         if(skill==BloodRules.FLOW&&s.flow>now||skill==BloodRules.BLADE&&s.blade>now||skill==BloodRules.WINGS&&s.wings>now||skill==BloodRules.DOMAIN&&BloodDomain.active(p))return false;
-        return BloodDomain.free(p)||Curse.canSpend(p,BloodRules.cost(skill));
+        return !(p instanceof NpcBridge.NpcActor)&&BloodDomain.free(p)||Curse.canSpend(p,BloodRules.cost(skill));
     }
     public static void automatic(ServerPlayer p,int skill){if(!available(p,skill))return;input(p,new TechniqueInput.Input(skill,0,false,false,false,false,0,skill));if(skill==BloodRules.COMPRESS){State s=state(p);s.automaticCharge=s.charge>=0;}}
 
@@ -99,8 +99,8 @@ public final class BloodArts {
         if(in.skill()==BloodRules.OCEAN&&!BloodExpansion.canOcean(p)){tell(p,"血洋仍在扩散或爆发，请等待结束");return;}
         int index=in.skill()-BloodRules.FIRST;
         if(s.cooldown[index]>now){tell(p,"冷却剩余 "+((s.cooldown[index]-now+19)/20)+" 秒");return;}
-        if(!BloodDomain.free(p)&&!Curse.spend(p,BloodRules.cost(in.skill()))){tell(p,"咒力不足：需要 "+BloodRules.cost(in.skill()));return;}
-        s.cooldown[index]=now+BloodRules.cooldown(in.skill());var saved=Curse.data(p).getCompound("BloodCooldowns");saved.putLong(Integer.toString(index),s.cooldown[index]);Curse.data(p).put("BloodCooldowns",saved);Curse.sync(p);
+        if((p instanceof NpcBridge.NpcActor||!BloodDomain.free(p))&&!Curse.spend(p,BloodRules.cost(in.skill()))){tell(p,"咒力不足：需要 "+BloodRules.cost(in.skill()));return;}
+        s.cooldown[index]=now+(p instanceof NpcBridge.NpcActor&&in.skill()==BloodRules.DOMAIN?character.npc.NpcBattleRules.DOMAIN_COOLDOWN:BloodRules.cooldown(in.skill()));var saved=Curse.data(p).getCompound("BloodCooldowns");saved.putLong(Integer.toString(index),s.cooldown[index]);Curse.data(p).put("BloodCooldowns",saved);Curse.sync(p);
         if(in.skill()==BloodRules.COMPRESS){s.charge=now;s.heartbeat=now;attributes(s);pose(p,BloodRules.COMPRESS,60);return;}
         boolean empowered=(in.skill()==BloodRules.PIERCE||in.skill()==BloodRules.NOVA)&&s.compressed>now;
         if(empowered&&--s.charges<=0)s.compressed=0;
@@ -132,7 +132,7 @@ public final class BloodArts {
             case BloodRules.DOMAIN -> BloodDomain.open(p,echo?origin.subtract(0,1,0):p.position(),echo);
             case BloodRules.OCEAN -> BloodExpansion.ocean(p,floor);
             case BloodRules.TRAP -> BloodExpansion.trap(p,origin,dir);
-            case BloodRules.VISION -> {s.vision=true;if(!(p instanceof MaidBridge.Actor))BlackFlashMarks.extendBloodVision(p);}
+            case BloodRules.VISION -> {s.vision=true;if(!(p instanceof net.minecraftforge.common.util.FakePlayer))BlackFlashMarks.extendBloodVision(p);}
             case BloodRules.SENBON -> {s.blade=0;BloodExpansion.senbon(p,origin,dir);}
             default -> {}
         }
@@ -206,7 +206,7 @@ public final class BloodArts {
             if(s.mirror>now)reflect(s);
             if(now%5==0){
                 if(s.compressed>now)fx(p,FX_READY,p.getEyePosition(),p.getLookAngle(),1,7,0);
-                if(s.flow>now){fx(p,FX+4,p.position(),p.getDeltaMovement(),1,7,s.vision?1:0);if(s.vision&&!(p instanceof MaidBridge.Actor))for(LivingEntity t:near(p,p.getEyePosition(),40+rank(p)*8))if(visible(p,p.getEyePosition(),t)){Vec3 velocity=t.position().subtract(t.xo,t.yo,t.zo);Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(()->p),new Network.Effect(FX_HEART,t.getId(),t.position(),velocity,1+rank(p)*.25f,7,0));}}
+                if(s.flow>now){fx(p,FX+4,p.position(),p.getDeltaMovement(),1,7,s.vision?1:0);if(s.vision&&!(p instanceof net.minecraftforge.common.util.FakePlayer))for(LivingEntity t:near(p,p.getEyePosition(),40+rank(p)*8))if(visible(p,p.getEyePosition(),t)){Vec3 velocity=t.position().subtract(t.xo,t.yo,t.zo);Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(()->p),new Network.Effect(FX_HEART,t.getId(),t.position(),velocity,1+rank(p)*.25f,7,0));}}
                 if(s.blade>now)fx(p,FX+5,p.position(),p.getLookAngle(),1,7,0);
                 if(s.shield>0)fx(p,FX+7,p.position(),Vec3.ZERO,s.shield,7,0);
                 if(s.wings>now)fx(p,FX+10,p.position(),p.getLookAngle(),1,7,0);
@@ -239,7 +239,7 @@ public final class BloodArts {
         }
     }
     @SubscribeEvent(priority=EventPriority.LOWEST) public static void shield(LivingHurtEvent event){
-        ServerPlayer p=event.getEntity() instanceof ServerPlayer player?player:MaidBridge.caster(event.getEntity());
+        ServerPlayer p=MaidBridge.progression(event.getEntity());
         if(p==null||DeathStar.source(event.getSource())||event.getAmount()<=0||event.getSource().is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY))return;State s=states.get(p.getUUID());if(s==null||s.shield<=0||s.shieldEnd<p.level().getGameTime())return;
         float taken=Math.min(s.shield,event.getAmount());s.shield-=taken;event.setAmount(event.getAmount()-taken);if(s.shield<=0){fx(p,FX_SHATTER,p.position().add(0,1,0),Vec3.ZERO,3,25,0);for(LivingEntity t:near(p,p.position(),5+rank(p)))hit(p,t,18,1,false);BloodExpansion.novaEchoes(p,p.position().add(0,1,0),false);}
     }
@@ -253,7 +253,7 @@ public final class BloodArts {
     @SubscribeEvent public static void fall(LivingFallEvent event){State s=states.get(event.getEntity().getUUID());if(s!=null&&s.wings>s.level.getGameTime()){event.setDistance(0);event.setDamageMultiplier(0);}}
     @SubscribeEvent public static void logout(PlayerEvent.PlayerLoggedOutEvent event){if(event.getEntity() instanceof ServerPlayer p)exit(p);}
     @SubscribeEvent public static void dimension(PlayerEvent.PlayerChangedDimensionEvent event){if(event.getEntity() instanceof ServerPlayer p)exit(p);}
-    @SubscribeEvent public static void death(LivingDeathEvent event){ServerPlayer p=event.getEntity() instanceof ServerPlayer player?player:MaidBridge.caster(event.getEntity());if(p!=null)exit(p);}
+    @SubscribeEvent public static void death(LivingDeathEvent event){ServerPlayer p=MaidBridge.progression(event.getEntity());if(p!=null)exit(p);}
     public static void exit(ServerPlayer p){BloodExpansion.exit(p);State s=states.remove(p.getUUID());if(s!=null)clear(s);BloodDomain.close(p);dots.removeIf(d->d.p==p);bindings.removeIf(d->d.p==p);areas.removeIf(d->d.p==p);rings.removeIf(d->d.p==p);thorns.removeIf(d->d.p==p);follows.removeIf(d->d.p==p);canals.removeIf(d->d.p==p);}
     @SubscribeEvent public static void stop(ServerStoppedEvent event){for(State s:states.values())clear(s);states.clear();dots.clear();bindings.clear();areas.clear();rings.clear();thorns.clear();follows.clear();canals.clear();BloodDomain.clear();}
     private BloodArts(){}

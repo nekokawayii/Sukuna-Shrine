@@ -20,15 +20,18 @@ import java.util.*;
  */
 public final class JogoTerrain {
     private static final int MAX_BLOCKS=140000;
-    private static final int PER_TICK=8000;
+    private static final int PER_TICK=512;
     private record Change(BlockPos pos,BlockState state) {}
-    private static final Map<UUID,LinkedHashMap<BlockPos,BlockState>> JOURNAL=new HashMap<>();
+    private static final Map<UUID,character.domain.DomainTerrain.Handle> TERRAIN=new HashMap<>();
     private static final Map<UUID,ArrayDeque<Change>> QUEUE=new HashMap<>();
     private static final Map<UUID,Integer> RATE=new HashMap<>();
+    private static final Map<UUID,ServerLevel> LEVELS=new HashMap<>();
 
     public static void open(ServerPlayer owner,Vec3 center,double radius) {
         restore(owner);
         ServerLevel level=owner.serverLevel();
+        LEVELS.put(owner.getUUID(),level);
+        TERRAIN.put(owner.getUUID(),character.domain.DomainTerrain.begin(level,owner.getUUID()));
         int R=(int)Math.round(radius);
         int bx=(int)Math.floor(center.x),by=(int)Math.floor(center.y),bz=(int)Math.floor(center.z);
         var queue=new ArrayDeque<Change>();
@@ -42,9 +45,7 @@ public final class JogoTerrain {
                 BlockPos pos=new BlockPos(bx+dx,by-1,bz+dz);
                 if(!inWorld(level,pos))continue;
                 int roll=random.nextInt(100);
-                BlockState floor=roll<62?Blocks.COBBLESTONE.defaultBlockState()
-                        :roll<88?Blocks.MAGMA_BLOCK.defaultBlockState()
-                        :Blocks.LAVA.defaultBlockState();
+                BlockState floor=roll<62?Blocks.COBBLESTONE.defaultBlockState():Blocks.MAGMA_BLOCK.defaultBlockState();
                 queue.add(new Change(pos,floor));
             }
         }
@@ -69,10 +70,7 @@ public final class JogoTerrain {
                                 :Blocks.DEEPSLATE_TILES.defaultBlockState();
                         queue.add(new Change(pos,state));
                     }else{
-                        BlockState old=level.getBlockState(pos);
-                        if(old.isAir())continue;              // 空气无需记录
-                        if(old.hasBlockEntity())continue;     // 容器不动（教程保守规则）
-                        if(old.getDestroySpeed(level,pos)<0)continue;
+                        // 空气也要声明占位：否则对手的球壳进入本方半区时无法清除。
                         queue.add(new Change(pos,Blocks.AIR.defaultBlockState()));
                     }
                 }
@@ -95,36 +93,33 @@ public final class JogoTerrain {
     }
 
     private static boolean inWorld(ServerLevel level,BlockPos pos){
-        return pos.getY()>level.getMinBuildHeight() && pos.getY()<level.getMaxBuildHeight()-1;
+        return level.hasChunkAt(pos)&&pos.getY()>level.getMinBuildHeight() && pos.getY()<level.getMaxBuildHeight()-1;
     }
 
     /** 每刻推进施工；由 JogoCombat 的服务器 tick 调用。 */
     public static void tick() {
         if(QUEUE.isEmpty())return;
+        int budget=1024;
         var server=net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
         if(server==null)return;
         for(var it=QUEUE.entrySet().iterator();it.hasNext();){
             var entry=it.next();
-            var owner=server.getPlayerList().getPlayer(entry.getKey());
-            if(owner==null){it.remove();continue;}
-            ServerLevel level=owner.serverLevel();
-            var journal=JOURNAL.computeIfAbsent(entry.getKey(),k->new LinkedHashMap<>());
+            var owner=cn.blockforge.generated.nnnnr1201forge2.NpcBridge.find(server,entry.getKey());
+            ServerLevel level=LEVELS.get(entry.getKey());
+            if(owner==null||owner.level()!=level){it.remove();restoreJournal(entry.getKey());continue;}
+            var terrain=TERRAIN.get(entry.getKey());if(terrain==null){it.remove();continue;}
             var queue=entry.getValue();
-            int perTick=Math.max(1,RATE.getOrDefault(entry.getKey(),PER_TICK));
+            int perTick=Math.max(1,Math.min(512,RATE.getOrDefault(entry.getKey(),PER_TICK)));
             int done=0;
-            while(done<perTick&&!queue.isEmpty()){
+            while(done<perTick&&budget>0&&!queue.isEmpty()){
+                done++;budget--;
                 Change change=queue.poll();
                 BlockPos pos=change.pos();
-                if(!inWorld(level,pos))continue;
-                BlockState old=level.getBlockState(pos);
-                if(old.hasBlockEntity()||old.getDestroySpeed(level,pos)<0)continue;
-                if(old==change.state())continue;
-                if(level.setBlock(pos,change.state(),2))journal.put(pos,old);
-                done++;
+                terrain.place(pos,change.state());
             }
             if(queue.isEmpty()){
                 it.remove();
-                owner.sendSystemMessage(net.minecraft.network.chat.Component.literal("盖棺铁围山 · 施工完成（"+journal.size()+" 块）"));
+                owner.sendSystemMessage(net.minecraft.network.chat.Component.literal("盖棺铁围山 · 地形已交给共用分区与恢复队列"));
             }
         }
     }
@@ -132,13 +127,13 @@ public final class JogoTerrain {
     /** 还原所有改过的方块；收起、结束、死亡、关服都调用。 */
     public static void restore(ServerPlayer owner) {
         QUEUE.remove(owner.getUUID());
-        RATE.remove(owner.getUUID());
-        var journal=JOURNAL.remove(owner.getUUID());
-        if(journal==null||journal.isEmpty())return;
-        ServerLevel level=owner.serverLevel();
-        for(var entry:journal.entrySet())level.setBlock(entry.getKey(),entry.getValue(),2);
-        owner.sendSystemMessage(net.minecraft.network.chat.Component.literal("盖棺铁围山 · 场地已还原（"+journal.size()+" 块）"));
+        restoreJournal(owner.getUUID());
     }
-    public static boolean changed(ServerPlayer owner) { return JOURNAL.containsKey(owner.getUUID()); }
+    private static void restoreJournal(UUID id){
+        RATE.remove(id);LEVELS.remove(id);var terrain=TERRAIN.remove(id);if(terrain!=null)terrain.close();
+    }
+    public static boolean sameLevel(ServerPlayer owner){return LEVELS.get(owner.getUUID())==owner.level();}
+    public static void reset(){for(UUID id:List.copyOf(LEVELS.keySet()))restoreJournal(id);QUEUE.clear();RATE.clear();}
+    public static boolean changed(ServerPlayer owner) { return TERRAIN.containsKey(owner.getUUID()); }
     private JogoTerrain() {}
 }

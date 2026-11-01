@@ -43,25 +43,12 @@ public final class MahitoTransfigure {
 
     public static void arm(ServerPlayer p) {
         if(p instanceof cn.blockforge.generated.nnnnr1201forge2.NpcBridge.NpcActor){MahitoBattle.strike(p);return;}
-        // r211：灵魂打击与贮存合并——打中了就顺手弹变化面板（伤害照旧结算，怪物不当场消失），
-        // 这样「无为转变」既是伤害技能，也还是原来那个贮存/改变入口。
-        LivingEntity struck = MahitoCombat.strikeHit(p);
+        // r212：伸手 —— 正前方 5 格（自闭圆顿裹内 30 格）伸手打中敌人，先结算灵魂伤害，
+        // 打中就直接弹贮存面板。命中判定只看"伸手够不够得着"，不再有 3 格/20 刻那些看不见的门槛。
+        LivingEntity struck = MahitoCombat.reach(p);
         if (struck != null) { store(p, struck); return; }
         if (character.domainking.SelfEmbryoDomain.active(p)) {
-            Vec3 look = p.getLookAngle();
-            LivingEntity inDomain = p.level().getEntitiesOfClass(LivingEntity.class,
-                    new AABB(p.position(), p.position()).inflate(30),
-                    e -> e != p && e.isAlive() && !(e instanceof Player) && cn.blockforge.generated.nnnnr1201forge2.CombatSettings.canHit(p,e))
-                .stream()
-                .min(java.util.Comparator.comparingDouble(e -> {
-                    Vec3 to = e.getBoundingBox().getCenter().subtract(p.getEyePosition());
-                    return (1.0 - to.normalize().dot(look)) * 100.0 + p.distanceToSqr(e) * 0.001;
-                })).orElse(null);
-            if (inDomain == null) {
-                p.sendSystemMessage(Component.literal("无为转变：领域内没有可锁定的目标").withStyle(ChatFormatting.GRAY));
-                return;
-            }
-            store(p, inDomain);
+            p.sendSystemMessage(Component.literal("无为转变：领域内没有可锁定的目标").withStyle(ChatFormatting.GRAY));
             return;
         }
         boolean noneAround = p.level().getEntitiesOfClass(LivingEntity.class,
@@ -79,7 +66,7 @@ public final class MahitoTransfigure {
                 e -> e != p && e.isAlive() && !(e instanceof Player) && cn.blockforge.generated.nnnnr1201forge2.CombatSettings.canHit(p,e))
             .stream().min(java.util.Comparator.comparingDouble(p::distanceToSqr)).orElse(null);
         if (target == null) {
-            p.sendSystemMessage(Component.literal("无为转变：需要 1 格内有敌人").withStyle(ChatFormatting.GRAY));
+            p.sendSystemMessage(Component.literal("无为转变：伸出手没打中——前方 5 格内要有敌人").withStyle(ChatFormatting.GRAY));
             return;
         }
         ARMED.put(p.getUUID(), new Armed(target.getUUID(), p.level().getGameTime()));

@@ -97,6 +97,29 @@ public final class MahitoCombat {
         }else target=aimed(p,5);
         return target!=null&&touch(p,target)?target:null;
     }
+    /**
+     * 无为转变的「伸手」：正前方 5 格（自闭圆顿裹内 30 格、不挑夹角）伸手够到谁就打谁，直接结算 8 点灵魂伤害，
+     * 命中就返回那只生物（调用方拿它弹贮存面板）。刻意绕开 {@link #touch} 的 3 格贴脸与 20 刻防抖——
+     * 否则会出现"看着打到了却没反应"的玄学。玩家不入选：贮存面板只处理可捕获生物。
+     */
+    public static LivingEntity reach(ServerPlayer p){
+        LivingEntity caster=body(p);boolean realm=character.domainking.SelfEmbryoDomain.active(p);
+        double range=realm?30:5;Vec3 look=p.getLookAngle();
+        LivingEntity target=p.level().getEntitiesOfClass(LivingEntity.class,caster.getBoundingBox().inflate(range),
+                t->t!=p&&t.isAlive()&&!(t instanceof Player)&&can(p,t)&&caster.distanceToSqr(t)<=range*range
+                    &&(realm||caster.hasLineOfSight(t))
+                    &&(realm||t.getBoundingBox().getCenter().subtract(caster.getEyePosition()).normalize().dot(look)>.55))
+            .stream().min(Comparator.comparingDouble(caster::distanceToSqr)).orElse(null);
+        if(target==null)return null;
+        pose(p,1,12);fx(p,TOUCH,caster.getEyePosition(),target.getBoundingBox().getCenter(),1,12);
+        if(!soulDamage(p,target,8))return null;
+        for(EquipmentSlot slot:EquipmentSlot.values())if(slot.getType()==EquipmentSlot.Type.ARMOR){
+            var stack=target.getItemBySlot(slot);
+            if(stack.getItem() instanceof ArmorItem armor&&armor.getDefense()>=2&&stack.isDamageableItem())
+                stack.hurtAndBreak(50,target,e->e.broadcastBreakEvent(slot));
+        }
+        return target;
+    }
     public static boolean ready(ServerPlayer p,LivingEntity target,int id){
         if(id==MahitoSkills.REFORGE)return body(p).getHealth()<body(p).getMaxHealth()*.8f||target.getActiveEffects().stream().anyMatch(e->e.getEffect().isBeneficial());
         if(id==MahitoSkills.DODGE)return body(p).hurtTime>0||body(p).distanceToSqr(target)<16;

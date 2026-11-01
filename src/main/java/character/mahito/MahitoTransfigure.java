@@ -19,10 +19,13 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 无为转变：
- * ① 1 格内释放 → 锁定；再击中一次 → 目标立刻消失（不判死亡、不掉落），贮存快照并弹贮存轮盘；
- * ② 自闭圆盾裹内释放 → 自动锁定「离准星最近」的目标并直接贮存（无距离限制、无需击打）；
- * ③ 右键任意无为转变物品 → 多页变化轮盘（工具 / 咒具 / 具象化 / 攻击 / 潜能激发）。
+ * 无为转变（r211 起打击与贮存合并）：
+ * ① 有战斗目标 → 灵魂打击照旧结算伤害，**命中后直接弹出贮存轮盘**（1 储存 / 2 改变 / 3 治疗 / 4 爆裂 / 5 潜能激发）；
+ *    怪物不会在命中时消失，只有点「1 储存」才收进贮存体。
+ * ② 打不中但 1 格内有生物 → 锁定；再击中一次 → 贮存快照并弹贮存轮盘；
+ * ③ 自闭圆盾裹内释放 → 自动锁定「离准星最近」的目标（无距离限制、无需击打）；
+ * ④ 周围 16 格内没有生物 → 自我改变轮盘（治疗 / 分身 / 遍杀即灵体 / 肢体）；
+ * ⑤ 右键任意无为转变物品 → 多页变化轮盘（工具 / 咒具 / 具象化 / 攻击 / 潜能激发）。
  */
 public final class MahitoTransfigure {
     public static final String BASE_TAG = "SukunaTransfigured";
@@ -40,8 +43,10 @@ public final class MahitoTransfigure {
 
     public static void arm(ServerPlayer p) {
         if(p instanceof cn.blockforge.generated.nnnnr1201forge2.NpcBridge.NpcActor){MahitoBattle.strike(p);return;}
-        // 战斗目标优先灵魂打击，保留非战斗生物原有的贮存玩法。
-        if(MahitoBattle.strike(p))return;
+        // r211：灵魂打击与贮存合并——打中了就顺手弹变化面板（伤害照旧结算，怪物不当场消失），
+        // 这样「无为转变」既是伤害技能，也还是原来那个贮存/改变入口。
+        LivingEntity struck = MahitoCombat.strikeHit(p);
+        if (struck != null) { store(p, struck); return; }
         if (character.domainking.SelfEmbryoDomain.active(p)) {
             Vec3 look = p.getLookAngle();
             LivingEntity inDomain = p.level().getEntitiesOfClass(LivingEntity.class,

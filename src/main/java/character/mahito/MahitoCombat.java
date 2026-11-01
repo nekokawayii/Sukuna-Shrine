@@ -85,7 +85,9 @@ public final class MahitoCombat {
         return p.level().getEntitiesOfClass(LivingEntity.class,caster.getBoundingBox().inflate(range),t->can(p,t)&&caster.distanceToSqr(t)<=range*range&&caster.hasLineOfSight(t)
             &&t.getBoundingBox().getCenter().subtract(caster.getEyePosition()).normalize().dot(look)>.65).stream().min(Comparator.comparingDouble(caster::distanceToSqr)).orElse(null);
     }
-    public static boolean strike(ServerPlayer p){
+    public static boolean strike(ServerPlayer p){ return strikeHit(p)!=null; }
+    /** 与 strike 同一套索敌，但命中时把被打中的目标返回（无为转变用它接「造成伤害后弹出面板」）。 */
+    public static LivingEntity strikeHit(ServerPlayer p){
         Realm realm=REALMS.get(p.getUUID());
         LivingEntity target;
         if(realm!=null){
@@ -93,7 +95,7 @@ public final class MahitoCombat {
             if(target==null||!inRealm(p,target)||!can(p,target))target=p.level().getEntitiesOfClass(LivingEntity.class,new AABB(realm.center,realm.center).inflate(realm.radius),t->can(p,t)&&inRealm(p,t))
                 .stream().min(Comparator.comparingDouble(t->1-t.getBoundingBox().getCenter().subtract(body(p).getEyePosition()).normalize().dot(p.getLookAngle()))).orElse(null);
         }else target=aimed(p,5);
-        return target!=null&&touch(p,target);
+        return target!=null&&touch(p,target)?target:null;
     }
     public static boolean ready(ServerPlayer p,LivingEntity target,int id){
         if(id==MahitoSkills.REFORGE)return body(p).getHealth()<body(p).getMaxHealth()*.8f||target.getActiveEffects().stream().anyMatch(e->e.getEffect().isBeneficial());

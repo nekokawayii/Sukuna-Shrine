@@ -1,7 +1,7 @@
 {
   "name": "05-NPC与咒灵图鉴",
-  "category": "sukuna:guide",
-  "icon": "sukuna:sukuna_memory",
+  "category": "sukuna:bestiary",
+  "icon": "sukuna:golden_relic",
   "priority": false,
   "sortnum": 5,
   "pages": [

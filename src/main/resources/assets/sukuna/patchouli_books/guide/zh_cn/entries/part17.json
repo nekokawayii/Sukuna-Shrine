@@ -1,7 +1,7 @@
 {
   "name": "数据-咒灵目录",
-  "category": "sukuna:guide",
-  "icon": "sukuna:sukuna_memory",
+  "category": "sukuna:data",
+  "icon": "sukuna:golden_relic",
   "priority": false,
   "sortnum": 17,
   "pages": [

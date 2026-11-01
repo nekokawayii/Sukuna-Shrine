@@ -1,7 +1,7 @@
 {
   "name": "附表A-术式数值",
-  "category": "sukuna:guide",
-  "icon": "sukuna:sukuna_memory",
+  "category": "sukuna:skills",
+  "icon": "sukuna:tenka_spear",
   "priority": false,
   "sortnum": 8,
   "pages": [

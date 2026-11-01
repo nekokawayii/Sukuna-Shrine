@@ -1,6 +1,6 @@
 {
   "name": "00-阅读入口",
-  "category": "sukuna:guide",
+  "category": "sukuna:basic",
   "icon": "sukuna:sukuna_memory",
   "priority": true,
   "sortnum": 0,

@@ -1,7 +1,7 @@
 {
   "name": "附表C-物品来源与配方用途",
-  "category": "sukuna:guide",
-  "icon": "sukuna:sukuna_memory",
+  "category": "sukuna:items",
+  "icon": "sukuna:residue_low",
   "priority": false,
   "sortnum": 10,
   "pages": [

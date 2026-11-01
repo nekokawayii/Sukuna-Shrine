@@ -1,7 +1,7 @@
 {
   "name": "01-入门与全部角色流程",
-  "category": "sukuna:guide",
-  "icon": "sukuna:sukuna_memory",
+  "category": "sukuna:basic",
+  "icon": "sukuna:curse_orb",
   "priority": false,
   "sortnum": 1,
   "pages": [

@@ -1,7 +1,7 @@
 {
   "name": "附表G-咒灵逐项图鉴",
-  "category": "sukuna:guide",
-  "icon": "sukuna:sukuna_memory",
+  "category": "sukuna:bestiary",
+  "icon": "sukuna:golden_relic",
   "priority": false,
   "sortnum": 14,
   "pages": [

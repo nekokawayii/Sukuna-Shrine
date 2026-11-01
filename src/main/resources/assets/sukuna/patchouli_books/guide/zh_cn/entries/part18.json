@@ -1,7 +1,7 @@
 {
   "name": "数据-术式目录",
-  "category": "sukuna:guide",
-  "icon": "sukuna:sukuna_memory",
+  "category": "sukuna:data",
+  "icon": "sukuna:tenka_spear",
   "priority": false,
   "sortnum": 18,
   "pages": [

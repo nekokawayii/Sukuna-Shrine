@@ -1,7 +1,7 @@
 {
   "name": "04-物品材料与用途",
-  "category": "sukuna:guide",
-  "icon": "sukuna:sukuna_memory",
+  "category": "sukuna:items",
+  "icon": "sukuna:residue_low",
   "priority": false,
   "sortnum": 4,
   "pages": [

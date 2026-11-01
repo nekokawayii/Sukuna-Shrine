@@ -1,7 +1,7 @@
 {
   "name": "数据-公开物品索引",
-  "category": "sukuna:guide",
-  "icon": "sukuna:sukuna_memory",
+  "category": "sukuna:data",
+  "icon": "sukuna:residue_low",
   "priority": false,
   "sortnum": 16,
   "pages": [

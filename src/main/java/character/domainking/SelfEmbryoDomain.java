@@ -17,7 +17,7 @@ import net.minecraftforge.event.server.ServerStoppedEvent;
 import java.util.*;
 
 /**
- * 真人领域「自闭圆盾裹」：
+ * 真人领域「自闭圆顿裹」：
  * · 地面 = 纯黑混凝土，上方再铺一层亮度 15 的光源方块；
  * · 球壳 = 半径 50 的黑色混凝土，每 5 格嵌 2 格宽肉色（粉红）混凝土网格；
  * · 玩家身后的球壳内侧 5 格处，放一排「不可移动的圆钝果实体」（暂用无 AI 僵尸替代）。
@@ -34,6 +34,7 @@ public final class SelfEmbryoDomain {
 
     private static final class Build {
         final ServerLevel level;
+        final UUID owner;
         final BlockPos center;
         long end;
         final character.domain.DomainTerrain.Handle terrain;
@@ -41,7 +42,7 @@ public final class SelfEmbryoDomain {
         final List<UUID> fruits = new ArrayList<>();
         int cursor;
         int rate;
-        Build(ServerLevel level, UUID owner, BlockPos center, long end) { this.level = level; this.center = center; this.end = end; this.terrain=character.domain.DomainTerrain.begin(level,owner); }
+        Build(ServerLevel level, UUID owner, BlockPos center, long end) { this.level = level; this.owner=owner; this.center = center; this.end = end; this.terrain=character.domain.DomainTerrain.begin(level,owner); }
     }
 
     private static final Map<UUID, Build> ACTIVE = new HashMap<>();
@@ -58,7 +59,7 @@ public final class SelfEmbryoDomain {
         ACTIVE.put(p.getUUID(), build);
         cn.blockforge.generated.nnnnr1201forge2.DomainClash.opened(p, net.minecraft.world.phys.Vec3.atCenterOf(center), RADIUS);
         if(!active(p))return;
-        spawnFruits(level, p, build);
+        character.mahito.MahitoCombat.openRealm(p,net.minecraft.world.phys.Vec3.atCenterOf(center),RADIUS);
         level.playSound(null, center, net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE,
             net.minecraft.sounds.SoundSource.HOSTILE, 1.8f, 0.4f);
     }
@@ -67,10 +68,10 @@ public final class SelfEmbryoDomain {
     public static boolean toggle(net.minecraft.server.level.ServerPlayer p) {
         if (active(p)) {
             close(p, "手动收起");
-            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域 · 自闭圆盾裹 已收起"));
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域 · 自闭圆顿裹 已收起"));
         } else {
             open(p);
-            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域展开 · 自闭圆盾裹"));
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域展开 · 自闭圆顿裹"));
         }
         return true;
     }
@@ -109,7 +110,7 @@ public final class SelfEmbryoDomain {
         int gy = Math.floorMod(pos.getY() - c.getY(), GRID_SPACING);
         int gz = Math.floorMod(pos.getZ() - c.getZ(), GRID_SPACING);
         boolean grid = gx < GRID_WIDTH || gy < GRID_WIDTH || gz < GRID_WIDTH;
-        return grid ? Blocks.PINK_CONCRETE.defaultBlockState() : Blocks.BLACK_CONCRETE.defaultBlockState();
+        return character.mahito.MahitoContent.FACES.get().defaultBlockState();
     }
 
     private static void spawnFruits(ServerLevel level, ServerPlayer p, Build build) {
@@ -139,6 +140,7 @@ public final class SelfEmbryoDomain {
     }
 
     private static void restore(Build build) {
+        character.mahito.MahitoCombat.closeRealm(build.owner);
         build.terrain.close();
         for (UUID id : build.fruits) {
             var entity = build.level.getEntity(id);
@@ -155,7 +157,7 @@ public final class SelfEmbryoDomain {
             Build build = ACTIVE.get(id);
             if(build==null)continue;
             if (p == null || !p.isAlive() || p.level() != build.level) { ACTIVE.remove(id); if (build != null) restore(build); continue; }
-            if (build.level.getGameTime() >= build.end) { ACTIVE.remove(id); restore(build); p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域 · 自闭圆盾裹 已收起")); continue; }
+            if (build.level.getGameTime() >= build.end) { ACTIVE.remove(id); restore(build); p.sendSystemMessage(net.minecraft.network.chat.Component.literal("领域 · 自闭圆顿裹 已收起")); continue; }
             if(!cn.blockforge.generated.nnnnr1201forge2.DomainClash.active(p))character.mahito.MahitoBattle.domainTick(p,net.minecraft.world.phys.Vec3.atCenterOf(build.center),RADIUS);
             if(!ACTIVE.containsKey(id))continue;
             int done = 0;
@@ -164,14 +166,14 @@ public final class SelfEmbryoDomain {
                 done++;   // 跳过的方块也计入进度，保证整体仍是 3 秒
                 BlockState target;
                 if (pos.getY() == build.center.getY() - 1) {
-                    target = Blocks.MAGENTA_CONCRETE.defaultBlockState();    // 地面：淡紫色混凝土（最近的浅紫）
+                    target = character.mahito.MahitoContent.FLESH.get().defaultBlockState();
                 } else if (pos.getY() == build.center.getY()) {
                     // 地板上一层：只给非最外圈铺亮度 15 光源（最外圈不放光源）
                     double hd2 = (pos.getX() - build.center.getX()) * (double) (pos.getX() - build.center.getX())
                         + (pos.getZ() - build.center.getZ()) * (double) (pos.getZ() - build.center.getZ());
                     target = hd2 > (RADIUS - 1) * (RADIUS - 1)
-                        ? Blocks.AIR.defaultBlockState()
-                        : Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 15);
+                        ? shellState(pos,build.center)
+                        : Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 10);
                 } else {
                     double d2 = pos.distSqr(build.center);
                     double in2 = (RADIUS - 1) * (RADIUS - 1), r2 = RADIUS * RADIUS;

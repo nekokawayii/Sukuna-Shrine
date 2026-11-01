@@ -23,6 +23,7 @@ public final class JogoNpcRenderer extends EntityRenderer<JogoNpcEntity> {
     @Override public void render(JogoNpcEntity entity, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int light) {
         ps.pushPose();
         ps.mulPose(Axis.YP.rotationDegrees(180f - yaw));
+        MODEL.fitHeight(ps,entity.getBbHeight());
         // 客户端没有服务端仇恨目标；用同步的位移/挥手状态，避免永远待机或原地狂奔。
         double speed=entity.getDeltaMovement().horizontalDistanceSqr();
         String animation=entity.swinging?"连招":speed>.012?"跑步":speed>.0001?"走路":"";

@@ -72,7 +72,7 @@ public final class NpcBridge {
     public static boolean isNpcActor(Player p) { return p instanceof NpcActor; }
     public static boolean canHit(NpcActor a, LivingEntity target) { return a != null && canHit(a.mob, target); }
     public static boolean canHit(LivingEntity mob, LivingEntity target) {
-        if (mob == null || target == null || target == mob || target.getUUID().equals(mob.getUUID())
+        if (mob == null || target == null || CurseHostility.truce(mob,target) || target == mob || target.getUUID().equals(mob.getUUID())
                 || !target.isAlive() || target.isRemoved() || target.isSpectator() || target.level() != mob.level()
                 || target instanceof FakePlayer || mob.isAlliedTo(target)) return false;
         UUID own = CombatSafety.ownerId(mob), theirs = CombatSafety.ownerId(target);

@@ -35,6 +35,7 @@ public final class DomainTerrain extends SavedData {
         private final ServerLevel level;
         private final UUID id=UUID.randomUUID(),owner;
         private final Set<BlockPos> positions=new HashSet<>();
+        private net.minecraft.world.phys.AABB bounds;
         private boolean closed;
         private Handle(ServerLevel level,UUID owner){this.level=level;this.owner=owner;}
         /** 可以逐批调用。覆盖其它领域时仍然保存最底层原状；容器和原生基岩保持不动。 */
@@ -47,7 +48,9 @@ public final class DomainTerrain extends SavedData {
         }
         /** 幂等关闭：立即停止施工，方块分批恢复，卸载区块等回来后继续。 */
         public void close(){
-            if(closed)return;closed=true;var store=get(level);store.handles.remove(id);
+            if(closed)return;closed=true;var store=get(level);
+            DomainSafety.release(level,owner,bounds);
+            store.handles.remove(id);
             for(BlockPos pos:positions){var cell=store.cells.get(pos);if(cell!=null){cell.layers.remove(id);store.enqueue(pos);}}
             positions.clear();store.setDirty();
         }
@@ -58,6 +61,8 @@ public final class DomainTerrain extends SavedData {
     public static DomainTerrain get(ServerLevel level){
         return level.getDataStorage().computeIfAbsent(tag->load(level,tag),DomainTerrain::new,"sukuna_domain_layers");
     }
+    /** 落点不能依赖仍被领域占用或正在恢复的方块。 */
+    public static boolean changing(ServerLevel level,BlockPos pos){return get(level).cells.containsKey(pos);}
     private void enqueue(BlockPos pos){if(queued.add(pos))pending.addLast(pos);}
     private boolean place(Handle handle,BlockPos pos,BlockState target){
         var level=handle.level;
@@ -70,7 +75,10 @@ public final class DomainTerrain extends SavedData {
             // 后来的人为改动成为新的原状；旧领域不强行覆盖，也不把它恢复成旧墙。
             forget(pos);return false;
         }
-        pos=pos.immutable();cell.layers.put(handle.id,target);handle.positions.add(pos);enqueue(pos);setDirty();return true;
+        pos=pos.immutable();cell.layers.put(handle.id,target);handle.positions.add(pos);
+        if(handle.bounds==null)handle.bounds=new net.minecraft.world.phys.AABB(pos);
+        else if(!handle.bounds.contains(Vec3.atCenterOf(pos)))handle.bounds=handle.bounds.minmax(new net.minecraft.world.phys.AABB(pos));
+        enqueue(pos);setDirty();return true;
     }
     private void forget(BlockPos pos){
         cells.remove(pos);
@@ -88,6 +96,7 @@ public final class DomainTerrain extends SavedData {
     }
     public static void closeOwner(ServerLevel level,UUID owner){
         for(var h:List.copyOf(get(level).handles.values()))if(h.owner.equals(owner))h.close();
+        DomainSafety.release(level,owner,null);
     }
     private BlockState desired(BlockPos pos,Cell cell){
         return cell.layers.visible(id->{var h=handles.get(id);return h!=null&&DomainClash.ownsTerrain(h.owner,Vec3.atCenterOf(pos));});

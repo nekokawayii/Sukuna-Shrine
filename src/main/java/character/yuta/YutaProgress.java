@@ -168,16 +168,23 @@ public final class YutaProgress {
     public static void tick(TickEvent.ServerTickEvent e) {
         if (e.phase != TickEvent.Phase.END) return;
         ServerLevel level = e.getServer().getLevel(HYAKKI);
-        if (level == null || level.getGameTime() % SPAWN_INTERVAL != 0) return;
+        if (level == null || level.getGameTime() % SPAWN_INTERVAL != 0 || level.getDifficulty()==net.minecraft.world.Difficulty.PEACEFUL || !level.getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_DOMOBSPAWNING)) return;
+        cn.blockforge.generated.nnnnr1201forge2.HyakkiArena.ambience(level);
         for (ServerPlayer p : level.players()) {
             if (level.getEntitiesOfClass(LowCurseEntity.class, p.getBoundingBox().inflate(64)).size() >= CURSE_CAP) continue;
-            LowCurseEntity curse = Content.LOW_CURSE.get().create(level);
+            LowCurseEntity curse = cn.blockforge.generated.nnnnr1201forge2.CurseRoster.create(level,cn.blockforge.generated.nnnnr1201forge2.CurseCatalog.choose(level.random,false));
             if (curse == null) continue;
-            double a = level.random.nextDouble() * Math.PI * 2, r = 10 + level.random.nextDouble() * 12;
-            int x = (int) Math.floor(p.getX() + Math.cos(a) * r), z = (int) Math.floor(p.getZ() + Math.sin(a) * r);
-            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-            curse.moveTo(x + 0.5, y, z + 0.5, level.random.nextFloat() * 360f, 0);
-            level.addFreshEntity(curse);
+            for(int attempt=0;attempt<12;attempt++){
+                double a = level.random.nextDouble() * Math.PI * 2, r = 10 + level.random.nextDouble() * 12;
+                int x = (int) Math.floor(p.getX() + Math.cos(a) * r), z = (int) Math.floor(p.getZ() + Math.sin(a) * r);
+                int y = cn.blockforge.generated.nnnnr1201forge2.HyakkiCathedralGenerator.FLOOR+1;
+                BlockPos at=new BlockPos(x,y,z);if(!level.hasChunkAt(at)||!level.getBlockState(at.below()).isSolidRender(level,at.below()))continue;
+                curse.moveTo(x + 0.5, y, z + 0.5, level.random.nextFloat() * 360f, 0);
+                if(!level.noCollision(curse)||!level.getEntities(curse,curse.getBoundingBox()).isEmpty())continue;
+                curse.getPersistentData().putLong("ExpeditionDespawnAt",level.getGameTime()+3600);
+                if(!p.isCreative()&&!p.isSpectator())curse.setTarget(p);
+                level.addFreshEntity(curse);break;
+            }
         }
     }
 
@@ -225,11 +232,7 @@ public final class YutaProgress {
             data.putDouble("YutaReturnY", p.getY());
             data.putDouble("YutaReturnZ", p.getZ());
         }
-        int surface = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, 0, 0);
-        BlockPos base = new BlockPos(0, surface, 0);
-        buildRuins(level, base);
-        p.teleportTo(level, 0.5, base.getY() + 1, 0.5, p.getYRot(), p.getXRot());
-        p.displayClientMessage(Component.literal("百鬼夜行：击败 100 只咒灵"), false);
+        cn.blockforge.generated.nnnnr1201forge2.HyakkiArena.enter(level,p);
     }
 
     /** 简易废墟：石砖地面 + 外围断墙 + 四根残柱。已存在则不重复生成。 */

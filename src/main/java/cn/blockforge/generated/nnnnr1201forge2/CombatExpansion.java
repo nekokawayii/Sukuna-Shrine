@@ -42,7 +42,7 @@ public final class CombatExpansion {
     private record AutoCast(ServerPlayer p,ServerLevel level,int skill,long start){}
     private static final Map<UUID,AutoCast> automatic=new HashMap<>();
     public static boolean automatic(ServerPlayer p){return automatic.containsKey(p.getUUID())||chanting(p);}
-    public static boolean available(ServerPlayer p,int skill){return CombatExpansionRules.branch(skill)&&allowed(p)&&!automatic(p)&&!DismantleMotion.active(p)&&(skill!=CombatExpansionRules.DRAGON_STAR||Curse.awakened(p))&&(skill!=CombatExpansionRules.PURPLE_FURNACE||VoidJourney.evolved(p)&&!Curse.active(p,"PurpleFurnaceCooldown"))&&(skill!=CombatExpansionRules.CLEAVE_LINGER||Curse.fingers(p)>=5)&&Curse.canSpend(p,skill==CombatExpansionRules.DRAGON_STAR?2000+6*Curse.COST[0]:skill==CombatExpansionRules.PURPLE_FURNACE?Curse.COST[3]:Curse.COST[0]);}
+    public static boolean available(ServerPlayer p,int skill){return CombatExpansionRules.branch(skill)&&allowed(p)&&!automatic(p)&&!DismantleMotion.active(p)&&(skill!=CombatExpansionRules.DRAGON_STAR||Curse.awakened(p)||ExpeditionProgress.data(p).getBoolean("ExpeditionScroll_ultimate_scroll"))&&(skill!=CombatExpansionRules.PURPLE_FURNACE||VoidJourney.evolved(p)&&!Curse.active(p,"PurpleFurnaceCooldown"))&&(skill!=CombatExpansionRules.CLEAVE_LINGER||Curse.fingers(p)>=5)&&Curse.canSpend(p,skill==CombatExpansionRules.DRAGON_STAR?2000+6*Curse.COST[0]:skill==CombatExpansionRules.PURPLE_FURNACE?Curse.COST[3]:Curse.COST[0]);}
     public static void castAutomatic(ServerPlayer p,int skill){if(!available(p,skill))return;if(skill==CombatExpansionRules.DRAGON_STAR&&Authority.instant(p)){if(!Curse.spend(p,2000+6*Curse.COST[0]))return;LivingEntity t=Skills.aimTarget(p);Vec3 at=t==null?Skills.aimPoint(p,96):t.getBoundingBox().getCenter();Projectile b=new Projectile(p,at,p.getLookAngle(),DRAGON,4);if(t!=null)b.target=t.getUUID();add(b);Skills.closeDomain(p);Curse.enterBurnout(p,CombatExpansionRules.DRAGON_BURNOUT);return;}if(skill==CombatExpansionRules.PURPLE_FURNACE){purple(p);return;}automatic.put(p.getUUID(),new AutoCast(p,p.serverLevel(),skill,p.level().getGameTime()));TechniqueInput.receive(p,new TechniqueInput.Input(skill,0,false,false,false));}
     private static final List<Projectile> projectiles=new ArrayList<>();
     private static final List<Scheduled> scheduled=new ArrayList<>();
@@ -248,7 +248,7 @@ public final class CombatExpansion {
         chants.put(p.getUUID(),new Chant(p,false,input));
     }
     public static void dragonPress(ServerPlayer p){
-        if(!allowed(p)||!Curse.awakened(p)){CastFeedback.tell(p,"龙之昴星需要先融合即身佛肉体");return;}
+        if(!allowed(p)||!Curse.awakened(p)&&!ExpeditionProgress.data(p).getBoolean("ExpeditionScroll_ultimate_scroll")){CastFeedback.tell(p,"龙之昴星需要融合即身佛肉体或研习天元坛的极之番卷轴");return;}
         if(chants.containsKey(p.getUUID()))return;
         long now=p.level().getGameTime();Star s=drawing.get(p.getUUID());
         if(s==null||s.level!=p.level()||CombatExpansionRules.strokeExpired(now,s.last)){s=new Star(p);drawing.put(p.getUUID(),s);}

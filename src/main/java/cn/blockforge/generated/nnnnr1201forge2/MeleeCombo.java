@@ -34,7 +34,7 @@ public final class MeleeCombo {
     }
     private static boolean allowed(ServerPlayer p){
         // 只要用过《咒术选择书》（身上有选中角色）就能用连击动作，不再限定宿傩/甚尔/虎杖
-        return (Journey.unlocked(p)||character.CharacterService.toji(p)||character.CharacterService.yuji(p)||character.CharacterService.selected(p)!=null)&&p.isAlive()&&!p.isRemoved()&&!p.hasDisconnected()&&!p.isSpectator()
+        return !ThousandMileChainItem.isChain(p.getMainHandItem())&&!ThousandMileChain.bound(p)&&(Journey.unlocked(p)||character.CharacterService.toji(p)||character.CharacterService.yuji(p)||character.CharacterService.selected(p)!=null)&&p.isAlive()&&!p.isRemoved()&&!p.hasDisconnected()&&!p.isSpectator()
             &&!p.isUsingItem()&&!p.isPassenger()&&!p.isSleeping()&&!p.isFallFlying()&&!p.isSwimming()
             &&!DismantleMotion.active(p)&&!SixfoldFinale.active(p)&&!SixfoldFinale.controlled(p)
             &&!DomainClash.active(p)&&!NetBranches.locked(p)&&!Uraume.locked(p)&&!CombatExpansion.controlled(p)

@@ -1,18 +1,13 @@
 {
   "type": "sukuna:hyakki",
   "generator": {
-    "type": "minecraft:flat",
+    "type": "sukuna:hyakki_cathedral",
     "settings": {
-      "biome": "minecraft:plains",
+      "biome": "sukuna:death_knell_church",
       "lakes": false,
       "features": false,
       "structure_overrides": [],
-      "layers": [
-        {"height": 1, "block": "minecraft:bedrock"},
-        {"height": 4, "block": "minecraft:stone"},
-        {"height": 1, "block": "minecraft:dirt"},
-        {"height": 1, "block": "minecraft:grass_block"}
-      ]
+      "layers": [{"height":1,"block":"minecraft:bedrock"}]
     }
   }
 }

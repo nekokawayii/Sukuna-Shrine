@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "sukuna:curse_flesh"
+    },
+    {
+      "item": "sukuna:curse_flesh"
+    },
+    {
+      "item": "sukuna:curse_flesh"
+    },
+    {
+      "item": "sukuna:curse_flesh"
+    }
+  ],
+  "result": {
+    "item": "sukuna:idle_transfigured_flesh",
+    "count": 1
+  }
+}

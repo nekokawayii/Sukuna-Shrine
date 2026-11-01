@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "sukuna:black_rope_fiber"
+    },
+    {
+      "item": "sukuna:seal_black"
+    },
+    {
+      "item": "sukuna:residue_medium"
+    }
+  ],
+  "result": {
+    "item": "sukuna:curtain_talisman",
+    "count": 2
+  }
+}

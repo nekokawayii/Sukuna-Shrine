@@ -106,6 +106,7 @@ public final class Mainline {
     private static boolean ready(ServerPlayer p,int id,int cooldown,double cost){
         if(!unlocked(p,id)){p.displayClientMessage(Component.literal("尚未解锁"+NAMES[id]+"（L 查看进度）"),true);return false;}
         if(!p.isAlive()||p.isSpectator()||PrisonSystem.locked(p)||DomainClash.active(p)||SixfoldFinale.active(p)||SixfoldFinale.controlled(p)||DeathStar.anemic(p))return false;
+        if(Curse.severed(p))return false;
         if(id!=REVERSE&&id!=REVERSE_OUT&&id!=SIMPLE&&!Curse.canUseTechnique(p))return false;
         String key="MainlineCooldown_"+id;
         if(Curse.active(p,key)){p.displayClientMessage(Component.literal(NAMES[id]+" 冷却中"),true);return false;}
@@ -158,7 +159,7 @@ public final class Mainline {
         case SKILL_REVERSE->reverse(p);case SKILL_REVERSE_OUT->reverseOut(p);case SKILL_BARRIER->barrier(p);case SKILL_SIMPLE->simple(p);
         case SKILL_AMPLIFY->DomainAmplification.toggle(p);case SKILL_DOMAIN->requireDomain(p);default->{} }
     }
-    private static void restore(Field f){for(var e:f.blocks.entrySet())if(f.level.getBlockState(e.getKey()).is(Blocks.BLACK_CONCRETE))f.level.setBlock(e.getKey(),e.getValue(),2);}
+    private static void restore(Field f){if(!f.blocks.isEmpty())character.domain.DomainSafety.evacuate(f.level,new AABB(f.center,f.center).inflate(BARRIER_RADIUS));for(var e:f.blocks.entrySet())if(f.level.getBlockState(e.getKey()).is(Blocks.BLACK_CONCRETE))f.level.setBlock(e.getKey(),e.getValue(),2);}
     @SubscribeEvent public static void fields(TickEvent.ServerTickEvent e){
         if(e.phase!=TickEvent.Phase.END)return;
         for(var map:List.of(BARRIERS,SIMPLE_FIELDS))for(var it=map.values().iterator();it.hasNext();){

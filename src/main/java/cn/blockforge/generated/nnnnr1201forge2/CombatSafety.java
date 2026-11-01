@@ -26,6 +26,7 @@ public final class CombatSafety {
         if(entity instanceof TamableAnimal tame)return tame.getOwnerUUID();
         if(entity instanceof JacobsLadderEntity ladder)return ladder.ownerId();
         if(entity instanceof RikaEntity rika)return rika.ownerId();
+        if(entity instanceof character.mahito.MahitoPuppetEntity puppet)return puppet.ownerId();
         return Legion.ownerId(entity);
     }
     public static ServerPlayer owner(Entity entity) {

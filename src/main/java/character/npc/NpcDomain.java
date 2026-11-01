@@ -40,8 +40,8 @@ public final class NpcDomain {
         final BlockPos center;
         final long end;
         final Style style;
-        final List<long[]> saved = new ArrayList<>();     // 编码：pos | (stateId << 64) 分两段存
-        final List<BlockState> states = new ArrayList<>();
+        final character.domain.DomainTerrain.Handle terrain;
+        int radius;
         final List<BlockPos> plan = new ArrayList<>();
         final Map<Long, Integer> decor = new HashMap<>();
         final Map<Long, BlockState> decorBlock = new HashMap<>();
@@ -49,6 +49,7 @@ public final class NpcDomain {
 
         Job(UUID owner, ServerLevel level, BlockPos center, long end, Style style) {
             this.owner = owner; this.level = level; this.center = center; this.end = end; this.style = style;
+            this.terrain=character.domain.DomainTerrain.begin(level,owner);
         }
     }
 
@@ -64,7 +65,8 @@ public final class NpcDomain {
         if (!(mob.level() instanceof ServerLevel level) || active(mob)) return;
         BlockPos center = mob.blockPosition();
         Job job = new Job(mob.getUUID(), level, center, level.getGameTime() + TICKS, style);
-        int r = (int) Math.round(radiusOverride);
+        int r = Math.max(4,Math.min(64,(int) Math.round(radiusOverride)));job.radius=r;
+        character.domain.DomainSafety.watch(level,mob.getUUID(),Vec3.atCenterOf(center),r);
         // 施工计划：外壳球壳 + 地板（内部先清空气，保证是空地）
         for (int dx = -r; dx <= r; dx++)
             for (int dy = -r; dy <= r; dy++)
@@ -116,15 +118,12 @@ public final class NpcDomain {
     }
 
     public static void close(Mob mob, String reason) {
-        Job job = JOBS.remove(mob.getUUID());
-        if (job == null) return;
-        // 还原
-        ServerLevel level = job.level;
-        for (int i = job.saved.size() - 1; i >= 0; i--) {
-            BlockPos pos = BlockPos.of(job.saved.get(i)[0]);
-            int id = net.minecraft.world.level.block.Block.getId(job.states.get(i));
-            level.setBlock(pos, net.minecraft.world.level.block.Block.stateById(id), 2);
-        }
+        if(mob!=null)close(mob.getUUID());
+    }
+    private static void close(UUID owner){
+        Job job=JOBS.remove(owner);if(job==null)return;
+        job.terrain.close();
+        character.domain.DomainSafety.release(job.level,owner,null);
     }
 
     /** 诛伏赐死·判决：随机 无罪 / 有罪·没收（60 秒不能用术式）/ 有罪·死刑（日车下一次伤害直接处刑）。 */
@@ -168,7 +167,7 @@ public final class NpcDomain {
             Job job = entry.getValue();
             Mob owner = job.level.getEntity(entry.getKey()) instanceof Mob mob ? mob : null;
             if (owner == null || !owner.isAlive() || job.level.getGameTime() >= job.end) {
-                close(owner, "结束");
+                close(entry.getKey());
                 continue;
             }
             int done = 0;
@@ -176,19 +175,17 @@ public final class NpcDomain {
                 BlockPos pos = job.plan.get(job.cursor++);
                 BlockState old = job.level.getBlockState(pos);
                 if (old.getBlock() == Blocks.BEDROCK) continue;
-                job.saved.add(new long[]{pos.asLong()});
-                job.states.add(old);
                 double dd = pos.distSqr(job.center);
-                boolean isShell = dd <= (double) RADIUS * RADIUS && dd > (double) (RADIUS - 1) * (RADIUS - 1);
-                boolean isFloor = pos.getY() == job.center.getY() - 1 && dd <= (double) RADIUS * RADIUS;
-                boolean outer = dd > (double) (RADIUS - 1) * (RADIUS - 1) && dd <= (double) RADIUS * RADIUS;
+                boolean isShell = dd <= (double) job.radius * job.radius && dd > (double) (job.radius - 1) * (job.radius - 1);
+                boolean isFloor = pos.getY() == job.center.getY() - 1 && dd <= (double) job.radius * job.radius;
+                boolean outer = dd > (double) (job.radius - 1) * (job.radius - 1) && dd <= (double) job.radius * job.radius;
                 var block = (isFloor || isShell)
                     ? (job.style == Style.FIREWORK && outer ? Blocks.BEDROCK.defaultBlockState() : shell)
                     : air;
                 if (job.style == Style.PACHINKO && isFloor) block = Blocks.GOLD_BLOCK.defaultBlockState();
                 if (job.style == Style.BLOOD && isFloor) block = Blocks.RED_CONCRETE.defaultBlockState();
                 BlockState courtBlock = job.decorBlock.get(pos.asLong());
-                if (courtBlock != null) { job.level.setBlock(pos, courtBlock, 2); done++; continue; }
+                if (courtBlock != null) { job.terrain.place(pos, courtBlock); done++; continue; }
                 Integer decor = job.decor.get(pos.asLong());
                 if (decor != null)
                     block = switch (decor) {
@@ -202,9 +199,8 @@ public final class NpcDomain {
                         : roll < 0.38 ? Blocks.LAVA.defaultBlockState()
                         : Blocks.STONE.defaultBlockState();
                 }
-                job.level.setBlock(pos, block, 2);
-                if (!isShell && !isFloor && (pos.getX() + pos.getY() + pos.getZ()) % 5 == 0)
-                    job.level.setBlock(pos, light, 2);
+                if (!isShell && !isFloor && block.isAir() && (pos.getX() + pos.getY() + pos.getZ()) % 5 == 0)block=light;
+                job.terrain.place(pos,block);
                 done++;
             }
             // ── 直哉·时胞月宫殿：千手乱舞（领域内每 0.5 秒压制 5 格内目标，无视无敌帧） ──
@@ -228,7 +224,7 @@ public final class NpcDomain {
                 for (LivingEntity living : level.getEntitiesOfClass(LivingEntity.class,
                         new AABB(job.center).inflate(RADIUS), t -> t != owner && t.isAlive()
                             && !(t instanceof Mob m && m.getType() == owner.getType()))) {
-                    if (living.distanceToSqr(Vec3.atCenterOf(job.center)) > (double) RADIUS * RADIUS) continue;
+                    if (living.distanceToSqr(Vec3.atCenterOf(job.center)) > (double) job.radius * job.radius) continue;
                     Network.send(level, new Network.Effect(character.ryu.RyuFx.BURST, living.getId(),
                         living.position(), Vec3.ZERO, 1.2f, 10, 0));
                     if (level.getGameTime() % 16 == 0) living.setSecondsOnFire(2);
@@ -264,7 +260,7 @@ public final class NpcDomain {
             boolean sureHit = job.style == Style.SUKUNA_OPEN || job.style == Style.GENERIC;
             if (job.level.getGameTime() % 10 == 0 && job.style != Style.FIREWORK && job.style != Style.PACHINKO
                 && (sureHit || !job.plan.isEmpty())) {
-                double r2 = (double) RADIUS * RADIUS;
+                double r2 = (double) job.radius * job.radius;
                 for (LivingEntity living : job.level.getEntitiesOfClass(LivingEntity.class,
                         new AABB(job.center).inflate(RADIUS), t -> t != owner && t.isAlive()
                             && !(t instanceof Mob m && m.getType() == owner.getType()))) {
@@ -325,7 +321,7 @@ public final class NpcDomain {
 
     @SubscribeEvent public static void stop(ServerStoppingEvent e) {
         for (var entry : new ArrayList<>(JOBS.entrySet()))
-            close(entry.getValue().level.getEntity(entry.getKey()) instanceof Mob mob ? mob : null, "关服");
+            close(entry.getKey());
     }
 
     private NpcDomain() {}

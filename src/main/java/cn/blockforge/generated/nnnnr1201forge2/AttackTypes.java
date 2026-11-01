@@ -138,6 +138,7 @@ public final class AttackTypes {
     /** 只看 DamageSource 的归类（原版/其他模组的伤害都走这里）。 */
     public static String bySource(DamageSource source){
         if(source==null)return UNARMED;
+        if(source.getMsgId().equals("soul_edge")||source.getMsgId().equals("soul_devourer"))return SOUL;
         if(source.is(DeathStar.DAMAGE)||source.is(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,new net.minecraft.resources.ResourceLocation("sukuna","blood")))||source.is(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,new net.minecraft.resources.ResourceLocation("sukuna","blood_true"))))return BLOOD;
         if(source.getEntity() instanceof ShadowEntity||source.getDirectEntity() instanceof ShadowEntity||source.getEntity() instanceof MahoragaEntity||source.getDirectEntity() instanceof MahoragaEntity)return TEN_SHADOWS;
         if(source.is(DamageTypeTags.IS_EXPLOSION))return EXPLOSION;

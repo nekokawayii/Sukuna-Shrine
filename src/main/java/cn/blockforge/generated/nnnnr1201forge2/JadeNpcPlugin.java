@@ -15,6 +15,7 @@ public final class JadeNpcPlugin implements IWailaPlugin {
     private static final class Provider implements IEntityComponentProvider, IServerDataProvider<EntityAccessor> {
         @Override public void appendServerData(CompoundTag tag, EntityAccessor accessor) {
             if (!(accessor.getEntity() instanceof Mob mob)) return;
+            if(mob instanceof LowCurseEntity curse){tag.putString("SukunaCurseGrade",curse.form().gradeName());tag.putFloat("SukunaCurseOriginalHeight",curse.form().originalHeight());}
             boolean physical = "toji".equals(NpcBridge.character(mob));
             var value = new CompoundTag();
             value.putBoolean("Physical", physical);
@@ -33,6 +34,7 @@ public final class JadeNpcPlugin implements IWailaPlugin {
         }
         @Override public void appendTooltip(ITooltip tooltip, EntityAccessor accessor, IPluginConfig config) {
             var tag = accessor.getServerData();
+            if(tag.contains("SukunaCurseGrade"))tooltip.add(Component.literal("咒灵等级："+tag.getString("SukunaCurseGrade")+" · 原高 "+String.format(java.util.Locale.ROOT,"%.2f",tag.getFloat("SukunaCurseOriginalHeight"))+"格"));
             if (!tag.contains("SukunaNpcResource")) return;
             var value = tag.getCompound("SukunaNpcResource");
             tooltip.add(Component.literal((value.getBoolean("Physical") ? "体术 " : "咒力 ")

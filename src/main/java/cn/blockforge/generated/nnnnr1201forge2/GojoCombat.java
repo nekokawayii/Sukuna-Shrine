@@ -377,8 +377,10 @@ public final class GojoCombat {
         Skills.endVoidSeal(p); // 领域关闭：无量空处的结印状态（解冻/手势/放下标记）一并清掉
         fx(p,GojoFx.DOMAIN_CLOSE,s.center,Vec3.ZERO,1,4,0);
         // 只进入普通熔断：不写 DomainClashPenaltyUntil，因此可以用"修复熔断"解除
-        Curse.enterBurnout(p,DomainClashRules.BURNOUT_TICKS);
-        p.sendSystemMessage(Component.literal("无量空处关闭 · 术式熔断 "+BalanceRules.number(DomainClashRules.BURNOUT_TICKS/20)+" 秒（可用修复熔断解除）"));
+        if(!TechniqueSeverance.severing()){
+            Curse.enterBurnout(p,DomainClashRules.BURNOUT_TICKS);
+            p.sendSystemMessage(Component.literal("无量空处关闭 · 术式熔断 "+BalanceRules.number(DomainClashRules.BURNOUT_TICKS/20)+" 秒（可用修复熔断解除）"));
+        }
     }
     public static void clashVisual(ServerPlayer p,boolean show){State s=states.get(p.getUUID());if(s==null||s.domainUntil<=0)return;if(show)fx(p,GojoFx.DOMAIN_OPEN,s.center,p.getLookAngle(),GojoFx.DOMAIN_RADIUS,(int)Math.max(1,s.domainUntil-p.level().getGameTime()),0);else fx(p,GojoFx.DOMAIN_CLOSE,s.center,Vec3.ZERO,1,4,0);}
     public static void extendDomain(ServerPlayer p,int ticks){State s=states.get(p.getUUID());if(s!=null&&s.domainUntil>0)s.domainUntil+=ticks;}

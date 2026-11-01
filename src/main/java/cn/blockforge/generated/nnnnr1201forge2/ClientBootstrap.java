@@ -26,6 +26,10 @@ public final class ClientBootstrap {
         MeleeCombo.receiver=MeleeComboClient::receive;
         modBus.addListener(EntityRendererRegistry::register);
         modBus.addListener(EventPriority.LOWEST,EntityRendererRegistry::afterReload);
+        modBus.addListener(TenkaPendantClient::layers);
+        modBus.addListener(RitualClient::register);
+        modBus.addListener(CurseModelReload::register);
+        ExpeditionProgress.receiver=RitualClient::progress;
 
         var gameBus=MinecraftForge.EVENT_BUS;
         gameBus.register(Client.class);
@@ -44,6 +48,9 @@ public final class ClientBootstrap {
         gameBus.register(BloodClient.class);
         gameBus.register(DeathStarClient.class);
         gameBus.register(BloodRealmRenderer.class);
+        gameBus.register(TenkaPendantClient.class);
+        gameBus.register(ThousandMileChainClient.class);
+        ThousandMileChain.receiver=ThousandMileChainClient::receive;
         gameBus.addListener(EntityRendererRegistry::login);
         gameBus.addListener(EntityRendererRegistry::logout);
         gameBus.addListener(EventPriority.LOWEST,EntityRendererRegistry::entityJoined);

@@ -584,7 +584,7 @@ public final class Skills {
             SdLog.w("通用冷却拦截 skill="+skill+"("+NAMES[skill]+") 剩="+String.format(Locale.ROOT,"%.2f",(times[skill]-now)/20.0)+"秒 领域接管="+SimpleDomain.owns(p)+" 维持中="+SimpleDomain.active(p));
             p.displayClientMessage(Component.literal(NAMES[skill]+" 冷却中 · "+String.format(Locale.ROOT,"%.1f",(times[skill]-now)/20.0)+" 秒"),true);return;}
         boolean awakened=Curse.awakened(p);int tier=Curse.tier(p);double scale=Curse.scale(p);
-        if(skill==4&&!awakened&&!domains.containsKey(p.getUUID())){p.displayClientMessage(Component.literal("灶需要先展开伏魔御厨子积聚粉尘"),true);return;}
+        if(skill==4&&!awakened&&!domains.containsKey(p.getUUID())&&!ExpeditionProgress.data(p).getBoolean("ExpeditionScroll_furnace_scroll")){p.displayClientMessage(Component.literal("灶需要先展开伏魔御厨子积聚粉尘"),true);return;}
         if(VoidJourney.evolved(p)&&!VoidCombat.ready(p,skill))return;
         if(!Curse.spend(p,Curse.COST[skill]))return;
         // 记下这一招的适应细分：解 / 捌 / 灵魂剥离（延迟命中的伤害靠它分类）

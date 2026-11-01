@@ -61,6 +61,8 @@ public final class GojoEntity extends Monster {
         if(gojo.getPersistentData().getBoolean("GojoSelfDamage"))return;
         if(gojo.getPersistentData().getBoolean("SukunaWorldSlashHit"))return;
         if(gojo.getPersistentData().getBoolean("GojoAmplified"))return;
+        // 天逆蛑斩断无下限：封印期间伤害不再被无限减速挡下。
+        if(gojo.getPersistentData().getLong("TenkaSeveredUntil")>gojo.level().getGameTime())return;
         LivingEntity attacker=source.getEntity() instanceof LivingEntity living?living:null;
         if(attacker!=null&&DomainAmplification.active(attacker))return;
         event.setCanceled(true);
@@ -103,6 +105,7 @@ public final class GojoEntity extends Monster {
         yBodyRot=getYRot();yHeadRot=getYRot();
     }
     private void begin(int skill,LivingEntity target){
+        if(getPersistentData().getLong("TenkaSeveredUntil")>level().getGameTime())return;
         if(skill!=6&&!character.npc.NpcLegacyCombat.pay(this,skill==7?1500:80,skill==7))return;
         entityData.set(ACTION,skill);entityData.set(AGE,0);
         if(target!=null)face(target.getBoundingBox().getCenter());
@@ -374,7 +377,9 @@ public final class GojoEntity extends Monster {
     public void extendDomain(int ticks){if(domain>0)domain+=ticks;}
     public void clashVisual(boolean show){if(show&&domain>0)fx(GojoFx.DOMAIN_OPEN,center,getLookAngle(),GojoFx.DOMAIN_RADIUS,domain,0);else fx(GojoFx.DOMAIN_CLOSE,center,Vec3.ZERO,1,4,0);}
     public void clashCloseDomain(){if(domain>0)character.npc.NpcLegacyCombat.burnout(this);domain=0;fx(GojoFx.DOMAIN_CLOSE,center,Vec3.ZERO,1,4,0);}
-    public static boolean mindLocked(LivingEntity e){return !DomainClash.counterCasting(e)&&!character.mainline.Mainline.simpleProtected(e)&&e.getPersistentData().getLong("GojoVoid")>e.level().getGameTime();}
+    /** 天逆蛑·术式切断：打断正在引导的苍/赫、清掉光球与激光，并关闭无量空处。 */
+    public void severTechnique(){clashCloseDomain();orbs.clear();beams.clear();finish();}
+    public static boolean mindLocked(LivingEntity e){return !ExpeditionEvents.mindShield(e)&&!DomainClash.counterCasting(e)&&!character.mainline.Mainline.simpleProtected(e)&&e.getPersistentData().getLong("GojoVoid")>e.level().getGameTime();}
     private void tickDomain(long now){
         if(domain<=0||DomainClash.active(this))return;
         domain--;

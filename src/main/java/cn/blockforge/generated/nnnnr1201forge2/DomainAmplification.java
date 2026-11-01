@@ -22,6 +22,7 @@ public final class DomainAmplification {
         if(!p.isAlive()||p.isSpectator())return;
         if(!unlocked(p)){p.displayClientMessage(Component.literal("领域展延尚未解锁：累计展开领域 10 次（L 查看进度）"),true);return;}
         boolean on=!active(p);
+        if(on&&Curse.severed(p)){p.displayClientMessage(Component.literal("术式被天逆蛑封锁，无法开启领域展延"),true);return;}
         if(on&&!Curse.canSpend(p,COST_PER_TICK)){p.displayClientMessage(Component.literal("咒力不足，无法展开领域展延"),true);return;}
         Curse.data(p).putBoolean("DomainAmplification",on);Curse.sync(p);
         p.displayClientMessage(Component.literal(on?"领域展延：开启 · 每秒 "+BalanceRules.number(COST_PER_SECOND)+" 咒力 · 术式可穿透无下限":"领域展延：关闭"),true);
@@ -31,7 +32,7 @@ public final class DomainAmplification {
     @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent event){
         if(event.phase!=TickEvent.Phase.END||!(event.player instanceof ServerPlayer p))return;
         if(!active(p))return;
-        if(!p.isAlive()||p.isSpectator()||SoulCombat.suppressed(p)||DomainClash.active(p)){stop(p);return;}
+        if(!p.isAlive()||p.isSpectator()||Curse.severed(p)||SoulCombat.suppressed(p)||DomainClash.active(p)){stop(p);return;}
         if(!Curse.spend(p,COST_PER_TICK)){stop(p);p.displayClientMessage(Component.literal("咒力耗尽，领域展延已解除"),true);return;}
     }
     private DomainAmplification(){}

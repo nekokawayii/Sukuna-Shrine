@@ -84,11 +84,42 @@ public final class DomainClash {
         boolean fresh=!fields.containsKey(owner.getUUID())||!live(fields.get(owner.getUUID()));
         fields.put(owner.getUUID(),new Field(owner,owner.level(),center,radius,lifecycle,
             style==null?character.domain.DomainPresentation.style(owner):style));
+        character.domain.DomainSafety.watch((net.minecraft.server.level.ServerLevel)owner.level(),owner.getUUID(),center,radius);
         if(fresh&&owner instanceof ServerPlayer p)character.mainline.Mainline.onDomainOpened(p);
         if(fresh&&body(owner) instanceof Mob mob)mob.getPersistentData().putLong("NpcDomainReadyAt",mob.level().getGameTime()+character.npc.NpcBattleRules.DOMAIN_COOLDOWN);
         discover();
     }
     public static boolean registered(LivingEntity owner){Field f=fields.get(owner.getUUID());return f!=null&&live(f);}
+    /**
+     * 天逆蛑的「术式切断」：立即终止 owner 正在维持的领域。
+     * 如果 owner 正在领域对拼中，**双方领域一起解除**，不判胜负、也不给败者挂对拼熔断。
+     * @return 是否真的切断了什么
+     */
+    public static boolean sever(LivingEntity owner){
+        if(owner==null||owner.level().isClientSide)return false;
+        Match m=matches.get(owner.getUUID());
+        if(m!=null){finish(m,0);return true;}
+        Field f=fields.get(owner.getUUID());
+        if(f==null)return false;
+        close(f,"天逆蛑·术式切断");
+        fields.remove(owner.getUUID());
+        if(f.level instanceof net.minecraft.server.level.ServerLevel level){
+            character.domain.DomainTerrain.closeOwner(level,owner.getUUID());
+            syncWorld(level.getServer());
+        }
+        fields.values().removeIf(v->!live(v));
+        return true;
+    }
+    /** 天逆蛑：把球壳**盖住这个点**的领域全部切断，哪怕施术者站得很远（站在别人领域里也能一刀切掉）。 */
+    public static int severDomainsAt(net.minecraft.world.level.Level level,Vec3 point){
+        int count=0;
+        for(Field f:new java.util.ArrayList<>(fields.values())){
+            if(f.level!=level)continue;
+            if(point.distanceToSqr(f.center)>f.radius*f.radius)continue;
+            if(fields.containsKey(f.owner.getUUID())&&TechniqueSeverance.sever(f.owner,false,null))count++;
+        }
+        return count;
+    }
     /** 自定义领域自然结束后可调用；对拼中的提前结束由统一裁决完成解锁。 */
     public static void closed(LivingEntity owner){
         if(!active(owner))fields.remove(owner.getUUID());

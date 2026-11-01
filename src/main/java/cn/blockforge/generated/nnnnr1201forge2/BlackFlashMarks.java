@@ -89,6 +89,7 @@ public final class BlackFlashMarks {
 
     /** 服务端：玩家在有效时间内瞄准并左键 → 瞬移到敌人身前，打出"普攻伤害³"的黑闪。 */
     public static void strike(ServerPlayer p,int targetId){
+        if(ThousandMileChainItem.isChain(p.getMainHandItem())||ThousandMileChain.bound(p)||Curse.severed(p))return;
         var log=com.mojang.logging.LogUtils.getLogger();
         log.info("[黑闪] 服务端收到 strike target={} marks={}",targetId,MARKS.containsKey(p.getUUID())?MARKS.get(p.getUUID()).size():-1);
         Map<Integer,Long> mine=MARKS.get(p.getUUID());
@@ -140,6 +141,7 @@ public final class BlackFlashMarks {
         if(mc.level==null||mc.player==null){CLIENT.clear();return;}
         long now=mc.level.getGameTime();
         CLIENT.removeIf(m->now>m.until());
+        if(ThousandMileChainClient.holding()){attackDown=mc.options.keyAttack.isDown();return;}
         if(!Client.progress.fist()||mc.screen!=null)return;
         Mark aimed=aimed();
         boolean down=mc.options.keyAttack.isDown();

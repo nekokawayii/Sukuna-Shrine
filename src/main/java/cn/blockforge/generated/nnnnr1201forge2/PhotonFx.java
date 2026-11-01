@@ -461,5 +461,15 @@ public final class PhotonFx {
             return start(pl,pos);
         }catch(Throwable t){fail(t);return null;}
     }
+    /** 祭坛光束：使用现有发射器系统，支持紫色激光和正常混合的黑色雷芯。 */
+    public static Handle ritualBeam(Vec3 from,Vec3 to,double width,int color,boolean additive,int ticks){
+        try{
+            Vec3 delta=to.subtract(from);double length=delta.length();if(length<.01)return null;
+            Emitter e=emitter(CYLINDER,width,1);Object c=e.config();duration(c,ticks);particleLife(c,8);
+            shapeScale(c,1,Math.sqrt(length),1);size(c,width*2);rate(c,Math.min(60,12+length*2));colour(c,color);
+            render(c,MODE_BILLBOARD,GLOW,additive?color:0,additive);
+            return start(List.of(PA(e,delta.scale(.5),delta.normalize())),from);
+        }catch(Throwable t){fail(t);return null;}
+    }
     private PhotonFx(){}
 }

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "inlaid=false": {
+      "model": "sukuna:block/special_seal_pillar"
+    },
+    "inlaid=true": {
+      "model": "sukuna:block/special_seal_pillar_inlaid"
+    }
+  }
+}

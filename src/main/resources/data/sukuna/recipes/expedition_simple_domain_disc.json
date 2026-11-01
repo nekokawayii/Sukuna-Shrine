@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "sukuna:ancient_talisman"
+    },
+    {
+      "item": "sukuna:jujutsu_alloy"
+    },
+    {
+      "item": "sukuna:curse_crystal"
+    }
+  ],
+  "result": {
+    "item": "sukuna:simple_domain_disc",
+    "count": 1
+  }
+}

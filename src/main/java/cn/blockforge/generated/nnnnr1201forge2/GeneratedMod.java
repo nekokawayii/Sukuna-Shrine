@@ -27,6 +27,8 @@ public final class GeneratedMod {
         MinecraftForge.EVENT_BUS.register(MaidBridge.class);
         MinecraftForge.EVENT_BUS.register(GuardianPlayerSkills.class);
         MinecraftForge.EVENT_BUS.register(DomainClash.class);
+        MinecraftForge.EVENT_BUS.register(TenkaPendantSync.class);
+        MinecraftForge.EVENT_BUS.register(ThousandMileChain.class);
         // 原版生命属性会把5000截为1024；两端同步提升数值容许上限。
         var health=(net.minecraft.world.entity.ai.attributes.RangedAttribute)net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH;
         if(health.getMaxValue()<150000){try{double cap=health.getMaxValue();for(var field:net.minecraft.world.entity.ai.attributes.RangedAttribute.class.getDeclaredFields())if(field.getType()==double.class){field.setAccessible(true);if(field.getDouble(health)==cap){field.setDouble(health,1000000);break;}}if(health.getMaxValue()<150000)throw new IllegalStateException("生命属性上限未能提高");}catch(ReflectiveOperationException ex){throw new IllegalStateException("无法启用即身佛5000生命",ex);}}
@@ -50,6 +52,18 @@ public final class GeneratedMod {
         ModTab.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         var armor=(net.minecraft.world.entity.ai.attributes.RangedAttribute)net.minecraft.world.entity.ai.attributes.Attributes.ARMOR;
         try{double cap=armor.getMaxValue();for(var field:net.minecraft.world.entity.ai.attributes.RangedAttribute.class.getDeclaredFields())if(field.getType()==double.class){field.setAccessible(true);if(field.getDouble(armor)==cap){field.setDouble(armor,1000000);break;}}}catch(ReflectiveOperationException ex){throw new IllegalStateException("无法启用净土守护者防御属性",ex);}
+        ExpeditionContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
+        character.mahito.MahitoContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
+        MinecraftForge.EVENT_BUS.register(ExpeditionWorldgen.class);
+        MinecraftForge.EVENT_BUS.register(ExpeditionEvents.class);
+        CurseRoster.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
+        MinecraftForge.EVENT_BUS.register(CurseHostility.class);
+        MinecraftForge.EVENT_BUS.register(CurseSpawning.class);
+        MinecraftForge.EVENT_BUS.register(HyakkiArena.class);
+        MinecraftForge.EVENT_BUS.register(CullingGame.class);
+        MinecraftForge.EVENT_BUS.register(SoulEchoes.class);
+        MinecraftForge.EVENT_BUS.register(ExpeditionProgress.class);
+        MinecraftForge.EVENT_BUS.register(ExpeditionCommands.class);
         ProgressionContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(Journey.class);
         Authority.init();
@@ -192,6 +206,8 @@ public final class GeneratedMod {
         MinecraftForge.EVENT_BUS.register(character.jogo.JogoCombat.class);
         character.CharacterCasting.registerEffect("mahito",character.mahito.MahitoSkills.TRANSMUTE,
             (p,skill,rank)->character.mahito.MahitoTransfigure.arm(p));
+        for(int id:new int[]{character.mahito.MahitoSkills.TAIL,character.mahito.MahitoSkills.COLLAPSE,character.mahito.MahitoSkills.ARMS,character.mahito.MahitoSkills.DODGE,character.mahito.MahitoSkills.REFORGE})
+            character.CharacterCasting.registerEffect("mahito",id,(p,skill,rank)->character.mahito.MahitoCombat.cast(p,skill.id()));
         MinecraftForge.EVENT_BUS.register(character.mahito.MahitoTransfigure.class);
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.living.LivingHurtEvent ev)->{if(ev.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp&&character.mahito.MahitoSelf.damageScale(sp)<1f)ev.setAmount(ev.getAmount()*character.mahito.MahitoSelf.damageScale(sp));});
         MinecraftForge.EVENT_BUS.register(character.mahito.MahitoPowers.class);

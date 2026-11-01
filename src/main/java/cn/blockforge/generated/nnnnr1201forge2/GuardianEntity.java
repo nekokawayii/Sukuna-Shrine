@@ -129,7 +129,7 @@ public final class GuardianEntity extends Monster {
     private void face(Vec3 point){Vec3 d=point.subtract(getEyePosition());getLookControl().setLookAt(point.x,point.y,point.z,180,180);setYRot((float)Math.toDegrees(Math.atan2(-d.x,d.z)));setXRot((float)-Math.toDegrees(Math.atan2(d.y,d.horizontalDistance())));yBodyRot=getYRot();yHeadRot=getYRot();}
     @Override public void tick(){
         super.tick();if(level().isClientSide||!isAlive()||SixfoldFinale.controlled(this))return;
-        if(friendly()){tickFriend();return;}
+        if(friendly()){if(dialogueFinished()&&CurseHostility.defend(this))return;tickFriend();return;}
         if(owner==null&&getTarget() instanceof ServerPlayer player)owner=player.getUUID();
         if(!configured){ServerPlayer p=players(128).stream().findFirst().orElse(null);if(p!=null)configure(p);}
         if(domain>0)DomainClash.opened(this,center,Math.min(512,v("DomainRadius")));

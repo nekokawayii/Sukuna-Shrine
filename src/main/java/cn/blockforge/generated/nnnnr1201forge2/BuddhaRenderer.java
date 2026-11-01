@@ -19,14 +19,14 @@ public final class BuddhaRenderer<T extends Mob> extends EntityRenderer<T> {
     @Override public void render(T entity,float yaw,float partial,PoseStack ps,MultiBufferSource buffers,int light){
         ps.pushPose();ps.mulPose(Axis.YP.rotationDegrees(180-yaw));float age=entity.tickCount+partial;
         if(entity instanceof BuddhaEntity b){
-            float scale=b.getBbHeight()/BUDDHA.heightBlocks();ps.scale(scale,scale,scale);
+            BUDDHA.fitHeight(ps,b.getBbHeight());
             Animation previous=animations.get(entity);boolean melee=b.swinging||previous!=null&&previous.name.equals("melee")&&age-previous.start<Math.min(48,20*(b.phase()==2?1:2));
             String name=!b.isAlive()?"death":b.action()!=0?"cast":melee?"melee":b.getDeltaMovement().horizontalDistanceSqr()>.0003?"walk":"idle";
             if(previous==null||!previous.name.equals(name)){previous=new Animation(name,b.tickCount);animations.put(entity,previous);}
             float seconds=(age-previous.start)/20;boolean red=b.phase()==2;
             BUDDHA.render(ps,buffers,light,name,seconds,1,red?.63f:1,red?.67f:1,1);
             if(b.action()==7||b.action()==11){ps.scale(1.012f,1.012f,1.012f);BUDDHA.render(ps,buffers,15728880,name,seconds,1,.35f,.18f,.2f);}
-        }else if(entity instanceof ParasiteEntity p){boolean mother=p.mother();ps.translate(0,Math.abs(Math.sin(age*.3))*(mother?.03:.045),0);ps.mulPose(Axis.ZP.rotationDegrees((float)Math.sin(age*.3)*(mother?1:4)));(mother?MOTHER:PARASITE).render(ps,buffers,light,"idle",age/20,1,1,1,1);}
+        }else if(entity instanceof ParasiteEntity p){boolean mother=p.mother();ps.translate(0,Math.abs(Math.sin(age*.3))*(mother?.03:.045),0);ps.mulPose(Axis.ZP.rotationDegrees((float)Math.sin(age*.3)*(mother?1:4)));(mother?MOTHER:PARASITE).fitHeight(ps,p.getBbHeight());(mother?MOTHER:PARASITE).render(ps,buffers,light,"idle",age/20,1,1,1,1);}
         ps.popPose();super.render(entity,yaw,partial,ps,buffers,light);
     }
 }

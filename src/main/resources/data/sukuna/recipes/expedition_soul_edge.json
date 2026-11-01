@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "sukuna:soul_echo"
+    },
+    {
+      "item": "sukuna:soul_echo"
+    },
+    {
+      "item": "sukuna:soul_echo"
+    },
+    {
+      "item": "sukuna:soul_echo"
+    },
+    {
+      "item": "sukuna:seal_gold"
+    }
+  ],
+  "result": {
+    "item": "sukuna:soul_edge",
+    "count": 1
+  }
+}

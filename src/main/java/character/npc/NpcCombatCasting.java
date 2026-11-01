@@ -24,6 +24,7 @@ public final class NpcCombatCasting {
         if (mob == null || mob.isNoAi() || !mob.isAlive() || !NpcBridge.canHit(mob,target)) return false;
         var actor = NpcBridge.actorFor(mob);
         if (actor == null || !skills(mob).contains(id)) return false;
+        if(actor.characterId.equals("mahito")&&!character.mahito.MahitoCombat.ready(actor,target,id))return false;
         mob.setTarget(target); actor.syncPosition();
         if (DomainClash.active(mob) || DomainClash.stunned(mob) || Curse.active(actor,"NpcCastInterval")) return false;
         boolean domain = character.mainline.Mainline.domainSkill(actor,id);
@@ -93,6 +94,11 @@ public final class NpcCombatCasting {
         if(!NpcBridge.canHit(mob,target)||mob.distanceToSqr(target)>64*64){data.putInt("NpcCombatTicks",0);return;}
         data.putInt("NpcCombatTicks",Math.min(12000,data.getInt("NpcCombatTicks")+1));
         repair(actor);
+        if(actor.characterId.equals("mahito")){
+            if(mob.tickCount%5==0&&mob.hurtTime>0&&cast(mob,target,character.mahito.MahitoSkills.DODGE))return;
+            if(mob.tickCount%10==0&&mob.getHealth()<mob.getMaxHealth()*.55f&&cast(mob,target,character.mahito.MahitoSkills.REFORGE))return;
+            if(character.domainking.SelfEmbryoDomain.active(actor)&&mob.tickCount%30==0&&character.mahito.MahitoCombat.touch(actor,target))return;
+        }
         if(actor.characterId.equals("ryu")&&Curse.data(actor).contains("NpcChannelUntil")){
             if(!Curse.active(actor,"NpcChannelUntil")){character.ryu.RyuCombat.testReset(actor);Curse.data(actor).remove("NpcChannelUntil");}
             return;

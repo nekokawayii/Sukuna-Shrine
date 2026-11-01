@@ -43,13 +43,14 @@ public final class ClientInput {
     }
     public static void key(int key,int scan,int action,int mods){
         // L 使用原版进度页面；G 只由可改键的 AMPLIFY 处理，避免一次按下切换两次。
+        if(ThousandMileChainClient.key(key,scan,action))return;
         if(TojiQteClient.key(key,action,mods))return;
         event(HeldInput.Kind.KEYSYM,key,action,mods);
         event(HeldInput.Kind.SCANCODE,scan,action,mods);
         // 不等下一游戏刻：同一刻内按下又松开也必须完整送出施术起手/松手。
         if(action!=GLFW.GLFW_REPEAT)TechniqueInputClient.inputChanged();
     }
-    public static void mouse(int button,int action,int mods){if(button==org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT&&NaoyaClient.attack(action))return;if(NaoyaClient.mouse(button,action,mods))return;if(TojiQteClient.mouse(button,action,mods))return;event(HeldInput.Kind.MOUSE,button,action,mods);TechniqueInputClient.inputChanged();}
+    public static void mouse(int button,int action,int mods){if(ThousandMileChainClient.mouse(button,action))return;if(button==org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT&&NaoyaClient.attack(action))return;if(NaoyaClient.mouse(button,action,mods))return;if(TojiQteClient.mouse(button,action,mods))return;event(HeldInput.Kind.MOUSE,button,action,mods);TechniqueInputClient.inputChanged();}
     public static void mouse(int button,int action){mouse(button,action,modifiers);}
     @SubscribeEvent public static void key(InputEvent.Key e){key(e.getKey(),e.getScanCode(),e.getAction(),e.getModifiers());}
     @SubscribeEvent public static void mouse(InputEvent.MouseButton.Post e){mouse(e.getButton(),e.getAction(),e.getModifiers());}

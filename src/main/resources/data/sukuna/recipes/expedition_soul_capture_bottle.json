@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:glass_bottle"
+    },
+    {
+      "item": "sukuna:seal_white"
+    }
+  ],
+  "result": {
+    "item": "sukuna:soul_capture_bottle",
+    "count": 1
+  }
+}

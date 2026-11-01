@@ -124,7 +124,7 @@ public class BuddhaEntity extends Monster {
         // 只反弹生物的近战/投射物，反伤本身和持续伤害不能递归反弹。
         if(source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY))return super.hurt(source,amount);
         boolean reflect=action()==5&&source.getEntity() instanceof LivingEntity attacker&&BossTargets.valid(this,attacker)&&(source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)||source.is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK)||source.getDirectEntity() instanceof net.minecraft.world.entity.projectile.Projectile);
-        float adjusted=amount*(action()==7?0.5f:0.9f)*(weakness>0?1.5f:1);
+        float adjusted=amount*(source.getMsgId().equals("soul_devourer")?1:action()==7?0.5f:0.9f)*(weakness>0?1.5f:1);
         if(!transitionDone)adjusted=Math.min(adjusted,Math.max(0,getHealth()-getMaxHealth()*0.5f));
         if(action()==11)adjusted=Math.min(adjusted,Math.max(0,getHealth()-1));
         if(transitionDone&&!finaleUsed&&action()!=11)adjusted=Math.min(adjusted,Math.max(0,getHealth()-getMaxHealth()*0.09f));

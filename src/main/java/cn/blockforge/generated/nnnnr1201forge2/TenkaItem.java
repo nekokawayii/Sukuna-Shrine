@@ -15,7 +15,7 @@ import net.minecraft.world.level.Level;
  * 天逆鉾：伏黑甚尔的咒具短刀，**能斩断术式**——命中时清掉目标身上所有增益（护盾/无敌/领域加持），
  * 配合甚尔连招 6「天逆鉾·破魔」使用。
  *
- * <p>占位说明：目前复用原版铁剑模型（`minecraft:item/iron_sword`），贴图等用户给了再换。
+ * <p>旧版短刀使用独立原创物品贴图；上传的立体天逆蛑仍由独立物品保留原模型。
  */
 public class TenkaItem extends SwordItem {
     public TenkaItem() {

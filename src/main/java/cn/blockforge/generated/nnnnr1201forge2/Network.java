@@ -12,8 +12,11 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.function.Consumer;
 
 public final class Network {
-    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation("sukuna", "skills"), () -> "sukuna-domain-clash-r292", "sukuna-domain-clash-r292"::equals, "sukuna-domain-clash-r292"::equals);
+    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation("sukuna", "skills"), () -> "sukuna-chain-r295", "sukuna-chain-r295"::equals, "sukuna-chain-r295"::equals);
     public static Consumer<Effect> clientReceiver = e -> {};
+    /** 天逆蛑腰间挂件：服务端告诉客户端某个玩家背包里有没有这件咒具。 */
+    public static Consumer<PendantState> pendantReceiver = p -> {};
+    public record PendantState(int entityId, boolean visible) {}
     public static Boolean clientModpackMode;
     public static double tooltipFactor(BalanceRules.Category category){return BalanceRules.factor(clientModpackMode!=null?clientModpackMode:BalanceRules.modpackMode(),category);}
     public record Cast(SkillAction action) {}
@@ -118,6 +121,7 @@ public final class Network {
         TenShadows.register();
         ShadowSystem.register();
         MeleeCombo.register();
+        ThousandMileChain.register();
         CHANNEL.messageBuilder(Cast.class,0,NetworkDirection.PLAY_TO_SERVER).encoder((m,b)->b.writeUtf(m.action().name(),32)).decoder(b->new Cast(SkillAction.valueOf(b.readUtf(32)))).consumerMainThread((m,c)->{
             var p=c.get().getSender();
             if(p!=null&&!character.CharacterService.allowsAction(p,m.action())){c.get().setPacketHandled(true);return;}
@@ -208,6 +212,15 @@ public final class Network {
     CHANNEL.messageBuilder(BlackFlashStrike.class,26,NetworkDirection.PLAY_TO_SERVER)
         .encoder((m,b)->b.writeVarInt(m.targetId())).decoder(b->new BlackFlashStrike(b.readVarInt()))
         .consumerMainThread((m,c)->{var p=c.get().getSender();if(p!=null)BlackFlashMarks.strike(p,m.targetId());c.get().setPacketHandled(true);}).add();
+        // 49 = 探索卷轴解锁；客户端仅显示，施法资格仍由服务端裁决。
+        CHANNEL.messageBuilder(ExpeditionProgress.State.class,49,NetworkDirection.PLAY_TO_CLIENT)
+            .encoder((m,b)->b.writeVarInt(m.scrollMask())).decoder(b->new ExpeditionProgress.State(b.readVarInt()))
+            .consumerMainThread((m,c)->{ExpeditionProgress.receiver.accept(m);c.get().setPacketHandled(true);}).add();
+        // 48 = 天逆蛑腰间挂件的可见状态（PLAY_TO_CLIENT）：只同步"背包里有没有"，不需要每刻发。
+        CHANNEL.messageBuilder(PendantState.class,48,NetworkDirection.PLAY_TO_CLIENT)
+            .encoder((m,b)->{b.writeVarInt(m.entityId());b.writeBoolean(m.visible());})
+            .decoder(b->new PendantState(b.readVarInt(),b.readBoolean()))
+            .consumerMainThread((m,c)->{pendantReceiver.accept(m);c.get().setPacketHandled(true);}).add();
     }
     public static void registerDrawing(){
         WallpaperPackets.register();

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "sukuna:frame_retina"
+    },
+    {
+      "item": "minecraft:glass"
+    },
+    {
+      "item": "sukuna:jujutsu_alloy"
+    }
+  ],
+  "result": {
+    "item": "sukuna:foresight_goggles",
+    "count": 1
+  }
+}

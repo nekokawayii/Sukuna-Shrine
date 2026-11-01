@@ -53,17 +53,27 @@ public final class Curse {
     public static double reverseHealing(Player p){return BalanceRules.strength(ReverseRules.healing(rawHealthBonus(p)),BalanceRules.Category.HEALING);}
     public static double reverseCost(Player p){return DomainClash.penalized(p)?DomainClashRules.healCost(maximum(p)):ReverseRules.cost(rawHealthBonus(p));}
     public static boolean repaired(Player p){return active(p,"TechniqueRepairedUntil");}
-    public static boolean canUseTechnique(Player p){return !character.CharacterService.toji(p)&&!PrisonSystem.locked(p)&&!SixfoldFinale.active(p)&&!SixfoldFinale.controlled(p)&&!burnout(p)&&!DomainClash.active(p)&&!NetBranches.locked(p)&&!Uraume.locked(p)&&!CombatExpansion.controlled(p);}
+    /** 天逆蛑的「术式封印」：3 秒内任何咒术（含领域、反转、外放）都放不出来。 */
+    public static boolean severed(Player p){return active(p,"TenkaSeveredUntil");}
+    public static int severedTicks(Player p){return (int)Math.max(0,data(p).getLong("TenkaSeveredUntil")-p.level().getGameTime());}
+    public static void severTechnique(ServerPlayer p,int ticks){
+        status(p,"TenkaSeveredUntil",ticks);
+        MaidBridge.body(p).addEffect(new net.minecraft.world.effect.MobEffectInstance(
+            TechniqueEffects.TECHNIQUE_SEAL.get(),ticks,0,false,true));
+        sync(p);
+    }
+    public static boolean canUseTechnique(Player p){return !character.CharacterService.toji(p)&&!PrisonSystem.locked(p)&&!SixfoldFinale.active(p)&&!SixfoldFinale.controlled(p)&&!burnout(p)&&!severed(p)&&!DomainClash.active(p)&&!NetBranches.locked(p)&&!Uraume.locked(p)&&!CombatExpansion.controlled(p);}
     public static double damageFactor(Player p){return burnout(p)?0.7:1.0;}
     public static double residueFactor(Player p){return 1+Journey.residuePercent(p)/100.0;}
     public static void status(Player p,String key,int ticks){data(p).putLong(key,p.level().getGameTime()+ticks);}
     public static void endDomain(ServerPlayer p,boolean voluntary){enterBurnout(p,ShrineRules.burnoutTicks(voluntary));}
     /** 御厨子领域结束：**只锁领域自己 30 秒**（熔断是全局禁用术式，领域不该走它）。 */
-    public static void cooldownDomain(ServerPlayer p){status(p,"DomainCooldown",ShrineRules.DOMAIN_COOLDOWN_TICKS);}
+    public static void cooldownDomain(ServerPlayer p){if(TechniqueSeverance.severing())return;status(p,"DomainCooldown",ShrineRules.DOMAIN_COOLDOWN_TICKS);}
     public static boolean domainCooling(ServerPlayer p){return active(p,"DomainCooldown");}
     public static int domainCooldownLeft(ServerPlayer p){return (int)Math.max(0,data(p).getLong("DomainCooldown")-p.level().getGameTime());}
     private static void clearBurnout(ServerPlayer p){data(p).putBoolean("TechniqueBurnout",false);data(p).remove("TechniqueBurnoutUntil");data(p).remove("TechniqueBurnoutAt");MaidBridge.body(p).removeEffect(TechniqueEffects.BURNOUT.get());}
     public static void enterBurnout(ServerPlayer p,int ticks){
+        if(TechniqueSeverance.severing())return; // 天逆蛑切断领域时不追加长熔断，只封 3 秒
         if(SixfoldFinale.active(p))return; // 终式期间不被关闭旧领域的熔断提前削减伤害，最终统一支付。
         ticks=Math.max(ticks,DomainClash.penaltyTicks(p));data(p).putBoolean("TechniqueBurnout",true);status(p,"TechniqueBurnoutUntil",ticks);data(p).remove("TechniqueRepairedUntil");data(p).remove("TechniqueBurnoutAt");data(p).remove("Rotation");
         MaidBridge.body(p).addEffect(new net.minecraft.world.effect.MobEffectInstance(TechniqueEffects.BURNOUT.get(),ticks,0,false,true));
@@ -117,6 +127,7 @@ public final class Curse {
         if(DeathStar.anemic(p))return "严重贫血期间无法回血";
         if(SixfoldFinale.active(p)||SixfoldFinale.controlled(p)||!p.isAlive()||p.isSpectator()||!(p instanceof net.minecraftforge.common.util.FakePlayer)&&!character.mainline.Mainline.unlocked(p,character.mainline.Mainline.REVERSE)||DomainClash.active(p)||NetBranches.locked(p)||Uraume.locked(p))return "当前无法使用反转术式";
         if(active(p,"ReverseCooldown"))return "反转术式冷却中";
+        if(severed(p))return ThousandMileChain.bound(MaidBridge.body(p))?"正被天逆蛑锁链缠绕，持续封锁咒术":"术式被天逆蛑斩断，暂时无法使用任何术式";
         var body=MaidBridge.body(p);var tag=body.getPersistentData();long now=p.level().getGameTime();
         if(active(p,"PureLandNoHeal")||active(p,"SoulGap")||tag.getBoolean("SukunaNoHeal")||tag.getLong("SoulGapUntil")>now||tag.getLong("VoidNoHeal")>now||tag.getLong("GuardianSkillNoHeal")>now||GuardianEntity.locked(body))return "当前处于禁疗状态，无法使用反转术式";
         if(body.getHealth()>=body.getMaxHealth())return "生命已满，无需使用反转术式";
@@ -138,6 +149,7 @@ public final class Curse {
         Network.send(p.serverLevel(),new Network.Effect(137,body.getId(),body.position(),net.minecraft.world.phys.Vec3.ZERO,1,20,0));return true;
     }
     public static void repairBurnout(ServerPlayer p){
+        if(severed(p)){CastFeedback.tell(p,"术式被天逆蛑封锁，暂时不能修复熔断");return;}
         if(active(p,"FinaleBurnout")){CastFeedback.tell(p,"终式代价不能提前修复，剩余"+((data(p).getLong("FinaleBurnout")-p.level().getGameTime()+19)/20)+"秒");return;}
         if(DomainClash.active(p)||DomainClash.penalized(p)){p.displayClientMessage(Component.literal("领域对拼败北熔断无法提前修复，剩余"+((DomainClash.penaltyTicks(p)+19)/20)+"秒"),true);return;}
         if((!(p instanceof NpcBridge.NpcActor)&&fingers(p)<15)||!burnout(p)){p.displayClientMessage(Component.literal("当前没有可修复的术式熔断"),true);return;}

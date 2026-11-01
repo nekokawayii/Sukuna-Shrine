@@ -1,0 +1,14 @@
+{
+  "structures": [
+    {
+      "structure": "sukuna:ancient_grave",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 28,
+    "separation": 14,
+    "salt": 474276
+  }
+}

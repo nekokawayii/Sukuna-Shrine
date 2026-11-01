@@ -1,0 +1,36 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "sukuna:jujutsu_alloy"
+    },
+    {
+      "item": "sukuna:jujutsu_alloy"
+    },
+    {
+      "item": "sukuna:jujutsu_alloy"
+    },
+    {
+      "item": "sukuna:jujutsu_alloy"
+    },
+    {
+      "item": "sukuna:jujutsu_alloy"
+    },
+    {
+      "item": "sukuna:jujutsu_alloy"
+    },
+    {
+      "item": "sukuna:jujutsu_alloy"
+    },
+    {
+      "item": "sukuna:jujutsu_alloy"
+    },
+    {
+      "item": "sukuna:jujutsu_alloy"
+    }
+  ],
+  "result": {
+    "item": "sukuna:alloy_block",
+    "count": 1
+  }
+}

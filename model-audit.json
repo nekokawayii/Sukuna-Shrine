@@ -1,0 +1,982 @@
+[
+  {
+    "file": "/workspace/uploads/minecraft-java-2.bbmodel",
+    "name": "ghost_bride_soft_veil_final",
+    "identifier": "ghost_bride",
+    "format": "free",
+    "elements": 69,
+    "bounds": [
+      [
+        -7.18,
+        7.18
+      ],
+      [
+        -1,
+        40.65
+      ],
+      [
+        -4.3095,
+        4.5495
+      ]
+    ],
+    "raw_height": 2.603125,
+    "textures": [
+      {
+        "name": "ghost_bride_64.png",
+        "embedded": true,
+        "size": [
+          64,
+          64
+        ]
+      },
+      {
+        "name": "soft_red_veil.png",
+        "embedded": true,
+        "size": [
+          512,
+          512
+        ]
+      },
+      {
+        "name": "veil_xi_gold.png",
+        "embedded": true,
+        "size": [
+          16,
+          16
+        ]
+      },
+      {
+        "name": "round_jade.png",
+        "embedded": true,
+        "size": [
+          32,
+          32
+        ]
+      },
+      {
+        "name": "wedding_skirt_extended_vines.png",
+        "embedded": true,
+        "size": [
+          256,
+          128
+        ]
+      },
+      {
+        "name": "wedding_sleeve_flower_vines.png",
+        "embedded": true,
+        "size": [
+          128,
+          128
+        ]
+      },
+      {
+        "name": "wedding_trim_palette.png",
+        "embedded": true,
+        "size": [
+          32,
+          32
+        ]
+      },
+      {
+        "name": "wedding_jacket_flower_vines.png",
+        "embedded": true,
+        "size": [
+          256,
+          128
+        ]
+      },
+      {
+        "name": "wedding_cloud_petals.png",
+        "embedded": true,
+        "size": [
+          64,
+          64
+        ]
+      },
+      {
+        "name": "wedding_small_ornaments.png",
+        "embedded": true,
+        "size": [
+          64,
+          32
+        ]
+      },
+      {
+        "name": "waist_carmine_silk.png",
+        "embedded": true,
+        "size": [
+          128,
+          128
+        ]
+      }
+    ],
+    "animations": [
+      "idle_haunt",
+      "spectral_drift"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-1cddf56a-2.bbmodel",
+    "name": "face_borrower",
+    "identifier": "face_borrower",
+    "format": "free",
+    "elements": 80,
+    "bounds": [
+      [
+        -8.4,
+        8.3
+      ],
+      [
+        0,
+        52.9
+      ],
+      [
+        -7,
+        4.5
+      ]
+    ],
+    "raw_height": 3.30625,
+    "textures": [
+      {
+        "name": "face_borrower.png",
+        "embedded": true,
+        "size": [
+          256,
+          256
+        ]
+      }
+    ],
+    "animations": [
+      "walk",
+      "lunge",
+      "attack",
+      "idle"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-2aa60d6b-2.bbmodel",
+    "name": "失序者",
+    "identifier": "失序者",
+    "format": "bedrock",
+    "elements": 127,
+    "bounds": [
+      [
+        -8.4,
+        10.31677
+      ],
+      [
+        0,
+        39.6
+      ],
+      [
+        -6.40795,
+        8.15487
+      ]
+    ],
+    "raw_height": 2.475,
+    "textures": [
+      {
+        "name": "失序者.png",
+        "embedded": true,
+        "size": [
+          512,
+          512
+        ]
+      }
+    ],
+    "animations": [
+      "walk",
+      "walk_stutter",
+      "attack",
+      "distort"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-9e17a599-2.bbmodel",
+    "name": "mummy_thorn",
+    "identifier": "mummy_thorn",
+    "format": "free",
+    "elements": 625,
+    "bounds": [
+      [
+        -46.63357,
+        47.66591
+      ],
+      [
+        0,
+        150.75
+      ],
+      [
+        -16.91761,
+        17.68313
+      ]
+    ],
+    "raw_height": 9.421875,
+    "textures": [
+      {
+        "name": "mummy_thorn.png",
+        "embedded": true,
+        "size": [
+          128,
+          128
+        ]
+      }
+    ],
+    "animations": [],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-9ed67ade-2.bbmodel",
+    "name": "corrupted_iron_golem",
+    "identifier": "corrupted_iron_golem",
+    "format": "free",
+    "elements": 54,
+    "bounds": [
+      [
+        -23.2,
+        23.2
+      ],
+      [
+        -1,
+        48.3
+      ],
+      [
+        -19,
+        11
+      ]
+    ],
+    "raw_height": 3.08125,
+    "textures": [
+      {
+        "name": "corrupted_iron_golem.png",
+        "embedded": true,
+        "size": [
+          128,
+          128
+        ]
+      }
+    ],
+    "animations": [
+      "combat_ready",
+      "lunge_punch"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-63bf56cd-2.bbmodel",
+    "name": "倒悬者_造型源文件",
+    "identifier": "hanging_one",
+    "format": "free",
+    "elements": 389,
+    "bounds": [
+      [
+        -65.48,
+        63.06
+      ],
+      [
+        37.72,
+        233.89
+      ],
+      [
+        -17.83,
+        13.57
+      ]
+    ],
+    "raw_height": 12.260625,
+    "textures": [
+      {
+        "name": "倒悬者_材质图集.png",
+        "embedded": true,
+        "size": [
+          2048,
+          2048
+        ]
+      }
+    ],
+    "animations": [],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-0073a9a0-2.bbmodel",
+    "name": "骨手-左手-我的世界风格",
+    "identifier": "",
+    "format": "free",
+    "elements": 18,
+    "bounds": [
+      [
+        -43.46447,
+        11.65262
+      ],
+      [
+        -60.5454,
+        12.52626
+      ],
+      [
+        -12.16938,
+        44.62006
+      ]
+    ],
+    "raw_height": 4.5669787500000005,
+    "textures": [
+      {
+        "name": "骨手-像素骨质.png",
+        "embedded": true,
+        "size": [
+          256,
+          128
+        ]
+      }
+    ],
+    "animations": [],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-0176bb53-2.bbmodel",
+    "name": "祂是一具高约四格、比例彻底错位的人形——躯干瘦长",
+    "identifier": "blood_judge",
+    "format": "free",
+    "elements": 110,
+    "bounds": [
+      [
+        -47.4,
+        47.4
+      ],
+      [
+        -1,
+        70
+      ],
+      [
+        -40,
+        40
+      ]
+    ],
+    "raw_height": 4.4375,
+    "textures": [
+      {
+        "name": "blood_judge.png",
+        "embedded": true,
+        "size": [
+          256,
+          256
+        ]
+      }
+    ],
+    "animations": [
+      "idle",
+      "move_drag",
+      "hurt_beat",
+      "death",
+      "core_beat"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-204e7195-2.bbmodel",
+    "name": "石头巨人_侧视精修_v4",
+    "identifier": "stone_golem",
+    "format": "free",
+    "elements": 85,
+    "bounds": [
+      [
+        -16.85,
+        16.85
+      ],
+      [
+        0,
+        48
+      ],
+      [
+        -6.45,
+        5.6
+      ]
+    ],
+    "raw_height": 3.0,
+    "textures": [
+      {
+        "name": "深青石巨人_图集.png",
+        "embedded": true,
+        "size": [
+          1024,
+          1024
+        ]
+      }
+    ],
+    "animations": [
+      "正常行走",
+      "双手蓄力砸地",
+      "左勾拳",
+      "右勾拳",
+      "单手重砸地面",
+      "冲锋撞击"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-493c7133-2.bbmodel",
+    "name": "长臂兽",
+    "identifier": "longarm_beast",
+    "format": "bedrock",
+    "elements": 91,
+    "bounds": [
+      [
+        -1.7,
+        17.7
+      ],
+      [
+        0,
+        43.4
+      ],
+      [
+        -4.2,
+        3.4
+      ]
+    ],
+    "raw_height": 2.7125,
+    "textures": [
+      {
+        "name": "longarm_beast.png",
+        "embedded": true,
+        "size": [
+          128,
+          128
+        ]
+      }
+    ],
+    "animations": [
+      "idle",
+      "walk",
+      "attack",
+      "death"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-42074b48-2.bbmodel",
+    "name": "乱码者-精修版",
+    "identifier": "corrupted_code",
+    "format": "free",
+    "elements": 563,
+    "bounds": [
+      [
+        -23.48878,
+        19.16688
+      ],
+      [
+        0,
+        63.03678
+      ],
+      [
+        -3.85538,
+        5.02356
+      ]
+    ],
+    "raw_height": 3.93979875,
+    "textures": [
+      {
+        "name": "乱码_实体_精修.png",
+        "embedded": true,
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "name": "乱码_垂落碎片.png",
+        "embedded": true,
+        "size": [
+          512,
+          1024
+        ]
+      },
+      {
+        "name": "面部_深黑空洞.png",
+        "embedded": true,
+        "size": [
+          64,
+          64
+        ]
+      },
+      {
+        "name": "故障_断边.png",
+        "embedded": true,
+        "size": [
+          64,
+          64
+        ]
+      }
+    ],
+    "animations": [
+      "待机",
+      "走路"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-ac9b43c0-2.bbmodel",
+    "name": "stone-spirit-final-review",
+    "identifier": "stone_spirit",
+    "format": "free",
+    "elements": 765,
+    "bounds": [
+      [
+        -9.42,
+        9.42
+      ],
+      [
+        -6.317,
+        40.75
+      ],
+      [
+        -4.90541,
+        4.39826
+      ]
+    ],
+    "raw_height": 2.9416875,
+    "textures": [
+      {
+        "name": "黑岩岩层_终稿.png",
+        "embedded": true,
+        "size": [
+          512,
+          512
+        ]
+      },
+      {
+        "name": "金色能量.png",
+        "embedded": true,
+        "size": [
+          64,
+          64
+        ]
+      }
+    ],
+    "animations": [
+      "待机_岩锥永转",
+      "防御_双臂抱头",
+      "攻击_重岩挥拳"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-c1ccc1a7-2.bbmodel",
+    "name": "螯肢恐惧",
+    "identifier": "skull_centipede_leviathan",
+    "format": "free",
+    "elements": 424,
+    "bounds": [
+      [
+        -1099.4311,
+        1810.836
+      ],
+      [
+        -6.0571,
+        2633.9429
+      ],
+      [
+        -3805.7484,
+        3874.2516
+      ]
+    ],
+    "raw_height": 165.0,
+    "textures": [
+      {
+        "name": "灰白骨质.png",
+        "embedded": true,
+        "size": [
+          128,
+          128
+        ]
+      },
+      {
+        "name": "深灰破皮.png",
+        "embedded": true,
+        "size": [
+          128,
+          128
+        ]
+      },
+      {
+        "name": "黑色节肢.png",
+        "embedded": true,
+        "size": [
+          128,
+          128
+        ]
+      },
+      {
+        "name": "空腔暗部.png",
+        "embedded": true,
+        "size": [
+          128,
+          128
+        ]
+      },
+      {
+        "name": "关节边缘.png",
+        "embedded": true,
+        "size": [
+          128,
+          128
+        ]
+      }
+    ],
+    "animations": [
+      "游龙_左右盘旋",
+      "悬浮_缓慢摇摆"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-c22cfd00-2.bbmodel",
+    "name": "幽灵-完整动画-v2",
+    "identifier": "ashen_wraith",
+    "format": "free",
+    "elements": 138,
+    "bounds": [
+      [
+        -9.9,
+        9.9
+      ],
+      [
+        2.09,
+        41.2
+      ],
+      [
+        -4.94,
+        4.6
+      ]
+    ],
+    "raw_height": 2.444375,
+    "textures": [
+      {
+        "name": "幽灵_像素图集_最终.png",
+        "embedded": true,
+        "size": [
+          256,
+          256
+        ]
+      }
+    ],
+    "animations": [
+      "01_漂浮待机",
+      "02_施法一_蓄力重砸",
+      "03_施法二_唤魔者",
+      "04_死亡_仰天化灰"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-c50be929-2.bbmodel",
+    "name": "sunflower_mummy",
+    "identifier": "sunflower_mummy",
+    "format": "free",
+    "elements": 97,
+    "bounds": [
+      [
+        -6.7,
+        11.6
+      ],
+      [
+        0,
+        43.7
+      ],
+      [
+        -3.4,
+        1.6
+      ]
+    ],
+    "raw_height": 2.73125,
+    "textures": [
+      {
+        "name": "sunflower_mummy.png",
+        "embedded": true,
+        "size": [
+          64,
+          64
+        ]
+      }
+    ],
+    "animations": [
+      "idle",
+      "walk",
+      "attack"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-c0807b1b-2.bbmodel",
+    "name": "失序者-精细模型-v1",
+    "identifier": "the_disordered",
+    "format": "free",
+    "elements": 189,
+    "bounds": [
+      [
+        -12.002,
+        12.329
+      ],
+      [
+        -0.59446,
+        43.05
+      ],
+      [
+        -3.33,
+        3.844
+      ]
+    ],
+    "raw_height": 2.7277787499999997,
+    "textures": [
+      {
+        "name": "失序者_材质图集.png",
+        "embedded": true,
+        "size": [
+          512,
+          512
+        ]
+      }
+    ],
+    "animations": [
+      "掉帧走路",
+      "掉帧跑步",
+      "攻击",
+      "扭曲消失"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-c2997094-2.bbmodel",
+    "name": "bloody_ghost",
+    "identifier": "bloody_ghost",
+    "format": "free",
+    "elements": 28,
+    "bounds": [
+      [
+        1.9,
+        14.1
+      ],
+      [
+        0.2,
+        36.6
+      ],
+      [
+        4.5,
+        14.9
+      ]
+    ],
+    "raw_height": 2.275,
+    "textures": [
+      {
+        "name": "bloody_ghost.png",
+        "embedded": true,
+        "size": [
+          128,
+          128
+        ]
+      }
+    ],
+    "animations": [
+      "float"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-e68941ce-2.bbmodel",
+    "name": "末影告密者",
+    "identifier": "ender_scryer",
+    "format": "free",
+    "elements": 173,
+    "bounds": [
+      [
+        -7.075,
+        15.25
+      ],
+      [
+        0.3,
+        53.35
+      ],
+      [
+        -8.75,
+        6.1
+      ]
+    ],
+    "raw_height": 3.3156250000000003,
+    "textures": [
+      {
+        "name": "ender_scryer-reference-atlas.png",
+        "embedded": true,
+        "size": [
+          512,
+          512
+        ]
+      },
+      {
+        "name": "ender_scryer-violet-glass.png",
+        "embedded": true,
+        "size": [
+          32,
+          32
+        ]
+      },
+      {
+        "name": "ender_scryer-emissive.png",
+        "embedded": true,
+        "size": [
+          512,
+          512
+        ]
+      }
+    ],
+    "animations": [
+      "idle_breath",
+      "slow_walk",
+      "lantern_attack"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/model-edc35e70-2.bbmodel",
+    "name": "乱码崩坏者",
+    "identifier": "garble_collapser",
+    "format": "bedrock",
+    "elements": 1750,
+    "bounds": [
+      [
+        -58.16875,
+        58.16875
+      ],
+      [
+        4.105,
+        114.90327
+      ],
+      [
+        -45.16875,
+        51.96625
+      ]
+    ],
+    "raw_height": 6.924891875,
+    "textures": [
+      {
+        "name": "garble_atlas_final.png",
+        "embedded": true,
+        "size": [
+          1024,
+          1024
+        ]
+      }
+    ],
+    "animations": [
+      "待机",
+      "追击"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/parasite-mother-bbmodel-2-2.bbmodel",
+    "name": "parasite_mother",
+    "identifier": "parasite_mother",
+    "format": "free",
+    "elements": 22,
+    "bounds": [
+      [
+        -5.0,
+        21.0
+      ],
+      [
+        0.0,
+        32.0
+      ],
+      [
+        -2.0,
+        28.0
+      ]
+    ],
+    "raw_height": 2.0,
+    "textures": [
+      {
+        "name": "parasite_mother.png",
+        "embedded": true,
+        "size": [
+          128,
+          128
+        ]
+      }
+    ],
+    "animations": [
+      "walk",
+      "idle"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/spiky-club-2.bbmodel",
+    "name": "twisted_remnant_soul",
+    "identifier": "扭曲的残魂",
+    "format": "free",
+    "elements": 56,
+    "bounds": [
+      [
+        -3.8,
+        3.8
+      ],
+      [
+        -2.2,
+        26.5
+      ],
+      [
+        -2.5,
+        2.2
+      ]
+    ],
+    "raw_height": 1.79375,
+    "textures": [
+      {
+        "name": "扭曲的残魂.png",
+        "embedded": true,
+        "size": [
+          64,
+          64
+        ]
+      }
+    ],
+    "animations": [
+      "struggle"
+    ],
+    "display": {}
+  },
+  {
+    "file": "/workspace/uploads/噬魂刀-2.bbmodel",
+    "name": "stardust_dagger",
+    "identifier": "stardust_dagger",
+    "format": "free",
+    "elements": 33,
+    "bounds": [
+      [
+        -6.94361,
+        6.94361
+      ],
+      [
+        -20.04465,
+        22.6
+      ],
+      [
+        -1.37,
+        1.37
+      ]
+    ],
+    "raw_height": 2.665290625,
+    "textures": [
+      {
+        "name": "stardust_dagger.png",
+        "embedded": true,
+        "size": [
+          256,
+          256
+        ]
+      }
+    ],
+    "animations": [],
+    "display": {}
+  }
+]

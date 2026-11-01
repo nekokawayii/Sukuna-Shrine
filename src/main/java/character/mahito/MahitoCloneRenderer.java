@@ -9,11 +9,11 @@ import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * 分身 / 尾巴渲染：玩家模型（默认 Steve 皮肤）。
+ * 分身 / 尾巴渲染：玩家模型（与真人本体共用自有皮肤）。
  * <p>尾巴（{@code tail} 标记）**不画模型**，只保留实体做伤害结算。</p>
  */
 public final class MahitoCloneRenderer extends MobRenderer<MahitoCloneEntity, PlayerModel<MahitoCloneEntity>> {
-    private static final ResourceLocation SKIN = new ResourceLocation("minecraft", "textures/entity/player/wide/steve.png");
+    private static final ResourceLocation SKIN = new ResourceLocation("sukuna", "textures/entity/mahito_npc.png");
 
     public MahitoCloneRenderer(EntityRendererProvider.Context context) {
         super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false), 0.5f);

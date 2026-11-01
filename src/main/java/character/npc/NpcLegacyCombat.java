@@ -21,6 +21,7 @@ public final class NpcLegacyCombat {
     }
     public static boolean pay(Mob mob,double cost,boolean domain){
         if(DomainClash.active(mob)||DomainClash.stunned(mob)
+            ||mob.getPersistentData().getLong("TenkaSeveredUntil")>mob.level().getGameTime()
             ||mob.getPersistentData().getLong("NpcLegacyPenaltyUntil")>mob.level().getGameTime()
             ||mob.getPersistentData().getLong("NpcLegacyBurnout")>mob.level().getGameTime()
             ||domain&&!domainReady(mob))return false;
@@ -29,6 +30,7 @@ public final class NpcLegacyCombat {
         return true;
     }
     public static void burnout(Mob mob){
+        if(cn.blockforge.generated.nnnnr1201forge2.TechniqueSeverance.severing())return; // 天逆蛑只封 3 秒，不追加 2 分钟
         mob.getPersistentData().putLong("NpcLegacyBurnout",mob.level().getGameTime()+2400);
         mob.getPersistentData().putLong("NpcLegacyRepairAt",mob.level().getGameTime()+NpcBattleRules.REPAIR_DELAY);
     }

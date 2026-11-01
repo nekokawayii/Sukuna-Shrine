@@ -53,6 +53,7 @@ public final class CharacterCasting {
 
     /** 以指定角色身份施放其自定义技能（乙骨复制来的漏壶术式走这里）。 */
     public static boolean castAs(ServerPlayer p,String role,int id,int rank){
+        if(Curse.severed(p))return false;
         var def=CharacterRegistry.get(role);
         if(def==null)return false;
         if(character.mainline.Mainline.domainSkill(def.id(),id)&&!character.mainline.Mainline.requireDomain(p))return false;
@@ -82,7 +83,7 @@ public final class CharacterCasting {
         }
         if(character.mainline.Mainline.domainSkill(p,id)&&!character.mainline.Mainline.requireDomain(p))return;
         var definition=CharacterService.selected(p);
-        if(definition==null)return;
+        if(definition==null||Curse.severed(p))return;
         if(!CharacterService.allowsSkill(p,id)){
             p.sendSystemMessage(Component.literal("无法施放：技能"+id+" 未解锁（"+definition.name()+" 阶段"+CharacterService.rank(p)+"，需求"+definition.config().unlockChapter(id)+"，已注册"+(definition.config().skill(id)==null?"否":"是")+"）"));
             return;

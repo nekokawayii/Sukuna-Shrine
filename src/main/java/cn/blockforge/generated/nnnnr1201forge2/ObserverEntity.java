@@ -25,6 +25,11 @@ public class ObserverEntity extends Monster {
             var owner=((net.minecraft.server.level.ServerLevel)level()).getServer().getPlayerList().getPlayer(getPersistentData().getUUID("HighOwner"));
             if(owner==null||!ObserverRitual.active(owner)){discard();return;}
         }
+        if(!level().isClientSide&&tickCount%20==0){
+            // 保持过场站姿和无敌设定，只对闯入附近的敌对咒灵出手，不锁定玩家。
+            var target=level().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,getBoundingBox().inflate(12),e->CurseHostility.enemy(this,e)&&hasLineOfSight(e)).stream().min(java.util.Comparator.comparingDouble(this::distanceToSqr)).orElse(null);
+            if(target!=null){getLookControl().setLookAt(target,30,30);swing(net.minecraft.world.InteractionHand.MAIN_HAND);target.hurt(damageSources().indirectMagic(this,this),12);}
+        }
         setDeltaMovement(Vec3.ZERO);setNoGravity(true);setInvulnerable(true);
     }
     @Override public boolean hurt(DamageSource source,float amount){return false;}

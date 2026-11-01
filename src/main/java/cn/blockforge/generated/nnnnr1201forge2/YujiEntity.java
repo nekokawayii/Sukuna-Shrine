@@ -73,7 +73,7 @@ public class YujiEntity extends Monster {
     private void finish(int ticks){entityData.set(ACTION,0);entityData.set(AGE,0);double frequency=BossControl.value(this,"YujiFrequency",1);rest=Math.max(1,(int)Math.ceil(Math.max(5,ticks/2)/frequency));setDeltaMovement(0,getDeltaMovement().y,0);getNavigation().stop();}
     @Override public void tick(){
         super.tick();if(level().isClientSide||!isAlive()||SixfoldFinale.controlled(this))return;
-        if(familyMember){bar.setVisible(false);setTarget(null);getNavigation().stop();setDeltaMovement(0,getDeltaMovement().y,0);entityData.set(ACTION,0);return;}
+        if(familyMember){bar.setVisible(false);if(CurseHostility.defend(this))return;setTarget(null);getNavigation().stop();setDeltaMovement(0,getDeltaMovement().y,0);entityData.set(ACTION,0);return;}
         if(decoy()){tickDecoy();return;}
         if(weakness>0)weakness--;
         bar.setProgress(Math.max(0,Math.min(1,getHealth()/getMaxHealth())));bar.setName(Component.literal("虎杖残影 · "+(int)getHealth()+" / "+(int)getMaxHealth()+(weakness>0?" · 虚弱":"")));

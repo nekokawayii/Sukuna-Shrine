@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "sukuna:tainted_bone"
+    },
+    {
+      "item": "sukuna:tainted_bone"
+    },
+    {
+      "item": "sukuna:tainted_bone"
+    }
+  ],
+  "result": {
+    "item": "sukuna:deformed_bone",
+    "count": 1
+  }
+}

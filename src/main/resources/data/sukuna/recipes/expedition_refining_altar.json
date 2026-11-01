@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:obsidian"
+    },
+    {
+      "item": "minecraft:amethyst_block"
+    },
+    {
+      "item": "sukuna:seal_white"
+    }
+  ],
+  "result": {
+    "item": "sukuna:refining_altar",
+    "count": 1
+  }
+}

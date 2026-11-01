@@ -251,10 +251,13 @@ public final class ThousandMileChain {
         Session s = null;
         for (Session it : SESSIONS.values()) if (it.owner == p) s = it;
         if (s == null) return false;
-        Vec3 dest = s.target != null ? s.target.position() : s.anchor;
+        // 落点 = 万里之锁的「前端」（锁链首端/命中点），不是目标背后
+        Vec3 dest = s.tip;
+        if (dest == null) dest = s.target != null ? s.target.getBoundingBox().getCenter() : s.anchor;
         Vec3 dir = dest.subtract(p.position());
         if (dir.lengthSqr() < 1) return false;
-        Vec3 at = dest.subtract(dir.normalize().scale(1.6));
+        // 站在锁链前端靠玩家这一侧 0.6 格，避免直接叠进方块/生物里
+        Vec3 at = dest.subtract(dir.normalize().scale(0.6));
         p.teleportTo(at.x, at.y, at.z);
         p.setDeltaMovement(Vec3.ZERO);
         p.fallDistance = 0;

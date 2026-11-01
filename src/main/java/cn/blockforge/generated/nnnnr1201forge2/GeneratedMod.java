@@ -228,6 +228,7 @@ public final class GeneratedMod {
         // r218：死灭洄游规则系统（规则结算 + 刷新/敌对）
         MinecraftForge.EVENT_BUS.register(character.culling.CullingRules.class);
         MinecraftForge.EVENT_BUS.register(character.culling.CullingSpawns.class);
+        MinecraftForge.EVENT_BUS.register(character.culling.CullingExtras.class);
         Network.registerDrawing();
         MinecraftForge.EVENT_BUS.register(SlashForms.class);
         MinecraftForge.EVENT_BUS.register(DismantleMotion.class);

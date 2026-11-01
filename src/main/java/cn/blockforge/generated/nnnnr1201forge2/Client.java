@@ -301,6 +301,7 @@ public final class Client {
         if(e.kind()>=character.hakari.HakariFx.FIRST&&e.kind()<=character.hakari.HakariFx.LAST){HakariClient.receive(e);return;}
         boolean self=e.owner()==(Minecraft.getInstance().player==null?-1:Minecraft.getInstance().player.getId());
         if(e.kind()==620){if(self)character.culling.CullingRuleScreen.open((int)e.size(),e.life(),e.seed());return;}
+        if(e.kind()==621){if(self)character.culling.CullingClient.set((int)e.size());return;}
         if(e.kind()==300){if(self)character.mahito.TransfigureScreen.open((int)e.size());return;}
         if(e.kind()==308){return;}
         if(e.kind()==306){character.mahito.MahitoArmsClient.addHeld(e.owner(),(int)e.size(),e.life());return;}
@@ -410,7 +411,15 @@ public final class Client {
     }
     @SubscribeEvent public static void hud(RenderGuiEvent.Post e){
         Minecraft mc=Minecraft.getInstance();if(mc.player==null||mc.options.hideGui||ObserverClient.active()||(mc.screen instanceof SkillWheel||mc.screen instanceof character.CharacterWheel||mc.screen instanceof character.CharacterSelectionScreen||mc.screen instanceof WallOptionsScreen||mc.screen instanceof TenShadowsScreen||mc.screen instanceof DomainOptionsScreen||mc.screen instanceof RelationsScreen))return;
-        int h=mc.getWindow().getGuiScaledHeight(),w=mc.getWindow().getGuiScaledWidth();var g=e.getGuiGraphics();if(character.CharacterClient.hud(g))return;FreehandClient.hud(g);
+        int h=mc.getWindow().getGuiScaledHeight(),w=mc.getWindow().getGuiScaledWidth();var g=e.getGuiGraphics();
+        // 死灭洄游规则：剥夺感官的暗角 + 亡命之徒藏血条（盖住原版心眼）
+        if(character.culling.CullingClient.fog()){
+            for(int i=0;i<6;i++){int pad=i*10, a=0x0E000000;
+                g.fill(0,pad,w,pad+10,a);g.fill(0,h-pad-10,w,h-pad,a);
+                g.fill(pad,0,pad+10,h,a);g.fill(w-pad-10,0,w-pad,h,a);}
+        }
+        if(character.culling.CullingClient.hideHealth())g.fill(w/2-91,h-40,w/2+91,h-30,0xFF120A0A);
+        if(character.CharacterClient.hud(g))return;FreehandClient.hud(g);
         if(!progress.unlocked()){
             boolean holding=mc.player.getMainHandItem().is(ProgressionContent.MEMORY.get())||mc.player.getOffhandItem().is(ProgressionContent.MEMORY.get());
             boolean ice=mc.player.getMainHandItem().is(IceContent.MEMORY.get())||mc.player.getOffhandItem().is(IceContent.MEMORY.get());

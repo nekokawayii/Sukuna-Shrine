@@ -19,6 +19,13 @@ public final class GetoRenderer extends MobRenderer<GetoEntity, GetoRenderer.Mod
 
     @Override public ResourceLocation getTextureLocation(GetoEntity entity) { return SKIN; }
 
+    /** r219：死灭洄游「羂索的幻影」用半透明渲染（其余夏油杰保持不透明）。 */
+    @Override protected net.minecraft.client.renderer.RenderType getRenderType(GetoEntity entity, boolean visible, boolean translucent, boolean glowing) {
+        if (entity.getPersistentData().getBoolean("CullingPhantom"))
+            return net.minecraft.client.renderer.RenderType.entityTranslucent(SKIN);
+        return super.getRenderType(entity, visible, translucent, glowing);
+    }
+
     public static final class Model extends PlayerModel<GetoEntity> {
         Model() { super(LayerDefinition.create(PlayerModel.createMesh(CubeDeformation.NONE, false), 64, 64).bakeRoot(), false); }
 

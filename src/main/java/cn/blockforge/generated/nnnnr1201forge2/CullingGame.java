@@ -29,6 +29,7 @@ public final class CullingGame {
             return;
         }
         character.culling.CullingRules.onLeave(p);
+        character.culling.CullingExtras.onLeave(p);
         var n=ExpeditionProgress.data(p).getCompound("ExpeditionReturn");
         ResourceLocation id=ResourceLocation.tryParse(n.getString("Dim"));ServerLevel to=id==null?null:p.server.getLevel(ResourceKey.create(Registries.DIMENSION,id));if(to==null)to=p.server.overworld();
         BlockPos desired=n.contains("X")?BlockPos.containing(n.getDouble("X"),n.getDouble("Y"),n.getDouble("Z")):to.getSharedSpawnPos();

@@ -22,29 +22,45 @@ public class ManualScreen extends Screen {
         g.fill(x, y + h - 1, x + w, y + h, 0xFF7A5CFF);
         g.drawString(font, "咒术公开玩法手册", x + 8, y + 8, 0xFFFFE6A8, false);
         int left = 104;
-        for (int i = 0; i < ManualContent.SECTIONS.size(); i++) {
+        // 分类可能超过 16 个：用滚动窗口显示当前分类前后各 7 个
+        int total = ManualContent.SECTIONS.size();
+        int first = Math.max(0, Math.min(index - 7, total - 15));
+        int rows = Math.min(15, total);
+        for (int r = 0; r < rows; r++) {
+            int i = first + r;
+            if (i >= total) break;
             boolean sel = i == index;
-            g.fill(x + 4, y + 26 + i * 18, x + left - 4, y + 42 + i * 18, sel ? 0xFF3A2A66 : 0x00000000);
-            g.drawString(font, ManualContent.SECTIONS.get(i).title(), x + 8, y + 28 + i * 18,
+            g.fill(x + 4, y + 26 + r * 13, x + left - 4, y + 38 + r * 13, sel ? 0xFF3A2A66 : 0x00000000);
+            g.drawString(font, ManualContent.SECTIONS.get(i).title(), x + 8, y + 28 + r * 13,
                 sel ? 0xFFFFE6A8 : 0xFFB8A9E0, false);
         }
         g.fill(x + left - 2, y + 26, x + left - 1, y + h - 6, 0x66FFFFFF);
         int ty = y + 28;
-        for (String line : ManualContent.SECTIONS.get(index).lines()) {
+        var all = ManualContent.SECTIONS.get(index).lines();
+        int from = Math.min(scroll, Math.max(0, all.size() - 1));
+        for (String line : all.subList(from, all.size())) {
             for (var part : font.split(Component.literal(line), w - left - 10)) {
                 g.drawString(font, part, x + left + 4, ty, 0xFFE8E0FF, false);
                 ty += 11;
             }
             ty += 3;
+            if (ty > y + h - 20) break;
         }
         g.drawString(font, (index + 1) + " / " + ManualContent.SECTIONS.size() + "   滚轮翻页 · ESC 关闭",
             x + 8, y + h - 14, 0xFF9E90C8, false);
         super.render(g, mouseX, mouseY, partial);
     }
 
+    private int scroll;
+
     @Override public boolean mouseScrolled(double mx, double my, double delta) {
-        if (delta > 0) index = Math.max(0, index - 1);
-        else index = Math.min(ManualContent.SECTIONS.size() - 1, index + 1);
+        if (mx < width / 2 - 80) {   // 左侧：切分类
+            if (delta > 0) index = Math.max(0, index - 1);
+            else index = Math.min(ManualContent.SECTIONS.size() - 1, index + 1);
+            scroll = 0;
+        } else {                      // 右侧：滚动正文
+            scroll = Math.max(0, scroll + (delta > 0 ? -2 : 2));
+        }
         return true;
     }
 

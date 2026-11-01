@@ -42,7 +42,11 @@ public final class GuideBook {
         tag.putString("title", "游玩方法手册");
         tag.putString("author", "宿傩 · 伏魔御厨子");
         ListTag pages = new ListTag();
-        for (String page : PAGES) pages.add(StringTag.valueOf(page));
+        for (String page : PAGES) {
+            // 1.20.1 的书页是「JSON 文本组件」列表，直接塞纯字符串会解析失败 → 书页空白
+            pages.add(StringTag.valueOf("{\"text\":\"" + page.replace("\\", "\\\\")
+                .replace("\"", "\\\"") + "\"}"));
+        }
         tag.put("pages", pages);
         return stack;
     }

@@ -44,5 +44,15 @@ public class RitualJeiCategory implements IRecipeCategory<RitualRecipes.Recipe> 
         builder.addSlot(RecipeIngredientRole.OUTPUT, 138, 20).addItemStack(recipe.result());
     }
 
+    @Override public void draw(RitualRecipes.Recipe recipe, mezz.jei.api.gui.ingredient.IRecipeSlotsView slots,
+                               net.minecraft.client.gui.GuiGraphics g, double mouseX, double mouseY) {
+        var font = net.minecraft.client.Minecraft.getInstance().font;
+        String time = "耗时 " + (recipe.ticks() / 20) + " 秒";
+        String tier = recipe.tier() == 0 ? "层级 一" : recipe.tier() == 1 ? "层级 二" : "层级 三";
+        g.drawString(font, time, 2, 46, 0xFF404040, false);
+        g.drawString(font, tier, 82, 46, 0xFF404040, false);
+        if (recipe.blueprint()) g.drawString(font, "需图纸", 2, 54, 0xFF8B0000, false);
+    }
+
     public static List<RitualRecipes.Recipe> all() { return RitualRecipes.ALL; }
 }

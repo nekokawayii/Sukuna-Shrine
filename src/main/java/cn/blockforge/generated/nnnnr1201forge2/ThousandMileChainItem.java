@@ -24,7 +24,7 @@ public final class ThousandMileChainItem extends Item {
         return stack.hasTag() ? ItemStack.of(stack.getTag().getCompound(ATTACHMENT)) : ItemStack.EMPTY;
     }
     public static boolean armed(ItemStack stack) { return isSpear(attachment(stack)); }
-    public static boolean isSpear(ItemStack stack) { return stack.is(Content.TENKA_SPEAR.get()) || stack.is(Content.TENKA.get()); }
+    public static boolean isSpear(ItemStack stack) { return stack.is(Content.TENKA_SPEAR.get()); }
 
     public static void configure(ServerPlayer p) {
         ItemStack chain = p.getMainHandItem();

@@ -39,7 +39,7 @@ public final class RitualRecipes {
         add("blood_armor",1,72000,"blood_armor",1,false,"minecraft:iron_chestplate",1,"mutant_gland",6,"curse_flesh",8,"residue_high",3);
         add("poison",1,72000,"poison_coating",4,false,"mutant_gland",4,"curse_flesh",2,"residue_high",2);
         add("incarnation",1,72000,"incarnation_reagent",1,false,"soul_molt",1,"kenjaku_thread",2,"curse_flesh",4,"residue_high",3);
-        add("tenka",2,240,"sukuna:tenka",1,true,"heavenly_bone",1,"tenka_fragment",3,"star_curse_core",1,"jujutsu_alloy",8,"residue_high",9);
+        add("tenka",2,240,"sukuna:tenka_spear",1,true,"heavenly_bone",1,"tenka_fragment",3,"star_curse_core",1,"jujutsu_alloy",8,"residue_high",9);
         add("soul_blade",2,240,"soul_splitter",1,true,"heavenly_bone",1,"soul_echo",8,"star_curse_core",1,"jujutsu_alloy",8,"residue_high",9);
         add("playful_cloud",2,240,"sukuna:yuyun",1,true,"heavenly_bone",1,"playful_cloud_parts",3,"star_curse_core",1,"jujutsu_alloy",8,"residue_high",9);
         add("ultimate",2,240,"ultimate_scroll",1,false,"star_curse_core",1,"volcanic_core",1,"seal_gold",3,"residue_high",9);

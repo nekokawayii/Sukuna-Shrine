@@ -289,6 +289,7 @@ public final class Client {
     public static void collectSlashes(Vec3 center,double radius,List<Vec3> out){visuals.removeIf(v->{if(!slashEffect(v.e.kind()))return false;Vec3 at=v.e.position();if(at.distanceToSqr(center)>radius*radius)return false;if(out.size()<6000)out.add(at);PhotonBridge.stop(v.handle);return true;});}
     public static void slashShake(){shakeUntil=Math.max(shakeUntil,tick+3);}
     public static void receive(Network.Effect e){
+        if(e.kind()==ManualContent.EFFECT_OPEN){Minecraft.getInstance().setScreen(new ManualScreen());return;}
         if(e.kind()==970){RitualClient.lightning(e);return;}
         if(e.kind()>=character.mahito.MahitoCombat.TOUCH&&e.kind()<=character.mahito.MahitoCombat.PUPPET){character.mahito.MahitoVisuals.receive(e);return;}
         if(e.kind()>=character.kashimo.KashimoFx.FIRST&&e.kind()<=character.kashimo.KashimoFx.LAST){KashimoVisuals.receive(e);return;}

@@ -1,0 +1,8 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. See https://docs.gradle.org/8.1.1/userguide/gradle_daemon.html#sec:disabling_the_daemon.
+Daemon will be stopped at the end of the build 
+
+> Configure project :
+Directory 'C:\Users\Administrator\Desktop\sukuna-Shrine\sukuna-Shrine\opt\jdks\java-25' (system property 'org.gradle.java.installations.paths') used for java installations does not exist
+Directory 'C:\Users\Administrator\Desktop\sukuna-Shrine\sukuna-Shrine\usr\lib\jvm\java-21-openjdk-amd64' (system property 'org.gradle.java.installations.paths') used for java installations does not exist
+Directory 'C:\Users\Administrator\Desktop\sukuna-Shrine\sukuna-Shrine\opt\jdks\java-8' (system property 'org.gradle.java.installations.paths') used for java installations does not exist
+Directory 'C:\Users\Administrator\Desktop\sukuna-Shrine\sukuna-Shrine\opt\jdks\java-17' (system property 'org.gradle.java.installations.paths') used for java installations does not exist

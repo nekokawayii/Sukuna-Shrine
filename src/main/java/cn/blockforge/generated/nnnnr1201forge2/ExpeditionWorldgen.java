@@ -59,14 +59,14 @@ public final class ExpeditionWorldgen {
         @Override public Holder<Biome> getNoiseBiome(int x,int y,int z,Climate.Sampler sampler){
             Holder<Biome> original=base.getNoiseBiome(x,y,z,sampler);String id=original.unwrapKey().map(k->k.location().getPath()).orElse("");
             if(id.contains("ocean")||id.contains("river")||id.contains("cave")||id.equals("deep_dark")||id.contains("beach"))return original;
-            // 一个候选格为384格，每个格仅18%机会出现一小片半径48–80格的诅咒群系。
+            // 一个候选格为384格，每个格 18% 机会出现一小片诅咒群系（r202 起半径 84–140 格，面积约 3 倍）。
             // Climate噪声作为种子扰动：同一世界稳定，不强行改写正常河流、海洋或洞穴。
             int cellX=Math.floorDiv(x,96),cellZ=Math.floorDiv(z,96);
             var climate=sampler.sample(cellX*96+48,16,cellZ*96+48);
             long hash=mix(cellX*341873128712L+cellZ*132897987541L+climate.temperature()*31+climate.weirdness()*17+climate.erosion());
             if(Math.floorMod(hash,100)>=18)return original;
             int centerX=cellX*96+24+(int)Math.floorMod(hash>>>8,48),centerZ=cellZ*96+24+(int)Math.floorMod(hash>>>16,48);
-            int radius=12+(int)Math.floorMod(hash>>>24,9);double dx=x-centerX,dz=z-centerZ;
+            int radius=21+(int)Math.floorMod(hash>>>24,14);double dx=x-centerX,dz=z-centerZ;
             if(dx*dx+dz*dz<=radius*radius)return added.get((int)Math.floorMod(hash>>>32,4));
             return original;
         }

@@ -42,6 +42,15 @@ public class SukunaNpcEntity extends PathfinderMob {
 
     @Override public boolean removeWhenFarAway(double distance) { return false; }
 
+    /** 从死亡边缘复活（咒胎受肉体用）：清死亡/受击状态并回满血。 */
+    public void reviveFromDeath(double hp) {
+        dead = false;
+        deathTime = 0;
+        hurtTime = 0;
+        invulnerableTime = 20;
+        setHealth((float) Math.max(1.0, hp));
+    }
+
     /** 进入「原身形态」：换皮肤 + 血量（由 {@link SukunaNpcTrueForm} 在受击流程里调用）。 */
     public void enterTrueForm() {
         if (getPersistentData().getBoolean("SukunaTrueForm")) return;

@@ -2,20 +2,21 @@ package cn.blockforge.generated.nnnnr1201forge2;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.entity.living.LivingDamageEvent;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 /**
- * 宿傩 NPC「原身形态」的触发（r271）。
+ * 宿傩 NPC「咒胎受肉体」多条命（r273）。
  *
- * <p>关键：**不能让这一击把它打死**。先把伤害压到"只掉到 1 点血"，等伤害结算完
- * （{@link LivingDamageEvent}）再变身回满；否则实体会进入死亡动画，
- * 我们中途 setHealth 只会把它变成"半死不死、一直抽搐的红色实体"。
+ * <p>不再用"锁一血"：让他**正常被打死**，在 {@link LivingDeathEvent} 里取消死亡并复活。
+ * 每死一次烧一条命（{@link #LIVES} 条，可调），全部烧光后这次死亡改成**进入原身形态**。
+ *
+ * <p>Forge 的 {@code LivingEntity#die} 会先 fire 这个事件、被取消就直接 return，
+ * 因此不会掉战利品、不会进死亡动画；随后手工把血量/死亡状态清干净即可。
  */
 public final class SukunaNpcTrueForm {
-    /** 咒胎受肉体：几条命（可调）。耗光最后一条命后才变成原身形态。 */
+    /** 咒胎受肉体：几条命（可调）。 */
     public static final int LIVES = 5;
 
     private static int lives(SukunaNpcEntity npc) {
@@ -25,25 +26,15 @@ public final class SukunaNpcTrueForm {
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void clamp(LivingHurtEvent e) {
+    public static void death(LivingDeathEvent e) {
         if (!(e.getEntity() instanceof SukunaNpcEntity npc) || npc.level().isClientSide) return;
-        if (npc.getPersistentData().getBoolean("SukunaTrueForm")) return;
-        float after = npc.getHealth() - e.getAmount();
-        if (after <= 1.0f) e.setAmount(Math.max(0.0f, npc.getHealth() - 1.0f));
-    }
-
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void transform(LivingDamageEvent e) {
-        if (!(e.getEntity() instanceof SukunaNpcEntity npc) || npc.level().isClientSide) return;
-        if (npc.getHealth() > 1.0f || npc.getPersistentData().getBoolean("SukunaTrueForm")) return;
+        var d = npc.getPersistentData();
+        if (d.getBoolean("SukunaTrueForm")) return; // 已经是原身，不再有命
         int left = lives(npc);
         if (left > 0) {
-            // 咒胎受肉体：先烧掉一条命，回满继续打
-            npc.getPersistentData().putInt("SukunaLives", left - 1);
-            npc.deathTime = 0;
-            npc.hurtTime = 0;
-            npc.invulnerableTime = 10;
-            npc.setHealth(npc.getMaxHealth());
+            d.putInt("SukunaLives", left - 1);
+            e.setCanceled(true);
+            npc.reviveFromDeath(npc.getMaxHealth());
             npc.level().playSound(null, npc.blockPosition(), net.minecraft.sounds.SoundEvents.WITHER_HURT,
                 net.minecraft.sounds.SoundSource.HOSTILE, 1.2f, .8f);
             if (npc.getTarget() instanceof ServerPlayer sp) {
@@ -52,7 +43,8 @@ public final class SukunaNpcTrueForm {
             }
             return;
         }
-        // 最后一条命也没了 → 原身形态
+        // 最后一条命也没了 → 这次死亡变成原身显现
+        e.setCanceled(true);
         npc.enterTrueForm();
         if (npc.getTarget() instanceof ServerPlayer sp) {
             sp.sendSystemMessage(Component.literal("两面宿傩 · 原身显现")

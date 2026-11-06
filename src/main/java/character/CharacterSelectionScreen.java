@@ -21,19 +21,25 @@ public final class CharacterSelectionScreen extends Screen {
     private static final Map<String, Integer> CATEGORY = new LinkedHashMap<>();
 
     static {
-        for (String id : new String[]{"gojo", "yuji", "megumi", "yuta", "nanami", "higuruma", "todo", "hakari", "ryu"}) {
+        // 高专
+        for (String id : new String[]{"gojo", "yuji", "megumi", "yuta", "nanami", "todo", "hakari", "yuki"}) {
             CATEGORY.put(id, 0);
         }
-        for (String id : new String[]{"toji", "naoya", "uraume", "kashimo"}) {
+        // 诅咒师（r286：宿傩也归这里）
+        for (String id : new String[]{"uraume", "sukuna"}) {
             CATEGORY.put(id, 1);
         }
+        // 咒灵
         for (String id : new String[]{"jogo", "mahito", "blood"}) {
             CATEGORY.put(id, 2);
         }
-        // 其余（sukuna / domainking / 未来的新角色）统一进「其他」
+        // 其他（r286：石流龙/日车/直哉/甚尔/鹿紫云一 都移到其他）
+        for (String id : new String[]{"ryu", "higuruma", "naoya", "toji", "kashimo", "domainking"}) {
+            CATEGORY.put(id, 3);
+        }
     }
 
-    private static final int CARD_H = 26, CARD_GAP = 4, HEADER_H = 16, COLS = 3;
+    private static final int CARD_H = 26, CARD_GAP = 4, HEADER_H = 16, COLS = 2;
 
     private CharacterDefinition choice = CharacterClient.selected();
     private Button confirm;
@@ -47,7 +53,7 @@ public final class CharacterSelectionScreen extends Screen {
     @Override
     protected void init() {
         cards.clear();
-        int panel = Math.min(560, width - 16);
+        int panel = Math.min(640, width - 16);
         int left = (width - panel) / 2;
         var all = CharacterRegistry.all();
         // 先统计每类人数 → 算出可用高度，必要时压缩卡片
@@ -113,7 +119,7 @@ public final class CharacterSelectionScreen extends Screen {
         g.fill(0, 27, width, 28, 0xFF2C3A52);
         g.drawCenteredString(font, "咒 术 选 择 书", width / 2, 9, 0xFFFFE4B2);
 
-        int panel = Math.min(560, width - 16);
+        int panel = Math.min(640, width - 16);
         int left = (width - panel) / 2;
         int[] counts = new int[GROUPS.length];
         for (Object[] card : cards) counts[groupOf(((CharacterDefinition) card[4]).id())]++;

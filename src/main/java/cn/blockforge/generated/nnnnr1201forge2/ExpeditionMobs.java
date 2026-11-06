@@ -12,12 +12,19 @@ import net.minecraft.world.phys.*;
 public final class ExpeditionMobs {
     public static Mob spawn(ServerLevel l,BlockPos pos,String role,ServerPlayer target){
         if(l.getDifficulty()==Difficulty.PEACEFUL||!l.getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_DOMOBSPAWNING))return null;
-        EntityType<? extends Mob> type=switch(role){case "young_daitian","special_curse","failed_vessel"->Content.DAITIAN.get();case "renegade"->Content.NANAMI_NPC.get();case "kenjaku"->Content.GETO.get();case "naoya"->Content.NAOYA_NPC.get();case "toji_echo"->Content.TOJI_NPC.get();case "participant_ryu"->Content.RYU_NPC.get();case "participant_kashimo"->Content.KASHIMO_NPC.get();case "participant_mahito"->Content.MAHITO_NPC.get();default->Content.LOW_CURSE.get();};
+        EntityType<? extends Mob> type=switch(role){case "young_daitian","special_curse","failed_vessel"->Content.DAITIAN.get();case "renegade"->Content.NANAMI_NPC.get();case "kenjaku"->Content.GETO.get();case "naoya"->Content.NAOYA_NPC.get();case "toji_echo"->Content.TOJI_NPC.get();case "participant_ryu"->Content.RYU_NPC.get();case "participant_kashimo"->Content.KASHIMO_NPC.get();case "participant_mahito"->Content.MAHITO_NPC.get();
+        case "jogo"->Content.JOGO_NPC.get();case "uraume"->Content.URAUME_NPC.get();
+        case "choso"->Content.CHOSO.get();case "todo"->Content.TODO_NPC.get();
+        case "hakari"->Content.HAKARI_NPC.get();case "higuruma"->Content.HIGURUMA_NPC.get();
+        case "yuta"->Content.YUTA_NPC.get();case "yuki"->Content.YUKI_NPC.get();default->Content.LOW_CURSE.get();};
         Mob m=type==Content.LOW_CURSE.get()?CurseRoster.create(l,role.equals("ash_curse")?CurseCatalog.index("ashen_wraith"):role.equals("wraith")?CurseCatalog.index("bloody_ghost"):CurseCatalog.choose(l.random,role.equals("low_curse"))):type.create(l);if(m==null)return null;
         m.moveTo(pos.getX()+.5,pos.getY(),pos.getZ()+.5,0,0);
         if(!l.noCollision(m)||!l.getFluidState(pos).isEmpty()||!l.getBlockState(pos.below()).isSolidRender(l,pos.below()))return null;
         m.getPersistentData().putString("ExpeditionRole",role);
-        String name=switch(role){case "young_daitian"->"咒胎戴天 · 未成熟";case "renegade"->"高专叛逃术师";case "special_curse"->"特级咒灵";case "failed_vessel"->"受肉失败的特级怪物";case "kenjaku"->"羂索的分身";case "toji_echo"->"伏黑甚尔残影";case "ash_curse"->"灰烬咒灵";case "wraith"->"战场怨灵";case "mutant"->"变异咒灵";default->role.startsWith("participant")?"死灭回游参赛者":"低级咒灵";};
+        String name=switch(role){case "young_daitian"->"咒胎戴天 · 未成熟";case "renegade"->"高专叛逃术师";case "special_curse"->"特级咒灵";case "failed_vessel"->"受肉失败的特级怪物";case "kenjaku"->"羂索的分身";case "toji_echo"->"伏黑甚尔残影";case "ash_curse"->"灰烬咒灵";case "wraith"->"战场怨灵";case "mutant"->"变异咒灵";case "jogo"->"漏壶";case "uraume"->"里梅";case "choso"->"胀相";
+            case "todo"->"东堂葵";case "hakari"->"秤金次";case "higuruma"->"日车宽见";
+            case "yuta"->"乙骨忧太";case "yuki"->"九十九由基";
+            default->role.startsWith("participant")?"死灭回游参赛者":"低级咒灵";};
         if(!(m instanceof LowCurseEntity))m.setCustomName(Component.literal(name));
         double hp=switch(role){case "young_daitian"->70;case "low_curse","ash_curse","wraith"->32;case "mutant"->90;case "special_curse"->400;case "failed_vessel"->900;default->m.getMaxHealth();};
         if(!(m instanceof LowCurseEntity)){if(m.getAttribute(Attributes.MAX_HEALTH)!=null)m.getAttribute(Attributes.MAX_HEALTH).setBaseValue(hp);m.setHealth(m.getMaxHealth());}

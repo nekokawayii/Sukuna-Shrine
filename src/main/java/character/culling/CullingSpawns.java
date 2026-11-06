@@ -24,7 +24,10 @@ public final class CullingSpawns {
     public static final int CAP_SORCERER = 8, CAP_CURSE = 5, CAP_SUKUNA = 1;
     private static final double BASE_SORCERER_HP = 150, BASE_CURSE_HP = 90;
     private static final int WAVE = 8;
-    private static final String[] SORCERERS = {"participant_ryu", "participant_kashimo", "participant_mahito", "naoya", "kenjaku", "renegade", "toji_echo"};
+    // r283：把全部 NPC 都编进参赛者池（胀相/里梅/漏壶/东堂/秤/日车/乙骨/九十九由基）
+    private static final String[] SORCERERS = {"participant_ryu", "participant_kashimo", "participant_mahito",
+        "naoya", "kenjaku", "renegade", "toji_echo",
+        "jogo", "uraume", "choso", "todo", "hakari", "higuruma", "yuta", "yuki"};
     private static final String[] CURSES = {"mutant", "special_curse", "low_curse", "ash_curse", "wraith"};
     /** 波次计数：每触发一轮刷新 +1，用来抬高后续一波的数值。 */
     private static int WAVE_INDEX;

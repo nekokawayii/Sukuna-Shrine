@@ -24,7 +24,8 @@ public final class BossControl extends SavedData {
     // 五条悟固定 150000、魔虚罗固定 400000 原值（关闭模式按"固定值首领生命"比值生效），都不受控制器遗留值影响。
     private static String healthKey(LivingEntity boss){return boss instanceof GojoEntity||boss instanceof MahoragaEntity?null:boss instanceof YujiEntity?"YujiHealth":boss instanceof BuddhaEntity?"BuddhaHealth":null;}
     private static boolean managed(LivingEntity boss){return BossTargets.managed(boss);}
-    private static boolean excluded(LivingEntity boss){return boss instanceof GuardianEntity g&&g.friendly()||boss instanceof YujiEntity y&&(y.decoy()||y.familyMember())||boss instanceof MahoragaEntity m&&m.ally();} // 友方魔虚罗固定 800 血，不受控制面板缩放
+    private static boolean excluded(LivingEntity boss){return boss.getPersistentData().getBoolean("CullingBoss")
+        || boss instanceof GuardianEntity g&&g.friendly()||boss instanceof YujiEntity y&&(y.decoy()||y.familyMember())||boss instanceof MahoragaEntity m&&m.ally();} // 友方魔虚罗固定 800 血，不受控制面板缩放
     private static void resize(LivingEntity boss,double raw,boolean fill){
         var a=boss.getAttribute(Attributes.MAX_HEALTH);if(a==null)return;
         // 五条悟/魔虚罗等"固定值首领"走 BOSS_FIXED 列，其余首领走 BOSS 列；开启模式两列都是 1.0。

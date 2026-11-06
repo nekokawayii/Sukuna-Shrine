@@ -73,7 +73,7 @@ public final class CullingSpawns {
 
     /** Boss 级角色池：全部按"普通参赛者"处理（血量与泳者相同）。 */
     private static final String[] BOSS_NAMES = {
-        "五条悟", "虎杖残影", "伏黑惠", "魔虚罗", "即身佛", "咒胎戴天", "破碎真人", "羂索"
+        "五条悟", "虎杖残影", "伏黑惠", "即身佛", "咒胎戴天", "破碎真人", "羂索"
     };
 
     private static Mob createBoss(ServerLevel level, int pick) {
@@ -81,10 +81,9 @@ public final class CullingSpawns {
             case 0 -> cn.blockforge.generated.nnnnr1201forge2.VoidContent.GOJO.get().create(level);
             case 1 -> cn.blockforge.generated.nnnnr1201forge2.SoulContent.YUJI.get().create(level);
             case 2 -> cn.blockforge.generated.nnnnr1201forge2.SoulContent.MEGUMI.get().create(level);
-            case 3 -> cn.blockforge.generated.nnnnr1201forge2.VoidContent.MAHORAGA.get().create(level);
-            case 4 -> cn.blockforge.generated.nnnnr1201forge2.Content.BUDDHA.get().create(level);
-            case 5 -> cn.blockforge.generated.nnnnr1201forge2.Content.DAITIAN.get().create(level);
-            case 6 -> cn.blockforge.generated.nnnnr1201forge2.Content.BROKEN_MAHITO.get().create(level);
+            case 3 -> cn.blockforge.generated.nnnnr1201forge2.Content.BUDDHA.get().create(level);
+            case 4 -> cn.blockforge.generated.nnnnr1201forge2.Content.DAITIAN.get().create(level);
+            case 5 -> cn.blockforge.generated.nnnnr1201forge2.Content.BROKEN_MAHITO.get().create(level);
             default -> cn.blockforge.generated.nnnnr1201forge2.Content.GETO.get().create(level);
         };
     }

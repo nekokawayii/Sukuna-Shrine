@@ -110,6 +110,24 @@ public class SukunaNpcEntity extends PathfinderMob {
                 net.minecraft.sounds.SoundSource.HOSTILE, 1.1f, 1.2f);
         }
     }
+    /** r278：原身形态不吃击退，也不会被生物推挤。 */
+    @Override
+    public void knockback(double strength, double x, double z) {
+        if (getPersistentData().getBoolean("SukunaTrueForm")) return;
+        super.knockback(strength, x, z);
+    }
+
+    @Override
+    public void push(net.minecraft.world.entity.Entity entity) {
+        if (getPersistentData().getBoolean("SukunaTrueForm")) return;
+        super.push(entity);
+    }
+
+    @Override
+    public boolean isPushable() {
+        return !getPersistentData().getBoolean("SukunaTrueForm") && super.isPushable();
+    }
+
     /** 进入「原身形态」：换皮肤 + 血量（由 {@link SukunaNpcTrueForm} 在受击流程里调用）。 */
     public void enterTrueForm() {
         if (getPersistentData().getBoolean("SukunaTrueForm")) return;

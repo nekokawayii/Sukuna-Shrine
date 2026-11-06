@@ -231,6 +231,7 @@ public final class GeneratedMod {
         MinecraftForge.EVENT_BUS.register(character.culling.CullingExtras.class);
         MinecraftForge.EVENT_BUS.register(character.culling.CullingPerks.class);
         MinecraftForge.EVENT_BUS.register(character.culling.CullingEntry.class);
+        MinecraftForge.EVENT_BUS.register(character.culling.CullingGate.class);
         Network.registerDrawing();
         MinecraftForge.EVENT_BUS.register(SlashForms.class);
         MinecraftForge.EVENT_BUS.register(DismantleMotion.class);

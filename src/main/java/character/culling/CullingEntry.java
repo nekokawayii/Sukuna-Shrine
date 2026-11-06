@@ -21,7 +21,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  */
 public final class CullingEntry {
     /** 被迫卷入需要的主世界击杀数。 */
-    public static final int FORCED_KILLS = 60;
+    public static final int FORCED_KILLS = 660;
     /** 三选一带来的攻击加成（永久，固定 UUID）。 */
     private static final java.util.UUID ATK_UUID = java.util.UUID.fromString("7c1e0000-0000-4a00-9c00-00000000c001");
 
@@ -39,6 +39,7 @@ public final class CullingEntry {
         CompoundTag d = ExpeditionProgress.data(p);
         if (d.getBoolean("CullingRegistered")) return;
         d.putBoolean("CullingRegistered", true);
+        d.putInt("CullingStartBuff", index);
         switch (index) {
             case 0 -> {
                 var atk = p.getAttribute(Attributes.ATTACK_DAMAGE);
@@ -86,6 +87,28 @@ public final class CullingEntry {
         CompoundTag pd = ExpeditionProgress.data(p);
         pd.putInt("CullingPoints", pd.getInt("CullingPoints") + 50);
         p.sendSystemMessage(Component.literal("【称号】不情愿的参赛者 · 补偿积分 +50").withStyle(ChatFormatting.GOLD));
+    }
+
+    /** 死亡重生后属性会重建：把「暴力」的 +20% 重新挂上（退出结界也保留）。 */
+    @SubscribeEvent
+    public static void clone(net.minecraftforge.event.entity.player.PlayerEvent.Clone e) {
+        if (!e.isWasDeath() || !(e.getEntity() instanceof ServerPlayer p)) return;
+        applyViolence(p);
+    }
+
+    @SubscribeEvent
+    public static void login(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent e) {
+        if (e.getEntity() instanceof ServerPlayer p) applyViolence(p);
+    }
+
+    private static void applyViolence(ServerPlayer p) {
+        var d = ExpeditionProgress.data(p);
+        if (d.getInt("CullingStartBuff") != 0) return;   // 0 = 暴力
+        if (!d.getBoolean("CullingRegistered")) return;
+        var atk = p.getAttribute(Attributes.ATTACK_DAMAGE);
+        if (atk != null && atk.getModifier(ATK_UUID) == null)
+            atk.addPermanentModifier(new AttributeModifier(ATK_UUID, "死灭开局·暴力",
+                0.2, AttributeModifier.Operation.MULTIPLY_TOTAL));
     }
 
     private CullingEntry() { }

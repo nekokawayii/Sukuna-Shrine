@@ -19,7 +19,10 @@ public final class CullingGame {
         if(p.level().dimension().equals(DIM)){leave(p);return;}
         ServerLevel to=p.server.getLevel(DIM);if(to==null){p.sendSystemMessage(Component.literal("死灭回游空间尚未加载，请重新进入世界。"));return;}
         CompoundTag n=new CompoundTag();n.putString("Dim",p.level().dimension().location().toString());n.putDouble("X",p.getX());n.putDouble("Y",p.getY());n.putDouble("Z",p.getZ());ExpeditionProgress.data(p).put("ExpeditionReturn",n);
-        p.teleportTo(to,.5,65,-15.5,0,0);p.fallDistance=0;
+        // r251：先进 1024,1024 的初始登记室，右键木门才进城市
+        character.culling.CullingGate.ensureRoom(to);
+        var room=character.culling.CullingGate.spawnPos();
+        p.teleportTo(to,room.getX()+.5,room.getY()+1,room.getZ()+.5,0,0);p.fallDistance=0;
         character.culling.CullingEntry.onEntered(p);p.sendSystemMessage(Component.literal("进入512×512死灭回游结界。击杀参赛者得5分、咒灵得1分；每 100 分可按 shift+P 制定一条规则，定满 5 条才能脱离。中央通讯塔可兑换。"));
     }
     public static void leave(ServerPlayer p){
@@ -49,7 +52,9 @@ public final class CullingGame {
     }
     @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent e){
         if(e.phase!=TickEvent.Phase.END||!(e.player instanceof ServerPlayer p)||!p.level().dimension().equals(DIM)||p.isSpectator())return;
-        if(p.getX()< -255||p.getX()>254||p.getZ()< -255||p.getZ()>254||p.getY()<1||p.getY()>510){p.teleportTo(p.serverLevel(),.5,65,-15.5,p.getYRot(),p.getXRot());p.fallDistance=0;}
+        if((p.getX()< -255||p.getX()>254||p.getZ()< -255||p.getZ()>254||p.getY()<1||p.getY()>510)
+            &&!character.culling.CullingGate.inRoomArea(p.blockPosition())){
+            p.teleportTo(p.serverLevel(),.5,65,-15.5,p.getYRot(),p.getXRot());p.fallDistance=0;}
         // r220：旧刷怪逻辑已整体交给 CullingSpawns（这里原来还会把参赛者塞进同一个阵营队伍、
         // 关掉友伤，导致「参赛者之间强制敌对」不生效，且和 CullingSpawns 重复刷怪）。此处只保留边界检查。
     }

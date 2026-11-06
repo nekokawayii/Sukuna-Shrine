@@ -30,7 +30,7 @@ public final class RyuDomain {
     public static final int LIFE_TICKS = 600;       // 30 秒后自动收
     public static final int FIREWORK_INTERVAL = 10; // r241：每 0.5 秒一波烟花（一波两枚），节奏更密
     public static final int SHELL_MIN = 45, SHELL_MAX = 100;   // r240：爆开弹幕 45~100
-    public static final double SHELL_SPEED = 0.65, SHELL_DAMAGE = 0.5; // r243：单发弹幕伤害 6 → 0.5
+    public static final double SHELL_SPEED = 0.65, SHELL_DAMAGE = 0.05; // r244：单发弹幕伤害 0.05，无视护甲与减伤
     public static final int SHELL_LIFE = 60, SHELL_CAP = 1000;   // r241：节奏加密、上限按用户要求提到 1000
     public static final int COLOR_COUNT = 8;
 
@@ -315,9 +315,14 @@ public final class RyuDomain {
                 break;
             }
             if (hit != null) {
-                // r242：弹幕无视无敌帧——结算前后各清零一次，保证每秒多发的弹幕都能真的掉血
+                // r244：弹幕无视无敌帧 + 无视护甲/减伤——用 genericKill 伤害类型（自带 bypasses_armor /
+                // bypasses_resistance / bypasses_invulnerability），仍然把 owner 作为攻击者保留击杀归属。
                 hit.invulnerableTime = 0;
-                RyuCombat.hurtPublic(shell.level(), owner, hit, SHELL_DAMAGE);
+                var dmgType = shell.level().registryAccess()
+                    .registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE)
+                    .getHolderOrThrow(net.minecraft.world.damagesource.DamageTypes.GENERIC_KILL);
+                var source = new net.minecraft.world.damagesource.DamageSource(dmgType, owner, owner);
+                hit.hurt(source, (float) SHELL_DAMAGE);
                 hit.invulnerableTime = 0;
                 continue;
             }

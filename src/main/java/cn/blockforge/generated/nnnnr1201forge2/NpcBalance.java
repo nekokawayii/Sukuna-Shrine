@@ -54,6 +54,15 @@ public final class NpcBalance {
         if (base == null) return;
         var attribute = living.getAttribute(Attributes.MAX_HEALTH);
         if (attribute == null) return;
+        // r270：宿傩 NPC 已进入原身形态时，血量固定 300000/10000，不按普通表重置
+        if (living.getPersistentData().getBoolean("SukunaTrueForm")) {
+            double trueWant = BalanceRules.modpackMode() ? 300000.0 : 10000.0;
+            if (Math.abs(attribute.getBaseValue() - trueWant) > 0.5) {
+                attribute.setBaseValue(trueWant);
+                living.setHealth(living.getMaxHealth());
+            }
+            return;
+        }
         double want = BalanceRules.modpackMode() ? base * MODPACK_MULTIPLIER : base;
         if (Math.abs(attribute.getBaseValue() - want) > 0.5) {
             attribute.setBaseValue(want);

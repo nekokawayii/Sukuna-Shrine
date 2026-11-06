@@ -49,6 +49,10 @@ public class SukunaNpcEntity extends PathfinderMob {
         if (!level().isClientSide && getHealth() <= 1.0f
             && !getPersistentData().getBoolean("SukunaTrueForm")) {
             getPersistentData().putBoolean("SukunaTrueForm", true);
+            // r270：原身血量 整合包 300000 / 非整合包 10000
+            double trueHp = BalanceRules.modpackMode() ? 300000.0 : 10000.0;
+            var maxHp = getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+            if (maxHp != null) { maxHp.setBaseValue(trueHp); setHealth((float) trueHp); }
             level().playSound(null, blockPosition(), net.minecraft.sounds.SoundEvents.WITHER_SPAWN,
                 net.minecraft.sounds.SoundSource.HOSTILE, 1.2f, .6f);
             if (getTarget() instanceof net.minecraft.server.level.ServerPlayer sp)

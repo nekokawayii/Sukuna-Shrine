@@ -228,8 +228,7 @@ public final class Skills {
         times[5]=now+(long)Math.ceil(COOLDOWN[5]*SoulCombat.cooldown(p)*(Curse.active(p,"Siphon")?1.3:1)*(Curse.tier(p)>=4?0.8:1));
         if(Authority.instant(p)){openDomain(p);return;}
         seals.put(p.getUUID(),new Seal(p,SEAL_SHRINE));
-        // r268：原身形态展开领域不再僵直
-        if(!SukunaTrueForm.active(p))freeze(p);
+        freeze(p);
         fx(p,67,p.position(),Vec3.ZERO,Journey.nine(p)?1:0,1,0);SkillSounds.cast(p,5);
         pose(p,SEAL_SHRINE,ShrineRules.domainTicks(MaidBridge.isCaster(p))+ShrineRules.DOMAIN_OPEN_TICKS+400);
         CastFeedback.tell(p,"伏魔御厨子 · 结印中 · "+(ShrineRules.DOMAIN_FREEZE_TICKS/20)+" 秒无法移动 · 再按释放键取消");
@@ -286,7 +285,7 @@ public final class Skills {
             if(!seals.containsKey(seal.owner.getUUID()))continue;   // 本轮已被取消或放下
             ServerPlayer p=seal.owner;long now=seal.level.getGameTime(),age=now-seal.start;
             if(!valid(p,seal.level)){seals.remove(p.getUUID());unfreeze(p);pose(p,seal.type,0);continue;}
-            if(age<ShrineRules.DOMAIN_FREEZE_TICKS&&!SukunaTrueForm.active(p))freeze(p);   // 每刻重挂一次（幂等）
+            if(age<ShrineRules.DOMAIN_FREEZE_TICKS)freeze(p);   // 每刻重挂一次（幂等）
             else unfreeze(p);                                   // 3 秒后可以移动，手势保持
             if(seal.type==SEAL_VOID&&seal.midAt>0&&now>=seal.midAt){seal.midAt=0;SkillSounds.play(p,"gojo_domain_mid",SkillSounds.DOMAIN_VOLUME);}
             int openAt=seal.type==SEAL_VOID?ShrineRules.VOID_OPEN_TICKS:ShrineRules.DOMAIN_OPEN_TICKS;
@@ -573,8 +572,7 @@ public final class Skills {
         // 技能5「伏魔御厨子」不再按下即展开：走结印时间轴（按下=结印，再按=取消/放下），见 domainPress。
         if(skill==5){domainPress(p);return;}
         // 结印期间不能释放其它术式：玩家侧由 TechniqueInput 拦，这里再兜住女仆 AI 等直连入口。
-        // r268：原身形态可以同时释放两个术式（不受结印互斥限制）
-        if(sealing(p)&&!SukunaTrueForm.active(p))return;
+        if(sealing(p))return;
         // 简易领域接管期间（维持中或它的冷却中）不走通用冷却：这条技不属于宿傩六式那套 times[] 冷却。
         if(SimpleDomain.owns(p)||FurnaceMax.active(p))return;
         if(!Curse.canUseTechnique(p)){p.displayClientMessage(Component.literal("术式熔断中：只能使用术式反转或修复熔断"),true);return;}
@@ -582,7 +580,7 @@ public final class Skills {
         if(skill==2&&Curse.fingers(p)<5){p.displayClientMessage(Component.literal("捌需要先吃下5根宿傩手指"),true);return;}
         if(skill==2&&auras.containsKey(p.getUUID())&&!VoidJourney.evolved(p)&&!MaidBridge.body(p).isShiftKeyDown()){auras.remove(p.getUUID());fx(p,9,p.position(),Vec3.ZERO,0,0,0);return;}
         if(SoulCombat.suppressed(p)){p.displayClientMessage(Component.literal("灵魂剥离或灵魂压制中，无法使用术式"),true);return;}
-        if(now<times[skill]&&!SukunaTrueForm.active(p)){
+        if(now<times[skill]){
             SdLog.w("通用冷却拦截 skill="+skill+"("+NAMES[skill]+") 剩="+String.format(Locale.ROOT,"%.2f",(times[skill]-now)/20.0)+"秒 领域接管="+SimpleDomain.owns(p)+" 维持中="+SimpleDomain.active(p));
             p.displayClientMessage(Component.literal(NAMES[skill]+" 冷却中 · "+String.format(Locale.ROOT,"%.1f",(times[skill]-now)/20.0)+" 秒"),true);return;}
         boolean awakened=Curse.awakened(p);int tier=Curse.tier(p);double scale=Curse.scale(p);

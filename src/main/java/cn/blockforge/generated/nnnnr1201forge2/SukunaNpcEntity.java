@@ -41,4 +41,19 @@ public class SukunaNpcEntity extends PathfinderMob {
     }
 
     @Override public boolean removeWhenFarAway(double distance) { return false; }
+
+    /** r269：被打到 1 血后进入「原身形态」（换皮肤，一次性）。 */
+    @Override
+    public void tick() {
+        super.tick();
+        if (!level().isClientSide && getHealth() <= 1.0f
+            && !getPersistentData().getBoolean("SukunaTrueForm")) {
+            getPersistentData().putBoolean("SukunaTrueForm", true);
+            level().playSound(null, blockPosition(), net.minecraft.sounds.SoundEvents.WITHER_SPAWN,
+                net.minecraft.sounds.SoundSource.HOSTILE, 1.2f, .6f);
+            if (getTarget() instanceof net.minecraft.server.level.ServerPlayer sp)
+                sp.sendSystemMessage(net.minecraft.network.chat.Component.literal("两面宿傩 · 原身显现")
+                    .withStyle(net.minecraft.ChatFormatting.DARK_RED));
+        }
+    }
 }

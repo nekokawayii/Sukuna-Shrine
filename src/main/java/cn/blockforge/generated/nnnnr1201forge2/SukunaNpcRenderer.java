@@ -10,10 +10,16 @@ import net.minecraft.resources.ResourceLocation;
 public final class SukunaNpcRenderer extends MobRenderer<SukunaNpcEntity, PlayerModel<SukunaNpcEntity>> {
     private static final ResourceLocation SKIN =
         new ResourceLocation("sukuna", "textures/entity/sukuna_npc.png");
+    /** r269：被打到 1 血后的「原身形态」皮肤。 */
+    private static final ResourceLocation TRUE_FORM =
+        new ResourceLocation("sukuna", "textures/entity/sukuna_true_form.png");
 
     public SukunaNpcRenderer(EntityRendererProvider.Context context) {
         super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false), 0.5f);
     }
 
-    @Override public ResourceLocation getTextureLocation(SukunaNpcEntity entity) { return SKIN; }
+    @Override public ResourceLocation getTextureLocation(SukunaNpcEntity entity) {
+        // r269：被打到 1 血后进入「原身形态」，换用原身皮肤
+        return entity.getPersistentData().getBoolean("SukunaTrueForm") ? TRUE_FORM : SKIN;
+    }
 }

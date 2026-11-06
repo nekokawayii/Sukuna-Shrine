@@ -324,6 +324,20 @@ public final class CullingRules {
         p.sendSystemMessage(Component.literal("【卡池刷新】消耗 "+REROLL_COST+" 分，重新抽取 5 条规则。").withStyle(ChatFormatting.AQUA));
     }
 
+    /** 免分随机给一条尚未制定的规则（开局三选一用）。 */
+    public static boolean freeRule(ServerPlayer p){
+        List<Integer> pool=new ArrayList<>();
+        for(int i=0;i<ALL.size();i++)if(!has(p,ALL.get(i).id()))pool.add(i);
+        if(pool.isEmpty())return false;
+        Rule rule=ALL.get(pool.get(p.getRandom().nextInt(pool.size())));
+        int n=picked(p);
+        ruleData(p).putString(OPTION+n,rule.id());
+        ruleData(p).putInt(COUNT,n+1);
+        p.sendSystemMessage(Component.literal("【规则生效】"+rule.name()+" · "+rule.desc()).withStyle(ChatFormatting.LIGHT_PURPLE));
+        applyModifiers(p);
+        return true;
+    }
+
     public static void choose(ServerPlayer p,int index){
         if(!inDimension(p))return;
         int n=picked(p);

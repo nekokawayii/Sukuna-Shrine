@@ -32,6 +32,18 @@ public final class ExpeditionItem extends Item {
             case "soul_capture_bottle"->{if(!SoulEchoes.capture(p)){p.sendSystemMessage(Component.literal("附近5格内没有可捕集的金色灵魂光点。"));return InteractionResultHolder.fail(s);}consume(p,s,20);Journey.give(p,new ItemStack(ExpeditionContent.item("soul_echo")));}
             case "incarnation_reagent"->{ItemStack tool=p.getOffhandItem();if(!tool.isDamageableItem()){p.sendSystemMessage(Component.literal("把需要修复的武器或防具放副手。"));return InteractionResultHolder.fail(s);}tool.setDamageValue(0);consume(p,s,40);}
             case "culling_key"->{CullingGame.enter(p);p.getCooldowns().addCooldown(this,40);return InteractionResultHolder.success(s);}
+            case "kenjaku_invitation"->{
+                int pulled=0;
+                for(ServerPlayer other:p.serverLevel().getEntitiesOfClass(ServerPlayer.class,p.getBoundingBox().inflate(16),
+                        o->o!=p&&!o.isSpectator()&&!o.isCreative())){
+                    CullingGame.enter(other);pulled++;
+                }
+                CullingGame.enter(p);
+                p.sendSystemMessage(Component.literal("羂索的邀请函展开成一个黑色立方体——附近的 "+pulled+" 名玩家一起被拉入了死灭回游。"));
+                consume(p,s,40);
+                p.getCooldowns().addCooldown(this,40);
+                return InteractionResultHolder.success(s);
+            }
             case "reverse_injection"->{p.heal(p.getMaxHealth()*.5f);consume(p,s,40);}
             case "curse_concentrate"->{Curse.add(p,Curse.maximum(p));Curse.sync(p);p.addEffect(new MobEffectInstance(MobEffects.WEAKNESS,600,1));consume(p,s,40);}
             case "blood_sakura_wine"->{p.heal(p.getMaxHealth()*.6f);p.addEffect(new MobEffectInstance(MobEffects.BLINDNESS,100));consume(p,s,40);}

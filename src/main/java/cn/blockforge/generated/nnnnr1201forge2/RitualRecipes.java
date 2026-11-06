@@ -49,6 +49,8 @@ public final class RitualRecipes {
         add("culling_points",0,1200,"sukuna:culling_points",1,false,
             "tenka_fragment",8,"star_curse_core",4,"golden_relic",2,"curse_concentrate",4,"residue_high",6);
         // 同一批"特殊道具"全部改成祭坛专属（工作台配方已删）
+        add("kenjaku_invitation",2,300,"sukuna:kenjaku_invitation",1,false,
+            "residue_high",4,"ancient_talisman",2,"prison_fragment",2);
         add("void_key",1,2400,"sukuna:void_key",1,false,
             "tenka_fragment",4,"star_curse_core",3,"curse_crystal",6,"golden_relic",2,"residue_high",6);
         add("eternal_love",0,1200,"sukuna:eternal_love",1,false,

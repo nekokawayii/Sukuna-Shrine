@@ -19,7 +19,8 @@ public final class CullingGame {
         if(p.level().dimension().equals(DIM)){leave(p);return;}
         ServerLevel to=p.server.getLevel(DIM);if(to==null){p.sendSystemMessage(Component.literal("死灭回游空间尚未加载，请重新进入世界。"));return;}
         CompoundTag n=new CompoundTag();n.putString("Dim",p.level().dimension().location().toString());n.putDouble("X",p.getX());n.putDouble("Y",p.getY());n.putDouble("Z",p.getZ());ExpeditionProgress.data(p).put("ExpeditionReturn",n);
-        p.teleportTo(to,.5,65,-15.5,0,0);p.fallDistance=0;p.sendSystemMessage(Component.literal("进入512×512死灭回游结界。击杀参赛者得5分、咒灵得1分；每 100 分可按 shift+P 制定一条规则，定满 5 条才能脱离。中央通讯塔可兑换。"));
+        p.teleportTo(to,.5,65,-15.5,0,0);p.fallDistance=0;
+        character.culling.CullingEntry.onEntered(p);p.sendSystemMessage(Component.literal("进入512×512死灭回游结界。击杀参赛者得5分、咒灵得1分；每 100 分可按 shift+P 制定一条规则，定满 5 条才能脱离。中央通讯塔可兑换。"));
     }
     public static void leave(ServerPlayer p){
         if(!p.level().dimension().equals(DIM))return;

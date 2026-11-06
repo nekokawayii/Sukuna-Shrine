@@ -54,20 +54,17 @@ public final class UraumePalaceDomain {
     public static void open(ServerPlayer p) {
         if (active(p) || !(p.level() instanceof ServerLevel level)) return;
         BlockPos center = p.blockPosition();
-        // 施工清单：先地板（由内向外）→ 后双层球壳（由内向外）+ 内部清场 + 地下填充
-        List<BlockPos> plan = new ArrayList<>();
+        // r297：施工清单按"从脚下一层往上、同层由内向外"排序，2 秒（40 刻）铺完
+        List<BlockPos> plan = new java.util.ArrayList<>();
         int r = RADIUS;
-        for (int dy = -1; dy >= -1; dy--)
-            for (int h = 0; h <= r; h++)
-                for (int dx = -h; dx <= h; dx++) for (int dz = -h; dz <= h; dz++)
-                    if (dx * dx + dz * dz == h * h) plan.add(center.offset(dx, dy, dz));
-        for (int d = 0; d <= r; d++)
-            for (int dy = -r; dy <= r; dy++) {
-                for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {
-                    if (dx * dx + dy * dy + dz * dz != d * d) continue;
+        for (int dy = -2; dy <= r; dy++)
+            for (int dx = -r; dx <= r; dx++)
+                for (int dz = -r; dz <= r; dz++) {
+                    if (dx * dx + dy * dy + dz * dz > r * r) continue;
                     plan.add(center.offset(dx, dy, dz));
                 }
-            }
+        plan.sort(java.util.Comparator.comparingInt((BlockPos pos) -> pos.getY())
+            .thenComparingDouble((BlockPos pos) -> pos.distSqr(center)));
         JOBS.put(p.getUUID(), new Job(p.getUUID(), level, center, level.getGameTime() + TICKS,
             new HashMap<>(), plan, 0, new ArrayList<>(), 0, false, false));
         level.playSound(null, center, net.minecraft.sounds.SoundEvents.GLASS_PLACE,
@@ -141,8 +138,8 @@ public final class UraumePalaceDomain {
 
             // 施工阶段：固定锚点，记录原方块后再写入
             int done = 0;
-            boolean half = job.cursor * 2 >= job.build.size();
-            while (job.cursor < job.build.size() && done < BUILD_BATCH) {
+            int batch = Math.max(1, job.build.size() / 40);   // 2 秒铺完
+            while (job.cursor < job.build.size() && done < batch) {
                 BlockPos pos = job.build.get(job.cursor++);
                 BlockState old = level.getBlockState(pos);
                 if (old.getBlock() == Blocks.BEDROCK) continue;

@@ -79,6 +79,8 @@ public class SukunaNpcEntity extends PathfinderMob {
         // ① 神武解：10 秒冷却（r280），面前 30 格、半角 45° 的扇形雷击（基准 15 × 20 = 300 原值）
         if (getPersistentData().getLong("ShinbukeReadyAt") <= now) {
         getPersistentData().putLong("ShinbukeReadyAt", now + 200);
+        level().playSound(null, blockPosition(), net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_THUNDER,
+            net.minecraft.sounds.SoundSource.HOSTILE, 1.1f, 1.2f);
         for (LivingEntity t : level().getEntitiesOfClass(LivingEntity.class,
                 getBoundingBox().inflate(30), t -> t != this && t.isAlive()
                     && (t instanceof net.minecraft.world.entity.Mob || t instanceof Player))) {
@@ -97,6 +99,8 @@ public class SukunaNpcEntity extends PathfinderMob {
         // ② 飞天：10 秒冷却（r279）
         if (getPersistentData().getLong("HitenReadyAt") > now) return;
         getPersistentData().putLong("HitenReadyAt", now + 200);
+        level().playSound(null, blockPosition(), net.minecraft.sounds.SoundEvents.TRIDENT_RIPTIDE_3,
+            net.minecraft.sounds.SoundSource.HOSTILE, 1.1f, .8f);
         for (LivingEntity t : level().getEntitiesOfClass(LivingEntity.class,
                 getBoundingBox().inflate(40), t -> t != this && t.isAlive()
                     && (t instanceof net.minecraft.world.entity.Mob || t instanceof Player))) {
@@ -110,10 +114,6 @@ public class SukunaNpcEntity extends PathfinderMob {
                 t.teleportTo(t.getX() + pull.x, t.getY(), t.getZ() + pull.z);
             }
             if (t.position().distanceToSqr(position()) <= 225) NpcCombat.hurt(this, t, 20f);
-        }
-        if (level().getGameTime() % 20 == 0) {
-            level().playSound(null, blockPosition(), net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_THUNDER,
-                net.minecraft.sounds.SoundSource.HOSTILE, 1.1f, 1.2f);
         }
     }
     /** r278：原身形态不吃击退，也不会被生物推挤。 */

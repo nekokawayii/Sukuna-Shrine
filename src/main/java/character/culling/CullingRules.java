@@ -460,10 +460,16 @@ public final class CullingRules {
     private static void splitMob(Mob mob){
         if(!(mob.level() instanceof ServerLevel level))return;
         for(int i=0;i<2;i++){
-            Mob child=ExpeditionMobs.spawn(level,mob.blockPosition(),"low_curse",null);
+            // r232：分裂出来的也改成强化原版生物，不再生成自定义咒灵
+            Mob child=net.minecraft.world.entity.EntityType.ZOMBIE.create(level);
             if(child==null)return;
+            child.moveTo(mob.getX(),mob.getY(),mob.getZ(),mob.getYRot(),0);
+            level.addFreshEntity(child);
+            child.getPersistentData().putBoolean("CullingEnemy",true);
+            child.getPersistentData().putString("CullingKind","curse");
+            child.getPersistentData().putBoolean("CullingSummon",true);
             var hp=child.getAttribute(Attributes.MAX_HEALTH);
-            if(hp!=null){hp.setBaseValue(Math.max(4,hp.getBaseValue()*.3));child.setHealth(child.getMaxHealth());}
+            if(hp!=null){hp.setBaseValue(Math.max(4,mob.getMaxHealth()*.3));child.setHealth(child.getMaxHealth());}
         }
     }
     private static void spawnTreasure(ServerPlayer p){

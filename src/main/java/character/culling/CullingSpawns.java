@@ -62,8 +62,9 @@ public final class CullingSpawns {
         if (sorcerers < sorcererCap) spawn(level, SORCERERS, "sorcerer", Math.min(sorcererCap - sorcerers, elite ? 1 : 2), wave, elite, allowToji);
         // r227：界内会偶尔刷出五条悟 / 虎杖残影这类"大人物"，血量按普通泳者算
         if (level.random.nextFloat() < BOSS_CHANCE) spawnBoss(level, wave);
+        // r232：溢出规则也改刷强化原版生物（不再生成自定义咒灵实体）
         if (anyRule(level, "overflow") && level.getRandom().nextInt(3) == 0)
-            spawn(level, CURSES, "curse", 2, wave, false);
+            spawnVanilla(level, 2, wave, false);
         // 全员敌对
         for (Mob m : all) hostile(level, m);
         // 波次推进：每次触发刷新后记一次，每 8 个参赛者抬一档数值

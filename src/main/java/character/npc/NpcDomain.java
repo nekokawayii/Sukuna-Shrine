@@ -65,11 +65,6 @@ public final class NpcDomain {
         if (!(mob.level() instanceof ServerLevel level) || active(mob)) return;
         BlockPos center = mob.blockPosition();
         Job job = new Job(mob.getUUID(), level, center, level.getGameTime() + TICKS, style);
-        if (style == Style.ICE) {
-            // r288：霜天宫殿——把天空贴图与领域范围同步给客户端
-            Network.send(level, new Network.Effect(650, mob.getId(), Vec3.atCenterOf(center), Vec3.ZERO,
-                (float) Math.max(4, Math.min(64, radiusOverride)), TICKS, 0));
-        }
         int r = Math.max(4,Math.min(64,(int) Math.round(radiusOverride)));job.radius=r;
         character.domain.DomainSafety.watch(level,mob.getUUID(),Vec3.atCenterOf(center),r);
         // 施工计划：外壳球壳 + 地板（内部先清空气，保证是空地）
@@ -137,10 +132,6 @@ public final class NpcDomain {
 
     private static void close(UUID owner){
         Job job=JOBS.remove(owner);if(job==null)return;
-        if (job.style == Style.ICE) {
-            Network.send(job.level, new Network.Effect(650, owner.hashCode(), Vec3.atCenterOf(job.center),
-                Vec3.ZERO, 0f, 0, 0));
-        }
         job.terrain.close();
         character.domain.DomainSafety.release(job.level,owner,null);
     }

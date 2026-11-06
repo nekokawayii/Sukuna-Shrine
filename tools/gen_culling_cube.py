@@ -47,8 +47,9 @@ def tag_string(s):
 def tag_int(v): return struct.pack(">i", v)
 def tag_double(v): return struct.pack(">d", v)
 
-def payload_int_array(vals):
-    return struct.pack(">i", len(vals)) + b"".join(struct.pack(">i", v) for v in vals)
+def payload_int_list(vals):
+    # TAG_List 的 payload：元素类型(3=Int) + 长度 + 元素
+    return struct.pack(">b", 3) + struct.pack(">i", len(vals)) + b"".join(struct.pack(">i", v) for v in vals)
 
 out = bytearray()
 out += b"\x0a" + tag_string("")  # root compound, empty name
@@ -57,7 +58,7 @@ out += b"\x0a" + tag_string("")  # root compound, empty name
 out += b"\x03" + tag_string("DataVersion") + tag_int(3465)
 
 # size
-out += b"\x0b" + tag_string("size") + payload_int_array([S, S, S])
+out += b"\x09" + tag_string("size") + payload_int_list([S, S, S])
 
 # palette: list of compound {Name: string}
 out += b"\x09" + tag_string("palette") + b"\x0a" + struct.pack(">i", len(palette))
@@ -68,7 +69,7 @@ for name in palette:
 # blocks: list of compound {pos:[I], state:int}
 out += b"\x09" + tag_string("blocks") + b"\x0a" + struct.pack(">i", len(blocks))
 for x, y, z, state in blocks:
-    out += b"\x0b" + tag_string("pos") + payload_int_array([x, y, z])
+    out += b"\x09" + tag_string("pos") + payload_int_list([x, y, z])
     out += b"\x03" + tag_string("state") + tag_int(state)
     out += b"\x00"
 

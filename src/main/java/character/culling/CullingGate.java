@@ -113,34 +113,7 @@ public final class CullingGate {
         p.sendSystemMessage(Component.literal("木门之后，是 512×512 的废弃都市。").withStyle(ChatFormatting.RED));
     }
 
-    // ====================== 方式一：主世界的 48³ 黑色立方体（NBT 结构） ======================
-
-    private static final net.minecraft.resources.ResourceLocation CUBE =
-        new net.minecraft.resources.ResourceLocation("sukuna", "culling_cube");
-
-    /** 走进立方体的红色缝隙 → 拉进结界。结构由 worldgen 放置（极低概率），这里只做入口判定。 */
-    @SubscribeEvent
-    public static void touchCube(TickEvent.PlayerTickEvent e) {
-        if (e.phase != TickEvent.Phase.END || !(e.player instanceof ServerPlayer p)) return;
-        if (!p.level().dimension().equals(Level.OVERWORLD)) return;
-        if (p.tickCount % 10 != 0) return;
-        ServerLevel level = p.serverLevel();
-        var structure = level.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.STRUCTURE)
-            .get(CUBE);
-        if (structure == null) return;
-        var start = level.structureManager().getStructureAt(p.blockPosition(), structure);
-        if (start == null || !start.isValid()) return;
-        var box = start.getBoundingBox();
-        // 红缝在 +Z 面正中：只要人在缝前后 4 格、离地 8 格以内就算走进去
-        double dx = Math.abs(p.getX() - (box.minX() + box.maxX()) / 2.0 - 0.5);
-        double dz = Math.abs(p.getZ() - (box.maxZ() + 0.5));
-        double dy = p.getY() - box.minY();
-        if (dx > 4.5 || dz > 5.0 || dy < -1 || dy > 9) return;
-        p.sendSystemMessage(Component.literal("雪花噪点闪过，羂索的声音在耳边响起：「欢迎来到死灭回游，棋子。」")
-            .withStyle(ChatFormatting.DARK_RED));
-        level.playSound(null, p.blockPosition(), SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 1f, .7f);
-        CullingGame.enter(p);
-    }
+    // ====================== 方式一：立方体结界（入口由 CullingSeamBlock.entityInside 处理） ======================
 
     private CullingGate() { }
 }

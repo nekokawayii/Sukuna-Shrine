@@ -356,6 +356,12 @@ public final class Content {
         });
 
     /** 领域方块（石流龙打上花火的内壳材料）：六个面显示同一张图，image 0~7 切不同外观。 */
+    /** 立方体结界的红色缝隙：走进去就被拉进死灭洄游（r256）。 */
+    public static final RegistryObject<net.minecraft.world.level.block.Block> CULLING_SEAM =
+        YUTA_BLOCKS.register("culling_seam", () -> new CullingSeamBlock(
+            net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()
+                .noCollission().noOcclusion().strength(-1, 3600000f).lightLevel(s -> 15)));
+
     public static final RegistryObject<net.minecraft.world.level.block.Block> DOMAIN_SCREEN =
         YUTA_BLOCKS.register("domain_screen", () -> new DomainScreenBlock(
             net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()

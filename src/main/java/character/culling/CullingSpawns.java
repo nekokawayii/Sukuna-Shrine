@@ -38,6 +38,10 @@ public final class CullingSpawns {
         if (server.getTickCount() % 100 != 0) return;
         ServerLevel level = server.getLevel(CullingGame.DIM);
         if (level == null || level.players().isEmpty()) return;
+        // r256：所有玩家都在登记室（1024,1024）时不刷怪，登记室保持安全
+        boolean allInRoom = level.players().stream()
+            .allMatch(p -> CullingGate.inRoomArea(p.blockPosition()));
+        if (allInRoom) return;
         List<Mob> all = level.getEntitiesOfClass(Mob.class, new AABB(-256, 0, -256, 256, 512, 256),
             m -> m.isAlive() && m.getPersistentData().getBoolean("CullingEnemy"));
         int sukuna = 0, sorcerers = 0, curses = 0, toji = 0;
@@ -95,7 +99,8 @@ public final class CullingSpawns {
         for (Mob m : level.getEntitiesOfClass(Mob.class, new AABB(-256, 0, -256, 256, 512, 256),
             m -> m.isAlive() && m.getPersistentData().getBoolean("CullingBoss"))) return;
         if (level.players().isEmpty()) return;
-        ServerPlayer anchor = level.players().get(level.random.nextInt(level.players().size()));
+        ServerPlayer anchor = anchor(level);
+        if (anchor == null) return;
         BlockPos at = findSpot(level, anchor, level.random);
         if (at == null) return;
         int pick = level.random.nextInt(BOSS_NAMES.length);
@@ -132,7 +137,8 @@ public final class CullingSpawns {
         if (level.players().isEmpty()) return;
         int stage = Math.max(0, wave / WAVE);
         for (int i = 0; i < count; i++) {
-            ServerPlayer anchor = level.players().get(rnd.nextInt(level.players().size()));
+            ServerPlayer anchor = anchor(level);
+            if (anchor == null) continue;
             BlockPos at = findSpot(level, anchor, rnd);
             if (at == null) continue;
             net.minecraft.world.entity.EntityType<?> type = VANILLA[rnd.nextInt(VANILLA.length)];
@@ -162,7 +168,8 @@ public final class CullingSpawns {
         for (Mob m : level.getEntitiesOfClass(Mob.class, new AABB(-256, 0, -256, 256, 512, 256),
             m -> m.isAlive() && m.getPersistentData().getBoolean("CullingGeto"))) return;
         if (level.players().isEmpty()) return;
-        ServerPlayer anchor = level.players().get(level.random.nextInt(level.players().size()));
+        ServerPlayer anchor = anchor(level);
+        if (anchor == null) return;
         BlockPos at = findSpot(level, anchor, level.random);
         if (at == null) return;
         Mob mob = cn.blockforge.generated.nnnnr1201forge2.Content.CULLING_GETO.get().create(level);
@@ -189,7 +196,8 @@ public final class CullingSpawns {
     private static void spawn(ServerLevel level, String[] pool, String kind, int count, int wave, boolean elite, boolean allowToji) {
         var rnd = level.random;
         for (int i = 0; i < count; i++) {
-            ServerPlayer anchor = level.players().get(rnd.nextInt(level.players().size()));
+            ServerPlayer anchor = anchor(level);
+            if (anchor == null) continue;
             BlockPos at = findSpot(level, anchor, rnd);
             if (at == null) continue;
             String role = pool[rnd.nextInt(pool.length)];
@@ -231,7 +239,8 @@ public final class CullingSpawns {
     private static void spawnSukuna(ServerLevel level, int wave) {
         var type = Content.SUKUNA_NPC.get();
         if (type == null) return;
-        ServerPlayer anchor = level.players().get(level.random.nextInt(level.players().size()));
+        ServerPlayer anchor = anchor(level);
+        if (anchor == null) return;
         BlockPos at = findSpot(level, anchor, level.random);
         if (at == null) return;
         Mob mob = type.create(level);
@@ -274,6 +283,14 @@ public final class CullingSpawns {
         }
     }
 
+    /** 随机挑一个不在登记室的玩家当刷新锚点；没有就返回 null。 */
+    private static ServerPlayer anchor(ServerLevel level) {
+        var players = level.players().stream()
+            .filter(p -> !CullingGate.inRoomArea(p.blockPosition())).toList();
+        if (players.isEmpty()) return null;
+        return players.get(level.random.nextInt(players.size()));
+    }
+
     private static LivingEntity nearestPrey(ServerLevel level, Mob mob, double range) {
         LivingEntity best = null; double bestD = range * range;
         for (LivingEntity t : level.getEntitiesOfClass(LivingEntity.class, mob.getBoundingBox().inflate(range),
@@ -288,6 +305,7 @@ public final class CullingSpawns {
     private static boolean canPrey(ServerLevel level, Mob mob, LivingEntity t) {
         if (t == mob || !t.isAlive() || t.isSpectator() || t.level() != level) return false;
         if (t instanceof ServerPlayer sp && (sp.isCreative() || sp.isSpectator())) return false;
+        if (t instanceof ServerPlayer sp2 && CullingGate.inRoomArea(sp2.blockPosition())) return false;
         boolean prey = t instanceof ServerPlayer || t.getPersistentData().getBoolean("CullingEnemy");
         if (!prey) return false;
         if (mob.getPersistentData().getBoolean("CullingSummon") && t.getPersistentData().getBoolean("CullingGeto")) return false;

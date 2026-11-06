@@ -5,7 +5,7 @@ S = 48
 BLACK = "minecraft:black_concrete"
 GLASS = "minecraft:black_stained_glass"
 RED = "minecraft:red_concrete"
-palette = [BLACK, GLASS, RED]
+palette = [BLACK, GLASS, RED, "sukuna:culling_seam"]
 pidx = {n: i for i, n in enumerate(palette)}
 
 blocks = []
@@ -29,8 +29,8 @@ for dx in range(-2, 3):
         x, y, z = cx + dx, cy + dy, S - 1
         inside = abs(dx) <= 1 and 0 <= dy <= 2
         if inside:
-            # 空气：从块列表里删掉
-            blocks = [b for b in blocks if (b[0], b[1], b[2]) != (x, y, z)]
+            # 缝隙本体：可走进去的判定方块
+            put(x, y, z, "sukuna:culling_seam")
         else:
             put(x, y, z, RED)
 

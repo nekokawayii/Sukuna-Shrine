@@ -75,7 +75,10 @@ public class SukunaNpcEntity extends PathfinderMob {
         if (forward.lengthSqr() < 0.5) forward = getLookAngle();
         forward = forward.normalize();
 
-        // ① 神武解：面前 30 格、半角 45° 的扇形雷击（基准 15 × 20 = 300 原值）
+        long now = level().getGameTime();
+        // ① 神武解：10 秒冷却（r280），面前 30 格、半角 45° 的扇形雷击（基准 15 × 20 = 300 原值）
+        if (getPersistentData().getLong("ShinbukeReadyAt") <= now) {
+        getPersistentData().putLong("ShinbukeReadyAt", now + 200);
         for (LivingEntity t : level().getEntitiesOfClass(LivingEntity.class,
                 getBoundingBox().inflate(30), t -> t != this && t.isAlive()
                     && (t instanceof net.minecraft.world.entity.Mob || t instanceof Player))) {
@@ -90,8 +93,8 @@ public class SukunaNpcEntity extends PathfinderMob {
             }
         }
 
-        // ② 飞天：10 秒冷却（r279），神武解保持无冷却
-        long now = level().getGameTime();
+        }
+        // ② 飞天：10 秒冷却（r279）
         if (getPersistentData().getLong("HitenReadyAt") > now) return;
         getPersistentData().putLong("HitenReadyAt", now + 200);
         for (LivingEntity t : level().getEntitiesOfClass(LivingEntity.class,

@@ -47,7 +47,7 @@ public final class UraumeIce {
     public static void handPrison(Mob caster, LivingEntity target) {
         if (!(caster.level() instanceof ServerLevel level) || target == null) return;
         Vec3 at = target.position();
-        Network.send(level, new Network.Effect(BranchRules.FX_ICE, caster.getId(),
+        Network.send(level, new Network.Effect(UraumeFx.PRISON, caster.getId(),
             at.add(0, 2, 0), new Vec3(0, -1, 0), 5f, 40, 1));
         for (LivingEntity t : level.getEntitiesOfClass(LivingEntity.class, new AABB(at, at).inflate(4.5),
             t -> t != caster && t.isAlive() && t instanceof Mob)) {
@@ -74,7 +74,7 @@ public final class UraumeIce {
         LivingEntity target = caster.getTarget();
         Vec3 dir = target != null ? target.position().subtract(caster.position()).normalize() : caster.getLookAngle();
         Vec3 origin = caster.position().add(0, 1.0, 0);
-        Network.send(level, new Network.Effect(BranchRules.FX_ICE, caster.getId(), origin, dir, 20f, 30, 2));
+        Network.send(level, new Network.Effect(UraumeFx.DRAGON, caster.getId(), origin, dir, 20f, 30, 2));
         for (LivingEntity t : level.getEntitiesOfClass(LivingEntity.class,
             new AABB(origin, origin.add(dir.scale(20))).inflate(3.5),
             t -> t != caster && t.isAlive() && t instanceof Mob)) {
@@ -93,7 +93,7 @@ public final class UraumeIce {
     public static void iceAge(Mob caster) {
         if (!(caster.level() instanceof ServerLevel level)) return;
         Vec3 center = caster.position();
-        Network.send(level, new Network.Effect(BranchRules.FX_FROST, caster.getId(), center, Vec3.ZERO, 50f, 60, 9));
+        Network.send(level, new Network.Effect(UraumeFx.ICEAGE, caster.getId(), center, Vec3.ZERO, 50f, 60, 9));
         for (LivingEntity t : level.getEntitiesOfClass(LivingEntity.class, new AABB(center, center).inflate(ICE_AGE_RADIUS),
             t -> t != caster && t.isAlive() && t instanceof Mob)) {
             t.setTicksFrozen(ICE_AGE_FREEZE + 200);

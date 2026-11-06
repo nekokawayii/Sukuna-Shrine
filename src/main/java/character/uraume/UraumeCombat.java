@@ -18,7 +18,7 @@ public final class UraumeCombat {
         Vec3 aim = p.getEyePosition().add(p.getLookAngle().scale(12));
         switch (skill) {
             case UraumeSkills.PRISON -> {
-                Network.send(p.serverLevel(), new Network.Effect(BranchRules.FX_ICE, p.getId(),
+                Network.send(p.serverLevel(), new Network.Effect(UraumeFx.PRISON, p.getId(),
                     aim.add(0, 2, 0), new Vec3(0, -1, 0), 5f, 40, 1));
                 for (LivingEntity t : targets(p, aim, 4.5)) {
                     t.setTicksFrozen(240);
@@ -36,12 +36,12 @@ public final class UraumeCombat {
                         UraumeIce.addFrost(t, 1);
                     }
                 }
-                Network.send(p.serverLevel(), new Network.Effect(BranchRules.FX_FROST, p.getId(),
+                Network.send(p.serverLevel(), new Network.Effect(UraumeFx.STORM, p.getId(),
                     p.position(), Vec3.ZERO, 9f, 100, 3));
             }
             case UraumeSkills.DRAGON -> {
                 Vec3 dir = p.getLookAngle();
-                Network.send(p.serverLevel(), new Network.Effect(BranchRules.FX_ICE, p.getId(),
+                Network.send(p.serverLevel(), new Network.Effect(UraumeFx.DRAGON, p.getId(),
                     p.position().add(0, 1, 0), dir, 20f, 30, 2));
                 for (LivingEntity t : targets(p, p.position().add(dir.scale(10)), 12)) {
                     Vec3 d = t.position().subtract(p.position());
@@ -53,7 +53,7 @@ public final class UraumeCombat {
                 }
             }
             case UraumeSkills.ICEAGE -> {
-                Network.send(p.serverLevel(), new Network.Effect(BranchRules.FX_FROST, p.getId(),
+                Network.send(p.serverLevel(), new Network.Effect(UraumeFx.ICEAGE, p.getId(),
                     p.position(), Vec3.ZERO, 50f, 60, 9));
                 for (LivingEntity t : targets(p, p.position(), 50)) {
                     t.setTicksFrozen(400);

@@ -93,6 +93,13 @@ public final class BloodArts {
         if(s.charge>=0){if(in.skill()!=BloodRules.COMPRESS)cancelCharge(s);else return;}
         if(in.skill()==BloodRules.DOMAIN&&BloodDomain.active(p)){BloodDomain.close(p);return;}
         if(!usable(p)){tell(p,"赤血操术尚未解锁，或当前不能施术");return;}
+        if(in.skill()==BloodRules.WINGS&&s.wings>now){
+            // 再按一次收起（手动关闭）
+            s.wings=0;
+            if(p.getAbilities().mayfly&&!p.isCreative()){p.getAbilities().mayfly=false;p.onUpdateAbilities();}
+            tell(p,"翅王·收翼");
+            return;
+        }
         if(in.skill()==BloodRules.FLOW&&s.flow>now){s.flow=0;s.vision=false;attributes(s);return;}
         if(in.skill()==BloodRules.VISION){if(s.vision){s.vision=false;return;}if(s.flow<=now){tell(p,"先开启赤鳞跃动，再使用载");return;}}
         if(in.skill()==BloodRules.SENBON&&s.blade<=now){tell(p,"先开启血刃，再剥离为千本");return;}
@@ -126,12 +133,10 @@ public final class BloodArts {
             case BloodRules.NOVA -> {nova(p,origin,empowered);BloodExpansion.novaEchoes(p,origin,empowered);}
             case BloodRules.CANAL -> {var targets=near(p,origin,36+rank*4);targets.removeIf(t->!cone(origin,dir,t,.65)||!visible(p,origin,t));targets.sort(Comparator.<LivingEntity>comparingDouble(t->-t.getBoundingBox().getCenter().subtract(origin).normalize().dot(dir)).thenComparingDouble(t->t.distanceToSqr(origin)));canals.removeIf(c->c.p==p);s.marks.clear();for(LivingEntity t:targets.stream().limit(BloodRules.canalTargets(rank)).toList())if(canals.size()<512)canals.add(new Canal(p,t,origin));if(targets.isEmpty())tell(p,"运河没有找到准星附近的敌人");}
             case BloodRules.WINGS -> {
-                s.wings=now+BloodRules.duration(160,rank);
-                LivingEntity body=MaidBridge.body(p);
-                body.setDeltaMovement(body.getDeltaMovement().add(dir.scale(.7)).add(0,.7,0));
-                body.hurtMarked=true;
-                // r261：翅王期间可以飞
+                // r262：手动关闭、不强制移动，时长 60 秒
+                s.wings=now+1200;
                 if(p.getAbilities().mayfly==false){p.getAbilities().mayfly=true;p.onUpdateAbilities();}
+                tell(p,"翅王·展开（再按一次收起）");
             }
             case BloodRules.MIST -> {if(areas.size()<512)areas.add(new Area(p,p.serverLevel(),floor,now+BloodRules.duration(100,rank),9+rank*2,true));}
             case BloodRules.THORNS -> {Vec3 flat=new Vec3(dir.x,0,dir.z).normalize();if(flat.lengthSqr()<.1)flat=new Vec3(0,0,1);int lanes=7+rank*2;for(int lane=0;lane<lanes;lane++){Vec3 ray=flat.yRot((float)(-Math.PI/3+lane*(Math.PI*2/3)/(lanes-1)));for(int i=1;i<=5+rank&&thorns.size()<1024;i++)thorns.add(new Thorn(p,p.serverLevel(),ground(p,origin.add(ray.scale(i*1.7))),ray,now+i*2));}}
@@ -231,8 +236,10 @@ public final class BloodArts {
             if(s.charge>=0){if(now-s.heartbeat>40)cancelCharge(s);else if(now%4==0){fx(p,FX+2,p.getEyePosition().add(p.getLookAngle().scale(.65)),p.getLookAngle(),(float)Math.min(1,(now-s.charge)/(double)BloodRules.CHARGE_TICKS),8,0);pose(p,BloodRules.COMPRESS,10);}}
             if(s.shield>0&&now>=s.shieldEnd)s.shield=0;
             if(s.wings>now){
+                // r262：不再强制移动，只保证可飞与免摔
                 if(p.getAbilities().mayfly==false){p.getAbilities().mayfly=true;p.onUpdateAbilities();}
-                LivingEntity body=MaidBridge.body(p);Vec3 v=body.getDeltaMovement(),look=p.getLookAngle();Vec3 flight=new Vec3(v.x*.97+look.x*.045,0,v.z*.97+look.z*.045);if(flight.lengthSqr()>1)flight=flight.normalize();body.setDeltaMovement(flight.x,Math.max(v.y,-.09),flight.z);body.fallDistance=0;body.hurtMarked=true;if(now%6==0&&areas.size()<512){Vec3 at=ground(p,p.position());areas.add(new Area(p,s.level,at,now+80+rank(p)*20,1.4+rank(p)*.35,false));fx(p,FX_TRAIL,at,Vec3.ZERO,1.4f,80,0);}}
+                LivingEntity body=MaidBridge.body(p);body.fallDistance=0;
+                if(now%6==0&&areas.size()<512){Vec3 at=ground(p,p.position());areas.add(new Area(p,s.level,at,now+80+rank(p)*20,1.4+rank(p)*.35,false));fx(p,FX_TRAIL,at,Vec3.ZERO,1.4f,80,0);}}
             if(s.wings>0&&s.wings<=now){if(p.getAbilities().mayfly&&!p.isCreative()){p.getAbilities().mayfly=false;p.onUpdateAbilities();}s.wings=0;}
             if(s.mirror>now)reflect(s);
             if(now%5==0){

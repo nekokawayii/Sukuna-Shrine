@@ -2,11 +2,14 @@ package cn.blockforge.generated.nnnnr1201forge2;
 
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.*;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.Level;
 
 /**
@@ -51,6 +54,50 @@ public class SukunaNpcEntity extends PathfinderMob {
         setHealth((float) Math.max(1.0, hp));
     }
 
+
+    /** r274：原身形态同时使用两种术式——神武解的扇形雷击 + 飞天的风压拉人斩击。 */
+    @Override
+    public void tick() {
+        super.tick();
+        if (level().isClientSide || !getPersistentData().getBoolean("SukunaTrueForm")) return;
+        if (level().getGameTime() % 40 != 0) return;
+        LivingEntity target = getTarget();
+        if (target == null || !target.isAlive()) return;
+        Vec3 forward = target.position().subtract(position());
+        if (forward.lengthSqr() < 0.5) forward = getLookAngle();
+        forward = forward.normalize();
+
+        // ① 神武解：面前 30 格、半角 45° 的扇形雷击（基准 15 × 20 = 300 原值）
+        for (LivingEntity t : level().getEntitiesOfClass(LivingEntity.class,
+                getBoundingBox().inflate(30), t -> t != this && t.isAlive() && t instanceof net.minecraft.world.entity.Mob)) {
+            Vec3 d = t.position().subtract(position());
+            if (d.lengthSqr() > 0.25 && d.normalize().dot(forward) < Math.cos(Math.PI / 4)) continue;
+            t.invulnerableTime = 0;
+            NpcCombat.hurt(this, t, 300f);
+            t.invulnerableTime = 0;
+            if (level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                sl.sendParticles(net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK,
+                    t.getX(), t.getY() + 1, t.getZ(), 18, .5, .6, .5, .08);
+            }
+        }
+
+        // ② 飞天：周围 10 格 + 面前扇形 40 格的敌人先被风拽到前方 6 格，再吃 15 格内 20 伤
+        for (LivingEntity t : level().getEntitiesOfClass(LivingEntity.class,
+                getBoundingBox().inflate(40), t -> t != this && t.isAlive() && t instanceof net.minecraft.world.entity.Mob)) {
+            Vec3 d = t.position().subtract(position());
+            boolean near = d.lengthSqr() <= 100;
+            boolean cone = d.lengthSqr() > 0.25 && d.normalize().dot(forward) >= Math.cos(Math.PI / 4);
+            if (!near && !cone) continue;
+            Vec3 pull = position().add(forward.scale(6)).subtract(t.position());
+            if (pull.lengthSqr() > 0.01) {
+                pull = pull.normalize().scale(Math.min(2.2, pull.length()));
+                t.teleportTo(t.getX() + pull.x, t.getY(), t.getZ() + pull.z);
+            }
+            if (t.position().distanceToSqr(position()) <= 225) NpcCombat.hurt(this, t, 20f);
+        }
+        level().playSound(null, blockPosition(), net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_THUNDER,
+            net.minecraft.sounds.SoundSource.HOSTILE, 1.1f, 1.2f);
+    }
     /** 进入「原身形态」：换皮肤 + 血量（由 {@link SukunaNpcTrueForm} 在受击流程里调用）。 */
     public void enterTrueForm() {
         if (getPersistentData().getBoolean("SukunaTrueForm")) return;
@@ -58,6 +105,11 @@ public class SukunaNpcEntity extends PathfinderMob {
         double trueHp = BalanceRules.modpackMode() ? 300000.0 : 10000.0;
         var maxHp = getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
         if (maxHp != null) maxHp.setBaseValue(trueHp);
+        // r274：原身四只手，同时持有「神武解」（主手）与「飞天」（副手）
+        setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND,
+            new ItemStack(VoidContent.SHINBUKE.get()));
+        setItemSlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND,
+            new ItemStack(VoidContent.HITEN.get()));
         // 清掉死亡/受击动画状态，避免"半死不死抽搐"
         dead = false; deathTime = 0; hurtTime = 0; invulnerableTime = 10;
         setHealth((float) trueHp);

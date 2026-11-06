@@ -30,6 +30,7 @@ public final class TojiNpcCombat {
         Mob mob = ready(actor);
         if (mob == null) return false;
         if (!mob.getMainHandItem().is(Content.TENKA_SPEAR.get())) return false;
+        if (mob.getPersistentData().getBoolean("TenkaBroken")) return false;
         long now = mob.level().getGameTime();
         var data = Curse.data(actor);
         if (!data.contains(SPEAR_NEXT)) { data.putLong(SPEAR_NEXT, now + SPEAR_INTERVAL); return false; }
@@ -50,7 +51,8 @@ public final class TojiNpcCombat {
         if (!data.contains(CHAIN_NEXT)) { data.putLong(CHAIN_NEXT, now + CHAIN_INTERVAL); return false; }
         if (now < data.getLong(CHAIN_NEXT) || ThousandMileChain.active(actor)) return false;
         if (mob.distanceToSqr(target) > 24 * 24 || !mob.hasLineOfSight(target)) return false;
-        if (!ThousandMileChain.npcThrow(actor, target, true, CHAIN_HOLD)) return false;
+        boolean armed = !owner.getPersistentData().getBoolean("TenkaBroken");
+        if (!ThousandMileChain.npcThrow(actor, target, armed, CHAIN_HOLD)) return false;
         data.putLong(CHAIN_NEXT, now + CHAIN_INTERVAL);
         mob.swing(InteractionHand.MAIN_HAND);
         return true;

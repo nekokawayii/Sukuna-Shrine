@@ -413,6 +413,50 @@ public final class TojiQte {
     public static final int HIT_SEAL = 100;
 
     /** 玩家甚尔与 NPC 甚尔共用：打中谁就僵直谁，拿天逆蛑就再封谁的术式。 */
+    /** 天逆蛑耐久：受到这么多伤害后被打碎（整合包 100 / 非整合包 20）。 */
+    public static int tenkaLimit() {
+        return cn.blockforge.generated.nnnnr1201forge2.BalanceRules.modpackMode() ? 100 : 20;
+    }
+
+    /** 甚尔（玩家或 NPC）。 */
+    private static boolean isToji(LivingEntity e) {
+        return e instanceof ServerPlayer p && CharacterService.toji(p)
+            || e instanceof cn.blockforge.generated.nnnnr1201forge2.SorcererNpcEntity npc && "toji".equals(npc.characterId());
+    }
+
+    /** 天逆蛑是否已被打碎（碎后不再封锁术式、不再僵直、手上也没有这武器）。 */
+    public static boolean tenkaBroken(LivingEntity e) {
+        return e.getPersistentData().getBoolean("TenkaBroken");
+    }
+
+    /** 受到伤害时给天逆蛑记耐久，累计到上限就碎掉。 */
+    @SubscribeEvent public static void tenkaWear(net.minecraftforge.event.entity.living.LivingHurtEvent e) {
+        LivingEntity victim = e.getEntity();
+        if (e.getAmount() <= 0 || !isToji(victim) || tenkaBroken(victim)) return;
+        if (!victim.getMainHandItem().is(Content.TENKA_SPEAR.get())) return;
+        var d = victim.getPersistentData();
+        int wear = d.getInt("TenkaWear") + Math.round(e.getAmount());
+        d.putInt("TenkaWear", wear);
+        if (wear < tenkaLimit()) return;
+        d.putBoolean("TenkaBroken", true);
+        d.putInt("TenkaWear", 0);
+        // 手上的天逆蛑消失（主手与副手都清，玩家背包里同名的也一并移除）
+        victim.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, net.minecraft.world.item.ItemStack.EMPTY);
+        if (victim.getOffhandItem().is(Content.TENKA_SPEAR.get()))
+            victim.setItemSlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND, net.minecraft.world.item.ItemStack.EMPTY);
+        if (victim instanceof ServerPlayer p) {
+            var inv = p.getInventory();
+            for (int i = 0; i < inv.getContainerSize(); i++)
+                if (inv.getItem(i).is(Content.TENKA_SPEAR.get())) inv.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+            inv.setChanged();
+            p.containerMenu.broadcastChanges();
+            p.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                "天逆蛑承受不住，碎裂了——术式封锁与僵直随之消失。").withStyle(net.minecraft.ChatFormatting.GRAY));
+        }
+        victim.level().playSound(null, victim.blockPosition(), net.minecraft.sounds.SoundEvents.ITEM_BREAK,
+            net.minecraft.sounds.SoundSource.PLAYERS, 1f, .7f);
+    }
+
     @SubscribeEvent public static void staggerOnHit(net.minecraftforge.event.entity.living.LivingHurtEvent e) {
         if (e.isCanceled() || e.getAmount() <= 0) return;
         LivingEntity victim = e.getEntity();
@@ -420,6 +464,8 @@ public final class TojiQte {
         boolean toji = attacker instanceof ServerPlayer p && CharacterService.toji(p)
             || attacker instanceof SorcererNpcEntity npc && "toji".equals(npc.characterId());
         if (!toji) return;
+        // 天逆蛑已碎：不再造成术式封锁与僵直
+        if (tenkaBroken(attacker)) return;
         if (victim instanceof Mob mob) character.npc.NpcControl.stun(mob, "toji_hit", HIT_STUN);
         else victim.addEffect(new net.minecraft.world.effect.MobEffectInstance(
             net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, HIT_STUN, 5, false, true));

@@ -15,6 +15,15 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  * 我们中途 setHealth 只会把它变成"半死不死、一直抽搐的红色实体"。
  */
 public final class SukunaNpcTrueForm {
+    /** 咒胎受肉体：几条命（可调）。耗光最后一条命后才变成原身形态。 */
+    public static final int LIVES = 5;
+
+    private static int lives(SukunaNpcEntity npc) {
+        var d = npc.getPersistentData();
+        if (!d.contains("SukunaLives")) d.putInt("SukunaLives", LIVES);
+        return d.getInt("SukunaLives");
+    }
+
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void clamp(LivingHurtEvent e) {
         if (!(e.getEntity() instanceof SukunaNpcEntity npc) || npc.level().isClientSide) return;
@@ -27,6 +36,23 @@ public final class SukunaNpcTrueForm {
     public static void transform(LivingDamageEvent e) {
         if (!(e.getEntity() instanceof SukunaNpcEntity npc) || npc.level().isClientSide) return;
         if (npc.getHealth() > 1.0f || npc.getPersistentData().getBoolean("SukunaTrueForm")) return;
+        int left = lives(npc);
+        if (left > 0) {
+            // 咒胎受肉体：先烧掉一条命，回满继续打
+            npc.getPersistentData().putInt("SukunaLives", left - 1);
+            npc.deathTime = 0;
+            npc.hurtTime = 0;
+            npc.invulnerableTime = 10;
+            npc.setHealth(npc.getMaxHealth());
+            npc.level().playSound(null, npc.blockPosition(), net.minecraft.sounds.SoundEvents.WITHER_HURT,
+                net.minecraft.sounds.SoundSource.HOSTILE, 1.2f, .8f);
+            if (npc.getTarget() instanceof ServerPlayer sp) {
+                sp.sendSystemMessage(Component.literal("两面宿傩 · 咒胎受肉体：还剩 " + (left - 1) + " 条命")
+                    .withStyle(net.minecraft.ChatFormatting.DARK_PURPLE));
+            }
+            return;
+        }
+        // 最后一条命也没了 → 原身形态
         npc.enterTrueForm();
         if (npc.getTarget() instanceof ServerPlayer sp) {
             sp.sendSystemMessage(Component.literal("两面宿傩 · 原身显现")

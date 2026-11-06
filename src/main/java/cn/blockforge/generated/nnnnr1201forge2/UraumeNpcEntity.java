@@ -70,6 +70,7 @@ public class UraumeNpcEntity extends Monster {
                     && "sukuna".equals(character.CharacterService.selected(p).id()))).size() > 0;
         shotAt = (int) now + (kin ? 25 : 50);
         if (!NpcCurse.spend(this, 40)) { shotAt = (int) now + 20; return; }
+        boolean domain = character.npc.NpcDomain.inIceDomain(this);
         Vec3 eye = getEyePosition();
         Vec3 to = target.getBoundingBox().getCenter();
         Vec3 dir = to.subtract(eye).normalize();
@@ -83,8 +84,8 @@ public class UraumeNpcEntity extends Monster {
             Network.send(world, new Network.Effect(BranchRules.FX_FROST, getId(), eye, dir, 14, 10, 0));
             for (var t : world.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(14),
                     e -> e != this && e.isAlive() && e instanceof Player p
-                        && e.position().subtract(position()).normalize().dot(dir) > 0.55)) {
-                NpcCombat.hurt(this, t, 12f);
+                        && (domain || e.position().subtract(position()).normalize().dot(dir) > 0.55))) {
+                NpcCombat.hurt(this, t, domain ? 24f : 12f);
                 t.setTicksFrozen(Math.min(600, t.getTicksFrozen() + 200));
                 UraumeIce.addFrost(t, 1);
             }
@@ -93,7 +94,7 @@ public class UraumeNpcEntity extends Monster {
             Network.send(world, new Network.Effect(BranchRules.FX_ICE, getId(), to.add(0, 10, 0), new Vec3(0, -1, 0), 3, 20, 0));
             for (var t : world.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(to, to).inflate(3.5),
                     e -> e != this && e.isAlive() && e instanceof Player p)) {
-                NpcCombat.hurt(this, t, 16f);
+                NpcCombat.hurt(this, t, domain ? 32f : 16f);
                 t.setTicksFrozen(Math.min(600, t.getTicksFrozen() + 120));
                 UraumeIce.addFrost(t, 1);
             }

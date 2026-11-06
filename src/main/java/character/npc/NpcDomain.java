@@ -125,6 +125,16 @@ public final class NpcDomain {
     public static void close(Mob mob, String reason) {
         if(mob!=null)close(mob.getUUID());
     }
+    /** r289：目标是否处在任一里梅霜天宫殿内（冰系伤害翻倍 / 追踪必中的判据）。 */
+    public static boolean inIceDomain(net.minecraft.world.entity.Entity entity) {
+        for (var job : JOBS.values()) {
+            if (job.style != Style.ICE) continue;
+            if (entity.level() != job.level) continue;
+            if (entity.position().distanceToSqr(Vec3.atCenterOf(job.center)) <= job.radius * job.radius) return true;
+        }
+        return false;
+    }
+
     private static void close(UUID owner){
         Job job=JOBS.remove(owner);if(job==null)return;
         if (job.style == Style.ICE) {

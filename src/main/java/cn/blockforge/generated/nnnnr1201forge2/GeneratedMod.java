@@ -224,6 +224,18 @@ public final class GeneratedMod {
         character.CharacterCasting.registerNpcProvider(JogoNpcEntity.class,(e,skill)->PlayerSkillBridge.cast(character.CharacterCasting.caster(e),"jogo",skill));
         character.CharacterCasting.registerNpcProvider(ChosoEntity.class,(e,skill)->PlayerSkillBridge.cast(character.CharacterCasting.caster(e),"choso",skill));
         character.CharacterCasting.registerNpcProvider(UraumeNpcEntity.class,(e,skill)->PlayerSkillBridge.cast(character.CharacterCasting.caster(e),"uraume",skill));
+        character.CharacterCasting.registerLock("uraume", new character.CharacterCasting.Lock() {
+            @Override public boolean locked(net.minecraft.server.level.ServerPlayer player) {
+                return player.getPersistentData().getLong("FrostbiteUntil") > player.level().getGameTime();
+            }
+            @Override public String reason() { return "严重冻伤：30 秒内无法施术"; }
+        });
+        for (int us : new int[]{character.uraume.UraumeSkills.FROST, character.uraume.UraumeSkills.ICEFALL,
+                character.uraume.UraumeSkills.PRISON, character.uraume.UraumeSkills.STORM,
+                character.uraume.UraumeSkills.DRAGON, character.uraume.UraumeSkills.ICEAGE}) {
+            character.CharacterCasting.registerEffect("uraume", us,
+                (character.CharacterCasting.Effect) (p, s2, r) -> character.uraume.UraumeCombat.cast(p, us));
+        }
         MinecraftForge.EVENT_BUS.register(character.toji.TojiCombat.class);
         // r218：死灭洄游规则系统（规则结算 + 刷新/敌对）
         MinecraftForge.EVENT_BUS.register(character.culling.CullingRules.class);

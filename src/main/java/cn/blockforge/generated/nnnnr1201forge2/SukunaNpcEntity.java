@@ -68,7 +68,7 @@ public class SukunaNpcEntity extends PathfinderMob {
         super.tick();
         if (level().isClientSide || !getPersistentData().getBoolean("SukunaTrueForm")) return;
         if (level().getGameTime() % 100 == 0) syncTrueForm();   // 重连/远处玩家补同步
-        if (level().getGameTime() % 40 != 0) return;
+        // r277：原身出招无冷却——每刻都结算两把咒具（不再每 2 秒一次）
         LivingEntity target = getTarget();
         if (target == null || !target.isAlive()) return;
         Vec3 forward = target.position().subtract(position());
@@ -105,8 +105,10 @@ public class SukunaNpcEntity extends PathfinderMob {
             }
             if (t.position().distanceToSqr(position()) <= 225) NpcCombat.hurt(this, t, 20f);
         }
-        level().playSound(null, blockPosition(), net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_THUNDER,
-            net.minecraft.sounds.SoundSource.HOSTILE, 1.1f, 1.2f);
+        if (level().getGameTime() % 20 == 0) {
+            level().playSound(null, blockPosition(), net.minecraft.sounds.SoundEvents.LIGHTNING_BOLT_THUNDER,
+                net.minecraft.sounds.SoundSource.HOSTILE, 1.1f, 1.2f);
+        }
     }
     /** 进入「原身形态」：换皮肤 + 血量（由 {@link SukunaNpcTrueForm} 在受击流程里调用）。 */
     public void enterTrueForm() {

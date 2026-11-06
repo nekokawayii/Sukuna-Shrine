@@ -71,34 +71,49 @@ public final class CullingSpawns {
     /** 五条悟 / 虎杖残影作为参赛者出现的概率（每轮刷新掷一次）。 */
     private static final float BOSS_CHANCE = 0.18f;
 
-    /** 刷一只"大人物"：五条悟或虎杖残影，血量与普通泳者完全相同。 */
+    /** Boss 级角色池：全部按"普通参赛者"处理（血量与泳者相同）。 */
+    private static final String[] BOSS_NAMES = {
+        "五条悟", "虎杖残影", "伏黑惠", "魔虚罗", "即身佛", "咒胎戴天", "破碎真人", "羂索"
+    };
+
+    private static Mob createBoss(ServerLevel level, int pick) {
+        return switch (pick) {
+            case 0 -> cn.blockforge.generated.nnnnr1201forge2.VoidContent.GOJO.get().create(level);
+            case 1 -> cn.blockforge.generated.nnnnr1201forge2.SoulContent.YUJI.get().create(level);
+            case 2 -> cn.blockforge.generated.nnnnr1201forge2.SoulContent.MEGUMI.get().create(level);
+            case 3 -> cn.blockforge.generated.nnnnr1201forge2.VoidContent.MAHORAGA.get().create(level);
+            case 4 -> cn.blockforge.generated.nnnnr1201forge2.Content.BUDDHA.get().create(level);
+            case 5 -> cn.blockforge.generated.nnnnr1201forge2.Content.DAITIAN.get().create(level);
+            case 6 -> cn.blockforge.generated.nnnnr1201forge2.Content.BROKEN_MAHITO.get().create(level);
+            default -> cn.blockforge.generated.nnnnr1201forge2.Content.GETO.get().create(level);
+        };
+    }
+
+    /** 刷一只 Boss 级参赛者，血量与普通泳者完全相同。 */
     private static void spawnBoss(ServerLevel level, int wave) {
         for (Mob m : level.getEntitiesOfClass(Mob.class, new AABB(-256, 0, -256, 256, 512, 256),
-            m -> m.isAlive() && m.getPersistentData().getBoolean("CullingEnemy")
-                && (m instanceof cn.blockforge.generated.nnnnr1201forge2.GojoEntity
-                    || m instanceof cn.blockforge.generated.nnnnr1201forge2.YujiEntity))) return;
+            m -> m.isAlive() && m.getPersistentData().getBoolean("CullingBoss"))) return;
         if (level.players().isEmpty()) return;
         ServerPlayer anchor = level.players().get(level.random.nextInt(level.players().size()));
         BlockPos at = findSpot(level, anchor, level.random);
         if (at == null) return;
-        boolean gojo = level.random.nextBoolean();
-        Mob mob = gojo
-            ? cn.blockforge.generated.nnnnr1201forge2.VoidContent.GOJO.get().create(level)
-            : cn.blockforge.generated.nnnnr1201forge2.SoulContent.YUJI.get().create(level);
+        int pick = level.random.nextInt(BOSS_NAMES.length);
+        Mob mob = createBoss(level, pick);
         if (mob == null) return;
         mob.moveTo(at.getX() + .5, at.getY(), at.getZ() + .5, level.random.nextFloat() * 360f, 0);
-        level.addFreshEntity(mob);
+        level.addFreshEntity(mob); // 先进世界（BossControl 会在这时按 Boss 原值铺属性）
         if (mob instanceof cn.blockforge.generated.nnnnr1201forge2.YujiEntity y) y.challenger = anchor.getUUID();
         level.getScoreboard().removePlayerFromTeam(mob.getScoreboardName());
         mob.getPersistentData().putBoolean("CullingEnemy", true);
+        mob.getPersistentData().putBoolean("CullingBoss", true);
         mob.getPersistentData().putString("CullingKind", "sorcerer");
         mob.getPersistentData().putLong("ExpeditionDespawnAt", level.getGameTime() + 9600);
-        scale(level, mob, "sorcerer", wave); // 与普通泳者同血量
+        scale(level, mob, "sorcerer", wave); // 覆盖成普通泳者血量
         applyNpcRuleMods(mob);
-        mob.setCustomName(Component.literal("死灭回游参赛者 · " + (gojo ? "五条悟" : "虎杖残影")));
+        mob.setCustomName(Component.literal("死灭回游参赛者 · " + BOSS_NAMES[pick]));
         mob.setCustomNameVisible(true);
         for (ServerPlayer p : level.players())
-            p.displayClientMessage(Component.literal("【死灭洄游】" + (gojo ? "五条悟" : "虎杖残影") + " 作为参赛者出现了。"), true);
+            p.displayClientMessage(Component.literal("【死灭洄游】" + BOSS_NAMES[pick] + " 作为参赛者出现了。"), true);
     }
 
     private static void spawn(ServerLevel level, String[] pool, String kind, int count, int wave, boolean elite) {

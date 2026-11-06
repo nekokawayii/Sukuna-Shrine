@@ -61,10 +61,10 @@ public final class SukunaNpcRenderer extends MobRenderer<SukunaNpcEntity, Player
                 var sleeve = side < 0 ? extra.leftSleeve : extra.rightSleeve;
                 sleeve.copyFrom(arm);
                 ps.pushPose();
-                // 模型单位（1 单位 = 1/16 格），+Y 向下：肩在 y≈2，第二对手臂放到肩下并外扩
-                ps.translate(side * 3.6, 2.4, 0.0);
-                ps.mulPose(Axis.ZP.rotationDegrees(side * -18));
-                ps.mulPose(Axis.XP.rotationDegrees(10));
+                // PoseStack 此处单位≈格：小幅外移 + 微下沉，贴着肩下长出第二对手臂
+                ps.translate(side * 0.26, 0.10, 0.0);
+                ps.mulPose(Axis.ZP.rotationDegrees(side * -14));
+                ps.mulPose(Axis.XP.rotationDegrees(8));
                 arm.render(ps, b, light, OverlayTexture.NO_OVERLAY);
                 sleeve.render(ps, b, light, OverlayTexture.NO_OVERLAY);
                 ps.popPose();

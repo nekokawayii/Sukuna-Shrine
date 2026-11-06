@@ -90,7 +90,10 @@ public class SukunaNpcEntity extends PathfinderMob {
             }
         }
 
-        // ② 飞天：周围 10 格 + 面前扇形 40 格的敌人先被风拽到前方 6 格，再吃 15 格内 20 伤
+        // ② 飞天：10 秒冷却（r279），神武解保持无冷却
+        long now = level().getGameTime();
+        if (getPersistentData().getLong("HitenReadyAt") > now) return;
+        getPersistentData().putLong("HitenReadyAt", now + 200);
         for (LivingEntity t : level().getEntitiesOfClass(LivingEntity.class,
                 getBoundingBox().inflate(40), t -> t != this && t.isAlive()
                     && (t instanceof net.minecraft.world.entity.Mob || t instanceof Player))) {

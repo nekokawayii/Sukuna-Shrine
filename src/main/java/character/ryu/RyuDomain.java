@@ -220,13 +220,15 @@ public final class RyuDomain {
             BlockState target;
             if (index < outerStart) {
                 pos = f.floor.get(index);
-                target = Content.DOMAIN_SCREEN.get().defaultBlockState().setValue(DomainScreenBlock.IMAGE,f.image);
+                // r235：地板与内壳改回纯黑混凝土——落日图改由内翻球天空层绘制，
+                // 避免方块实体做的"圆形球壳"把领域里的烟花全挡掉。
+                target = Blocks.BLACK_CONCRETE.defaultBlockState();
             } else if (index < innerStart) {
                 pos = f.outer.get(index - outerStart);
                 target = Blocks.BEDROCK.defaultBlockState();
             } else if (index < fillStart) {
                 pos = f.inner.get(index - innerStart);
-                target = Content.DOMAIN_SCREEN.get().defaultBlockState().setValue(DomainScreenBlock.IMAGE,f.image);
+                target = Blocks.BLACK_CONCRETE.defaultBlockState();
             } else {
                 pos = f.fill.get(index - fillStart);
                 target = Blocks.LIGHT.defaultBlockState()

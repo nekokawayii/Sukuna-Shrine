@@ -55,16 +55,22 @@ public final class SukunaNpcRenderer extends MobRenderer<SukunaNpcEntity, Player
             }
             extra.setupAnim(entity, limb, amount, age, yaw, pitch);
             var b = buffer.getBuffer(RenderType.entityCutoutNoCull(TRUE_FORM));
-            // 左右各多一条手臂：向外平移 + 外翻，形成"背后再伸出两只手"的轮廓
+            // r282：直接用模型坐标摆位（1 像素 = 1/16 格）。玩家模型肩宽：手臂轴在 x=±5，
+            // 身子半宽 4 → 放到 x=±10 就已经在肩膀外侧，不再靠 PoseStack 平移猜方向。
             for (int side = -1; side <= 1; side += 2) {
                 var arm = side < 0 ? extra.leftArm : extra.rightArm;
                 var sleeve = side < 0 ? extra.leftSleeve : extra.rightSleeve;
-                sleeve.copyFrom(arm);
+                arm.x = side * 10f;
+                arm.y = 2f;
+                arm.z = 1f;
+                arm.zRot = side * 0.55f;
+                arm.xRot = 1.1f;
+                sleeve.x = arm.x;
+                sleeve.y = arm.y;
+                sleeve.z = arm.z;
+                sleeve.zRot = arm.zRot;
+                sleeve.xRot = arm.xRot;
                 ps.pushPose();
-                // PoseStack 此处单位≈格：移到肩膀外侧（不再贴着胳膊里侧）
-                ps.translate(side * 0.46, 0.02, 0.0);
-                ps.mulPose(Axis.ZP.rotationDegrees(side * -26));
-                ps.mulPose(Axis.XP.rotationDegrees(8));
                 arm.render(ps, b, light, OverlayTexture.NO_OVERLAY);
                 sleeve.render(ps, b, light, OverlayTexture.NO_OVERLAY);
                 ps.popPose();

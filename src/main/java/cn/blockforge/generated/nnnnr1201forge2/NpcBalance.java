@@ -63,7 +63,10 @@ public final class NpcBalance {
             }
             return;
         }
-        double want = BalanceRules.modpackMode() ? base * MODPACK_MULTIPLIER : base;
+        // r282：宿傩 NPC 特殊档——整合包 18000 / 非整合包 2500（不走 ×30）
+        double want = "sukuna:sukuna_npc".equals(id)
+            ? (BalanceRules.modpackMode() ? 18000.0 : 2500.0)
+            : (BalanceRules.modpackMode() ? base * MODPACK_MULTIPLIER : base);
         if (Math.abs(attribute.getBaseValue() - want) > 0.5) {
             attribute.setBaseValue(want);
             living.setHealth(living.getMaxHealth());

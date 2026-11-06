@@ -34,7 +34,8 @@ public final class SukunaNpcTrueForm {
         if (left > 0) {
             d.putInt("SukunaLives", left - 1);
             e.setCanceled(true);
-            npc.reviveFromDeath(npc.getMaxHealth());
+            // r282：每次复活只回一半血
+            npc.reviveFromDeath(npc.getMaxHealth() * 0.5);
             npc.level().playSound(null, npc.blockPosition(), net.minecraft.sounds.SoundEvents.WITHER_HURT,
                 net.minecraft.sounds.SoundSource.HOSTILE, 1.2f, .8f);
             if (npc.getTarget() instanceof ServerPlayer sp) {

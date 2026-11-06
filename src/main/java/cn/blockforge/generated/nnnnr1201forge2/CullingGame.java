@@ -42,8 +42,9 @@ public final class CullingGame {
         String[] ids={"special_blueprint","curse_concentrate","star_iron_fragment","sukuna:yuyun"};int[] costs={40,10,15,100};
         var d=ExpeditionProgress.data(p);int selection=Math.floorMod(d.getInt("CullingExchangeChoice"),ids.length),points=d.getInt("CullingPoints");
         if(p.isShiftKeyDown()){selection=(selection+1)%ids.length;d.putInt("CullingExchangeChoice",selection);p.sendSystemMessage(Component.literal("积分 "+points+"；选择 "+new ItemStack(RitualRecipes.resolve(ids[selection])).getHoverName().getString()+"，需要 "+costs[selection]+" 分。普通右键购买。"));return;}
-        if(points<costs[selection]){p.sendSystemMessage(Component.literal("积分不足：现有"+points+"，需要"+costs[selection]+"；潜行右键换商品。"));return;}
-        d.putInt("CullingPoints",points-costs[selection]);Journey.give(p,new ItemStack(RitualRecipes.resolve(ids[selection])));
+        int cost=character.culling.CullingRules.special(p,"half_price")?Math.max(1,costs[selection]/2):costs[selection];
+        if(points<cost){p.sendSystemMessage(Component.literal("积分不足：现有"+points+"，需要"+cost+"；潜行右键换商品。"));return;}
+        d.putInt("CullingPoints",points-cost);Journey.give(p,new ItemStack(RitualRecipes.resolve(ids[selection])));
     }
     @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent e){
         if(e.phase!=TickEvent.Phase.END||!(e.player instanceof ServerPlayer p)||!p.level().dimension().equals(DIM)||p.isSpectator())return;

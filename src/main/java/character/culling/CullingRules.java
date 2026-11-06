@@ -60,6 +60,10 @@ public final class CullingRules {
         double cooldown = 1, heal = 1, spell = 1, melee = 1, score = 1, loot = 1;
         double flashChance = 1, flashPower = 0;
         int jump = 0;
+        // r225 第二批（绝对暴力/无限火力/生存/机动/资源）用的数值
+        double armorPen = 0, truePct = 0, lifesteal = 0, killHeal = 0, damageCap = 0;
+        double thorns = 0, manaOnHurt = 0, execute = 0, recovery = 1;
+        int deathShields = 0, cooldownOnKill = 0;
         boolean noEnergyRegen, noRegen, domainBanned, noFly, armorOff, noHealthBar, killFullHeal;
         final Set<String> special = new LinkedHashSet<>();
         Mods energy(double v){energy=v;return this;}
@@ -75,6 +79,17 @@ public final class CullingRules {
         Mods score(double v){score=v;return this;}
         Mods loot(double v){loot=v;return this;}
         Mods flash(double chance,double power){flashChance=chance;flashPower=power;return this;}
+        Mods armorPen(double v){armorPen=v;return this;}
+        Mods truePct(double v){truePct=v;return this;}
+        Mods lifesteal(double v){lifesteal=v;return this;}
+        Mods killHeal(double v){killHeal=v;return this;}
+        Mods damageCap(double v){damageCap=v;return this;}
+        Mods thorns(double v){thorns=v;return this;}
+        Mods manaOnHurt(double v){manaOnHurt=v;return this;}
+        Mods execute(double v){execute=v;return this;}
+        Mods recovery(double v){recovery=v;return this;}
+        Mods deathShields(int v){deathShields=v;return this;}
+        Mods cooldownOnKill(int v){cooldownOnKill=v;return this;}
         Mods jump(int v){jump=v;return this;}
         Mods noEnergyRegen(){noEnergyRegen=true;return this;}
         Mods noRegen(){noRegen=true;return this;}
@@ -157,7 +172,62 @@ public final class CullingRules {
         r("resource_swap","资源互换","每制定一条规则，随机传送一个终极宝箱","环境",mods().special("treasure")),
         r("dead_run","亡命狂奔","移速攻速 +100%，连续奔跑 10 秒开始掉血","环境",mods().speed(2).atkSpeed(2).special("run_drain")),
         r("poison_air","剧毒空气","所有人持续中毒","环境",mods().special("poison_air")),
-        r("kenjaku_deal","契约赌局","界内刷出「羂索的幻影」，可交易回满血与咒力","环境",mods().special("kenjaku"))
+        r("kenjaku_deal","契约赌局","界内刷出「羂索的幻影」，可交易回满血与咒力","环境",mods().special("kenjaku")),
+        // ===== 第二批（r225）：绝对暴力 / 无限火力 / 绝对生存 / 机动风筝 / 资源爆率 =====
+        r("no_limit_cut","无下限切断","所有攻击无视目标 50% 护甲与抗性","暴力",mods().armorPen(.5)),
+        r("extreme_violence","极致的暴力","暴击率 +50%（黑闪红圈触发率大幅提高）","暴力",mods().flash(1.5,0)),
+        r("surge_overload","咒力超载","术式伤害 +100%，但每次施法额外消耗 10% 饱食度","暴力",mods().spell(2).special("food_cost")),
+        r("weak_point","弱点洞悉","命中附带目标最大生命 5% 的真实伤害","暴力",mods().truePct(.05)),
+        r("burn_boat_v2","破釜沉舟·残血","血量低于 30% 时伤害 +200%","暴力",mods().special("low_hp_damage")),
+        r("tailwind","顺风局","满血时伤害 +50%","暴力",mods().special("full_hp_damage")),
+        r("execution_declare","处刑宣告","敌人血量低于 20% 时，攻击有 30% 概率直接斩杀（非 Boss）","暴力",mods().execute(.3)),
+        r("armor_piercer","穿甲弹","远程剑气/弹道不被方块阻挡","暴力",mods().special("pierce_shot")),
+        r("combo_master","连击大师","连续命中 5 次后，下一次攻击必定暴击","暴力",mods().special("combo_crit")),
+        r("element_imbue","属性赋予","平A 附带随机元素伤害（火/冰/雷）","暴力",mods().special("element_melee")),
+
+        r("mana_spring","咒力涌泉","咒力自然回复速度 +300%","火力",mods().recovery(4)),
+        r("time_thief","时间窃贼","每次击杀，所有技能冷却减少 2 秒","火力",mods().cooldownOnKill(40)),
+        r("no_cost_mode","无耗能模式","站立不动时释放技能不消耗咒力","火力",mods().special("still_free")),
+        r("edge_runner","边缘行者","血量越低咒力上限越高（最高翻倍）","火力",mods().special("low_hp_energy")),
+        r("skill_carnival","技能狂欢","使用领域/极之番后，普通技能冷却清零","火力",mods().special("ult_clear_cd")),
+        r("mana_crystal","咒力结晶","每次受到伤害都会回复等量咒力","火力",mods().manaOnHurt(1)),
+        r("hand_free","脱手释放","技能可提前取消后摇，且不额外消耗咒力","火力",mods().special("no_aftercast")),
+        r("infinite_combo","无限连段","连招窗口延长 100%","火力",mods().special("combo_window")),
+        r("counter_power","借力打力","完美闪避/格挡后，下一次技能不消耗咒力","火力",mods().special("dodge_free")),
+        r("overclock_v2","超频运转","冷却缩短 30%，但每次施法扣 1 点最大生命（击杀恢复）","火力",mods().cooldown(.7).special("max_hp_cost")),
+
+        r("reverse_out","反转外放","造成伤害的 10% 转化为自身生命","生存",mods().lifesteal(.1)),
+        r("stand_in","替身使者","获得一次免死金牌（致死伤害时满血复活）","生存",mods().deathShields(1)),
+        r("curse_incarnate","咒胎受肉","获得 5 层受肉护盾，每层抵挡一次致命伤害","生存",mods().deathShields(5)),
+        r("damage_threshold","伤害阈值","单次受到的伤害不超过最大生命的 15%","生存",mods().damageCap(.15)),
+        r("adversity","逆境求生","血量越低，护甲与减伤越高","生存",mods().special("low_hp_defense")),
+        r("kill_heal","杀敌回血","每次击杀恢复 20% 生命","生存",mods().killHeal(.2)),
+        r("poison_ward","毒抗结界","免疫中毒、流血与腐蚀伤害","生存",mods().special("poison_immune")),
+        r("thorns_armor","反伤装甲·极","受到近战攻击时反弹 200% 伤害","生存",mods().thorns(2)),
+        r("absolute_stealth","绝对隐蔽","脱离战斗 3 秒后隐身，直到下次攻击","生存",mods().special("stealth")),
+        r("armor_eternal","护甲永固","装备的防具耐久永不下降","生存",mods().special("armor_unbreak")),
+
+        r("gale_step","疾风步","移速 +50%，且免疫减速","机动",mods().speed(1.5).special("slow_immune")),
+        r("infinite_jump","无限跳跃","可以在空中二段跳、三段跳","机动",mods().jump(2).special("multi_jump")),
+        r("blink","空间跳跃","按潜行+空格向准星方向瞬移 10 格（冷却 3 秒）","机动",mods().special("blink")),
+        r("dodge_master","闪避大师","翻滚/闪避无敌帧延长 0.5 秒","机动",mods().special("iframes")),
+        r("water_walk","水上行走","水面与岩浆表面如履平地","机动",mods().special("water_walk")),
+        r("spider","蜘蛛侠","可以攀爬任何垂直墙面","机动",mods().special("wall_climb")),
+        r("phantom","幻影迷踪","奔跑时留下残影，怪物有 50% 概率攻击残影","机动",mods().special("afterimage")),
+        r("counter_launch","后发先至","受到攻击时自动向反方向弹射 5 格","机动",mods().special("launch_back")),
+        r("immune_control","免控躯体","免疫击退、击飞与定身","机动",mods().special("no_knockback")),
+        r("fly_permit","飞行权限","生存模式下可以自由飞行（不可穿墙）","机动",mods().special("fly")),
+
+        r("greedy_hand","贪婪之手","积分与材料掉落翻倍","资源",mods().loot(2).score(2)),
+        r("precise_collect","精准采集","击杀必定掉落该生物的稀有专属核心","资源",mods().special("rare_core")),
+        r("treasure_hunter","宝藏猎人","开箱必定出最高品质图纸或星之碎片","资源",mods().special("best_loot")),
+        r("merchant","商人特权","计分塔兑换消耗积分减半","资源",mods().special("half_price")),
+        r("stone_gold","点石成金","挖石头有 10% 概率变成高专原矿或紫水晶","资源",mods().special("ore_chance")),
+        r("scavenger","拾荒者","破坏废墟方块时额外掉落咒力残秽","资源",mods().special("ruin_scrap")),
+        r("infinite_ammo","无限弹药","远程武器与弓不再消耗箭矢","资源",mods().special("no_ammo")),
+        r("void_backpack","虚空背包","背包扩大一倍，死亡不掉落物品","资源",mods().special("keep_inventory")),
+        r("time_stasis","时间停滞","界内怪物动作变慢（只对自身周围生效）","资源",mods().special("mob_slow")),
+        r("dimension_strike","降维打击","所有攻击附加灵魂打击，对咒灵也造成 100% 物理伤害","资源",mods().special("soul_strike"))
     );
 
     private CullingRules() { }
@@ -196,7 +266,12 @@ public final class CullingRules {
         for(Rule rule:active(p))if(rule.mods().special.contains(id))return true;
         return false;
     }
-    public static double energyMul(Player p){return mul(p,m->m.energy);}
+    public static double energyMul(Player p){
+        double v=mul(p,m->m.energy);
+        // 边缘行者：血越低咒力上限越高（最高翻倍）
+        if(special(p,"low_hp_energy"))v*=1+(1-Math.max(0,Math.min(1,p.getHealth()/Math.max(1,p.getMaxHealth()))));
+        return v;
+    }
     public static double scoreMul(Player p){return mul(p,m->m.score);}
     public static double lootMul(Player p){return mul(p,m->m.loot);}
     public static double cooldownMul(Player p){return mul(p,m->m.cooldown);}

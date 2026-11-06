@@ -55,7 +55,9 @@ public final class CullingSpawns {
         // r221：甚尔每三波最多一只——场上已有就不再刷，且只允许在第 0/3/6… 波刷出来
         boolean allowToji = toji == 0 && stage % 3 == 0;
         if (sukuna < CAP_SUKUNA) spawnSukuna(level, wave);
-        if (curses < CAP_CURSE) spawn(level, CURSES, "curse", Math.min(CAP_CURSE - curses, elite ? 1 : 2), wave, elite);
+        if (curses < CAP_CURSE) spawnVanilla(level, Math.min(CAP_CURSE - curses, elite ? 2 : 3), wave, elite);
+        // r230：羂索本体（轻量独立生物，只会召唤强化原版怪），场上最多一只
+        if (level.random.nextFloat() < GETO_CHANCE) spawnGeto(level, wave);
         int sorcererCap = ancient ? CAP_SORCERER * 3 : CAP_SORCERER;
         if (sorcerers < sorcererCap) spawn(level, SORCERERS, "sorcerer", Math.min(sorcererCap - sorcerers, elite ? 1 : 2), wave, elite, allowToji);
         // r227：界内会偶尔刷出五条悟 / 虎杖残影这类"大人物"，血量按普通泳者算
@@ -73,7 +75,7 @@ public final class CullingSpawns {
 
     /** Boss 级角色池：全部按"普通参赛者"处理（血量与泳者相同）。 */
     private static final String[] BOSS_NAMES = {
-        "五条悟", "虎杖残影", "伏黑惠", "即身佛", "咒胎戴天", "破碎真人", "羂索"
+        "五条悟", "虎杖残影", "伏黑惠", "即身佛", "咒胎戴天", "破碎真人"
     };
 
     private static Mob createBoss(ServerLevel level, int pick) {
@@ -83,8 +85,7 @@ public final class CullingSpawns {
             case 2 -> cn.blockforge.generated.nnnnr1201forge2.SoulContent.MEGUMI.get().create(level);
             case 3 -> cn.blockforge.generated.nnnnr1201forge2.Content.BUDDHA.get().create(level);
             case 4 -> cn.blockforge.generated.nnnnr1201forge2.Content.DAITIAN.get().create(level);
-            case 5 -> cn.blockforge.generated.nnnnr1201forge2.Content.BROKEN_MAHITO.get().create(level);
-            default -> cn.blockforge.generated.nnnnr1201forge2.Content.GETO.get().create(level);
+            default -> cn.blockforge.generated.nnnnr1201forge2.Content.BROKEN_MAHITO.get().create(level);
         };
     }
 
@@ -113,6 +114,71 @@ public final class CullingSpawns {
         mob.setCustomNameVisible(true);
         for (ServerPlayer p : level.players())
             p.displayClientMessage(Component.literal("【死灭洄游】" + BOSS_NAMES[pick] + " 作为参赛者出现了。"), true);
+    }
+
+    /** 羂索本体出现概率。 */
+    private static final float GETO_CHANCE = .12f;
+    /** 强化原版生物池（替代自定义咒灵，省性能）。 */
+    private static final net.minecraft.world.entity.EntityType<?>[] VANILLA = {
+        net.minecraft.world.entity.EntityType.ZOMBIE, net.minecraft.world.entity.EntityType.HUSK,
+        net.minecraft.world.entity.EntityType.SKELETON, net.minecraft.world.entity.EntityType.STRAY,
+        net.minecraft.world.entity.EntityType.SPIDER, net.minecraft.world.entity.EntityType.CREEPER
+    };
+
+    /** 刷一波强化原版生物。 */
+    private static void spawnVanilla(ServerLevel level, int count, int wave, boolean elite) {
+        var rnd = level.random;
+        if (level.players().isEmpty()) return;
+        int stage = Math.max(0, wave / WAVE);
+        for (int i = 0; i < count; i++) {
+            ServerPlayer anchor = level.players().get(rnd.nextInt(level.players().size()));
+            BlockPos at = findSpot(level, anchor, rnd);
+            if (at == null) continue;
+            net.minecraft.world.entity.EntityType<?> type = VANILLA[rnd.nextInt(VANILLA.length)];
+            if (!(type.create(level) instanceof Mob mob)) continue;
+            mob.moveTo(at.getX() + .5, at.getY(), at.getZ() + .5, rnd.nextFloat() * 360f, 0);
+            level.addFreshEntity(mob);
+            level.getScoreboard().removePlayerFromTeam(mob.getScoreboardName());
+            mob.getPersistentData().putBoolean("CullingEnemy", true);
+            mob.getPersistentData().putString("CullingKind", "curse");
+            mob.getPersistentData().putInt("CullingStage", stage);
+            mob.getPersistentData().putLong("ExpeditionDespawnAt", level.getGameTime() + 9600);
+            double hp = BASE_CURSE_HP * (1 + .25 * stage) * 2;
+            var max = mob.getAttribute(Attributes.MAX_HEALTH);
+            if (max != null) { max.setBaseValue(hp); mob.setHealth((float) hp); }
+            var atk = mob.getAttribute(Attributes.ATTACK_DAMAGE);
+            if (atk != null) atk.setBaseValue(Math.min(120, 8 * (1 + .2 * stage)));
+            var spd = mob.getAttribute(Attributes.MOVEMENT_SPEED);
+            if (spd != null) spd.setBaseValue(spd.getBaseValue() * 1.1);
+            mob.setCustomName(Component.literal("死灭咒灵 · 强化" + mob.getName().getString()));
+            mob.setCustomNameVisible(false);
+            applyNpcRuleMods(mob);
+        }
+    }
+
+    /** 刷一只死灭洄游专用的羂索（只会召唤强化原版生物）。 */
+    private static void spawnGeto(ServerLevel level, int wave) {
+        for (Mob m : level.getEntitiesOfClass(Mob.class, new AABB(-256, 0, -256, 256, 512, 256),
+            m -> m.isAlive() && m.getPersistentData().getBoolean("CullingGeto"))) return;
+        if (level.players().isEmpty()) return;
+        ServerPlayer anchor = level.players().get(level.random.nextInt(level.players().size()));
+        BlockPos at = findSpot(level, anchor, level.random);
+        if (at == null) return;
+        Mob mob = cn.blockforge.generated.nnnnr1201forge2.Content.CULLING_GETO.get().create(level);
+        if (mob == null) return;
+        mob.moveTo(at.getX() + .5, at.getY(), at.getZ() + .5, level.random.nextFloat() * 360f, 0);
+        level.addFreshEntity(mob);
+        level.getScoreboard().removePlayerFromTeam(mob.getScoreboardName());
+        mob.getPersistentData().putBoolean("CullingEnemy", true);
+        mob.getPersistentData().putBoolean("CullingGeto", true);
+        mob.getPersistentData().putString("CullingKind", "sorcerer");
+        mob.getPersistentData().putLong("ExpeditionDespawnAt", level.getGameTime() + 9600);
+        scale(level, mob, "sorcerer", wave);
+        applyNpcRuleMods(mob);
+        mob.setCustomName(Component.literal("死灭回游参赛者 · 夏油杰"));
+        mob.setCustomNameVisible(true);
+        for (ServerPlayer p : level.players())
+            p.displayClientMessage(Component.literal("【死灭洄游】夏油杰出现了——他只会不断召唤强化过的咒灵。"), true);
     }
 
     private static void spawn(ServerLevel level, String[] pool, String kind, int count, int wave, boolean elite) {

@@ -80,6 +80,7 @@ public final class EntityRendererRegistry {
         entry(Content.PARASITE,BuddhaRenderer.class,BuddhaRenderer::new),
         entry(Content.MOTHER,BuddhaRenderer.class,BuddhaRenderer::new),
         entry(Content.GETO,GetoRenderer.class,GetoRenderer::new),
+        entry(Content.CULLING_GETO,CullingGetoRenderer.class,CullingGetoRenderer::new),
         entry(Content.LOW_CURSE,LowCurseRenderer.class,LowCurseRenderer::new),
         entry(Content.RIKA,RikaRenderer.class,RikaRenderer::new)
     ));

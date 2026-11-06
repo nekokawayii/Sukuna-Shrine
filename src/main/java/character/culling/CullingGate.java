@@ -122,7 +122,7 @@ public final class CullingGate {
     @SubscribeEvent
     public static void touchCube(TickEvent.PlayerTickEvent e) {
         if (e.phase != TickEvent.Phase.END || !(e.player instanceof ServerPlayer p)) return;
-        if (!p.level().dimension().equals(Level.OVERWORLD) || p.isCreative()) return;
+        if (!p.level().dimension().equals(Level.OVERWORLD)) return;
         if (p.tickCount % 10 != 0) return;
         ServerLevel level = p.serverLevel();
         var structure = level.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.STRUCTURE)
@@ -131,9 +131,11 @@ public final class CullingGate {
         var start = level.structureManager().getStructureAt(p.blockPosition(), structure);
         if (start == null || !start.isValid()) return;
         var box = start.getBoundingBox();
-        // 红缝在 +Z 面正中，离地 2~4 格
-        double sx = (box.minX() + box.maxX()) / 2.0 + 0.5, sy = box.minY() + 3.0, sz = box.maxZ() + 0.5;
-        if (p.position().distanceToSqr(sx, sy, sz) > 25) return;
+        // 红缝在 +Z 面正中：只要人在缝前后 4 格、离地 8 格以内就算走进去
+        double dx = Math.abs(p.getX() - (box.minX() + box.maxX()) / 2.0 - 0.5);
+        double dz = Math.abs(p.getZ() - (box.maxZ() + 0.5));
+        double dy = p.getY() - box.minY();
+        if (dx > 4.5 || dz > 5.0 || dy < -1 || dy > 9) return;
         p.sendSystemMessage(Component.literal("雪花噪点闪过，羂索的声音在耳边响起：「欢迎来到死灭回游，棋子。」")
             .withStyle(ChatFormatting.DARK_RED));
         level.playSound(null, p.blockPosition(), SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 1f, .7f);

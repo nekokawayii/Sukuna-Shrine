@@ -387,19 +387,13 @@ public final class RyuVisuals {
         RenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);
         RenderSystem.disableCull();
         RenderSystem.setShaderColor(1, 1, 1, 1);
-        // ① 底色：深紫黑（云图是黑底不透明的，必须有这层压住，加法层才不会糊在空气里）
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        BufferBuilder b = Tesselator.getInstance().getBuilder();
-        b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        sphereQuads(b, ps, center, radius, 0xEE0C0716, 0f, 1f, false);
-        BufferUploader.drawWithShader(b.end());
-        // ② 图片层：正常 alpha 混合（照片才不会被加法冲白）+ UV 横向叠 3 次并随时间漂移
+        // r236：去掉那层不透明的深紫黑底色球（用户说的"球壳还在"就是它），
+        // 只保留落日图，并改用加法混合——黑底部分加 0 不改变画面，因此不会再形成实心球。
         float pulse = (float) (0.92 + 0.08 * Math.sin(now(mc) * 0.012));
         RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
         RenderSystem.setShaderTexture(0, SKY_TEXTURE);
-        RenderSystem.defaultBlendFunc();
-        b = Tesselator.getInstance().getBuilder();
+        RenderSystem.blendFunc(org.lwjgl.opengl.GL11.GL_SRC_ALPHA, org.lwjgl.opengl.GL11.GL_ONE);
+        BufferBuilder b = Tesselator.getInstance().getBuilder();
         b.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         sphereQuads(b, ps, center, radius * 0.985, ((int) (255 * pulse) << 24) | 0xFFFFFF, time * 0.15f, 1f, true);
         BufferUploader.drawWithShader(b.end());

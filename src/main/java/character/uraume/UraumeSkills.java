@@ -20,13 +20,13 @@ public final class UraumeSkills {
                 0xFFE6FBFF, 320, 240, CharacterSkill.Shape.BURST, 12, 4.5, 60, 14, 4, 8, 0, 40, 2),
             new CharacterSkill(STORM, "冰凝咒法 · 急冻风暴", "风暴",
                 "以自身为中心 5 秒冰雪龙卷，持续把敌人吸向中心并造成切割伤害。",
-                0xFF9FE4FF, 400, 360, CharacterSkill.Shape.BURST, 9, 9, 90, 4, 1, 32, 0, 20, 1),
+                0xFF9FE4FF, 400, 360, CharacterSkill.Shape.BURST, 9, 8, 90, 4, 1, 32, 0, 20, 1),
             new CharacterSkill(DRAGON, "冰凝咒法 · 冰龙", "冰龙",
                 "召唤冰霜巨龙向前贯穿 20 格，极高击退并叠两层霜寒。",
                 0xFFBDEBFF, 500, 420, CharacterSkill.Shape.RAY, 20, 3.5, 45, 25, 5, 8, 0, 40, 2),
             new CharacterSkill(ICEAGE, "极之番 · 大冰河时代", "大冰河",
                 "双手按地，50 格内所有生物与方块冻结成冰雕；自身 30 秒严重冻伤、无法施术。",
-                0xFF8FD8FF, 1200, 1200, CharacterSkill.Shape.BURST, 50, 8, 90, 40, 10, 32, 0, 200, 3)
+                0xFF8FD8FF, 1200, 1200, CharacterSkill.Shape.BURST, 32, 8, 90, 40, 10, 32, 0, 200, 3)
         );
     }
 

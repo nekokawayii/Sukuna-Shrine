@@ -61,12 +61,24 @@ public class UraumeNpcEntity extends Monster {
         if (distanceToSqr(target) > 32 * 32) return;
         long now = world.getGameTime();
         if (now < shotAt) return;
-        shotAt = (int) now + 50;
+        // 大冰河时代之后的 30 秒严重冻伤：不能放技能
+        if (getPersistentData().getLong("FrostbiteUntil") > now) return;
+        // 被动·宿傩的眷属：附近有宿傩线玩家/宿傩 NPC 时，回蓝与出招速度翻倍
+        boolean kin = level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(16),
+            e -> e != this && e.isAlive() && (e instanceof SukunaNpcEntity
+                || e instanceof Player p && character.CharacterService.selected(p) != null
+                    && "sukuna".equals(character.CharacterService.selected(p).id()))).size() > 0;
+        shotAt = (int) now + (kin ? 25 : 50);
         if (!NpcCurse.spend(this, 40)) { shotAt = (int) now + 20; return; }
         Vec3 eye = getEyePosition();
         Vec3 to = target.getBoundingBox().getCenter();
         Vec3 dir = to.subtract(eye).normalize();
-        if ((skillIndex++ & 1) == 0) {
+        int pick = skillIndex++ % 6;
+        if (pick == 2) { UraumeIce.handPrison(this, target); return; }
+        if (pick == 3) { UraumeIce.storm(this); return; }
+        if (pick == 4) { UraumeIce.dragon(this); return; }
+        if (pick == 5 && distanceToSqr(target) < 30 * 30) { UraumeIce.iceAge(this); return; }
+        if (pick == 0) {
             // 冰凝咒法 · 霜凪：前方锥形寒气
             Network.send(world, new Network.Effect(BranchRules.FX_FROST, getId(), eye, dir, 14, 10, 0));
             for (var t : world.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(14),
@@ -74,6 +86,7 @@ public class UraumeNpcEntity extends Monster {
                         && e.position().subtract(position()).normalize().dot(dir) > 0.55)) {
                 NpcCombat.hurt(this, t, 12f);
                 t.setTicksFrozen(Math.min(600, t.getTicksFrozen() + 200));
+                UraumeIce.addFrost(t, 1);
             }
         } else {
             // 冰凝咒法 · 直瀑：目标处冰柱
@@ -82,6 +95,7 @@ public class UraumeNpcEntity extends Monster {
                     e -> e != this && e.isAlive() && e instanceof Player p)) {
                 NpcCombat.hurt(this, t, 16f);
                 t.setTicksFrozen(Math.min(600, t.getTicksFrozen() + 120));
+                UraumeIce.addFrost(t, 1);
             }
         }
         world.playSound(null, blockPosition(), (skillIndex & 1) == 1

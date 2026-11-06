@@ -129,7 +129,11 @@ public class ChosoEntity extends PathfinderMob {
             case 10 -> { // 翅王
                 addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 120, 2, false, false));
                 addEffect(new MobEffectInstance(MobEffects.JUMP, 120, 1, false, false));
+                addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 120, 0, false, false));
+                setDeltaMovement(getDeltaMovement().add(0, .6, 0)); hurtMarked = true;
                 fx(world, position().add(0, 1.2, 0), Vec3.ZERO, 3, 14);
+                // r261：和玩家同样的 5×5 血雨（1 秒后落下）
+                BloodWingsRain.request(this, (ServerLevel) level(), target.position());
             }
             case 11 -> { // 血雾
                 for (var t : near(8)) {

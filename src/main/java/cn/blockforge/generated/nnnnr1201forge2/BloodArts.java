@@ -125,7 +125,14 @@ public final class BloodArts {
             case BloodRules.ARMOR -> {s.shield=Math.max(s.shield,BalanceRules.damage(160*(1+.15f*rank)));s.shieldEnd=now+BloodRules.duration(300,rank);}
             case BloodRules.NOVA -> {nova(p,origin,empowered);BloodExpansion.novaEchoes(p,origin,empowered);}
             case BloodRules.CANAL -> {var targets=near(p,origin,36+rank*4);targets.removeIf(t->!cone(origin,dir,t,.65)||!visible(p,origin,t));targets.sort(Comparator.<LivingEntity>comparingDouble(t->-t.getBoundingBox().getCenter().subtract(origin).normalize().dot(dir)).thenComparingDouble(t->t.distanceToSqr(origin)));canals.removeIf(c->c.p==p);s.marks.clear();for(LivingEntity t:targets.stream().limit(BloodRules.canalTargets(rank)).toList())if(canals.size()<512)canals.add(new Canal(p,t,origin));if(targets.isEmpty())tell(p,"运河没有找到准星附近的敌人");}
-            case BloodRules.WINGS -> {s.wings=now+BloodRules.duration(160,rank);LivingEntity body=MaidBridge.body(p);body.setDeltaMovement(body.getDeltaMovement().add(dir.scale(.7)).add(0,.7,0));body.hurtMarked=true;}
+            case BloodRules.WINGS -> {
+                s.wings=now+BloodRules.duration(160,rank);
+                LivingEntity body=MaidBridge.body(p);
+                body.setDeltaMovement(body.getDeltaMovement().add(dir.scale(.7)).add(0,.7,0));
+                body.hurtMarked=true;
+                // r261：翅王期间可以飞
+                if(p.getAbilities().mayfly==false){p.getAbilities().mayfly=true;p.onUpdateAbilities();}
+            }
             case BloodRules.MIST -> {if(areas.size()<512)areas.add(new Area(p,p.serverLevel(),floor,now+BloodRules.duration(100,rank),9+rank*2,true));}
             case BloodRules.THORNS -> {Vec3 flat=new Vec3(dir.x,0,dir.z).normalize();if(flat.lengthSqr()<.1)flat=new Vec3(0,0,1);int lanes=7+rank*2;for(int lane=0;lane<lanes;lane++){Vec3 ray=flat.yRot((float)(-Math.PI/3+lane*(Math.PI*2/3)/(lanes-1)));for(int i=1;i<=5+rank&&thorns.size()<1024;i++)thorns.add(new Thorn(p,p.serverLevel(),ground(p,origin.add(ray.scale(i*1.7))),ray,now+i*2));}}
             case BloodRules.MIRROR -> s.mirror=now+BloodRules.duration(60,rank);
@@ -168,6 +175,27 @@ public final class BloodArts {
         for(LivingEntity t:targets){if(remaining--<=0)break;boolean weak=!sure&&BlackFlashMarks.bloodWeakPoint(p,t,start,end);hit(p,t,32,.5f,false,BloodRules.multiplier(empowered,weak)*(sure?BloodRules.domainBase(MaidBridge.body(p).getMaxHealth())/32/(1+rank(p)):1));if(weak)fx(p,FX_HIT,t.getEyePosition().add(dir),dir,3,24,t.getId());}
         fx(p,FX+3,start,end,empowered?2:1,12,sure?2:0);
     }
+    /** 翅王血雨的单条伤害：原版穿血的 5%（供 BloodWingsRain 调用）。 */
+    public static void wingsRainHit(ServerPlayer p,LivingEntity t){
+        hit(p,t,32f,.025f,false,BloodRules.multiplier(false,false));
+    }
+
+    /** 翅王是否仍在持续（r261）。 */
+    public static boolean wingsActive(ServerPlayer p){
+        State s=states.get(p.getUUID());
+        return s!=null&&s.wings>p.level().getGameTime();
+    }
+
+    /** 翅王期间左键：准星 24 格内落红圈，1 秒后 100 条穿血铺满 5×5。 */
+    public static void wingsStrike(ServerPlayer p){
+        if(!wingsActive(p))return;
+        Vec3 eye=p.getEyePosition(),look=p.getLookAngle(),end=eye.add(look.scale(24));
+        var hit=p.level().clip(new ClipContext(eye,end,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,p));
+        Vec3 center=hit.getType()==HitResult.Type.MISS?end:hit.getLocation();
+        BloodWingsRain.request(p,p.serverLevel(),center);
+        tell(p,"翅王·血雨");
+    }
+
     static void nova(ServerPlayer p,Vec3 at,boolean empowered){
         fx(p,FX+8,at,Vec3.ZERO,empowered?2:1,32,BloodRules.novaRays(rank(p)));
         p.serverLevel().playSound(null,BlockPos.containing(at),SoundEvents.GENERIC_EXPLODE,SoundSource.PLAYERS,1.1f,.7f);
@@ -202,7 +230,10 @@ public final class BloodArts {
             if(s.automaticCharge&&s.charge>=0){s.heartbeat=now;if(now-s.charge>=BloodRules.CHARGE_TICKS){cancelCharge(s);s.charges=1+rank(p);s.compressed=now+600;}}
             if(s.charge>=0){if(now-s.heartbeat>40)cancelCharge(s);else if(now%4==0){fx(p,FX+2,p.getEyePosition().add(p.getLookAngle().scale(.65)),p.getLookAngle(),(float)Math.min(1,(now-s.charge)/(double)BloodRules.CHARGE_TICKS),8,0);pose(p,BloodRules.COMPRESS,10);}}
             if(s.shield>0&&now>=s.shieldEnd)s.shield=0;
-            if(s.wings>now){LivingEntity body=MaidBridge.body(p);Vec3 v=body.getDeltaMovement(),look=p.getLookAngle();Vec3 flight=new Vec3(v.x*.97+look.x*.045,0,v.z*.97+look.z*.045);if(flight.lengthSqr()>1)flight=flight.normalize();body.setDeltaMovement(flight.x,Math.max(v.y,-.09),flight.z);body.fallDistance=0;body.hurtMarked=true;if(now%6==0&&areas.size()<512){Vec3 at=ground(p,p.position());areas.add(new Area(p,s.level,at,now+80+rank(p)*20,1.4+rank(p)*.35,false));fx(p,FX_TRAIL,at,Vec3.ZERO,1.4f,80,0);}}
+            if(s.wings>now){
+                if(p.getAbilities().mayfly==false){p.getAbilities().mayfly=true;p.onUpdateAbilities();}
+                LivingEntity body=MaidBridge.body(p);Vec3 v=body.getDeltaMovement(),look=p.getLookAngle();Vec3 flight=new Vec3(v.x*.97+look.x*.045,0,v.z*.97+look.z*.045);if(flight.lengthSqr()>1)flight=flight.normalize();body.setDeltaMovement(flight.x,Math.max(v.y,-.09),flight.z);body.fallDistance=0;body.hurtMarked=true;if(now%6==0&&areas.size()<512){Vec3 at=ground(p,p.position());areas.add(new Area(p,s.level,at,now+80+rank(p)*20,1.4+rank(p)*.35,false));fx(p,FX_TRAIL,at,Vec3.ZERO,1.4f,80,0);}}
+            if(s.wings>0&&s.wings<=now){if(p.getAbilities().mayfly&&!p.isCreative()){p.getAbilities().mayfly=false;p.onUpdateAbilities();}s.wings=0;}
             if(s.mirror>now)reflect(s);
             if(now%5==0){
                 if(s.compressed>now)fx(p,FX_READY,p.getEyePosition(),p.getLookAngle(),1,7,0);

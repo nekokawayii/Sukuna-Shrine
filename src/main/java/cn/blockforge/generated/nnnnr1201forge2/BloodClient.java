@@ -28,6 +28,10 @@ public final class BloodClient {
     public static final class Registration {
         @SubscribeEvent public static void shaders(RegisterShadersEvent event){shader=null;try{event.registerShader(new ShaderInstance(event.getResourceProvider(),new ResourceLocation("sukuna","blood_fluid"),DefaultVertexFormat.POSITION_COLOR_TEX),s->shader=s);}catch(java.io.IOException|RuntimeException error){com.mojang.logging.LogUtils.getLogger().warn("赤血动态材质加载失败，保留流动血线与基础材质",error);}}
     }
+    /** 翅王是否仍在持续（客户端判断，供左键血雨用）。 */
+    private static long wingsUntil;
+    public static boolean wingsActive(){return Minecraft.getInstance().level!=null&&Minecraft.getInstance().level.getGameTime()<wingsUntil;}
+
     public static boolean receive(Network.Effect e){
         if((e.kind()<BloodArts.FX||e.kind()>BloodDomain.FX_CLOSE)&&(e.kind()<BloodExpansion.FX_OCEAN||e.kind()>BloodExpansion.FX_OCEAN_CLOSE))return false;
         var mc=Minecraft.getInstance();if(mc.level==null)return true;if(world!=mc.level){clear();world=mc.level;}tick=mc.level.getGameTime();
@@ -35,6 +39,7 @@ public final class BloodClient {
         if(e.kind()==BloodExpansion.FX_OCEAN){oceans.put(e.seed(),new Visual(e,(long)e.direction().x,tick+e.life()));return true;}
         if(e.kind()==BloodDomain.FX_CLOSE){domains.remove(e.seed());return true;}
         if(e.kind()==BloodDomain.FX_DOMAIN){if(DomainWorldRenderer.clashing(e.owner()))return true;Visual old=domains.get(e.seed());domains.put(e.seed(),new Visual(e,old==null?tick:old.born,tick+e.life()));return true;}
+        if(e.kind()==BloodArts.FX+10&&e.life()>0)wingsUntil=tick+Math.max(20,e.life());
         if(e.life()<=0)return true;
         if(e.kind()==BloodArts.FX+2)GojoOpticsClient.receive(e);
         if(e.kind()==BloodArts.FX+4||e.kind()==BloodArts.FX+5&&e.seed()==0||e.kind()==BloodArts.FX+7||e.kind()==BloodArts.FX+10||e.kind()==BloodArts.FX+13&&e.seed()==0||e.kind()==BloodArts.FX+2||e.kind()==BloodArts.FX_HEART||e.kind()==BloodArts.FX_READY)visuals.removeIf(v->v.e.kind()==e.kind()&&v.e.owner()==e.owner()&&v.e.seed()==e.seed());

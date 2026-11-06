@@ -45,6 +45,7 @@ public final class TechniqueInput {
         if(input.phase()==0&&character.mainline.Mainline.domainSkill(p,input.skill())&&!DomainClash.counterCasting(p)){
             DomainClash.counterCast(p,()->{receive(p,input);return true;});return;
         }
+        if(input.skill()==BloodRules.WINGS&&input.phase()==7){BloodArts.wingsStrike(p);return;}
         if(input.skill()==character.mahito.MahitoSkills.TRANSMUTE&&input.phase()==7){character.mahito.MahitoTransfigure.handle(p,input.motion());return;}
         // 鹿紫云一：轮盘中心「幻兽·琥珀」用 phase=7 直接请求（终奥不在轮盘技能表里，不走 CharacterCasting 的扣费/冷却）
         // 日车判决「没收」：60 秒内禁用术式

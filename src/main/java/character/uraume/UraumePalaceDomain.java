@@ -76,20 +76,15 @@ public final class UraumePalaceDomain {
     public static void closeByOwner(UUID owner) {
         Job job = JOBS.get(owner);
         if (job == null) return;
-        if (job.restore.isEmpty()) {
-            job.restore.addAll(job.old.keySet());
-            job.old.clear();
-        }
+        if (job.restore.isEmpty()) job.restore.addAll(job.old.keySet());   // 保留 old 供还原读取
     }
 
     public static void close(ServerPlayer p, String why) {
         if (p == null) return;
         Job job = JOBS.get(p.getUUID());
-        if (job == null || !job.restore.isEmpty()) return;  // 已在还原中
-        job.restore.addAll(job.old.keySet());
-        job.old.clear();
-        JOBS.put(p.getUUID(), new Job(p.getUUID(), job.level, job.center, job.end, job.old, job.build,
-            job.cursor, job.restore, 0, job.built, job.opened));
+        if (job == null) return;
+        if (job.restore.isEmpty()) job.restore.addAll(job.old.keySet());   // 保留 old，还原时要用
+        else return;                                                       // 已在还原中
         if (!why.isEmpty()) p.displayClientMessage(net.minecraft.network.chat.Component.literal("霜天宫殿 · 解除（" + why + "）"), true);
     }
 

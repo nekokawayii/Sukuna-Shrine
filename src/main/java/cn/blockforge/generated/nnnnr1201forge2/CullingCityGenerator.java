@@ -24,7 +24,8 @@ public final class CullingCityGenerator extends FlatLevelSource {
         for(int x=c.getPos().getMinBlockX();x<=c.getPos().getMaxBlockX();x++)for(int z=c.getPos().getMinBlockZ();z<=c.getPos().getMaxBlockZ();z++){
             if(x< -256||x>255||z< -256||z>255)continue;
             put(c,x,0,z,ExpeditionContent.block("culling_barrier"));
-            for(int y=1;y<=63;y++)put(c,x,y,z,y<60?Blocks.STONE:Blocks.GRAVEL);
+            // r259：地面下的沙砾层全部改成基岩，防止玩家往下挖穿结界
+            for(int y=1;y<=63;y++)put(c,x,y,z,y<60?Blocks.STONE:Blocks.BEDROCK);
             int lx=Math.floorMod(x+256,32),lz=Math.floorMod(z+256,32),bx=Math.floorDiv(x+256,32),bz=Math.floorDiv(z+256,32);
             boolean road=lx<7||lz<7;put(c,x,64,z,road?(lx==3||lz==3?Blocks.YELLOW_CONCRETE:Blocks.GRAY_CONCRETE):Blocks.SMOOTH_STONE);
             if(x==-256||x==255||z==-256||z==255)for(int y=1;y<=511;y++)put(c,x,y,z,ExpeditionContent.block("culling_barrier"));

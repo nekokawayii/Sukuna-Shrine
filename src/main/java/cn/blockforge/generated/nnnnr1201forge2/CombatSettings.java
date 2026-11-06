@@ -88,8 +88,11 @@ public final class CombatSettings {
         float before=target.getHealth()+target.getAbsorptionAmount();String attackType=AttackTypes.peek();
         amount*=ExpeditionEvents.techniqueBonus(owner,attackType);
         try{boolean accepted=target.hurt(source,amount);if(accepted&&amount>0&&!source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)&&!source.is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK)){
-            int index=AttackTypes.index(attackType);boolean ordinarySlash=index>=0&&AttackTypes.SLASH.equals(AttackTypes.family(index))&&!AttackTypes.WORLD_SLASH.equals(attackType);
-            if(!ordinarySlash&&!character.mahito.MahitoCombat.soulSource(source))SkillDestruction.impact(owner,target.position(),1);
+            // r259：只要开了 sukunaDesblock，所有角色的所有技能命中都按受击体积破坏方块
+            // （半径取目标碰撞体积宽高中的较大者，限制在 1~3 格，避免过大的连扇破坏）
+            double breakRadius = Math.max(1.0, Math.min(3.0,
+                Math.max(target.getBbWidth(), target.getBbHeight() * 0.5)));
+            SkillDestruction.impact(owner, target.position(), breakRadius);
             SlashImpact.after(owner,target,attackType,before,true);
         }return accepted;}finally{AttackTypes.consume();if(previousOwner==null)spellOwners.remove(source);else spellOwners.put(source,previousOwner);}
     }

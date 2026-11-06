@@ -398,8 +398,18 @@ public final class TojiQte {
         return best;
     }
 
-    /** 眩晕/硬直：直接锁 AI。 */
+    /** 眩晕/硬直：直接锁 AI。天逆蛑已碎时不再生效（r248）。 */
+    public static void stun(ServerPlayer source, LivingEntity target, int ticks) {
+        if (source != null && tenkaBroken(source)) return;
+        applyStun(target, ticks);
+    }
+
+    /** 兼容旧调用（没有来源时照旧生效）。 */
     public static void stun(LivingEntity target, int ticks) {
+        applyStun(target, ticks);
+    }
+
+    private static void applyStun(LivingEntity target, int ticks) {
         data(target).putLong(K_STUN, now(target) + ticks);
         if (target instanceof Mob mob) {
             character.npc.NpcControl.stun(mob, "toji_combo", ticks);

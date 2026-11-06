@@ -162,7 +162,7 @@ public final class TojiCombos {
         LivingEntity target = TojiQte.approach(p, 4.5);
         if (target == null) return false;
         hit(p, target, C3, 2.4, 0, 10);
-        TojiQte.stun(target, 10);
+        TojiQte.stun(p, target, 10);
         fx(p, 3, target.position());
         say(p, "飞踢拉扯 · 打断");
         return true;
@@ -176,7 +176,7 @@ public final class TojiCombos {
             return false;
         }
         hit(p, target, C4, 0.2, 0, 40);
-        TojiQte.stun(target, 40);
+        TojiQte.stun(p, target, 40);
         target.setDeltaMovement(0, -0.6, 0);
         TojiQte.dust(p.serverLevel(), target.position(), 2.2);
         fx(p, 4, target.position());
@@ -188,7 +188,7 @@ public final class TojiCombos {
         LivingEntity target = TojiQte.approach(p, 3.5);
         if (target == null) return false;
         hit(p, target, C5, 0.4, 0, 30);
-        TojiQte.stun(target, 30);
+        TojiQte.stun(p, target, 30);
         fx(p, 5, target.position());
         say(p, "滑铲切足 · 硬直 1.5 秒");
         return true;
@@ -209,7 +209,7 @@ public final class TojiCombos {
     private static boolean kneeStrike(ServerPlayer p, LivingEntity target) {
         if (target == null) return false;
         hit(p, target, C7, 0.7, 0, 8);
-        target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 2));
+        if (!TojiQte.tenkaBroken(p)) target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 2));
         fx(p, 7, target.position());
         say(p, "游云·破膝击");
         return true;
@@ -279,7 +279,7 @@ public final class TojiCombos {
         LivingEntity target = TojiQte.approach(p, 12.0);
         if (target == null) return false;
         hit(p, target, C12, 1.2, 0, 20);
-        TojiQte.stun(target, 20);
+        TojiQte.stun(p, target, 20);
         fx(p, 12, target.position());
         say(p, "先之先·截击");
         return true;
@@ -298,7 +298,7 @@ public final class TojiCombos {
 
     private static boolean wallSlam(ServerPlayer p, LivingEntity target) {
         hit(p, target, C14, 1.0, 1.0, 40);      // 无视防御
-        TojiQte.stun(target, 40);
+        TojiQte.stun(p, target, 40);
         TojiQte.dust(p.serverLevel(), target.position(), 2.0);
         fx(p, 14, target.position());
         say(p, "墙壁反杀 · 脑震荡");
@@ -423,7 +423,7 @@ public final class TojiCombos {
             target.setDeltaMovement(target.getDeltaMovement().add(push.x, Math.max(0.15, push.y + 0.3), push.z));
             target.hurtMarked = true;
         }
-        if (stun > 0) TojiQte.stun(target, stun);
+        if (stun > 0) TojiQte.stun(p, target, stun);
         p.serverLevel().playSound(null, target.blockPosition(), net.minecraft.sounds.SoundEvents.PLAYER_ATTACK_CRIT,
             net.minecraft.sounds.SoundSource.PLAYERS, 0.8f, 0.9f);
     }

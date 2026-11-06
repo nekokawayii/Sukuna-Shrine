@@ -254,13 +254,44 @@ public final class CullingSpawns {
     private static void hostile(ServerLevel level, Mob mob) {
         LivingEntity current = mob.getTarget();
         if (current != null && current.isAlive() && current.level() == level && mob.distanceToSqr(current) < 48 * 48) return;
-        LivingEntity best = null; double bestD = Double.MAX_VALUE;
-        for (LivingEntity t : level.getEntitiesOfClass(LivingEntity.class, mob.getBoundingBox().inflate(48),
-            t -> t != mob && t.isAlive() && !t.isSpectator() && !(t instanceof ServerPlayer sp && (sp.isCreative() || sp.isSpectator())) && t.level() == level)) {
+        LivingEntity best = nearestPrey(level, mob, 48);
+        if (best != null) mob.setTarget(best);
+    }
+
+    /** 强制互相攻击（r231）：每 20 刻把所有界内生物的目标重设成最近的「玩家 / 参赛者 / 咒灵」。 */
+    @SubscribeEvent
+    public static void forceHostile(TickEvent.ServerTickEvent e) {
+        if (e.phase != TickEvent.Phase.END) return;
+        var server = e.getServer();
+        if (server.getTickCount() % 20 != 0) return;
+        ServerLevel level = server.getLevel(CullingGame.DIM);
+        if (level == null) return;
+        for (Mob mob : level.getEntitiesOfClass(Mob.class, new AABB(-256, 0, -256, 256, 512, 256),
+            m -> m.isAlive() && m.getPersistentData().getBoolean("CullingEnemy"))) {
+            LivingEntity best = nearestPrey(level, mob, 48);
+            if (best != null && mob.getTarget() != best) mob.setTarget(best);
+        }
+    }
+
+    private static LivingEntity nearestPrey(ServerLevel level, Mob mob, double range) {
+        LivingEntity best = null; double bestD = range * range;
+        for (LivingEntity t : level.getEntitiesOfClass(LivingEntity.class, mob.getBoundingBox().inflate(range),
+            t -> canPrey(level, mob, t))) {
             double d = mob.distanceToSqr(t);
             if (d < bestD) { bestD = d; best = t; }
         }
-        if (best != null) mob.setTarget(best);
+        return best;
+    }
+
+    /** 谁能打谁：玩家/参赛者/咒灵全都算；召唤物与召唤师之间不互打（否则自己召的怪会先把他打死）。 */
+    private static boolean canPrey(ServerLevel level, Mob mob, LivingEntity t) {
+        if (t == mob || !t.isAlive() || t.isSpectator() || t.level() != level) return false;
+        if (t instanceof ServerPlayer sp && (sp.isCreative() || sp.isSpectator())) return false;
+        boolean prey = t instanceof ServerPlayer || t.getPersistentData().getBoolean("CullingEnemy");
+        if (!prey) return false;
+        if (mob.getPersistentData().getBoolean("CullingSummon") && t.getPersistentData().getBoolean("CullingGeto")) return false;
+        if (mob.getPersistentData().getBoolean("CullingGeto") && t.getPersistentData().getBoolean("CullingSummon")) return false;
+        return true;
     }
 
     private static BlockPos findSpot(ServerLevel level, ServerPlayer anchor, net.minecraft.util.RandomSource rnd) {

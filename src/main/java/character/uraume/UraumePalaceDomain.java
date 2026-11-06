@@ -48,7 +48,8 @@ public final class UraumePalaceDomain {
             BlockState state = level.getBlockState(pos);
             if (state.getBlock() == Blocks.BEDROCK) continue;
             boolean inner = d2 <= (double) (r - 1) * (r - 1) && d2 > (double) (r - 2) * (r - 2);
-            BlockState palace = cn.blockforge.generated.nnnnr1201forge2.Content.DOMAIN_SCREEN.get().defaultBlockState();
+            BlockState palace = cn.blockforge.generated.nnnnr1201forge2.Content.DOMAIN_SCREEN.get().defaultBlockState()
+                .setValue(cn.blockforge.generated.nnnnr1201forge2.DomainScreenBlock.IMAGE, 8);
             BlockState put = (floor || inner) ? palace
                 : shell ? Blocks.PACKED_ICE.defaultBlockState() : Blocks.AIR.defaultBlockState();
             if (!shell && !floor && !inner && !state.isAir()) continue;

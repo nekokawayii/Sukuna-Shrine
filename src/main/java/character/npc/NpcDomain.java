@@ -202,7 +202,8 @@ public final class NpcDomain {
                     ? (job.style == Style.FIREWORK && outer ? Blocks.BEDROCK.defaultBlockState() : shell)
                     : air;
                 if (job.style == Style.PACHINKO && isFloor) block = Blocks.GOLD_BLOCK.defaultBlockState();
-                if (job.style == Style.ICE && isFloor) block = cn.blockforge.generated.nnnnr1201forge2.Content.DOMAIN_SCREEN.get().defaultBlockState();
+                if (job.style == Style.ICE && isFloor) block = cn.blockforge.generated.nnnnr1201forge2.Content.DOMAIN_SCREEN.get().defaultBlockState()
+                    .setValue(cn.blockforge.generated.nnnnr1201forge2.DomainScreenBlock.IMAGE, 8);
                 if (job.style == Style.ICE && isShell) block = Blocks.PACKED_ICE.defaultBlockState();
                 if (job.style == Style.BLOOD && isFloor) block = Blocks.RED_CONCRETE.defaultBlockState();
                 BlockState courtBlock = job.decorBlock.get(pos.asLong());

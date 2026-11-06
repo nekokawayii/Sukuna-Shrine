@@ -19,10 +19,10 @@ import net.minecraft.world.level.block.Block;
  * 石流龙的领域固定使用落日晚霞，不读取旧存档中的 RyuDomainImage。
  */
 public class DomainScreenItem extends BlockItem {
-    public static final int IMAGES = 8;
+    public static final int IMAGES = 9;
     public static final String KEY = "RyuDomainImage";
     private static final String[] NAMES = {
-        "落日云海", "落日云海（旧外观兼容）", "银河", "血海", "火焰", "虚空裂隙", "尘埃", "光斑"
+        "落日云海", "落日云海（旧外观兼容）", "银河", "血海", "火焰", "虚空裂隙", "尘埃", "光斑", "霜月雪云"
     };
 
     public DomainScreenItem(Block block, Properties properties) {

@@ -14,7 +14,7 @@ import net.minecraft.world.phys.Vec3;
 public final class DomainMaskRenderer implements BlockEntityRenderer<DomainMaskBlockEntity> {
     private static final ResourceLocation STAR=new ResourceLocation("sukuna","textures/block/yuki_star_shell.png");
     private static final ResourceLocation SUNSET=new ResourceLocation("sukuna","textures/effect/domain_sunset.png");
-    private static final ResourceLocation[] IMAGES=java.util.stream.IntStream.range(0,8)
+    private static final ResourceLocation[] IMAGES=java.util.stream.IntStream.range(0,9)
         .mapToObj(i->i<=1?SUNSET:new ResourceLocation("sukuna","textures/block/domain_screen_"+i+".png")).toArray(ResourceLocation[]::new);
     private static final float[][][] FACES={
         {{0,0,0},{1,0,0},{1,0,1},{0,0,1}},

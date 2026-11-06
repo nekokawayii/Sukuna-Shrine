@@ -58,12 +58,47 @@ public final class CullingSpawns {
         if (curses < CAP_CURSE) spawn(level, CURSES, "curse", Math.min(CAP_CURSE - curses, elite ? 1 : 2), wave, elite);
         int sorcererCap = ancient ? CAP_SORCERER * 3 : CAP_SORCERER;
         if (sorcerers < sorcererCap) spawn(level, SORCERERS, "sorcerer", Math.min(sorcererCap - sorcerers, elite ? 1 : 2), wave, elite, allowToji);
+        // r227：界内会偶尔刷出五条悟 / 虎杖残影这类"大人物"，血量按普通泳者算
+        if (level.random.nextFloat() < BOSS_CHANCE) spawnBoss(level, wave);
         if (anyRule(level, "overflow") && level.getRandom().nextInt(3) == 0)
             spawn(level, CURSES, "curse", 2, wave, false);
         // 全员敌对
         for (Mob m : all) hostile(level, m);
         // 波次推进：每次触发刷新后记一次，每 8 个参赛者抬一档数值
         WAVE_INDEX = wave + 1;
+    }
+
+    /** 五条悟 / 虎杖残影作为参赛者出现的概率（每轮刷新掷一次）。 */
+    private static final float BOSS_CHANCE = 0.18f;
+
+    /** 刷一只"大人物"：五条悟或虎杖残影，血量与普通泳者完全相同。 */
+    private static void spawnBoss(ServerLevel level, int wave) {
+        for (Mob m : level.getEntitiesOfClass(Mob.class, new AABB(-256, 0, -256, 256, 512, 256),
+            m -> m.isAlive() && m.getPersistentData().getBoolean("CullingEnemy")
+                && (m instanceof cn.blockforge.generated.nnnnr1201forge2.GojoEntity
+                    || m instanceof cn.blockforge.generated.nnnnr1201forge2.YujiEntity))) return;
+        if (level.players().isEmpty()) return;
+        ServerPlayer anchor = level.players().get(level.random.nextInt(level.players().size()));
+        BlockPos at = findSpot(level, anchor, level.random);
+        if (at == null) return;
+        boolean gojo = level.random.nextBoolean();
+        Mob mob = gojo
+            ? cn.blockforge.generated.nnnnr1201forge2.VoidContent.GOJO.get().create(level)
+            : cn.blockforge.generated.nnnnr1201forge2.SoulContent.YUJI.get().create(level);
+        if (mob == null) return;
+        mob.moveTo(at.getX() + .5, at.getY(), at.getZ() + .5, level.random.nextFloat() * 360f, 0);
+        level.addFreshEntity(mob);
+        if (mob instanceof cn.blockforge.generated.nnnnr1201forge2.YujiEntity y) y.challenger = anchor.getUUID();
+        level.getScoreboard().removePlayerFromTeam(mob.getScoreboardName());
+        mob.getPersistentData().putBoolean("CullingEnemy", true);
+        mob.getPersistentData().putString("CullingKind", "sorcerer");
+        mob.getPersistentData().putLong("ExpeditionDespawnAt", level.getGameTime() + 9600);
+        scale(level, mob, "sorcerer", wave); // 与普通泳者同血量
+        applyNpcRuleMods(mob);
+        mob.setCustomName(Component.literal("死灭回游参赛者 · " + (gojo ? "五条悟" : "虎杖残影")));
+        mob.setCustomNameVisible(true);
+        for (ServerPlayer p : level.players())
+            p.displayClientMessage(Component.literal("【死灭洄游】" + (gojo ? "五条悟" : "虎杖残影") + " 作为参赛者出现了。"), true);
     }
 
     private static void spawn(ServerLevel level, String[] pool, String kind, int count, int wave, boolean elite) {

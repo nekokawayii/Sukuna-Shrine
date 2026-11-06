@@ -15,7 +15,7 @@ public final class CullingRuleScreen extends Screen {
     private static final int CARD_W = 132, CARD_H = 56, GAP = 8;
     private final int picked, points;
     private final int[] options = new int[5];
-    private int hover = -1, escapeHover = -1;
+    private int hover = -1, escapeHover = -1, rerollHover = -1;
 
     private CullingRuleScreen(int picked, int points, long packed) {
         super(Component.literal("死灭洄游 · 规则"));
@@ -59,6 +59,19 @@ public final class CullingRuleScreen extends Screen {
             g.drawString(font, tip, (this.width - font.width(tip)) / 2, y - 22, 0xFF9A9A9A, false);
         }
 
+        // 刷新卡池（25 分）
+        rerollHover = -1;
+        {
+            int bw = 110, bh = 18, bx = (this.width - bw) / 2, by = y + height - 34;
+            boolean hot = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + bh;
+            rerollHover = hot ? 1 : 0;
+            boolean can = points >= CullingRules.REROLL_COST;
+            g.fill(bx - 1, by - 1, bx + bw + 1, by + bh + 1, hot && can ? 0xFF66CCFF : 0xFF2A4A5A);
+            g.fill(bx, by, bx + bw, by + bh, hot && can ? 0xFF102A38 : 0xFF0C1418);
+            g.drawCenteredString(font, "刷新卡池 " + CullingRules.REROLL_COST + " 分", bx + bw / 2, by + 5,
+                can ? 0xFFBFE8FF : 0xFF5A6A70);
+        }
+
         // 五张候选卡
         int total = 5 * CARD_W + 4 * GAP;
         int startX = (this.width - total) / 2, top = y + 34;
@@ -90,6 +103,7 @@ public final class CullingRuleScreen extends Screen {
     @Override public boolean mouseClicked(double mx, double my, int button) {
         if (button != 0) return super.mouseClicked(mx, my, button);
         int y = (this.height - 150) / 2;
+        if (rerollHover == 1 && points >= CullingRules.REROLL_COST) { send(CullingRules.REROLL); return true; }
         if (picked >= CullingRules.ESCAPE_AT && escapeHover == 1) { send(CullingRules.ESCAPE); return true; }
         if (hover >= 0 && points >= CullingRules.COST) { send(hover); return true; }
         return super.mouseClicked(mx, my, button);

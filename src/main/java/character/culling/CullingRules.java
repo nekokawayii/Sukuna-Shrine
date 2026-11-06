@@ -43,6 +43,8 @@ public final class CullingRules {
     public static final int SKILL = 3200, OPEN = 99, ESCAPE = 5, COST = 100;
     /** 无限跳跃：空中按空格时客户端用这个 motion 上报（服务端校验是否真有该规则）。 */
     public static final int JUMP_REQ = 250;
+    /** 刷新卡池：花 25 分重掷 5 张候选。 */
+    public static final int REROLL = 251, REROLL_COST = 25;
     /** 脱离门槛：制定够这么多条规则后，面板上方才出现「脱离」。选规则本身**不限条数**（r224）。 */
     public static final int ESCAPE_AT = 5;
     /** 兼容旧引用。 */
@@ -194,8 +196,6 @@ public final class CullingRules {
         r("skill_carnival","技能狂欢","使用领域/极之番后，普通技能冷却清零","火力",mods().special("ult_clear_cd")),
         r("mana_crystal","咒力结晶","每次受到伤害都会回复等量咒力","火力",mods().manaOnHurt(1)),
         r("hand_free","脱手释放","技能可提前取消后摇，且不额外消耗咒力","火力",mods().special("no_aftercast")),
-        r("infinite_combo","无限连段","连招窗口延长 100%","火力",mods().special("combo_window")),
-        r("counter_power","借力打力","完美闪避/格挡后，下一次技能不消耗咒力","火力",mods().special("dodge_free")),
         r("overclock_v2","超频运转","冷却缩短 30%，但每次施法扣 1 点最大生命（击杀恢复）","火力",mods().cooldown(.7).special("max_hp_cost")),
 
         r("reverse_out","反转外放","造成伤害的 10% 转化为自身生命","生存",mods().lifesteal(.1)),
@@ -211,22 +211,17 @@ public final class CullingRules {
 
         r("gale_step","疾风步","移速 +50%，且免疫减速","机动",mods().speed(1.5).special("slow_immune")),
         r("infinite_jump","无限跳跃","可以在空中二段跳、三段跳","机动",mods().jump(2).special("multi_jump")),
-        r("blink","空间跳跃","按潜行+空格向准星方向瞬移 10 格（冷却 3 秒）","机动",mods().special("blink")),
-        r("dodge_master","闪避大师","翻滚/闪避无敌帧延长 0.5 秒","机动",mods().special("iframes")),
         r("water_walk","水上行走","水面与岩浆表面如履平地","机动",mods().special("water_walk")),
         r("spider","蜘蛛侠","可以攀爬任何垂直墙面","机动",mods().special("wall_climb")),
-        r("phantom","幻影迷踪","奔跑时留下残影，怪物有 50% 概率攻击残影","机动",mods().special("afterimage")),
         r("counter_launch","后发先至","受到攻击时自动向反方向弹射 5 格","机动",mods().special("launch_back")),
         r("immune_control","免控躯体","免疫击退、击飞与定身","机动",mods().special("no_knockback")),
         r("fly_permit","飞行权限","生存模式下可以自由飞行（不可穿墙）","机动",mods().special("fly")),
 
         r("greedy_hand","贪婪之手","积分与材料掉落翻倍","资源",mods().loot(2).score(2)),
         r("precise_collect","精准采集","击杀必定掉落该生物的稀有专属核心","资源",mods().special("rare_core")),
-        r("treasure_hunter","宝藏猎人","开箱必定出最高品质图纸或星之碎片","资源",mods().special("best_loot")),
         r("merchant","商人特权","计分塔兑换消耗积分减半","资源",mods().special("half_price")),
         r("stone_gold","点石成金","挖石头有 10% 概率变成高专原矿或紫水晶","资源",mods().special("ore_chance")),
         r("scavenger","拾荒者","破坏废墟方块时额外掉落咒力残秽","资源",mods().special("ruin_scrap")),
-        r("infinite_ammo","无限弹药","远程武器与弓不再消耗箭矢","资源",mods().special("no_ammo")),
         r("void_backpack","虚空背包","背包扩大一倍，死亡不掉落物品","资源",mods().special("keep_inventory")),
         r("time_stasis","时间停滞","界内怪物动作变慢（只对自身周围生效）","资源",mods().special("mob_slow")),
         r("dimension_strike","降维打击","所有攻击附加灵魂打击，对咒灵也造成 100% 物理伤害","资源",mods().special("soul_strike"))
@@ -315,6 +310,20 @@ public final class CullingRules {
         d.putString(OPTIONS,sb.toString());
         return out;
     }
+    /** 刷新卡池：25 分重掷 5 张候选（不改已制定规则）。 */
+    public static void reroll(ServerPlayer p){
+        if(!inDimension(p))return;
+        if(points(p)<REROLL_COST){
+            p.sendSystemMessage(Component.literal("积分不足：刷新卡池需要 "+REROLL_COST+" 分，现有 "+points(p)+"。").withStyle(ChatFormatting.GRAY));
+            return;
+        }
+        ExpeditionProgress.data(p).putInt("CullingPoints",points(p)-REROLL_COST);
+        ruleData(p).putString(OPTIONS,"");
+        options(p);
+        request(p);
+        p.sendSystemMessage(Component.literal("【卡池刷新】消耗 "+REROLL_COST+" 分，重新抽取 5 条规则。").withStyle(ChatFormatting.AQUA));
+    }
+
     public static void choose(ServerPlayer p,int index){
         if(!inDimension(p))return;
         int n=picked(p);

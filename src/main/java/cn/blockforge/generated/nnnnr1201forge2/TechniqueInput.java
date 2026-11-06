@@ -35,6 +35,7 @@ public final class TechniqueInput {
         if(input.skill()==character.culling.CullingRules.SKILL&&input.phase()==7){
             if(input.motion()==character.culling.CullingRules.OPEN)character.culling.CullingRules.request(p);
             else if(input.motion()==character.culling.CullingRules.JUMP_REQ)character.culling.CullingPerks.airJump(p);
+            else if(input.motion()==character.culling.CullingRules.REROLL)character.culling.CullingRules.reroll(p);
             else character.culling.CullingRules.choose(p,input.motion());
             return;
         }

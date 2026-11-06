@@ -77,7 +77,8 @@ public class SukunaNpcEntity extends PathfinderMob {
 
         // ① 神武解：面前 30 格、半角 45° 的扇形雷击（基准 15 × 20 = 300 原值）
         for (LivingEntity t : level().getEntitiesOfClass(LivingEntity.class,
-                getBoundingBox().inflate(30), t -> t != this && t.isAlive() && t instanceof net.minecraft.world.entity.Mob)) {
+                getBoundingBox().inflate(30), t -> t != this && t.isAlive()
+                    && (t instanceof net.minecraft.world.entity.Mob || t instanceof Player))) {
             Vec3 d = t.position().subtract(position());
             if (d.lengthSqr() > 0.25 && d.normalize().dot(forward) < Math.cos(Math.PI / 4)) continue;
             t.invulnerableTime = 0;
@@ -91,7 +92,8 @@ public class SukunaNpcEntity extends PathfinderMob {
 
         // ② 飞天：周围 10 格 + 面前扇形 40 格的敌人先被风拽到前方 6 格，再吃 15 格内 20 伤
         for (LivingEntity t : level().getEntitiesOfClass(LivingEntity.class,
-                getBoundingBox().inflate(40), t -> t != this && t.isAlive() && t instanceof net.minecraft.world.entity.Mob)) {
+                getBoundingBox().inflate(40), t -> t != this && t.isAlive()
+                    && (t instanceof net.minecraft.world.entity.Mob || t instanceof Player))) {
             Vec3 d = t.position().subtract(position());
             boolean near = d.lengthSqr() <= 100;
             boolean cone = d.lengthSqr() > 0.25 && d.normalize().dot(forward) >= Math.cos(Math.PI / 4);

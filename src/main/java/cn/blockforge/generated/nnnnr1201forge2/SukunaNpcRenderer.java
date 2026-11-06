@@ -22,6 +22,8 @@ public final class SukunaNpcRenderer extends MobRenderer<SukunaNpcEntity, Player
 
     public SukunaNpcRenderer(EntityRendererProvider.Context context) {
         super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false), 0.5f);
+        addLayer(new net.minecraft.client.renderer.entity.layers.ItemInHandLayer<>(this,
+            context.getItemInHandRenderer()));
         addLayer(new ExtraArmsLayer(this, context));
     }
 
@@ -59,8 +61,10 @@ public final class SukunaNpcRenderer extends MobRenderer<SukunaNpcEntity, Player
                 var sleeve = side < 0 ? extra.leftSleeve : extra.rightSleeve;
                 sleeve.copyFrom(arm);
                 ps.pushPose();
-                ps.translate(side * 0.42, -0.55, 0.06);
-                ps.mulPose(Axis.ZP.rotationDegrees(side * -22));
+                // 模型单位（1 单位 = 1/16 格），+Y 向下：肩在 y≈2，第二对手臂放到肩下并外扩
+                ps.translate(side * 3.6, 2.4, 0.0);
+                ps.mulPose(Axis.ZP.rotationDegrees(side * -18));
+                ps.mulPose(Axis.XP.rotationDegrees(10));
                 arm.render(ps, b, light, OverlayTexture.NO_OVERLAY);
                 sleeve.render(ps, b, light, OverlayTexture.NO_OVERLAY);
                 ps.popPose();

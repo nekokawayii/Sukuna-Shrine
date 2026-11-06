@@ -44,18 +44,22 @@ public final class BloodWingsRain {
     }
 
     private static void fire(LivingEntity caster, ServerLevel level, Vec3 center) {
-        for (int i = 0; i < GRID; i++) {
-            for (int j = 0; j < GRID; j++) {
-                double x = center.x - RADIUS + (i + .5) * (2 * RADIUS / GRID);
-                double z = center.z - RADIUS + (j + .5) * (2 * RADIUS / GRID);
-                Vec3 point = new Vec3(x, center.y, z);
-                Network.send(level, new Network.Effect(BloodArts.FX + 4, caster.getId(),
-                    point.add(0, 8, 0), new Vec3(0, -1, 0), 1f, 14, 0));
-                for (LivingEntity t : level.getEntitiesOfClass(LivingEntity.class,
-                    new AABB(point, point).inflate(0.75),
-                    t -> t.isAlive() && t != caster && t.getBoundingBox().inflate(0.15).contains(point))) {
-                    hurt(caster, t);
-                }
+        // r263：红圈内随机落点、随机倾角，从天上扎满整个圈；不再用穿血表现
+        var rnd = level.random;
+        for (int i = 0; i < 90; i++) {
+            double a = rnd.nextDouble() * Math.PI * 2;
+            double r = Math.sqrt(rnd.nextDouble()) * RADIUS;
+            double x = center.x + Math.cos(a) * r;
+            double z = center.z + Math.sin(a) * r;
+            double tiltX = (rnd.nextDouble() - .5) * .7;
+            double tiltZ = (rnd.nextDouble() - .5) * .7;
+            Vec3 point = new Vec3(x, center.y, z);
+            Network.send(level, new Network.Effect(BloodArts.FX_SPIKE, caster.getId(),
+                point, new Vec3(tiltX, -1, tiltZ), (float)(1.0 + rnd.nextDouble() * .4), 12, 0));
+            for (LivingEntity t : level.getEntitiesOfClass(LivingEntity.class,
+                new AABB(point, point).inflate(0.75),
+                t -> t.isAlive() && t != caster && t.getBoundingBox().inflate(0.15).contains(point))) {
+                hurt(caster, t);
             }
         }
         level.playSound(null, net.minecraft.core.BlockPos.containing(center),

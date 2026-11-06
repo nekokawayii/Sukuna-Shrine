@@ -124,6 +124,14 @@ public final class BloodClient {
             case 22 -> {ring(b,ps,at,new Vec3(0,1,0),size*(.8+Math.sin(time*.1)*.05),.35,camera,time,fade*.65);}
             case 24 -> rope(b,ps,at,e.direction(),.045,camera,time,fade);
             case 26 -> {Vec3 p=owner==null?at:owner.getEyePosition().add(owner.getLookAngle().scale(.7));orb(b,ps,p,.26,camera,time,fade);}
+            case 27 -> {
+                // r263：天上扎下来的血矛——顶端按 direction 的 xz 偏移、落点固定在 at
+                double drop = Math.min(8.0, 2.0 + age * 2.4);
+                Vec3 top = at.add(dir.x * drop * .12, drop, dir.z * drop * .12);
+                rope(b, ps, top, at, .085 * size, camera, time, fade);
+                rope(b, ps, top.add(0, 1.6, 0), top, .045 * size, camera, time, fade);
+                ring(b, ps, at.add(0, .03, 0), new Vec3(0, 1, 0), .34 * size, .09, camera, time, fade * .8);
+            }
             default -> {}
         }
     }

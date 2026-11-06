@@ -101,14 +101,15 @@ public final class RyuVisuals {
                 TRAILS.add(new Trail(e.position().subtract(e.direction().normalize().scale(0.7)), e.position(), now, 4));
             }
             case RyuFx.DOMAIN -> {
-                SKY = e.size() > 0 ? new Sky(e.position(), Math.max(2, e.size()), now + Math.max(1, e.life())) : null;
-                if (e.size() <= 0) break;
-                // r232：按用户要求注释掉领域特效球壳，只保留方块球壳
+                // r233：用户要求只保留方块球壳——天空球、光环、球壳轮廓全部关掉
+                if (e.size() <= 0) SKY = null;
+                // SKY = e.size() > 0 ? new Sky(e.position(), Math.max(2, e.size()), now + Math.max(1, e.life())) : null;
+                // if (e.size() <= 0) break;
                 // DOMAINS.add(new Domain(e.position(), Math.max(2, e.size()), now, 20));
-                if (PhotonFx.ready()) {
-                    PhotonFx.ring(e.position().add(0, 0.2, 0), Math.max(2, e.size()), 1.2, 0xA8D8F7FF, 0xFF9FDFFF, 44, 10, 14);
-                    PhotonFx.shockwave(e.position(), 0xFFBFF0FF, Math.max(2, e.size()), 12);
-                }
+                // if (PhotonFx.ready()) {
+                //     PhotonFx.ring(e.position().add(0, 0.2, 0), Math.max(2, e.size()), 1.2, 0xA8D8F7FF, 0xFF9FDFFF, 44, 10, 14);
+                //     PhotonFx.shockwave(e.position(), 0xFFBFF0FF, Math.max(2, e.size()), 12);
+                // }
                 Client.shake(8);
             }
             default -> { }

@@ -303,6 +303,7 @@ public final class Client {
         if(e.kind()==620){if(self)character.culling.CullingRuleScreen.open((int)e.size(),e.life(),e.seed());return;}
         if(e.kind()==621){if(self)character.culling.CullingClient.set((int)e.size());return;}
         if(e.kind()==622){if(self)character.culling.CullingStartScreen.open();return;}
+        if(e.kind()==623){CullingCubeClient.receive(e);return;}
         if(e.kind()==300){if(self)character.mahito.TransfigureScreen.open((int)e.size());return;}
         if(e.kind()==308){return;}
         if(e.kind()==306){character.mahito.MahitoArmsClient.addHeld(e.owner(),(int)e.size(),e.life());return;}

@@ -111,5 +111,35 @@ public final class CullingEntry {
                 0.2, AttributeModifier.Operation.MULTIPLY_TOTAL));
     }
 
+    // ===== 邀请函：原地展开黑色立方体，40 刻后把附近玩家吸进去（r257） =====
+    private static final java.util.List<Object[]> PENDING = new java.util.ArrayList<>();
+
+    public static void openInvitation(ServerPlayer p) {
+        ServerLevel level = p.serverLevel();
+        Network.send(level, new Network.Effect(623, p.getId(), p.position(),
+            net.minecraft.world.phys.Vec3.ZERO, 16f, 40, 0));
+        PENDING.add(new Object[]{level, p.position(), level.getGameTime() + 40});
+        p.sendSystemMessage(Component.literal("羂索的邀请函展开了——黑色立方体正在把你和周围的人吞进去。")
+            .withStyle(ChatFormatting.DARK_RED));
+    }
+
+    @SubscribeEvent
+    public static void tick(net.minecraftforge.event.TickEvent.ServerTickEvent e) {
+        if (e.phase != net.minecraftforge.event.TickEvent.Phase.END || PENDING.isEmpty()) return;
+        for (var it = PENDING.iterator(); it.hasNext(); ) {
+            Object[] job = it.next();
+            ServerLevel level = (ServerLevel) job[0];
+            long at = (long) job[2];
+            if (level.getGameTime() < at) continue;
+            it.remove();
+            net.minecraft.world.phys.Vec3 center = (net.minecraft.world.phys.Vec3) job[1];
+            for (ServerPlayer other : level.getEntitiesOfClass(ServerPlayer.class,
+                new net.minecraft.world.phys.AABB(center, center).inflate(16),
+                o -> !o.isSpectator())) {
+                CullingGame.enter(other);
+            }
+        }
+    }
+
     private CullingEntry() { }
 }

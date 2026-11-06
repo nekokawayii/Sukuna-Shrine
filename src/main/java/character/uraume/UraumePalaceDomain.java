@@ -75,7 +75,18 @@ public final class UraumePalaceDomain {
         p.displayClientMessage(net.minecraft.network.chat.Component.literal("领域展开 · 霜天宫殿"), true);
     }
 
+    /** 不要求施术者在线（离线/死亡时收场）。 */
+    public static void closeByOwner(UUID owner) {
+        Job job = JOBS.get(owner);
+        if (job == null) return;
+        if (job.restore.isEmpty()) {
+            job.restore.addAll(job.old.keySet());
+            job.old.clear();
+        }
+    }
+
     public static void close(ServerPlayer p, String why) {
+        if (p == null) return;
         Job job = JOBS.get(p.getUUID());
         if (job == null || !job.restore.isEmpty()) return;  // 已在还原中
         job.restore.addAll(job.old.keySet());
@@ -123,9 +134,8 @@ public final class UraumePalaceDomain {
             }
 
             if (owner == null || !owner.isAlive() || owner.level() != level) {
-                close(owner == null ? null : owner, "");
-                if (owner == null) it.remove();
-                continue;
+                if (owner == null) { closeByOwner(entry.getKey()); continue; }
+                close(owner, ""); continue;
             }
             if (level.getGameTime() >= job.end && job.built) { close(owner, "时间到"); continue; }
 

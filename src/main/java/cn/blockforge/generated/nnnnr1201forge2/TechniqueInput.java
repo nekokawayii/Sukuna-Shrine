@@ -85,6 +85,12 @@ public final class TechniqueInput {
             return;
         }
         if(character.CharacterSkill.custom(input.skill())){
+            // r299：里梅·霜天宫殿，领域开着时再按同一格=收起（必须在冷却检查之前拦下）
+            if(input.phase()==0&&input.skill()==character.uraume.UraumeSkills.DOMAIN
+                    &&character.uraume.UraumePalaceDomain.active(p)){
+                character.uraume.UraumePalaceDomain.close(p,"收起");
+                return;
+            }
             // 领域王：再按同一领域=收起（在冷却/维持/扣费检查之前拦下）
             if(input.phase()==0&&character.CharacterService.selected(p)!=null
                     &&character.CharacterService.selected(p).id().equals("domainking")

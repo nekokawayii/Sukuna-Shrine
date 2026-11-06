@@ -56,9 +56,11 @@ public final class BloodWingsRain {
             Vec3 point = new Vec3(x, center.y, z);
             Network.send(level, new Network.Effect(BloodArts.FX_SPIKE, caster.getId(),
                 point, new Vec3(tiltX, -1, tiltZ), (float)(1.0 + rnd.nextDouble() * .4), 16, 0));
+            // r265：由血矛本体判定伤害——每根矛按自己的"从天顶到落点"这条线段单独结算
+            Vec3 top = point.add(tiltX * 2.88, 48.0, tiltZ * 2.88);
             for (LivingEntity t : level.getEntitiesOfClass(LivingEntity.class,
-                new AABB(point, point).inflate(0.75),
-                t -> t.isAlive() && t != caster && t.getBoundingBox().inflate(0.15).contains(point))) {
+                new AABB(top, point).inflate(0.6),
+                t -> t.isAlive() && t != caster && t.getBoundingBox().inflate(0.12).clip(top, point).isPresent())) {
                 hurt(caster, t);
             }
         }

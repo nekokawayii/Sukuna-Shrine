@@ -413,12 +413,6 @@ public final class Client {
     @SubscribeEvent public static void hud(RenderGuiEvent.Post e){
         Minecraft mc=Minecraft.getInstance();if(mc.player==null||mc.options.hideGui||ObserverClient.active()||(mc.screen instanceof SkillWheel||mc.screen instanceof character.CharacterWheel||mc.screen instanceof character.CharacterSelectionScreen||mc.screen instanceof WallOptionsScreen||mc.screen instanceof TenShadowsScreen||mc.screen instanceof DomainOptionsScreen||mc.screen instanceof RelationsScreen))return;
         int h=mc.getWindow().getGuiScaledHeight(),w=mc.getWindow().getGuiScaledWidth();var g=e.getGuiGraphics();
-        // 死灭洄游：进入结界后屏幕常驻红色边框
-        if(mc.level!=null&&mc.level.dimension()==CullingGame.DIM){
-            int t=6, red=0xC8FF2B2B;
-            g.fill(0,0,w,t,red);g.fill(0,h-t,w,h,red);
-            g.fill(0,0,t,h,red);g.fill(w-t,0,w,h,red);
-        }
         // 死灭洄游规则：剥夺感官的暗角 + 亡命之徒藏血条（盖住原版心眼）
         if(character.culling.CullingClient.fog()){
             for(int i=0;i<6;i++){int pad=i*10, a=0x0E000000;

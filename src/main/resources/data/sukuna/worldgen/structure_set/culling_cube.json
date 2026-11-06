@@ -1,0 +1,15 @@
+{
+  "structures": [
+    {
+      "structure": "sukuna:culling_cube",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "salt": 4815162,
+    "spacing": 96,
+    "separation": 80,
+    "spread_type": "linear"
+  }
+}

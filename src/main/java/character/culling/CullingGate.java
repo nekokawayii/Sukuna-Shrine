@@ -113,59 +113,31 @@ public final class CullingGate {
         p.sendSystemMessage(Component.literal("木门之后，是 512×512 的废弃都市。").withStyle(ChatFormatting.RED));
     }
 
-    // ====================== 方式一：主世界的黑色立方体 ======================
+    // ====================== 方式一：主世界的 48³ 黑色立方体（NBT 结构） ======================
 
-    /** 极低概率在玩家附近生成一个立方体结界。 */
+    private static final net.minecraft.resources.ResourceLocation CUBE =
+        new net.minecraft.resources.ResourceLocation("sukuna", "culling_cube");
+
+    /** 走进立方体的红色缝隙 → 拉进结界。结构由 worldgen 放置（极低概率），这里只做入口判定。 */
     @SubscribeEvent
-    public static void spawnCube(TickEvent.PlayerTickEvent e) {
+    public static void touchCube(TickEvent.PlayerTickEvent e) {
         if (e.phase != TickEvent.Phase.END || !(e.player instanceof ServerPlayer p)) return;
         if (!p.level().dimension().equals(Level.OVERWORLD) || p.isCreative()) return;
-        if (p.tickCount % 600 != 0) return;                 // 每 30 秒掷一次
-        if (p.getRandom().nextInt(24) != 0) return;          // 约 1/24 → 平均 12 分钟一个
+        if (p.tickCount % 10 != 0) return;
         ServerLevel level = p.serverLevel();
-        if (CUBES.stream().anyMatch(c -> c.distSqr(p.blockPosition()) < 96 * 96)) return;
-        if (CUBES.size() > 8) CUBES.remove(0);
-        BlockPos at = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-            p.blockPosition().offset(p.getRandom().nextInt(41) - 20, 0, p.getRandom().nextInt(41) - 20));
-        buildCube(level, at);
-    }
-
-    private static void buildCube(ServerLevel level, BlockPos base) {
-        for (int dx = -CUBE_HALF; dx <= CUBE_HALF; dx++) {
-            for (int dy = 0; dy <= CUBE_HALF * 2; dy++) {
-                for (int dz = -CUBE_HALF; dz <= CUBE_HALF; dz++) {
-                    BlockPos p = base.offset(dx, dy, dz);
-                    level.setBlockAndUpdate(p, Blocks.BLACK_STAINED_GLASS.defaultBlockState());
-                }
-            }
-        }
-        // 正面（+Z）开一道 2 格宽、3 格高的红色缝隙
-        BlockPos seam = base.offset(0, 1, CUBE_HALF);
-        for (int dx = -1; dx <= 1; dx++) for (int dy = 0; dy <= 2; dy++) {
-            BlockPos p = seam.offset(dx, dy, 0);
-            level.setBlockAndUpdate(p, dx == 0 ? Blocks.AIR.defaultBlockState() : Blocks.RED_CONCRETE.defaultBlockState());
-            if (dx == 0 && dy == 0) SEAMS.add(p);
-        }
-        CUBES.add(base);
-        level.playSound(null, base, SoundEvents.WARDEN_HEARTBEAT, SoundSource.AMBIENT, 1.2f, .55f);
-        com.mojang.logging.LogUtils.getLogger().info("[死灭洄游] 立方体结界生成 @{}", base);
-    }
-
-    /** 走进缝隙 → 拉进结界。 */
-    @SubscribeEvent
-    public static void touchSeam(TickEvent.PlayerTickEvent e) {
-        if (e.phase != TickEvent.Phase.END || !(e.player instanceof ServerPlayer p)) return;
-        if (!p.level().dimension().equals(Level.OVERWORLD) || p.isCreative()) return;
-        if (p.tickCount % 5 != 0 || SEAMS.isEmpty()) return;
-        for (BlockPos seam : SEAMS) {
-            if (p.blockPosition().distSqr(seam) > 4) continue;
-            p.sendSystemMessage(Component.literal("雪花噪点闪过，羂索的声音在耳边响起：「欢迎来到死灭回游，棋子。」")
-                .withStyle(ChatFormatting.DARK_RED));
-            p.level().playSound(null, p.blockPosition(), SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 1f, .7f);
-            SEAMS.remove(seam);
-            CullingGame.enter(p);
-            return;
-        }
+        var structure = level.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.STRUCTURE)
+            .get(CUBE);
+        if (structure == null) return;
+        var start = level.structureManager().getStructureAt(p.blockPosition(), structure);
+        if (start == null || !start.isValid()) return;
+        var box = start.getBoundingBox();
+        // 红缝在 +Z 面正中，离地 2~4 格
+        double sx = (box.minX() + box.maxX()) / 2.0 + 0.5, sy = box.minY() + 3.0, sz = box.maxZ() + 0.5;
+        if (p.position().distanceToSqr(sx, sy, sz) > 25) return;
+        p.sendSystemMessage(Component.literal("雪花噪点闪过，羂索的声音在耳边响起：「欢迎来到死灭回游，棋子。」")
+            .withStyle(ChatFormatting.DARK_RED));
+        level.playSound(null, p.blockPosition(), SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 1f, .7f);
+        CullingGame.enter(p);
     }
 
     private CullingGate() { }

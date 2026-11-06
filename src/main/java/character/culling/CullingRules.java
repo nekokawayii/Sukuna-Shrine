@@ -41,6 +41,8 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 public final class CullingRules {
     /** 规则面板：99=请求打开；0~4=选第 n 个候选；5=脱离。走 TechniqueInput 的 phase=7。 */
     public static final int SKILL = 3200, OPEN = 99, ESCAPE = 5, COST = 100;
+    /** 无限跳跃：空中按空格时客户端用这个 motion 上报（服务端校验是否真有该规则）。 */
+    public static final int JUMP_REQ = 250;
     /** 脱离门槛：制定够这么多条规则后，面板上方才出现「脱离」。选规则本身**不限条数**（r224）。 */
     public static final int ESCAPE_AT = 5;
     /** 兼容旧引用。 */

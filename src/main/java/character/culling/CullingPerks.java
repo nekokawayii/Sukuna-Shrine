@@ -260,6 +260,28 @@ public final class CullingPerks {
         }
     }
 
+    // ===== 无限跳跃：空中再跳一次（服务端校验规则） =====
+    public static void airJump(ServerPlayer p) {
+        if (!CullingRules.inDimension(p) || !CullingRules.special(p, "multi_jump")) return;
+        CompoundTag d = Curse.data(p);
+        long now = p.level().getGameTime();
+        if (now - d.getLong("CullingAirJumpAt") < 4) return;
+        if (p.onGround()) return;
+        d.putLong("CullingAirJumpAt", now);
+        p.teleportTo(p.getX(), p.getY() + 1.15, p.getZ());
+        p.setDeltaMovement(p.getDeltaMovement().x * .6, .48, p.getDeltaMovement().z * .6);
+        p.fallDistance = 0;
+    }
+
+    // ===== 穿甲弹：远程弹道不被方块阻挡 =====
+    @SubscribeEvent
+    public static void projectile(net.minecraftforge.event.entity.ProjectileImpactEvent e) {
+        if (e.getRayTraceResult().getType() != net.minecraft.world.phys.HitResult.Type.BLOCK) return;
+        net.minecraft.world.entity.Entity owner = e.getProjectile().getOwner();
+        if (!(owner instanceof ServerPlayer p) || !CullingRules.inDimension(p)) return;
+        if (CullingRules.special(p, "pierce_shot")) e.setCanceled(true);
+    }
+
     // ===== 击退免疫 =====
     @SubscribeEvent
     public static void knockback(LivingKnockBackEvent e) {

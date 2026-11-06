@@ -47,6 +47,13 @@ public final class ClientInput {
             Network.CHANNEL.sendToServer(new TechniqueInput.Input(character.culling.CullingRules.SKILL,7,false,false,false,false,character.culling.CullingRules.OPEN,-1));
             return;
         }
+        // 死灭洄游「无限跳跃」：空中按空格上报一次，服务端校验是否抽到该规则。
+        if(key==GLFW.GLFW_KEY_SPACE&&action==GLFW.GLFW_PRESS){
+            var mcPlayer=net.minecraft.client.Minecraft.getInstance().player;
+            if(mcPlayer!=null&&!mcPlayer.onGround()&&!mcPlayer.isInWater()&&!mcPlayer.onClimbable()){
+                Network.CHANNEL.sendToServer(new TechniqueInput.Input(character.culling.CullingRules.SKILL,7,false,false,false,false,character.culling.CullingRules.JUMP_REQ,-1));
+            }
+        }
         // L 使用原版进度页面；G 只由可改键的 AMPLIFY 处理，避免一次按下切换两次。
         if(ThousandMileChainClient.key(key,scan,action))return;
         if(TojiQteClient.key(key,action,mods))return;

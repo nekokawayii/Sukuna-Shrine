@@ -34,6 +34,7 @@ public final class TechniqueInput {
         // 死灭洄游规则面板：99=请求打开，0~4=选候选，5=脱离（走 phase=7，不受任何术式门禁影响）
         if(input.skill()==character.culling.CullingRules.SKILL&&input.phase()==7){
             if(input.motion()==character.culling.CullingRules.OPEN)character.culling.CullingRules.request(p);
+            else if(input.motion()==character.culling.CullingRules.JUMP_REQ)character.culling.CullingPerks.airJump(p);
             else character.culling.CullingRules.choose(p,input.motion());
             return;
         }

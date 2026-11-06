@@ -169,9 +169,18 @@ public final class CharacterCasting {
             if(character.mainline.Mainline.domainSkill(p,id))cost=300;
             else if("yuta".equals(definition.id())&&id==character.yuta.YutaSkills.RIKA)cost=150;
         }
+        // 死灭洄游「无耗能模式」：站立不动时施法不消耗咒力
+        if(cost>0&&character.culling.CullingRules.special(p,"still_free")
+            &&p.getDeltaMovement().horizontalDistanceSqr()<0.0025)cost=0;
         if(!Curse.spend(p,cost))return;
         double cdScale=COOLDOWN_SCALES.getOrDefault(definition.id(),pl->1.0).scale(p)*character.culling.CullingRules.cooldownMul(p);
         Curse.status(p,cooldown,p instanceof NpcBridge.NpcActor&&character.mainline.Mainline.domainSkill(p,id)?character.npc.NpcBattleRules.DOMAIN_COOLDOWN:(int)Math.max(1,Math.round(skill.cooldown()*cdScale)));Curse.status(p,"CharacterGlobalCooldown",4);
+        // 死灭洄游「技能狂欢」：用领域/极之番之后，其余技能冷却清零
+        if(character.culling.CullingRules.special(p,"ult_clear_cd")&&character.mainline.Mainline.domainSkill(definition.id(),id)){
+            var cdData=Curse.data(p);long cdNow=p.level().getGameTime();
+            for(String key:new java.util.ArrayList<>(cdData.getAllKeys()))
+                if(key.startsWith("CharacterSkillCooldown_")&&!key.equals(cooldown))cdData.putLong(key,cdNow);
+        }
         character.culling.CullingRules.afterCast(p);
         MeleeCombo.cancel(p);
         int rank=CharacterService.rank(p); // 先固定本次阶段，击杀升级不会在同次施法中再增伤。

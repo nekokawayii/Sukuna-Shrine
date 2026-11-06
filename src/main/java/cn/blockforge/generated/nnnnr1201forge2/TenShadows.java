@@ -67,7 +67,8 @@ public final class TenShadows {
      *  <p>两种显现**互斥**：放完全显现会自动解除不完全显现，反之亦然；
      *  每次显现（切换或重新使用）后进入 {@link #MANIFEST_COOLDOWN} 冷却，解除法轮本身不受冷却限制。</p> */
     public static void manifest(ServerPlayer p,int mode){
-        if(PrisonSystem.locked(p)||!incarnated(p)||locked(p))return;
+        // r266：伏黑惠角色（非受肉）也要能调服/显现，门禁统一用 canUse
+        if(PrisonSystem.locked(p)||!canUse(p)||locked(p))return;
         if(!tamed(p)){if(mode==0)begin(p);return;}
         if(mode==1){
             if(!manifestReady(p))return;
@@ -93,7 +94,7 @@ public final class TenShadows {
         }
     }
     public static void begin(ServerPlayer p){
-        if(PrisonSystem.locked(p)||!incarnated(p)||locked(p)||!p.isAlive()||p.isSpectator())return;
+        if(PrisonSystem.locked(p)||!canUse(p)||locked(p)||!p.isAlive()||p.isSpectator())return;
         if(p.serverLevel().getDifficulty()==net.minecraft.world.Difficulty.PEACEFUL){p.displayClientMessage(Component.literal("请先把难度改为简单、普通或困难"),true);return;}
         TechniqueInput.cancel(p);Skills.cancelCharge(p);p.stopUsingItem();
         chants.put(p.getUUID(),new Chant(p,p.serverLevel(),p.position(),p.level().getGameTime()+CHANT_TICKS));

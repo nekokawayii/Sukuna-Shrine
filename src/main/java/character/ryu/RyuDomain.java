@@ -315,7 +315,10 @@ public final class RyuDomain {
                 break;
             }
             if (hit != null) {
+                // r242：弹幕无视无敌帧——结算前后各清零一次，保证每秒多发的弹幕都能真的掉血
+                hit.invulnerableTime = 0;
                 RyuCombat.hurtPublic(shell.level(), owner, hit, SHELL_DAMAGE);
+                hit.invulnerableTime = 0;
                 continue;
             }
             keep.add(new Shell(shell.level(), shell.owner(), pos, dir, shell.color(), shell.born()));

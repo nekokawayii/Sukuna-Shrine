@@ -65,8 +65,9 @@ public final class CullingGame {
         var chunk = e.getChunk();
         BlockPos origin = chunk.getPos().getWorldPosition();
         boolean changed = false;
+        // r260：整个区块（全高度）的沙砾统统换成基岩
         for (int dx = 0; dx < 16; dx++) for (int dz = 0; dz < 16; dz++)
-            for (int y = 60; y <= 63; y++) {
+            for (int y = level.getMinBuildHeight(); y < level.getMaxBuildHeight(); y++) {
                 BlockPos pos = origin.offset(dx, y, dz);
                 if (level.getBlockState(pos).is(net.minecraft.world.level.block.Blocks.GRAVEL)) {
                     level.setBlock(pos, net.minecraft.world.level.block.Blocks.BEDROCK.defaultBlockState(), 2);

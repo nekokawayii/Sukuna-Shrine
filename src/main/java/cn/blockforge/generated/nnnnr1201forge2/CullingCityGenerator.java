@@ -22,7 +22,12 @@ public final class CullingCityGenerator extends FlatLevelSource {
     @Override public CompletableFuture<ChunkAccess> fillFromNoise(Executor executor,Blender blender,RandomState random,StructureManager manager,ChunkAccess c){return super.fillFromNoise(executor,blender,random,manager,c).thenApply(chunk->{generate(chunk);return chunk;});}
     private static void generate(ChunkAccess c){
         for(int x=c.getPos().getMinBlockX();x<=c.getPos().getMaxBlockX();x++)for(int z=c.getPos().getMinBlockZ();z<=c.getPos().getMaxBlockZ();z++){
-            if(x< -256||x>255||z< -256||z>255)continue;
+            if(x< -256||x>255||z< -256||z>255){
+                // r260：城市之外（含 1024 登记室一带）同样是整层基岩地基，不再有沙砾
+                put(c,x,0,z,ExpeditionContent.block("culling_barrier"));
+                for(int y=1;y<=63;y++)put(c,x,y,z,Blocks.BEDROCK);
+                continue;
+            }
             put(c,x,0,z,ExpeditionContent.block("culling_barrier"));
             // r259：地面下的沙砾层全部改成基岩，防止玩家往下挖穿结界
             for(int y=1;y<=63;y++)put(c,x,y,z,y<60?Blocks.STONE:Blocks.BEDROCK);

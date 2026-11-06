@@ -19,7 +19,7 @@ import net.minecraft.world.phys.Vec3;
  * 内部天空与蒙版统一使用 {@code textures/effect/domain_sunset.png}。
  *
  * <p>领域效果：①自己所有招式**必中**（冲击波不再被方块截断、追踪弹穿墙）；
- * ②随机放烟花：小特效上升 5~15 格后炸成 15~45 发各色追踪弹幕。
+ * ②随机放烟花：小特效上升 5~15 格后炸成 45~100 发各色追踪弹幕。
  *
  * <p>地形借用遵循项目惯例：**每一格都记第一次的原始状态**，收起时逐格还原；关服/死亡/切角色都会兜底还原。
  */
@@ -29,9 +29,9 @@ public final class RyuDomain {
     public static final int CLOSE_TICKS = 100;      // 5 秒收起
     public static final int LIFE_TICKS = 600;       // 30 秒后自动收
     public static final int FIREWORK_INTERVAL = 20; // 每 1 秒一波烟花（一波两枚）
-    public static final int SHELL_MIN = 15, SHELL_MAX = 45;
+    public static final int SHELL_MIN = 45, SHELL_MAX = 100;   // r240：爆开弹幕 45~100
     public static final double SHELL_SPEED = 0.65, SHELL_DAMAGE = 6;
-    public static final int SHELL_LIFE = 60, SHELL_CAP = 320;
+    public static final int SHELL_LIFE = 60, SHELL_CAP = 600;   // r240：密度提高后上限同步放宽
     public static final int COLOR_COUNT = 8;
 
     private static final class Fract {
@@ -334,8 +334,9 @@ public final class RyuDomain {
         rocket.level().playSound(null, BlockPos.containing(rocket.pos()),
             net.minecraft.sounds.SoundEvents.FIREWORK_ROCKET_BLAST, net.minecraft.sounds.SoundSource.PLAYERS, 1f,
             (float) (0.9 + rocket.level().random.nextDouble() * 0.3));
-        if (SHELLS.size() + count > SHELL_CAP) return;
-        for (int i = 0; i < count; i++) {
+        int total = count;
+        if (SHELLS.size() + total > SHELL_CAP) return;
+        for (int i = 0; i < total; i++) {
             double a = rocket.level().random.nextDouble() * Math.PI * 2;
             double b = (rocket.level().random.nextDouble() - 0.5) * Math.PI;
             Vec3 dir = new Vec3(Math.cos(a) * Math.cos(b), Math.sin(b), Math.sin(a) * Math.cos(b)).normalize();

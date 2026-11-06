@@ -5,7 +5,7 @@ import java.util.List;
 
 /** 里梅 · 冰凝咒法（r289 迁到新角色框架）：6 格轮盘。 */
 public final class UraumeSkills {
-    public static final int FROST = 2198, ICEFALL = 2199, PRISON = 2200, STORM = 2201, DRAGON = 2202, ICEAGE = 2203;
+    public static final int FROST = 2198, ICEFALL = 2199, PRISON = 2200, STORM = 2201, DRAGON = 2202, ICEAGE = 2203, DOMAIN = 2204;
 
     public static List<CharacterSkill> all() {
         return List.of(
@@ -24,6 +24,9 @@ public final class UraumeSkills {
             new CharacterSkill(DRAGON, "冰凝咒法 · 冰龙", "冰龙",
                 "召唤冰霜巨龙向前贯穿 20 格，极高击退并叠两层霜寒。",
                 0xFFBDEBFF, 500, 420, CharacterSkill.Shape.RAY, 20, 3.5, 45, 25, 5, 8, 0, 40, 2),
+            new CharacterSkill(DOMAIN, "领域展开 · 霜天宫殿", "霜天宫殿",
+                "展开深蓝黑冰宫殿：界内敌人无法跳跃/飞行、霜寒永久满层、冰系伤害翻倍。",
+                0xFF7FC8FF, 1000, 1200, CharacterSkill.Shape.BURST, 26, 8, 90, 0, 0, 32, 0, 0, 0),
             new CharacterSkill(ICEAGE, "极之番 · 大冰河时代", "大冰河",
                 "双手按地，50 格内所有生物与方块冻结成冰雕；自身 30 秒严重冻伤、无法施术。",
                 0xFF8FD8FF, 1200, 1200, CharacterSkill.Shape.BURST, 32, 8, 90, 40, 10, 32, 0, 200, 3)

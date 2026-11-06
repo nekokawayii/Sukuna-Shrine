@@ -232,7 +232,7 @@ public final class GeneratedMod {
         });
         for (int us : new int[]{character.uraume.UraumeSkills.FROST, character.uraume.UraumeSkills.ICEFALL,
                 character.uraume.UraumeSkills.PRISON, character.uraume.UraumeSkills.STORM,
-                character.uraume.UraumeSkills.DRAGON, character.uraume.UraumeSkills.ICEAGE}) {
+                character.uraume.UraumeSkills.DRAGON, character.uraume.UraumeSkills.ICEAGE, character.uraume.UraumeSkills.DOMAIN}) {
             character.CharacterCasting.registerEffect("uraume", us,
                 (character.CharacterCasting.Effect) (p, s2, r) -> character.uraume.UraumeCombat.cast(p, us));
         }
@@ -246,6 +246,7 @@ public final class GeneratedMod {
         MinecraftForge.EVENT_BUS.register(character.culling.CullingGate.class);
         MinecraftForge.EVENT_BUS.register(BloodWingsRain.class);
         MinecraftForge.EVENT_BUS.register(UraumeIce.class);
+        MinecraftForge.EVENT_BUS.register(character.uraume.UraumePalaceDomain.class);
         MinecraftForge.EVENT_BUS.register(SukunaNpcTrueForm.class);
         Network.registerDrawing();
         MinecraftForge.EVENT_BUS.register(SlashForms.class);

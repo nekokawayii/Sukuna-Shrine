@@ -11,6 +11,10 @@ public final class UraumeCombat {
     public static void cast(ServerPlayer p, int skill) {
         if (skill == UraumeSkills.FROST) { Uraume.cast(p, BranchRules.FROST); return; }
         if (skill == UraumeSkills.ICEFALL) { Uraume.cast(p, BranchRules.ICEFALL); return; }
+        if (skill == UraumeSkills.DOMAIN) {
+            if (UraumePalaceDomain.active(p)) UraumePalaceDomain.close(p, "收起"); else UraumePalaceDomain.open(p);
+            return;
+        }
         Vec3 aim = p.getEyePosition().add(p.getLookAngle().scale(12));
         switch (skill) {
             case UraumeSkills.PRISON -> {
@@ -72,7 +76,7 @@ public final class UraumeCombat {
 
     private static void hurt(ServerPlayer p, LivingEntity t, float amount) {
         // 领域内冰系伤害翻倍（r289）
-        if (UraumeDomain.inDomain(t)) amount *= 2f;
+        if (UraumeDomain.inDomain(t) || UraumePalaceDomain.inDomain(t)) amount *= 2f;
         CombatSettings.hurt(p, t, p.damageSources().magic(), amount);
     }
 

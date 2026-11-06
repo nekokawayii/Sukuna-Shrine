@@ -30,7 +30,12 @@ public final class RyuDomain {
     public static final int LIFE_TICKS = 600;       // 30 秒后自动收
     public static final int FIREWORK_INTERVAL = 10; // r241：每 0.5 秒一波烟花（一波两枚），节奏更密
     public static final int SHELL_MIN = 45, SHELL_MAX = 100;   // r240：爆开弹幕 45~100
-    public static final double SHELL_SPEED = 0.65, SHELL_DAMAGE = 0.2; // r245：单发弹幕伤害 0.2，无视护甲与减伤
+    public static final double SHELL_SPEED = 0.65;
+    /** 单发弹幕伤害：整合包模式 0.4，非整合包 0.15（无视护甲与减伤）。 */
+    public static final double SHELL_DAMAGE_PACK = 0.4, SHELL_DAMAGE_NORMAL = 0.15;
+    public static double shellDamage() {
+        return cn.blockforge.generated.nnnnr1201forge2.BalanceRules.modpackMode() ? SHELL_DAMAGE_PACK : SHELL_DAMAGE_NORMAL;
+    }
     public static final int SHELL_LIFE = 60, SHELL_CAP = 1000;   // r241：节奏加密、上限按用户要求提到 1000
     public static final int COLOR_COUNT = 8;
 
@@ -322,7 +327,7 @@ public final class RyuDomain {
                     .registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE)
                     .getHolderOrThrow(net.minecraft.world.damagesource.DamageTypes.GENERIC_KILL);
                 var source = new net.minecraft.world.damagesource.DamageSource(dmgType, owner, owner);
-                hit.hurt(source, (float) SHELL_DAMAGE);
+                hit.hurt(source, (float) shellDamage());
                 hit.invulnerableTime = 0;
                 continue;
             }

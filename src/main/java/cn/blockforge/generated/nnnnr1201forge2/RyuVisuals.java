@@ -367,8 +367,9 @@ public final class RyuVisuals {
      * UV 随时间横向漂移 + 亮度呼吸，看起来就是一片缓慢翻涌的云海。
      * 画在方块之后、粒子之前，并保留深度测试：球壳 35 格在云层 33 格之外，所以云层只会盖住墙、不会盖住地板。
      */
-    /** r235：恢复内翻球落日天空（画在方块之后、粒子之前，所以不会挡住烟花）。 */
-    @SubscribeEvent
+    /** r235：恢复内翻球落日天空（画在方块之后、粒子之前，所以不会挡住烟花）。
+     *  r237：按用户要求把晚霞图也整层关掉先看看——去掉订阅注解即可，代码保留随时恢复。 */
+    // @SubscribeEvent
     public static void renderSky(RenderLevelStageEvent e) {
         var mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null || SKY == null) return;

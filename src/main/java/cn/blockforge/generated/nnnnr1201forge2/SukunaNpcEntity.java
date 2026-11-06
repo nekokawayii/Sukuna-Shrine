@@ -55,11 +55,19 @@ public class SukunaNpcEntity extends PathfinderMob {
     }
 
 
+    /** 把"已进入原身"同步给客户端（皮肤与四只手靠它）。 */
+    private void syncTrueForm() {
+        if (level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            Network.send(sl, new Network.Effect(640, getId(), position(), Vec3.ZERO, 1f, 0, 0));
+        }
+    }
+
     /** r274：原身形态同时使用两种术式——神武解的扇形雷击 + 飞天的风压拉人斩击。 */
     @Override
     public void tick() {
         super.tick();
         if (level().isClientSide || !getPersistentData().getBoolean("SukunaTrueForm")) return;
+        if (level().getGameTime() % 100 == 0) syncTrueForm();   // 重连/远处玩家补同步
         if (level().getGameTime() % 40 != 0) return;
         LivingEntity target = getTarget();
         if (target == null || !target.isAlive()) return;
@@ -115,5 +123,6 @@ public class SukunaNpcEntity extends PathfinderMob {
         setHealth((float) trueHp);
         level().playSound(null, blockPosition(), net.minecraft.sounds.SoundEvents.WITHER_SPAWN,
             net.minecraft.sounds.SoundSource.HOSTILE, 1.2f, .6f);
+        syncTrueForm();
     }
 }

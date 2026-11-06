@@ -26,7 +26,7 @@ public final class SukunaNpcRenderer extends MobRenderer<SukunaNpcEntity, Player
     }
 
     @Override public ResourceLocation getTextureLocation(SukunaNpcEntity entity) {
-        return entity.getPersistentData().getBoolean("SukunaTrueForm") ? TRUE_FORM : SKIN;
+        return SukunaNpcTrueFormClient.has(entity.getId()) ? TRUE_FORM : SKIN;
     }
 
     /** 原身形态的"四只手"：在原有双臂外侧再画一对。 */
@@ -43,7 +43,7 @@ public final class SukunaNpcRenderer extends MobRenderer<SukunaNpcEntity, Player
         @Override
         public void render(PoseStack ps, MultiBufferSource buffer, int light, SukunaNpcEntity entity,
                            float limb, float amount, float partial, float age, float yaw, float pitch) {
-            if (!entity.getPersistentData().getBoolean("SukunaTrueForm")) return;
+            if (!SukunaNpcTrueFormClient.has(entity.getId())) return;
             if (extra == null) {
                 try {
                     extra = new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false);

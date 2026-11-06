@@ -42,22 +42,17 @@ public class SukunaNpcEntity extends PathfinderMob {
 
     @Override public boolean removeWhenFarAway(double distance) { return false; }
 
-    /** r269：被打到 1 血后进入「原身形态」（换皮肤，一次性）。 */
-    @Override
-    public void tick() {
-        super.tick();
-        if (!level().isClientSide && getHealth() <= 1.0f
-            && !getPersistentData().getBoolean("SukunaTrueForm")) {
-            getPersistentData().putBoolean("SukunaTrueForm", true);
-            // r270：原身血量 整合包 300000 / 非整合包 10000
-            double trueHp = BalanceRules.modpackMode() ? 300000.0 : 10000.0;
-            var maxHp = getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
-            if (maxHp != null) { maxHp.setBaseValue(trueHp); setHealth((float) trueHp); }
-            level().playSound(null, blockPosition(), net.minecraft.sounds.SoundEvents.WITHER_SPAWN,
-                net.minecraft.sounds.SoundSource.HOSTILE, 1.2f, .6f);
-            if (getTarget() instanceof net.minecraft.server.level.ServerPlayer sp)
-                sp.sendSystemMessage(net.minecraft.network.chat.Component.literal("两面宿傩 · 原身显现")
-                    .withStyle(net.minecraft.ChatFormatting.DARK_RED));
-        }
+    /** 进入「原身形态」：换皮肤 + 血量（由 {@link SukunaNpcTrueForm} 在受击流程里调用）。 */
+    public void enterTrueForm() {
+        if (getPersistentData().getBoolean("SukunaTrueForm")) return;
+        getPersistentData().putBoolean("SukunaTrueForm", true);
+        double trueHp = BalanceRules.modpackMode() ? 300000.0 : 10000.0;
+        var maxHp = getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+        if (maxHp != null) maxHp.setBaseValue(trueHp);
+        // 清掉死亡/受击动画状态，避免"半死不死抽搐"
+        dead = false; deathTime = 0; hurtTime = 0; invulnerableTime = 10;
+        setHealth((float) trueHp);
+        level().playSound(null, blockPosition(), net.minecraft.sounds.SoundEvents.WITHER_SPAWN,
+            net.minecraft.sounds.SoundSource.HOSTILE, 1.2f, .6f);
     }
 }

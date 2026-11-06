@@ -60,6 +60,15 @@ public final class UraumePalaceDomain {
             net.minecraft.sounds.SoundSource.PLAYERS, 1.6f, .5f);
     }
 
+    /** 恢复符/切角色强制收场（不要求施术者在线）。 */
+    public static void forceClose(ServerPlayer p) {
+        Job job = JOBS.remove(p.getUUID());
+        if (job == null) return;
+        job.old.forEach((pos, state) -> job.level.setBlock(pos, state, 2));
+        Network.send(job.level, new Network.Effect(650, p.getId(),
+            net.minecraft.world.phys.Vec3.atCenterOf(job.center), net.minecraft.world.phys.Vec3.ZERO, 0f, 0, 0));
+    }
+
     public static void close(ServerPlayer p, String why) {
         Job job = JOBS.remove(p.getUUID());
         if (job == null) return;

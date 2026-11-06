@@ -20,7 +20,7 @@ public final class RecoveryRules {
             ||key.startsWith("SukunaVoidIgnition")||key.startsWith("SukunaSixfoldScar")||key.startsWith("ClashAnchor")
             ||key.equals("DomainClashStunUntil")||key.equals("SoulGapUntil")||key.equals("VoidCaptured")
             ||key.equals("VoidNoHeal")||key.equals("VoidContactCooldown")||key.equals("GuardianSkillNoHeal")
-            ||key.startsWith("Kashimo");
+            ||key.startsWith("Kashimo")||key.equals("FrostbiteUntil")||key.equals("FrostStacks")||key.equals("IceStatue")||key.startsWith("Uraume");
     }
     private RecoveryRules(){}
 }

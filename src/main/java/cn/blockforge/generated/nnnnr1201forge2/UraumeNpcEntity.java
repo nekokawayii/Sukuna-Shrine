@@ -74,7 +74,15 @@ public class UraumeNpcEntity extends Monster {
         Vec3 eye = getEyePosition();
         Vec3 to = target.getBoundingBox().getCenter();
         Vec3 dir = to.subtract(eye).normalize();
-        int pick = skillIndex++ % 6;
+        int pick = skillIndex++ % 7;
+        if (pick == 6) {
+            // r292：NPC 里梅也会展开「霜天宫殿」（与玩家同步的领域）
+            if (!character.npc.NpcDomain.active(this)) {
+                character.npc.NpcDomain.open(this, character.npc.NpcDomain.RADIUS,
+                    character.npc.NpcDomain.Style.ICE);
+            }
+            return;
+        }
         if (pick == 2) { UraumeIce.handPrison(this, target); return; }
         if (pick == 3) { UraumeIce.storm(this); return; }
         if (pick == 4) { UraumeIce.dragon(this); return; }

@@ -55,7 +55,7 @@ public final class BloodWingsRain {
             double tiltZ = (rnd.nextDouble() - .5) * .7;
             Vec3 point = new Vec3(x, center.y, z);
             Network.send(level, new Network.Effect(BloodArts.FX_SPIKE, caster.getId(),
-                point, new Vec3(tiltX, -1, tiltZ), (float)(1.0 + rnd.nextDouble() * .4), 12, 0));
+                point, new Vec3(tiltX, -1, tiltZ), (float)(1.0 + rnd.nextDouble() * .4), 16, 0));
             for (LivingEntity t : level.getEntitiesOfClass(LivingEntity.class,
                 new AABB(point, point).inflate(0.75),
                 t -> t.isAlive() && t != caster && t.getBoundingBox().inflate(0.15).contains(point))) {

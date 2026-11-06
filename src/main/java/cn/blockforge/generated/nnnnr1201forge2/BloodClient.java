@@ -116,7 +116,11 @@ public final class BloodClient {
             case 73 -> {line(b,ps,at,dir,.018,camera,fade);line(b,ps,at,dir,.055,camera,fade*.2);}
             case 74 -> {Vec3 center=at.lerp(dir,Math.min(1,age/3));crystal(b,ps,center,.4,camera,time,fade);rope(b,ps,at.subtract(dir.subtract(at).scale(1.5)),center,.085,camera,time,fade*.7);}
             case 9 -> {if(e.seed()<0){rope(b,ps,at,e.direction(),.06,camera,time,fade);break;}Entity target=Minecraft.getInstance().level.getEntity((int)e.seed());Vec3 end=target==null?e.direction():target.getBoundingBox().getCenter();Vec3 source=owner==null?at:owner.getEyePosition();rope(b,ps,source,end,.06,camera,time,fade);orb(b,ps,end,.18+.035*Math.sin(time*.5),camera,time,fade);}
-            case 10 -> {Vec3 facing=owner==null?dir:owner.getLookAngle(),side=NetBranches.side(facing);for(int sign:new int[]{-1,1})for(int i=0;i<6;i++){Vec3 tip=at.add(side.scale(sign*(1.4+i*.22))).add(facing.scale(-.5-i*.18)).add(0,1.8-i*.15+Math.sin(time*.35)*.3,0);rope(b,ps,at.add(0,1.2,0),tip,.16,camera,time+i,fade);}}
+            case 10 -> {
+                // r264：本人第一人称不显示翅膀（仍然渲染给其他人和自己的第三人称）
+                if(owner==Minecraft.getInstance().player
+                    &&Minecraft.getInstance().options.getCameraType().isFirstPerson())break;
+                Vec3 facing=owner==null?dir:owner.getLookAngle(),side=NetBranches.side(facing);for(int sign:new int[]{-1,1})for(int i=0;i<6;i++){Vec3 tip=at.add(side.scale(sign*(1.4+i*.22))).add(facing.scale(-.5-i*.18)).add(0,1.8-i*.15+Math.sin(time*.35)*.3,0);rope(b,ps,at.add(0,1.2,0),tip,.16,camera,time+i,fade);}}
             case 11 -> {if(e.seed()==1)for(int i=0;i<22;i++){double a=i*2.4,r=Math.sqrt((i+.5)/22.0)*size;orb(b,ps,at.add(Math.cos(a)*r,1.2+Math.sin(time*.07+i)*.5,Math.sin(a)*r),1.3,camera,time+i,fade*.38);}}
             case 12 -> {for(int i=0;i<4;i++){Vec3 base=at.add(Math.sin(i*2.7)*.5,0,Math.cos(i*2.7)*.5),tip=base.add(Math.sin(i)*.35,Math.min(3,age*.55),Math.cos(i)*.35);rope(b,ps,base,tip,.22,camera,time+i,fade);}}
             case 13 -> {if(e.seed()==0&&owner!=null){dir=owner.getLookAngle();at=owner.getEyePosition().add(dir);}ring(b,ps,at,dir,1.25,.18,camera,time,fade);for(int i=0;i<6;i++)ring(b,ps,at,dir,i*.2,.13,camera,time+i,fade*.6);}
@@ -125,11 +129,11 @@ public final class BloodClient {
             case 24 -> rope(b,ps,at,e.direction(),.045,camera,time,fade);
             case 26 -> {Vec3 p=owner==null?at:owner.getEyePosition().add(owner.getLookAngle().scale(.7));orb(b,ps,p,.26,camera,time,fade);}
             case 27 -> {
-                // r263：天上扎下来的血矛——顶端按 direction 的 xz 偏移、落点固定在 at
-                double drop = Math.min(8.0, 2.0 + age * 2.4);
-                Vec3 top = at.add(dir.x * drop * .12, drop, dir.z * drop * .12);
+                // r264：血矛从很高处贯穿到地面，视觉上"高度无限"
+                double drop = 48.0;
+                Vec3 top = at.add(dir.x * drop * .06, drop, dir.z * drop * .06);
                 rope(b, ps, top, at, .085 * size, camera, time, fade);
-                rope(b, ps, top.add(0, 1.6, 0), top, .045 * size, camera, time, fade);
+                rope(b, ps, top.add(0, 8, 0), top, .05 * size, camera, time, fade * .8);
                 ring(b, ps, at.add(0, .03, 0), new Vec3(0, 1, 0), .34 * size, .09, camera, time, fade * .8);
             }
             default -> {}

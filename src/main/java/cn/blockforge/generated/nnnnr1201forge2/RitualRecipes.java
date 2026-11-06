@@ -43,6 +43,22 @@ public final class RitualRecipes {
         add("soul_blade",2,240,"soul_splitter",1,true,"heavenly_bone",1,"soul_echo",8,"star_curse_core",1,"jujutsu_alloy",8,"residue_high",9);
         add("playful_cloud",2,240,"sukuna:yuyun",1,true,"heavenly_bone",1,"playful_cloud_parts",3,"star_curse_core",1,"jujutsu_alloy",8,"residue_high",9);
         add("ultimate",2,240,"ultimate_scroll",1,false,"star_curse_core",1,"volcanic_core",1,"seal_gold",3,"residue_high",9);
+        // r249：狱门僵与点数改为祭坛专属（工作台配方已删除，材料同步加价）
+        add("prison_realm",1,2400,"sukuna:prison_realm",1,false,
+            "heavenly_bone",2,"tenka_fragment",6,"star_curse_core",3,"prison_fragment",8,"residue_high",9);
+        add("culling_points",0,1200,"sukuna:culling_points",1,false,
+            "tenka_fragment",8,"star_curse_core",4,"golden_relic",2,"curse_concentrate",4,"residue_high",6);
+        // 同一批"特殊道具"全部改成祭坛专属（工作台配方已删）
+        add("void_key",1,2400,"sukuna:void_key",1,false,
+            "tenka_fragment",4,"star_curse_core",3,"curse_crystal",6,"golden_relic",2,"residue_high",6);
+        add("eternal_love",0,1200,"sukuna:eternal_love",1,false,
+            "star_curse_core",2,"curse_crystal",4,"golden_relic",1,"residue_high",3);
+        add("culling_key",0,1200,"sukuna:culling_key",1,false,
+            "seal_gold",2,"star_iron_fragment",4,"residue_high",4);
+        add("curse_summon_talisman",0,800,"sukuna:curse_summon_talisman",1,false,
+            "seal_white",2,"curse_concentrate",2,"residue_medium",4);
+        add("buddha_incense",0,800,"sukuna:buddha_incense",1,false,
+            "seal_white",1,"curse_concentrate",1,"soul_echo",2,"residue_medium",3);
     }
     private static void add(String id,int tier,int ticks,String output,int count,boolean bp,Object... parts){Map<String,Integer> m=new LinkedHashMap<>();for(int i=0;i<parts.length;i+=2)m.put((String)parts[i],(Integer)parts[i+1]);ALL.add(new Recipe(id,tier,ticks,output,count,bp,Collections.unmodifiableMap(m)));}
     public static Item resolve(String id){return ForgeRegistries.ITEMS.getValue(new ResourceLocation(id.contains(":")?id:"sukuna:"+id));}

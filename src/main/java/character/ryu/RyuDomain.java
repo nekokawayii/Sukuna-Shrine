@@ -30,7 +30,7 @@ public final class RyuDomain {
     public static final int LIFE_TICKS = 600;       // 30 秒后自动收
     public static final int FIREWORK_INTERVAL = 10; // r241：每 0.5 秒一波烟花（一波两枚），节奏更密
     public static final int SHELL_MIN = 45, SHELL_MAX = 100;   // r240：爆开弹幕 45~100
-    public static final double SHELL_SPEED = 0.65, SHELL_DAMAGE = 6;
+    public static final double SHELL_SPEED = 0.65, SHELL_DAMAGE = 0.5; // r243：单发弹幕伤害 6 → 0.5
     public static final int SHELL_LIFE = 60, SHELL_CAP = 1000;   // r241：节奏加密、上限按用户要求提到 1000
     public static final int COLOR_COUNT = 8;
 

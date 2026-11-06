@@ -41,7 +41,6 @@ public final class MahoragaWheelClient {
         // 重做的特效：每次收到"法轮被推动"就点亮一圈扩散金环（转格时更亮更长）
         entry.ring=Math.max(entry.ring,turned?RING_TICKS:RING_TICKS/2);
         entry.flash=turned?1f:0.55f;
-        System.out.println("[SUKUNA-WHEEL] rotate owner="+e.owner()+" cells="+cells+" turned="+turned+" ring="+entry.ring);
     }
     /** 心跳：只续租，不动动画。 */
     public static void beat(Network.Effect e){

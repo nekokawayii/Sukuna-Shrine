@@ -250,7 +250,7 @@ public final class GojoBranchCombat {
                 Vec3 pull = at.subtract(t.position());
                 if (pull.lengthSqr() > .25) {
                     Vec3 flat = new Vec3(pull.x, 0, pull.z);
-                    if (flat.lengthSqr() > 1e-4) flat = flat.normalize().scale(4.0); // 吸得更快，追得上高速环绕
+                    if (flat.lengthSqr() > 1e-4) flat = flat.normalize().scale(6.0); // 吸得更快，追得上高速环绕
                     // 竖直：最多只允许比球心高 1 格；超过就不再给向上的量
                     double vy = t.getY() < at.y + 1.0 ? 0.12 : -0.06;
                     t.setDeltaMovement(flat.x, vy, flat.z);

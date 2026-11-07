@@ -103,11 +103,11 @@ public final class FingerPossession {
         tune(npc, power);
         level.addFreshEntity(npc);
         p.getPersistentData().putBoolean("SukunaPossessed", true);
-        p.setCamera(npc);                 // 看宿傩的视角，而不是旁观模式
-        p.setInvisible(true);             // 自己的身体留在原地，但不显眼
-        p.setInvulnerable(true);          // 夺舍期间身体不能被打死（宿傩的 AOE 会擦到自己）
-        p.setDeltaMovement(0, 0, 0);
-        p.hurtMarked = true;
+        // 记录吃手指时的游戏模式，结束后恢复（用户明确要求）
+        if (p.getPersistentData().getString("PossessedPrevMode").isEmpty())
+            p.getPersistentData().putString("PossessedPrevMode", p.gameMode.getGameModeForPlayer().getName());
+        p.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);  // 旁观，但镜头挂在宿傩身上
+        p.setCamera(npc);
         Network.send(level, new Network.Effect(CAMERA_LOCK, p.getId(), at, Vec3.ZERO, 1f, ACTIVE_TICKS, 0));
         var definition = character.CharacterService.selected(p);
         boolean yuji = definition != null && "yuji".equals(definition.id());
@@ -200,10 +200,7 @@ public final class FingerPossession {
         // 保留夺舍体，只让玩家"重生"
         p.getPersistentData().remove("SukunaPossessed");
         p.setCamera(p);
-        p.setInvisible(false);
-        p.setInvulnerable(false);
-        if (p.gameMode.getGameModeForPlayer() != net.minecraft.world.level.GameType.SURVIVAL)
-            p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+        restoreMode(p);
         var spawn = p.server.getLevel(p.serverLevel().dimension()).getSharedSpawnPos();
         p.teleportTo(p.serverLevel(), spawn.getX() + .5, spawn.getY(), spawn.getZ() + .5, p.getYRot(), p.getXRot());
         p.setHealth(p.getMaxHealth());
@@ -235,9 +232,20 @@ public final class FingerPossession {
     private static void finish(ServerPlayer p) {
         p.getPersistentData().remove("SukunaPossessed");
         p.setCamera(p);
-        p.setInvisible(false);
-        p.setInvulnerable(false);
+        restoreMode(p);
         Network.send(p.serverLevel(), new Network.Effect(CAMERA_LOCK, p.getId(), p.position(), Vec3.ZERO, 1f, 0, 0));
+    }
+
+    /** 恢复到"吃手指那一刻"的游戏模式（创造/生存/冒险），没有记录就回生存。 */
+    private static void restoreMode(ServerPlayer p) {
+        String prev = p.getPersistentData().getString("PossessedPrevMode");
+        net.minecraft.world.level.GameType type = net.minecraft.world.level.GameType.SURVIVAL;
+        if (!prev.isEmpty()) {
+            type = net.minecraft.world.level.GameType.byName(prev);
+            if (type == null) type = net.minecraft.world.level.GameType.SURVIVAL;
+        }
+        p.getPersistentData().remove("PossessedPrevMode");
+        p.setGameMode(type);
     }
 
     @SubscribeEvent
@@ -248,7 +256,10 @@ public final class FingerPossession {
     @SubscribeEvent
     public static void clone(PlayerEvent.Clone e) {
         if (!(e.getEntity() instanceof ServerPlayer to)) return;
-        if (e.getOriginal().getPersistentData().getBoolean("SukunaPossessed")) to.getPersistentData().putBoolean("SukunaPossessed", true);
+        if (e.getOriginal().getPersistentData().getBoolean("SukunaPossessed")) {
+            to.getPersistentData().putBoolean("SukunaPossessed", true);
+            to.getPersistentData().putString("PossessedPrevMode", e.getOriginal().getPersistentData().getString("PossessedPrevMode"));
+        }
     }
 
     @SubscribeEvent
@@ -260,15 +271,12 @@ public final class FingerPossession {
             if (p.gameMode.getGameModeForPlayer() == net.minecraft.world.level.GameType.SPECTATOR) {
                 p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
             }
-            p.setCamera(p); p.setInvisible(false); p.setInvulnerable(false);
+            p.setCamera(p); restoreMode(p);
             return;
         }
         p.getPersistentData().remove("SukunaPossessed");
         p.setCamera(p);
-        p.setInvisible(false);
-        p.setInvulnerable(false);
-        if (p.gameMode.getGameModeForPlayer() != net.minecraft.world.level.GameType.SURVIVAL)
-            p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+        restoreMode(p);
         Network.send(p.serverLevel(), new Network.Effect(CAMERA_LOCK, p.getId(), p.position(), Vec3.ZERO, 1f, 0, 0));
     }
 

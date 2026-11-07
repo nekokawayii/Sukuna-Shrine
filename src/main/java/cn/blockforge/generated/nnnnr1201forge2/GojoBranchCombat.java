@@ -21,6 +21,9 @@ public final class GojoBranchCombat {
     private static final List<Singularity> SINGULARITIES = new ArrayList<>();
     private static final List<Meteor> METEORS = new ArrayList<>();
     private static final List<Shot> SHOTS = new ArrayList<>();
+    /** 重压冲击：先在被斩中的目标身上留"斩痕"，10 刻后一起炸开（类似宿傩的解多重斩）。 */
+    private record Mark(ServerPlayer owner, ServerLevel level, LivingEntity target, long at) { }
+    private static final List<Mark> MARKS = new ArrayList<>();
 
     public static void cast(ServerPlayer p, int skill) {
         com.mojang.logging.LogUtils.getLogger().info("[五条悟分支] 服务端收到 skill=" + skill + " 玩家=" + p.getName().getString());
@@ -38,26 +41,46 @@ public final class GojoBranchCombat {
             p.displayClientMessage(net.minecraft.network.chat.Component.literal("咒力不足"), true);
             return;
         }
-        Curse.data(p).putLong(key, now + GojoBranches.cooldown(skill));
         com.mojang.logging.LogUtils.getLogger().info("[五条悟分支] 开始结算 " + GojoBranches.name(skill));
+        boolean[] ok = {true};
         Vec3 eye = p.getEyePosition(), look = p.getLookAngle();
-        switch (skill) {
+        switch (skill) {  // 下面每个 case 结算完，若 ok[0] 仍为 true 才写冷却
+
             case GojoBranches.SINGULARITY -> {
-                Vec3 center = eye.add(look.scale(10));
-                SINGULARITIES.add(new Singularity(p, level, center, now + 40));
-                Network.send(level, new Network.Effect(GojoBranches.FX_SINGULARITY, p.getId(), center, Vec3.ZERO, 5f, 60, 0));
+                // 准星位置十字排开 10 个「1 格大的苍」：中心 1 个 + 上下左右各两格位（间距 1.6 格）
+                Vec3 c = eye.add(look.scale(10));
+                Vec3 right = look.cross(new Vec3(0, 1, 0)).normalize();
+                Vec3 up = right.cross(look).normalize();
+                int n = 0;
+                SINGULARITIES.add(new Singularity(p, level, c, now + 40));
+                Network.send(level, new Network.Effect(GojoBranches.FX_SINGULARITY, p.getId(), c, look, 1f, 60, 0));
+                for (int d = 0; d < 4; d++) {
+                    Vec3 axis = switch (d) { case 0 -> right; case 1 -> right.scale(-1); case 2 -> up; default -> up.scale(-1); };
+                    for (int k = 1; k <= 2 && n < 9; k++, n++) {
+                        Vec3 pos = c.add(axis.scale(1.6 * k));
+                        SINGULARITIES.add(new Singularity(p, level, pos, now + 40));
+                        Network.send(level, new Network.Effect(GojoBranches.FX_SINGULARITY, p.getId(), pos, look, 1f, 60, 0));
+                    }
+                    if (n >= 9) break;
+                }
             }
             case GojoBranches.TEAR -> {
-                LivingEntity hit = rayTarget(p, 24);
-                Vec3 at = hit == null ? eye.add(look.scale(12)) : hit.position();
-                Network.send(level, new Network.Effect(GojoBranches.FX_TEAR, p.getId(), at, look, 4f, 30, 0));
-                if (hit != null) {
-                    hit.invulnerableTime = 0;
-                    CombatSettings.hurt(p, hit, p.damageSources().magic(), 40f);
-                    hit.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                // 前方扇形：长 25 格、半角 55°，扇形内所有敌人吃撕裂 + 凋零
+                Network.send(level, new Network.Effect(GojoBranches.FX_TEAR, p.getId(), eye, look, 25f, 30, 0));
+                int hits = 0;
+                for (LivingEntity t : targets(p, eye.add(look.scale(12)), 26)) {
+                    Vec3 to = t.position().add(0, t.getBbHeight() * .5, 0).subtract(eye);
+                    double dist = to.length();
+                    if (dist < .8 || dist > 25) continue;
+                    if (to.normalize().dot(look) < Math.cos(Math.toRadians(55))) continue;
+                    t.invulnerableTime = 0;
+                    CombatSettings.hurt(p, t, p.damageSources().magic(), 40f);
+                    t.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                         net.minecraft.world.effect.MobEffects.WITHER, 120, 1, false, false));
-                    hit.invulnerableTime = 0;
+                    t.invulnerableTime = 0;
+                    hits++;
                 }
+                p.displayClientMessage(net.minecraft.network.chat.Component.literal("苍·引力撕裂：扇形命中 " + hits + " 个目标"), true);
             }
             case GojoBranches.METEOR -> {
                 for (int i = 0; i < 5; i++) {
@@ -67,18 +90,19 @@ public final class GojoBranchCombat {
                 Network.send(level, new Network.Effect(GojoBranches.FX_METEOR, p.getId(), eye, look, 2f, 20, 0));
             }
             case GojoBranches.HEAVY -> {
-                Vec3 at = eye.add(look.scale(2));
-                Network.send(level, new Network.Effect(GojoBranches.FX_HEAVY, p.getId(), at, look, 3f, 20, 0));
-                for (LivingEntity t : targets(p, at, 3.5)) {
-                    t.invulnerableTime = 0;
-                    CombatSettings.hurt(p, t, p.damageSources().magic(), 55f);
-                    Vec3 push = t.position().subtract(p.position()).normalize().scale(2.6);
-                    t.setDeltaMovement(push.x, .7, push.z);
-                    t.hurtMarked = true;
-                    t.setAbsorptionAmount(0);
-                    var armor = t.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR);
-                    if (armor != null) armor.setBaseValue(0);
+                // 类似宿傩的解多重斩：先在前方扇形留下斩痕，10 刻后所有被标记者一起被斩开
+                Vec3 at = eye.add(look.scale(4));
+                Network.send(level, new Network.Effect(GojoBranches.FX_HEAVY, p.getId(), at, look, 6f, 20, 0));
+                int marked = 0;
+                for (LivingEntity t : targets(p, at, 7)) {
+                    Vec3 to = t.position().add(0, t.getBbHeight() * .5, 0).subtract(eye);
+                    if (to.length() > 7 || to.normalize().dot(look) < Math.cos(Math.toRadians(60))) continue;
+                    MARKS.add(new Mark(p, level, t, now + 10));
+                    marked++;
                 }
+                if (marked == 0) { Curse.addRaw(p, GojoBranches.cost(skill)); ok[0] = false;
+                    p.displayClientMessage(net.minecraft.network.chat.Component.literal("赫·重压冲击：前方 7 格扇形内没有目标"), true); }
+                else p.displayClientMessage(net.minecraft.network.chat.Component.literal("赫·重压冲击：斩痕附着 " + marked + " 个目标"), true);
             }
             case GojoBranches.TURBULENCE -> {
                 for (int i = 0; i < 5; i++) SHOTS.add(new Shot(p, level, eye, look, now + i * 3, i));
@@ -86,16 +110,30 @@ public final class GojoBranchCombat {
             }
             case GojoBranches.BRAINDEAD -> {
                 LivingEntity target = rayTarget(p, 20);
-                if (target == null) { p.displayClientMessage(net.minecraft.network.chat.Component.literal("准星没有目标"), true); return; }
+                if (target == null) {
+                    Curse.addRaw(p, GojoBranches.cost(skill));   // 没打中：退咒力、不写冷却
+                    ok[0] = false;
+                    p.displayClientMessage(net.minecraft.network.chat.Component.literal("准星 20 格内没有可命中的目标"), true);
+                    break;
+                }
                 Network.send(level, new Network.Effect(GojoBranches.FX_BRAIN, p.getId(), target.getEyePosition(), Vec3.ZERO, 2f, 40, 0));
                 long dur = target.getMaxHealth() > 2000 ? 40 : 100;
                 target.getPersistentData().putLong("GojoBrainDeep", now + dur);
                 if (target instanceof Mob m) character.npc.NpcControl.stun(m, "gojo_brain", (int) dur);
                 target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                     net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN, (int) dur, 6, false, false));
+                target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                    net.minecraft.world.effect.MobEffects.WEAKNESS, (int) dur, 3, false, false));
+                target.setDeltaMovement(0, Math.min(0, target.getDeltaMovement().y), 0);
+                target.invulnerableTime = 0;
+                CombatSettings.hurt(p, target, p.damageSources().magic(), 8f);   // 至少有可见伤害
+                target.invulnerableTime = 0;
+                p.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                    "无量空处·局部脑死：" + target.getName().getString() + " 瘫痪 " + (dur / 20) + " 秒"), true);
             }
-            default -> { }
+            default -> ok[0] = false;
         }
+        if (ok[0]) Curse.data(p).putLong(key, now + GojoBranches.cooldown(skill));
         Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> p),
             new Network.Effect(GojoBranches.FX_METEOR + 50, p.getId(), Vec3.ZERO, Vec3.ZERO, 0f, 0, 0));
     }
@@ -141,17 +179,17 @@ public final class GojoBranchCombat {
         for (var it = SINGULARITIES.iterator(); it.hasNext(); ) {
             Singularity s = it.next();
             if (now >= s.at) {
-                for (LivingEntity t : targets(s.owner, s.center, 6)) {
+                for (LivingEntity t : targets(s.owner, s.center, 2.6)) {
                     t.invulnerableTime = 0;
-                    CombatSettings.hurt(s.owner, t, s.owner.damageSources().genericKill(), 60f);
+                    CombatSettings.hurt(s.owner, t, s.owner.damageSources().genericKill(), 25f);
                     t.invulnerableTime = 0;
                 }
                 Network.send(s.level, new Network.Effect(GojoBranches.FX_SINGULARITY, s.owner.getId(),
-                    s.center, Vec3.ZERO, 6f, 20, 0));
+                    s.center, Vec3.ZERO, 1.2f, 20, 0));
                 it.remove();
                 continue;
             }
-            for (LivingEntity t : targets(s.owner, s.center, 10)) {
+            for (LivingEntity t : targets(s.owner, s.center, 4.0)) {
                 Vec3 pull = s.center.subtract(t.position());
                 if (pull.lengthSqr() > .04) {
                     pull = pull.normalize().scale(.9);
@@ -178,6 +216,23 @@ public final class GojoBranchCombat {
             }
             Vec3 step = to.normalize().scale(.9);
             METEORS.set(METEORS.indexOf(m), new Meteor(m.owner, m.level, m.pos.add(step), t, m.end));
+        }
+        for (var it = MARKS.iterator(); it.hasNext(); ) {
+            Mark m = it.next();
+            LivingEntity t = m.target;
+            if (now < m.at) continue;
+            it.remove();
+            if (t == null || !t.isAlive() || t.level() != m.level) continue;
+            t.invulnerableTime = 0;
+            CombatSettings.hurt(m.owner, t, m.owner.damageSources().magic(), 55f);
+            Vec3 push = t.position().subtract(m.owner.position()).normalize().scale(2.6);
+            t.setDeltaMovement(push.x, .7, push.z);
+            t.hurtMarked = true;
+            t.setAbsorptionAmount(0);
+            var armor = t.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR);
+            if (armor != null) armor.setBaseValue(0);
+            t.invulnerableTime = 0;
+            Network.send(m.level, new Network.Effect(GojoBranches.FX_HEAVY, m.owner.getId(), t.position(), Vec3.ZERO, 2f, 14, 0));
         }
         for (var it = SHOTS.iterator(); it.hasNext(); ) {
             Shot s = it.next();

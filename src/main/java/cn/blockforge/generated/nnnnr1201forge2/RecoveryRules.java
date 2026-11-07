@@ -14,7 +14,7 @@ public final class RecoveryRules {
         "KashimoAttachUntil","KashimoUltUntil","KashimoUltUsed","KashimoCrashUntil","KashimoMagnetUntil",
         "KashimoFreeDash","KashimoGuardUntil","KashimoGuardReady","KashimoCombo","KashimoComboAt",
         "KashimoReflectReady","KashimoShadowUntil","KashimoNeg","KashimoNegAt","KashimoFanAt");
-    public static boolean progressKey(String key){return TRANSIENT.contains(key)||key.contains("Cooldown");}
+    public static boolean progressKey(String key){return TRANSIENT.contains(key)||key.contains("Cooldown")||key.startsWith("GojoBranchCD_");}
     public static boolean entityKey(String key){
         return key.startsWith("SukunaSoul")||key.equals("SukunaNoHeal")||key.startsWith("SukunaVoidFlame")
             ||key.startsWith("SukunaVoidIgnition")||key.startsWith("SukunaSixfoldScar")||key.startsWith("ClashAnchor")

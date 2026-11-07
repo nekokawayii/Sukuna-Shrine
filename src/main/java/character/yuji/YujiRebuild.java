@@ -62,7 +62,21 @@ public final class YujiRebuild {
         for (String k : new ArrayList<>(d.getAllKeys())) if (k.startsWith("Yuji")) d.remove(k);
     }
 
-    /** 左键命中：连击 + 专注 + 径庭拳二段。 */
+    /** 径庭拳是被动：左键攻击必定挂上二段（哪怕这一下被闪避/无敌帧吃掉），0.5 秒后在敌人体内炸开。 */
+    @SubscribeEvent
+    public static void attack(net.minecraftforge.event.entity.player.AttackEntityEvent e) {
+        if (!(e.getEntity() instanceof ServerPlayer p) || p.level().isClientSide) return;
+        if (!"yuji".equals(role(p))) return;
+        if (!(e.getTarget() instanceof LivingEntity t) || !t.isAlive()) return;
+        if (!cn.blockforge.generated.nnnnr1201forge2.CombatSafety.canTarget(p, t)) return;
+        addCombo(p);
+        addFocus(p, 10);
+        if (JOBS.stream().noneMatch(j -> j.target == t && j.kind == 0))
+            JOBS.add(new Job(p, (ServerLevel) p.level(), t, t.position(), Vec3.ZERO,
+                p.level().getGameTime() + 10, 0, 0));
+    }
+
+    /** 命中：连击 + 专注（技能命中同样叠层）。 */
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void hurt(LivingHurtEvent e) {
         if (e.getEntity().level().isClientSide) return;
@@ -79,9 +93,6 @@ public final class YujiRebuild {
                 e.setAmount((float) Math.min(1.0e7, dmg));
                 Curse.data(p).putInt("YujiFocus", 0);
                 Network.send((ServerLevel) p.level(), new Network.Effect(YujiFx.BLACK_FLASH, p.getId(), t.position(), p.getLookAngle(), 3f, 20, 0));
-            } else if (JOBS.stream().noneMatch(j -> j.target == t && j.kind == 0)) {
-                // 径庭拳：0.5 秒后二段真实伤害
-                JOBS.add(new Job(p, (ServerLevel) t.level(), t, t.position(), Vec3.ZERO, t.level().getGameTime() + 10, 0, 0));
             }
         }
     }

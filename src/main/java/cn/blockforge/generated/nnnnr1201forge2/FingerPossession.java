@@ -29,6 +29,38 @@ public final class FingerPossession {
     private record Pending(ServerPlayer player, Mob npc, long at) { }
     private static final List<Pending> ACTIVE = new ArrayList<>();
 
+    private static final String[] TAUNTS = {
+        "手指在喉间化作一声低笑——「这具身体，归我了。」",
+        "「这副皮囊还算结实。就从你这儿开始吧。」",
+        "「别挣扎了，你的咒力已经在给我暖手。」",
+        "「有意思……这具身体里，居然还有能让我笑出来的东西。」",
+        "「借你身体一用。放心，我会好好『照顾』它的。」",
+        "「你以为是你吃了我？不，是我吞了你。」",
+        "「这副身体的味道……比上一个好些。」"
+    };
+    private static final String[] YUJI_TAUNTS = {
+        "宿傩咧开嘴：「……又是你？这副身体，我倒是熟了。」",
+        "「虎杖悠仁。你总是这么不听话。」",
+        "「又见面了，小鬼。这次，轮到我说了算。」",
+        "「你的身体记得我。这就够了。」"
+    };
+    private static final String[] END_LINES = {
+        "「下次再陪你玩。」",
+        "「扫兴。这具身体先还你。」",
+        "「呵……你会再求我回来的。」",
+        "「记住这种感觉，小鬼。」"
+    };
+    private static final String[] RESIGNED = {
+        "你放任宿傩继续支配这具身体。远处传来一声轻笑。",
+        "「这就对了。看着就好。」",
+        "你没有反抗，任由那双眼睛用你的身体看世界。"
+    };
+    private static final String[] RECLAIM = {
+        "你夺回了身体的控制权，宿傩的身影散去。",
+        "「……啧。」宿傩退回意识深处，身体重新属于你。",
+        "你咬紧牙关把那张脸从意识里挤出去——控制权回来了。"
+    };
+    private static String pick(ServerPlayer p, String[] pool) { return pool[p.getRandom().nextInt(pool.length)]; }
     private static int fingers(ServerPlayer p) { return Curse.fingers(p); }
 
     /** 术式伤害永久倍率（与 /sukuna damage 用的是同一把键）。 */
@@ -68,7 +100,10 @@ public final class FingerPossession {
             p.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 300, 0, false, true));
             p.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 300, 0, false, true));
             p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 300, 4, false, true));
-            p.displayClientMessage(Component.literal("诅咒之力灌入体内：咒力猛然翻倍，但胃里翻江倒海、眼前漆黑、四肢沉重。"), true);
+            String[] surge = {"诅咒之力灌入体内：咒力猛然翻倍，但胃里翻江倒海、眼前漆黑、四肢沉重。",
+                "一股腥甜冲上喉咙，咒力暴涨的同时，世界开始倾斜。",
+                "咒力在血管里翻涌，像有什么东西在皮下爬。"};
+            p.displayClientMessage(Component.literal(pick(p, surge)), true);
             return false;
         }
         Curse.consume(p, false);
@@ -111,8 +146,7 @@ public final class FingerPossession {
         Network.send(level, new Network.Effect(CAMERA_LOCK, p.getId(), at, Vec3.ZERO, 1f, ACTIVE_TICKS, 0));
         var definition = character.CharacterService.selected(p);
         boolean yuji = definition != null && "yuji".equals(definition.id());
-        if (yuji) p.sendSystemMessage(Component.literal("宿傩咧开嘴：「……又是你？这副身体，我倒是熟了。」").withStyle(Style.EMPTY.withColor(0xFF8A00)));
-        else p.sendSystemMessage(Component.literal("手指在喉间化作一声低笑——「这具身体，归我了。」").withStyle(Style.EMPTY.withColor(0xFF8A00)));
+        p.sendSystemMessage(Component.literal(pick(p, yuji ? YUJI_TAUNTS : TAUNTS)).withStyle(Style.EMPTY.withColor(0xFF8A00)));
         if (yuji) {
             p.sendSystemMessage(button("继续", "/sukuna possess keep", 0xFFFFD27A, "让宿傩继续使用这具身体"));
             p.sendSystemMessage(button("夺回", "/sukuna possess back", 0xFFFF4A4A, "夺回控制权，宿傩消失（无掉落）"));
@@ -205,23 +239,23 @@ public final class FingerPossession {
         p.teleportTo(p.serverLevel(), spawn.getX() + .5, spawn.getY(), spawn.getZ() + .5, p.getYRot(), p.getXRot());
         p.setHealth(p.getMaxHealth());
         Network.send(p.serverLevel(), new Network.Effect(CAMERA_LOCK, p.getId(), p.position(), Vec3.ZERO, 1f, 0, 0));
-        p.sendSystemMessage(Component.literal("你松开了那具身体，在出生点重新醒来。").withStyle(Style.EMPTY.withColor(0xFF7FD7FF)));
+        p.sendSystemMessage(Component.literal("你松开了那具身体，在出生点重新醒来。耳畔只剩一声若有若无的笑。").withStyle(Style.EMPTY.withColor(0xFF7FD7FF)));
     }
 
     public static void keep(ServerPlayer p) {
-        p.sendSystemMessage(Component.literal("你放任宿傩继续支配这具身体。").withStyle(Style.EMPTY.withColor(0xFF8A00)));
+        p.sendSystemMessage(Component.literal(pick(p, RESIGNED)).withStyle(Style.EMPTY.withColor(0xFF8A00)));
     }
 
     public static void back(ServerPlayer p) {
         removeHost(p);
         finish(p);
-        p.sendSystemMessage(Component.literal("你夺回了身体的控制权，宿傩的身影散去。").withStyle(Style.EMPTY.withColor(0xFF7FD7FF)));
+        p.sendSystemMessage(Component.literal(pick(p, RECLAIM)).withStyle(Style.EMPTY.withColor(0xFF7FD7FF)));
     }
 
     public static void returnTo(ServerPlayer p) {
         removeHost(p);
         finish(p);
-        p.sendSystemMessage(Component.literal("「下次再陪你玩。」宿傩退去。").withStyle(Style.EMPTY.withColor(0xFF8A00)));
+        p.sendSystemMessage(Component.literal(pick(p, END_LINES)).withStyle(Style.EMPTY.withColor(0xFF8A00)));
     }
 
     private static void removeHost(ServerPlayer p) {

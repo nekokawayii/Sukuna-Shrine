@@ -346,6 +346,7 @@ public final class Client {
         if(e.kind()>=NetBranchRules.FX_CROSS&&e.kind()<=NetBranchRules.FX_STOP){NetBranchVisuals.receive(e);return;}
         if(e.kind()>=UraumeFx.FIRST&&e.kind()<=UraumeFx.LAST){UraumeVisuals.receive(e);return;}
         if(e.kind()>=GojoBranches.FX_SINGULARITY&&e.kind()<=GojoBranches.FX_BRAIN){GojoBranchClient.receive(e);return;}
+        if(e.kind()>=YujiFx.FIRST&&e.kind()<=YujiFx.LAST){YujiFxClient.receive(e);return;}
         if(e.kind()>=BranchRules.FX_LINE&&e.kind()<=BranchRules.FX_FREEZE){BranchVisuals.receive(e);return;}
         if(e.kind()==144){VoidBossClient.receive(e);return;}
         if(e.kind()>=113&&e.kind()<=121){VoidTechniqueClient.receive(e);return;}

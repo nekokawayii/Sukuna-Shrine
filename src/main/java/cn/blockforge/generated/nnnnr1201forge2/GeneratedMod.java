@@ -248,6 +248,9 @@ public final class GeneratedMod {
         MinecraftForge.EVENT_BUS.register(UraumeIce.class);
         MinecraftForge.EVENT_BUS.register(character.uraume.UraumePalaceDomain.class);
         MinecraftForge.EVENT_BUS.register(GojoBranchCombat.class);
+        MinecraftForge.EVENT_BUS.register(character.yuji.YujiRebuild.class);
+        for (int yujiSkill : character.yuji.YujiRebuildSkills.WHEEL)
+            character.CharacterCasting.registerEffect("yuji", yujiSkill, (p, s, r) -> character.yuji.YujiRebuild.cast(p, s.id()));
         MinecraftForge.EVENT_BUS.register(SukunaNpcTrueForm.class);
         Network.registerDrawing();
         MinecraftForge.EVENT_BUS.register(SlashForms.class);

@@ -4,67 +4,65 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.common.Mod;
 
-/** 虎杖重做（r316）表现层：全部走 PhotonFx 加法层，按招区分形状与颜色。 */
+/** 虎杖重做（r321）表现层：改用 Photon 粒子 + 简单贴图（PhotonBridge），不再用 PhotonFx 光球/光环。 */
 @Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT)
 public final class YujiFxClient {
-    private static final int ORANGE = 0xFFFFAB85, RED = 0xFFFF6A4A, BLUE = 0xFF8FC8FF, BLACK = 0xFF2A0A0A;
+    private static final int ORANGE = 0xFFFFAB85, RED = 0xFFFF5A3C, BLUE = 0xFF8FC8FF, WHITE = 0xFFF2F2F2, BLACK = 0xFF241010;
 
     public static void receive(Network.Effect e) {
         Vec3 at = e.position();
         float size = Math.max(.3f, e.size());
-        Vec3 dir = e.direction().lengthSqr() < .01 ? new Vec3(0, 0, 1) : e.direction().normalize();
         switch (e.kind()) {
-            case YujiFx.IKKI -> { // 二段：敌人背后的蓝色咒力震荡圈
-                PhotonFx.shockwave(at, BLUE, 1.8, 12);
-                PhotonFx.spark(at, 1.6, .5, BLUE, 0xFFDCF0FF, "textures/effect/glow.png", true, e.life(), 10, 30, 0);
+            case YujiFx.IKKI -> {          // 二段：蓝色咒力震荡（贴图云 + 小火花）
+                PhotonBridge.cloud(at, BLUE, 1.4, .55, 16, 12);
+                PhotonBridge.spawn(at, WHITE, .5, 6, 10);
             }
-            case YujiFx.BREAK -> {
-                PhotonFx.shockwave(at, ORANGE, 2.2, 12);
-                PhotonFx.spark(at, 2.0, .7, ORANGE, 0xFFFFE0CE, "textures/effect/glow.png", true, e.life(), 10, 34, 0);
+            case YujiFx.BREAK -> {          // 崩拳：橙色爆尘 + 白闪
+                PhotonBridge.cloud(at, ORANGE, 1.8, .7, 22, 14);
+                PhotonBridge.spawn(at, WHITE, .7, 8, 8);
             }
-            case YujiFx.BARRAGE -> PhotonFx.spark(at, 1.2, .45, ORANGE, 0xFFFFE6D6, "textures/effect/glow.png", true, e.life(), 6, 30, 0);
-            case YujiFx.CHARGE -> PhotonFx.spark(at, 1.0, .5, ORANGE, 0xFFFFF0D0, "textures/effect/glow.png", true, e.life(), 12, 22, -0.4);
+            case YujiFx.BARRAGE -> PhotonBridge.spawn(at, ORANGE, .45, 10, 7);
+            case YujiFx.CHARGE -> PhotonBridge.smoke(at, ORANGE, 1.2, .5, 12, 16);   // 聚气：尘土回卷
             case YujiFx.CHARGE_HIT -> {
-                PhotonFx.shockwave(at, RED, 3.2, 16);
-                PhotonFx.ring(at, 2.4, .25, RED, 0xFFFFD8C8, 10, e.life(), 14);
+                PhotonBridge.cloud(at, RED, 2.4, .9, 30, 18);
+                PhotonBridge.spawn(at, WHITE, .9, 10, 8);
             }
-            case YujiFx.RISING -> { // 上勾：竖直光柱 + 旋风
-                PhotonFx.beam(at, at.add(0, 5, 0), 1.1, 14);
-                PhotonFx.ring(at, 1.6, .16, ORANGE, 0xFFFFE8D8, 8, e.life(), 12);
+            case YujiFx.RISING -> {          // 上勾：沿竖直方向连串火星
+                for (int i = 0; i < 6; i++) PhotonBridge.spawn(at.add(0, i * .7, 0), ORANGE, .4, 5, 8 + i);
             }
-            case YujiFx.HOOK -> PhotonFx.ring(at, 1.8, .2, ORANGE, 0xFFFFD8B8, 7, e.life(), 10);
+            case YujiFx.HOOK -> PhotonBridge.spawn(at, ORANGE, .5, 8, 8);
             case YujiFx.KICK -> {
-                PhotonFx.shockwave(at, ORANGE, 2.6, 14);
-                PhotonFx.spark(at, 2.2, .6, ORANGE, 0xFFFFE8D8, "textures/effect/glow.png", true, e.life(), 8, 26, 0);
+                PhotonBridge.cloud(at, ORANGE, 1.6, .6, 18, 12);
+                PhotonBridge.spawn(at, WHITE, .6, 6, 8);
             }
-            case YujiFx.DASH -> { // 残影线
+            case YujiFx.DASH -> {            // 残影：沿路径一串小粒子
+                for (int i = 0; i < 8; i++) PhotonBridge.spawn(at.add(e.direction().normalize().scale(i * 1.2)), ORANGE, .35, 4, 8);
+            }
+            case YujiFx.ROLL -> PhotonBridge.smoke(at, ORANGE, 1.0, .45, 8, 10);
+            case YujiFx.SWEEP -> {           // 扫堂：贴地一圈尘土
                 for (int i = 0; i < 8; i++) {
-                    Vec3 p = at.add(dir.scale(i * 1.2));
-                    PhotonFx.spark(p, .8, .4, ORANGE, 0xFF3A211A, "textures/effect/glow.png", true, e.life(), 6, 16, 0);
+                    double a = i * Math.PI / 4;
+                    PhotonBridge.smoke(at.add(Math.cos(a) * size * .6, .15, Math.sin(a) * size * .6), ORANGE, .6, .45, 4, 10);
                 }
             }
-            case YujiFx.ROLL -> PhotonFx.ring(at, 1.4, .12, ORANGE, 0xFFFFF0E0, 6, e.life(), 10);
-            case YujiFx.SWEEP -> { // 贴地气浪
-                for (int i = 0; i < 3; i++) PhotonFx.ring(at.add(0, .1, 0), size * (.5 + i * .3), .18, ORANGE, 0xFFFFE0C0, 9, e.life(), 12);
+            case YujiFx.WALL -> PhotonBridge.cloud(at, ORANGE, 1.0, .5, 10, 10);
+            case YujiFx.WAVE -> {            // 拳风：沿飞行方向拉细线贴图
+                for (int i = 1; i <= 5; i++) PhotonBridge.thread(at.add(e.direction().normalize().scale(i * .9)), WHITE, 1.2, 8, 0);
             }
-            case YujiFx.WALL -> PhotonFx.ring(at, 1.0, .14, ORANGE, 0xFFFFEFD8, 6, e.life(), 10);
-            case YujiFx.WAVE -> PhotonFx.beam(at, at.add(dir.scale(size * 2.2)), 1.4, 16);
-            case YujiFx.WAVE_HIT -> {
-                PhotonFx.shockwave(at, ORANGE, 2.0, 12);
-                PhotonFx.ring(at, 1.4, .18, ORANGE, 0xFFFFE8D8, 8, e.life(), 10);
+            case YujiFx.WAVE_HIT -> PhotonBridge.cloud(at, ORANGE, 1.6, .6, 16, 12);
+            case YujiFx.STOMP -> {           // 重踏：地面一圈圈尘土
+                for (int i = 0; i < 10; i++) {
+                    double a = i * Math.PI / 5;
+                    PhotonBridge.smoke(at.add(Math.cos(a) * size * .7, .1, Math.sin(a) * size * .7), ORANGE, .9, .6, 6, 14);
+                }
+                PhotonBridge.cloud(at, ORANGE, 2.0, .8, 20, 14);
             }
-            case YujiFx.STOMP -> { // 地震：多重径向环 + 地面裂
-                for (int i = 0; i < 3; i++) PhotonFx.ring(at.add(0, .05, 0), size * (.4 + i * .28), .22, ORANGE, 0xFFFFD8B0, 10, e.life(), 14);
-                PhotonFx.shockwave(at, ORANGE, size * 1.4, 18);
-            }
-            case YujiFx.ELBOW -> PhotonFx.ring(at, 1.5, .16, ORANGE, 0xFFFFE6D6, 7, e.life(), 10);
-            case YujiFx.KNEE -> {
-                PhotonFx.spark(at, 1.4, .6, ORANGE, 0xFFFFF0E0, "textures/effect/glow.png", true, e.life(), 8, 24, 0);
-                PhotonFx.ring(at, 1.2, .12, RED, 0xFFFFD0C0, 6, e.life(), 10);
-            }
-            case YujiFx.BLACK_FLASH -> { // 黑闪：黑芯 + 红边
-                PhotonFx.spark(at, 2.6, .8, BLACK, 0xFFFF3A2A, "textures/effect/glow.png", true, e.life(), 10, 40, 0);
-                PhotonFx.shockwave(at, RED, 3.0, 12);
+            case YujiFx.ELBOW -> PhotonBridge.spawn(at, ORANGE, .55, 8, 8);
+            case YujiFx.KNEE -> PhotonBridge.cloud(at, WHITE, 1.2, .5, 14, 10);
+            case YujiFx.BLACK_FLASH -> {     // 黑闪：黑红贴图粒子 + 白闪 + 震屏
+                PhotonBridge.cloud(at, BLACK, 2.2, .9, 26, 14);
+                PhotonBridge.cloud(at, RED, 1.6, .7, 18, 12);
+                PhotonBridge.spawn(at, WHITE, .8, 8, 6);
                 Client.shake(12);
             }
             default -> { }

@@ -324,12 +324,13 @@ public final class CombatExpansion {
         for(Chant c:List.copyOf(chants.values())){
             if(!allowed(c.p)||c.p.level()!=c.level||!c.dragon&&!MaidBridge.isCaster(c.p)&&c.level.getGameTime()-c.heartbeat>25||c.dragon&&!TechniqueInput.holding(c.p,CombatExpansionRules.DRAGON_STAR)){chants.remove(c.p.getUUID());drawing.remove(c.p.getUUID());continue;}
             int age=(int)(c.level.getGameTime()-c.start),gap=TechniqueConfig.gap();
-            // 世界斩咏唱：把「成双之流星」拆成「成双 / 之 / 流星」三句，总时长仍是原来的 3 句（每句 3/5 间隔）
+            // 世界斩咏唱：前两句各占 gap；第三句「成双之流星」仍是 gap，但内部再平分成「成双 / 之 / 流星」三小句
             String[] words=c.dragon?new String[]{"龍（リュウ）","昴（スバル）","三千（サンゼン）","斬（ザン）"}
                 :new String[]{"龙鳞","反发","成双","之","流星"};
-            double step=c.dragon?gap:gap*3.0/5.0;
+            double[] due=c.dragon?new double[]{0,gap,2.0*gap,3.0*gap}
+                :new double[]{0,gap,2.0*gap,2.0*gap+gap/3.0,2.0*gap+2.0*gap/3.0};
             int total=c.dragon?words.length*gap:gap*3;
-            if(c.word<words.length&&age>=c.word*step)announce(c.p,words[c.word++]);
+            if(c.word<words.length&&age>=due[c.word])announce(c.p,words[c.word++]);
             if(age<total)continue;chants.remove(c.p.getUUID());drawing.remove(c.p.getUUID());
             if(c.dragon){if(!Curse.spend(c.p,2000))continue;Projectile b=new Projectile(c.p,c.p.getEyePosition(),c.p.getLookAngle(),DRAGON,4);add(b);Skills.closeDomain(c.p);Curse.enterBurnout(c.p,CombatExpansionRules.DRAGON_BURNOUT);}
             else if(Curse.spend(c.p,2000)){Curse.status(c.p,"FormCooldown"+SlashFormRules.WORLD,CombatExpansionRules.WORLD_COOLDOWN);SlashForms.world(c.p);afterWorld(c);}

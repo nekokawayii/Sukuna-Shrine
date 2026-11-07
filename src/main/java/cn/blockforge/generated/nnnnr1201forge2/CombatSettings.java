@@ -159,6 +159,10 @@ public final class CombatSettings {
             c.getSource().sendSuccess(()->Component.literal("各分类比值："+BalanceRules.ratios()),false);
             c.getSource().sendSuccess(()->Component.literal("关闭模式首领生命：五条悟 150000 → "+BalanceRules.number(BalanceRules.strength(150000,BalanceRules.Category.BOSS_FIXED))+" · 魔虚罗 400000 → "+BalanceRules.number(BalanceRules.strength(400000,BalanceRules.Category.BOSS_FIXED))+" · 净土守护者 800000 → "+BalanceRules.number(BalanceRules.strength(800000,BalanceRules.Category.BOSS_GUARDIAN))+"（开启模式三者都是原值）"),false);return 1;
         })));
+        event.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("possess")
+            .then(Commands.literal("keep").executes(c->{FingerPossession.keep(c.getSource().getPlayerOrException());return 1;}))
+            .then(Commands.literal("back").executes(c->{FingerPossession.back(c.getSource().getPlayerOrException());return 1;}))
+            .then(Commands.literal("return").executes(c->{FingerPossession.returnTo(c.getSource().getPlayerOrException());return 1;}))));
         event.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("damage")
             .executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();
                 p.sendSystemMessage(Component.literal("当前术式伤害倍率："+multiplier(p)+" 倍（/sukuna damage 数字 可改，1 为原倍率）"));

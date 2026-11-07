@@ -66,7 +66,9 @@ public class SukunaNpcEntity extends PathfinderMob {
     @Override
     public void tick() {
         super.tick();
-        if (level().isClientSide || !getPersistentData().getBoolean("SukunaTrueForm")) return;
+        if (level().isClientSide) return;
+        if (getPersistentData().getBoolean("PossessedSukuna")) return; // 夺舍体只由 AI 近战，不出咒具连招
+        if (!getPersistentData().getBoolean("SukunaTrueForm")) return;
         if (level().getGameTime() % 100 == 0) syncTrueForm();   // 重连/远处玩家补同步
         // r277：原身出招无冷却——每刻都结算两把咒具（不再每 2 秒一次）
         LivingEntity target = getTarget();

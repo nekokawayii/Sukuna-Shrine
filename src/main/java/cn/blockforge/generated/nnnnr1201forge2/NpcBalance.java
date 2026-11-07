@@ -54,6 +54,15 @@ public final class NpcBalance {
         if (base == null) return;
         var attribute = living.getAttribute(Attributes.MAX_HEALTH);
         if (attribute == null) return;
+        // r329：被夺舍生成的宿傩按"吞下的手指数"给血量，不被 18000 表覆盖
+        if (living.getPersistentData().getBoolean("PossessedSukuna")) {
+            double want = 150.0 * Math.max(1, living.getPersistentData().getInt("PossessedPower"));
+            if (Math.abs(attribute.getBaseValue() - want) > 0.5) {
+                attribute.setBaseValue(want);
+                living.setHealth(living.getMaxHealth());
+            }
+            return;
+        }
         // r270：宿傩 NPC 已进入原身形态时，血量固定 300000/10000，不按普通表重置
         if (living.getPersistentData().getBoolean("SukunaTrueForm")) {
             double trueWant = BalanceRules.modpackMode() ? 300000.0 : 10000.0;

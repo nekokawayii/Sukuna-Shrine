@@ -14,6 +14,7 @@ public final class PossessionClient {
     private static boolean wasForced;
 
     public static void receive(Network.Effect e) {
+        if (e.life() <= 0) { until = 0; return; }   // 取消锁视角
         until = Math.max(until, System.currentTimeMillis() + e.life() * 50L);
     }
 

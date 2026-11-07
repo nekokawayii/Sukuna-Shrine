@@ -121,8 +121,11 @@ public final class FingerPossession {
         var max = npc.getAttribute(Attributes.MAX_HEALTH); if (max != null) max.setBaseValue(hp);
         var atk = npc.getAttribute(Attributes.ATTACK_DAMAGE); if (atk != null) atk.setBaseValue(2 + Math.max(0, power - 1) * 0.6);
         var spd = npc.getAttribute(Attributes.MOVEMENT_SPEED); if (spd != null) spd.setBaseValue(0.30 + Math.min(0.15, power * 0.006));
+        int interval = Math.max(10, 24 - power);   // 1 指约 1.2 秒，20 指 0.5 秒
+        var aspd = npc.getAttribute(Attributes.ATTACK_SPEED);
+        if (aspd != null) aspd.setBaseValue(20.0 / interval);
         npc.setHealth((float) hp);
-        npc.getPersistentData().putInt("PossessedInterval", Math.max(10, 24 - power));
+        npc.getPersistentData().putInt("PossessedInterval", interval);
     }
 
     /** 夺舍体 AI：杀光半径 200 格内所有生物，优先近的，地下目标最后。 */
@@ -194,11 +197,25 @@ public final class FingerPossession {
     }
 
     @SubscribeEvent
+    public static void clone(PlayerEvent.Clone e) {
+        if (!(e.getEntity() instanceof ServerPlayer to)) return;
+        if (e.getOriginal().getPersistentData().getBoolean("SukunaPossessed")) to.getPersistentData().putBoolean("SukunaPossessed", true);
+    }
+
+    @SubscribeEvent
     public static void respawn(PlayerEvent.PlayerRespawnEvent e) {
         if (!(e.getEntity() instanceof ServerPlayer p)) return;
-        if (!p.getPersistentData().getBoolean("SukunaPossessed")) return;
+        boolean possessed = p.getPersistentData().getBoolean("SukunaPossessed");
+        if (!possessed) {
+            // 背包/存档里可能残留旁观模式：只要带过夺舍标记就拉回生存
+            if (p.gameMode.getGameModeForPlayer() == net.minecraft.world.level.GameType.SPECTATOR) {
+                p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+            }
+            return;
+        }
         p.getPersistentData().remove("SukunaPossessed");
         p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+        Network.send(p.serverLevel(), new Network.Effect(CAMERA_LOCK, p.getId(), p.position(), Vec3.ZERO, 1f, 0, 0));
     }
 
     private static Component button(String label, String command, int color, String hover) {

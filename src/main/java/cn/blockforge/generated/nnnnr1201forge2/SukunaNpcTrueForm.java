@@ -29,6 +29,7 @@ public final class SukunaNpcTrueForm {
     public static void death(LivingDeathEvent e) {
         if (!(e.getEntity() instanceof SukunaNpcEntity npc) || npc.level().isClientSide) return;
         var d = npc.getPersistentData();
+        if (d.getBoolean("PossessedSukuna")) return; // 夺舍体只有一条命，死了就死
         if (d.getBoolean("SukunaTrueForm")) return; // 已经是原身，不再有命
         int left = lives(npc);
         if (left > 0) {

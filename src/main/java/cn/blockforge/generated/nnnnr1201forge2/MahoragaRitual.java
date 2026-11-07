@@ -11,7 +11,8 @@ import net.minecraft.world.phys.Vec3;
 public final class MahoragaRitual {
     /** 调服不收费，不限制重试次数或同时在场数量。 */
     public static boolean summon(ServerPlayer owner){
-        if(!TenShadows.incarnated(owner))return false;
+        // r361：选择书选的伏黑惠也要能开始调服（功能门禁用 canUse，外观才用 incarnated）
+        if(!TenShadows.canUse(owner))return false;
         ServerLevel level=owner.serverLevel();
         Vec3 at=owner.position().add(owner.getLookAngle().multiply(1,0,1).normalize().scale(4));
         MahoragaEntity boss=VoidContent.MAHORAGA.get().create(level);

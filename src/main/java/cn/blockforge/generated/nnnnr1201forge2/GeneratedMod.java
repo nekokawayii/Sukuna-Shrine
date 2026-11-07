@@ -127,7 +127,14 @@ public final class GeneratedMod {
             (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiCombat.gap(p));
         character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.OVERTIME,
             (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiCombat.overtime(p));
+        character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.BLADES,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiExtras.cast(p, s2.id()));
+        character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.QUAKE,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiExtras.cast(p, s2.id()));
+        character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.EXECUTE,
+            (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiExtras.cast(p, s2.id()));
         MinecraftForge.EVENT_BUS.register(character.nanami.NanamiCombat.class);
+        MinecraftForge.EVENT_BUS.register(character.nanami.NanamiExtras.class);
         // 石流龙 · 咒力强化/放出：冰沙冲击波（蓄力在 TechniqueInput 里拦截）/ 追踪弹 / 咒力喷涌 / 甜品 / 领域占位
         character.CharacterCasting.registerEffect("ryu", character.ryu.RyuSkills.SCATTER,
             (character.CharacterCasting.Effect) (p, s2, r) -> character.ryu.RyuCombat.scatter(p));

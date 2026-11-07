@@ -5,7 +5,8 @@ import java.util.List;
 
 /** 七海建人 · 十划咒法：1 强打 / 2 瓦落瓦落 / 3 隙 / 4 加班。 */
 public final class NanamiSkills {
-    public static final int SMASH = 2600, VALOR = 2601, GAP = 2602, OVERTIME = 2603;
+    public static final int SMASH = 2600, VALOR = 2601, GAP = 2602, OVERTIME = 2603,
+        BLADES = NanamiExtras.BLADES, QUAKE = NanamiExtras.QUAKE, EXECUTE = NanamiExtras.EXECUTE;
 
     public static List<CharacterSkill> all() {
         return List.of(
@@ -21,6 +22,15 @@ public final class NanamiSkills {
                 "射出一道极细的黑金咒力线：目标有弱点时自动微调轨迹直击弱点（暴击），否则只是小额伤害。",
                 0xFFFFF2B8, 150, 100, CharacterSkill.Shape.RAY,
                 32, 0.6, 8, 10, 2, 1, 0, 0, 0),
+            new CharacterSkill(BLADES, "十划咒法·飞刃", "飞刃",
+                "向扇形掷出数把咒力钝刀，命中即强制生成 7:3 弱点 3 秒。",
+                0xFFD8B24A, 120, 100, CharacterSkill.Shape.CONE, 16, 1.5, 35, 14, 0, 5, 0, 0, 0),
+            new CharacterSkill(QUAKE, "瓦落瓦落·震地", "震地",
+                "格挡后双拳砸地：范围冲击波击飞并眩晕 1.5 秒。",
+                0xFFFFE08A, 180, 160, CharacterSkill.Shape.BURST, 4.5, 4.5, 180, 30, 0, 8, 0, 30, 0),
+            new CharacterSkill(EXECUTE, "十划咒法·处刑", "处刑",
+                "对血量低于 30% 且有弱点的目标瞬移斩杀：300% 真实伤害，击杀刷新冷却。",
+                0xFFFF6A5A, 260, 240, CharacterSkill.Shape.RAY, 12, 1, 20, 30, 0, 1, 0, 0, 0),
             new CharacterSkill(OVERTIME, "加班", "加班",
                 "攻速 +50%、移速 +30%、弱点判定 ×1.5；代价是每秒掉 1% 最大生命（期间击杀一次即停止扣血）。",
                 0xFFB98A2E, 400, 600, CharacterSkill.Shape.BURST,

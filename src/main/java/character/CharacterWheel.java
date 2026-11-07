@@ -28,7 +28,7 @@ public final class CharacterWheel extends Screen {
     private boolean gojo(){return definition!=null&&"gojo".equals(definition.id());}
     private int[] branches(){
         if(!gojo())return new int[0];
-        if(current==34)return new int[]{GojoBranches.SINGULARITY,GojoBranches.TEAR,GojoBranches.METEOR};
+        if(current==34)return new int[]{GojoBranches.SINGULARITY,GojoBranches.TEAR,GojoBranches.METEOR,GojoBranches.SURROUND};
         if(current==35)return new int[]{GojoBranches.HEAVY,GojoBranches.TURBULENCE};
         if(current==40)return new int[]{GojoBranches.BRAINDEAD};
         return new int[0];

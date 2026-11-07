@@ -21,6 +21,9 @@ public final class GojoBranchCombat {
     private static final List<Singularity> SINGULARITIES = new ArrayList<>();
     private static final List<Meteor> METEORS = new ArrayList<>();
     private static final List<Shot> SHOTS = new ArrayList<>();
+    /** 苍·环绕：围绕施术者半径 30 格高速旋转的巨大苍球。 */
+    private record Orbit(ServerPlayer owner, ServerLevel level, long end, double angle) { }
+    private static final List<Orbit> ORBITS = new ArrayList<>();
     /** 重压冲击：先在被斩中的目标身上留"斩痕"，10 刻后一起炸开（类似宿傩的解多重斩）。 */
     private record Mark(ServerPlayer owner, ServerLevel level, LivingEntity target, long at) { }
     private static final List<Mark> MARKS = new ArrayList<>();
@@ -131,6 +134,11 @@ public final class GojoBranchCombat {
                 p.displayClientMessage(net.minecraft.network.chat.Component.literal(
                     "无量空处·局部脑死：" + target.getName().getString() + " 瘫痪 " + (dur / 20) + " 秒"), true);
             }
+            case GojoBranches.SURROUND -> {
+                ORBITS.add(new Orbit(p, level, now + 200, 0));
+                Network.send(level, new Network.Effect(GojoBranches.FX_SINGULARITY, p.getId(),
+                    p.position().add(30, 1.5, 0), Vec3.ZERO, 4f, 60, 0));
+            }
             default -> ok[0] = false;
         }
         if (ok[0]) Curse.data(p).putLong(key, now + GojoBranches.cooldown(skill));
@@ -216,6 +224,23 @@ public final class GojoBranchCombat {
             }
             Vec3 step = to.normalize().scale(.9);
             METEORS.set(METEORS.indexOf(m), new Meteor(m.owner, m.level, m.pos.add(step), t, m.end));
+        }
+        for (var it = ORBITS.iterator(); it.hasNext(); ) {
+            Orbit o = it.next();
+            if (now >= o.end || !o.owner.isAlive()) { it.remove(); continue; }
+            double angle = o.angle + 0.45;
+            Vec3 at = o.owner.position().add(Math.cos(angle) * 30, 1.5, Math.sin(angle) * 30);
+            ORBITS.set(ORBITS.indexOf(o), new Orbit(o.owner, o.level, o.end, angle));
+            for (LivingEntity t : targets(o.owner, at, 4.5)) {
+                t.invulnerableTime = 0;
+                CombatSettings.hurt(o.owner, t, o.owner.damageSources().magic(), 25f);
+                t.invulnerableTime = 0;
+                Vec3 push = t.position().subtract(at).normalize().scale(1.1);
+                t.setDeltaMovement(push.x, 0.55, push.z);
+                t.hurtMarked = true;
+            }
+            if (now % 2 == 0) Network.send(o.level, new Network.Effect(GojoBranches.FX_SINGULARITY,
+                o.owner.getId(), at, Vec3.ZERO, 4f, 8, 0));
         }
         for (var it = MARKS.iterator(); it.hasNext(); ) {
             Mark m = it.next();

@@ -45,7 +45,7 @@ public final class SkillWheel extends Screen {
     private int[] branches(){
         if(gojo()){
             int sector=current-34;
-            if(sector==0)return new int[]{GojoBranches.SINGULARITY,GojoBranches.TEAR,GojoBranches.METEOR};
+            if(sector==0)return new int[]{GojoBranches.SINGULARITY,GojoBranches.TEAR,GojoBranches.METEOR,GojoBranches.SURROUND};
             if(sector==1)return new int[]{GojoBranches.HEAVY,GojoBranches.TURBULENCE};
             if(sector==6)return new int[]{GojoBranches.BRAINDEAD};
             return new int[0];

@@ -250,10 +250,10 @@ public final class GojoBranchCombat {
                 Vec3 pull = at.subtract(t.position());
                 if (pull.lengthSqr() > .25) {
                     Vec3 flat = new Vec3(pull.x, 0, pull.z);
-                    if (flat.lengthSqr() > 1e-4) flat = flat.normalize().scale(1.1); // 水平吸力，限速
-                    Vec3 next = flat;
-                    // 直接覆写速度并压住竖直分量：否则每刻叠 +Y 会把怪顶上天
-                    t.setDeltaMovement(flat.x, Math.min(0, t.getDeltaMovement().y) - 0.02, flat.z);
+                    if (flat.lengthSqr() > 1e-4) flat = flat.normalize().scale(2.4); // 吸得更快，追得上高速环绕
+                    // 竖直：最多只允许比球心高 1 格；超过就不再给向上的量
+                    double vy = t.getY() < at.y + 1.0 ? 0.12 : -0.06;
+                    t.setDeltaMovement(flat.x, vy, flat.z);
                     t.hurtMarked = true;
                     // 被吸着撞墙：一次 1000% 伤害（每 2 秒最多一次，避免贴墙连打）
                     var pdt = t.getPersistentData();

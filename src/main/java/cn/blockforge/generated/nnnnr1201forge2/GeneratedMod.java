@@ -135,6 +135,14 @@ public final class GeneratedMod {
             (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiExtras.cast(p, s2.id()));
         MinecraftForge.EVENT_BUS.register(character.nanami.NanamiCombat.class);
         MinecraftForge.EVENT_BUS.register(character.nanami.NanamiExtras.class);
+        for (int hSkill : new int[]{character.higuruma.HigurumaExtras.BONE, character.higuruma.HigurumaExtras.VERDICT,
+                character.higuruma.HigurumaExtras.FREEZE, character.higuruma.HigurumaExtras.COFFIN,
+                character.higuruma.HigurumaExtras.LIGHT}) {
+            final int hs = hSkill;
+            character.CharacterCasting.registerEffect("higuruma", hs,
+                (character.CharacterCasting.Effect) (p, s2, r) -> character.higuruma.HigurumaExtras.cast(p, hs));
+        }
+        MinecraftForge.EVENT_BUS.register(character.higuruma.HigurumaExtras.class);
         // 石流龙 · 咒力强化/放出：冰沙冲击波（蓄力在 TechniqueInput 里拦截）/ 追踪弹 / 咒力喷涌 / 甜品 / 领域占位
         character.CharacterCasting.registerEffect("ryu", character.ryu.RyuSkills.SCATTER,
             (character.CharacterCasting.Effect) (p, s2, r) -> character.ryu.RyuCombat.scatter(p));

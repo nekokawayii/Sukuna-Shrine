@@ -71,6 +71,15 @@ public final class TechniqueInput {
             &&character.ryu.RyuDomain.isOwner(p)){
             character.ryu.RyuDomain.close(p,"主动收起");return;
         }
+        // 五条悟（角色框架）：技能 34-40 走充能路径，不能走"直接施法"，否则长按永远被当成短按
+        if(input.skill()>=34&&input.skill()<34+GojoPlayer.COUNT
+            &&character.CharacterService.selected(p)!=null
+            &&"gojo".equals(character.CharacterService.selected(p).id())){
+            int slot=input.skill()-34;
+            if(input.phase()==0)GojoCombat.chargeStart(p,slot);
+            else if(input.phase()>=2)GojoCombat.chargeRelease(p,slot);   // 心跳(1)不结算，交给 chargeTick
+            return;
+        }
         // 鹿紫云一：防御键（右键）→ 同极相斥
         if(input.skill()==character.kashimo.KashimoCombat.GUARD&&input.phase()==7){character.kashimo.KashimoCombat.guard(p);return;}
         if(!character.CharacterService.allowsSkill(p,input.skill())){

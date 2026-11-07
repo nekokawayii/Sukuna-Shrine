@@ -137,8 +137,8 @@ public final class GojoBranchCombat {
             }
             case GojoBranches.SURROUND -> {
                 ORBITS.add(new Orbit(p, level, now + 200, 0));
-                Network.send(level, new Network.Effect(GojoBranches.FX_SINGULARITY, p.getId(),
-                    p.position().add(30, 1.5, 0), Vec3.ZERO, 4f, 60, 0));
+                Network.send(level, new Network.Effect(GojoFx.BLUE, p.getId(),
+                    p.position().add(30, 1.5, 0), Vec3.ZERO, 7.5f, 8, 0));
             }
             default -> ok[0] = false;
         }
@@ -151,8 +151,8 @@ public final class GojoBranchCombat {
     public static void orbit(LivingEntity owner) {
         if (!(owner.level() instanceof ServerLevel level)) return;
         ORBITS.add(new Orbit(owner, level, level.getGameTime() + 200, 0));
-        Network.send(level, new Network.Effect(GojoBranches.FX_SINGULARITY, owner.getId(),
-            owner.position().add(30, 1.5, 0), Vec3.ZERO, 4f, 60, 0));
+        Network.send(level, new Network.Effect(GojoFx.BLUE, owner.getId(),
+            owner.position().add(30, 1.5, 0), Vec3.ZERO, 7.5f, 8, 0));
     }
 
     private static List<LivingEntity> targetsOf(LivingEntity owner, Vec3 at, double r) {
@@ -242,10 +242,10 @@ public final class GojoBranchCombat {
         for (var it = ORBITS.iterator(); it.hasNext(); ) {
             Orbit o = it.next();
             if (now >= o.end || !o.owner.isAlive()) { it.remove(); continue; }
-            double angle = o.angle + 0.45;
+            double angle = o.angle + 0.18;   // 约 5.4 格/刻：连续环绕，不再是"一格一格跳"
             Vec3 at = o.owner.position().add(Math.cos(angle) * 30, 1.5, Math.sin(angle) * 30);
             ORBITS.set(ORBITS.indexOf(o), new Orbit(o.owner, o.level, o.end, angle));
-            for (LivingEntity t : targetsOf(o.owner, at, 4.5)) {
+            for (LivingEntity t : targetsOf(o.owner, at, 7.5)) {   // 苍放大 3 倍 → 受击判定也 ×3
                 t.invulnerableTime = 0;
                 if (o.owner instanceof ServerPlayer sp) CombatSettings.hurt(sp, t, sp.damageSources().magic(), 25f);
                 else t.hurt(o.owner.damageSources().magic(), 25f);
@@ -254,8 +254,7 @@ public final class GojoBranchCombat {
                 t.setDeltaMovement(push.x, 0.55, push.z);
                 t.hurtMarked = true;
             }
-            if (now % 2 == 0) Network.send(o.level, new Network.Effect(GojoBranches.FX_SINGULARITY,
-                o.owner.getId(), at, Vec3.ZERO, 4f, 8, 0));
+            Network.send(o.level, new Network.Effect(GojoFx.BLUE, o.owner.getId(), at, Vec3.ZERO, 7.5f, 4, 0));
         }
         for (var it = MARKS.iterator(); it.hasNext(); ) {
             Mark m = it.next();

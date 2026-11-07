@@ -7,64 +7,105 @@ import net.minecraftforge.event.TickEvent;
 @Mod(GeneratedMod.MOD_ID)
 public final class GeneratedMod {
     public static final String MOD_ID = "jujutsu_kaisen_cursed_paths";
+    private static void step(String s){System.out.println("[CURSEDPATH] init " + s);}
     public GeneratedMod() {
+        step("growth-config");
         GrowthConfig.register();
+        step("growth-config-done");
         if(net.minecraftforge.fml.loading.FMLEnvironment.dist==net.minecraftforge.api.distmarker.Dist.CLIENT)
             net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT,()->ConfigClient::registerScreen);
         TechniqueConfig.register();
+        step("TechniqueInput");
         MinecraftForge.EVENT_BUS.register(TechniqueInput.class);
+        step("CombatExpansion");
         MinecraftForge.EVENT_BUS.register(CombatExpansion.class);
+        step("SixfoldFinale");
         MinecraftForge.EVENT_BUS.register(SixfoldFinale.class);
+        step("");
         SkillDestruction.init();
+        step("net");
         IceContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
+        step("SukunaBranches");
         MinecraftForge.EVENT_BUS.register(SukunaBranches.class);
+        step("Uraume");
         MinecraftForge.EVENT_BUS.register(Uraume.class);
         SukunaTempleStructure.TYPES.register(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
+        step("SukunaTempleStructure");
         MinecraftForge.EVENT_BUS.register(SukunaTempleStructure.class);
         net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus().addListener(
             (net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event)->event.enqueueWork(ControllerCraftingCondition::register));
+        step("");
         StageFood.init();
+        step("net");
         TechniqueEffects.EFFECTS.register(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
+        step("StageFood");
         MinecraftForge.EVENT_BUS.register(StageFood.class);
+        step("MaidBridge");
         MinecraftForge.EVENT_BUS.register(MaidBridge.class);
+        step("GuardianPlayerSkills");
         MinecraftForge.EVENT_BUS.register(GuardianPlayerSkills.class);
+        step("DomainClash");
         MinecraftForge.EVENT_BUS.register(DomainClash.class);
+        step("TenkaPendantSync");
         MinecraftForge.EVENT_BUS.register(TenkaPendantSync.class);
+        step("ThousandMileChain");
         MinecraftForge.EVENT_BUS.register(ThousandMileChain.class);
         // 原版生命属性会把5000截为1024；两端同步提升数值容许上限。
         var health=(net.minecraft.world.entity.ai.attributes.RangedAttribute)net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH;
         if(health.getMaxValue()<150000){try{double cap=health.getMaxValue();for(var field:net.minecraft.world.entity.ai.attributes.RangedAttribute.class.getDeclaredFields())if(field.getType()==double.class){field.setAccessible(true);if(field.getDouble(health)==cap){field.setDouble(health,1000000);break;}}if(health.getMaxValue()<150000)throw new IllegalStateException("生命属性上限未能提高");}catch(ReflectiveOperationException ex){throw new IllegalStateException("无法启用即身佛5000生命",ex);}}
+        step("net");
         VoidContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
+        step("VoidJourney");
         MinecraftForge.EVENT_BUS.register(VoidJourney.class);
+        step("GojoEntity");
         MinecraftForge.EVENT_BUS.register(GojoEntity.class);
+        step("MahoragaEntity");
         MinecraftForge.EVENT_BUS.register(MahoragaEntity.class);
+        step("DomainAmplification");
         MinecraftForge.EVENT_BUS.register(DomainAmplification.class);
+        step("GojoCombat");
         MinecraftForge.EVENT_BUS.register(GojoCombat.class);
+        step("VoidCombat");
         MinecraftForge.EVENT_BUS.register(VoidCombat.class);
         EternalLove.init();
+        step("BossTargets");
         MinecraftForge.EVENT_BUS.register(BossTargets.class);
+        step("BossControl");
         MinecraftForge.EVENT_BUS.register(BossControl.class);
+        step("IwateWaterRepair");
         MinecraftForge.EVENT_BUS.register(IwateWaterRepair.class);
         SoulContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         ShadowContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         PrisonContent.init();
+        step("SoulJourney");
         MinecraftForge.EVENT_BUS.register(SoulJourney.class);
+        step("RuinAtmosphere");
         MinecraftForge.EVENT_BUS.register(RuinAtmosphere.class);
+        step("SoulCombat");
         MinecraftForge.EVENT_BUS.register(SoulCombat.class);
         ModTab.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         var armor=(net.minecraft.world.entity.ai.attributes.RangedAttribute)net.minecraft.world.entity.ai.attributes.Attributes.ARMOR;
         try{double cap=armor.getMaxValue();for(var field:net.minecraft.world.entity.ai.attributes.RangedAttribute.class.getDeclaredFields())if(field.getType()==double.class){field.setAccessible(true);if(field.getDouble(armor)==cap){field.setDouble(armor,1000000);break;}}}catch(ReflectiveOperationException ex){throw new IllegalStateException("无法启用净土守护者防御属性",ex);}
         ExpeditionContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         character.mahito.MahitoContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
+        step("ExpeditionWorldgen");
         MinecraftForge.EVENT_BUS.register(ExpeditionWorldgen.class);
+        step("ExpeditionEvents");
         MinecraftForge.EVENT_BUS.register(ExpeditionEvents.class);
         CurseRoster.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
+        step("CurseHostility");
         MinecraftForge.EVENT_BUS.register(CurseHostility.class);
+        step("CurseSpawning");
         MinecraftForge.EVENT_BUS.register(CurseSpawning.class);
+        step("HyakkiArena");
         MinecraftForge.EVENT_BUS.register(HyakkiArena.class);
+        step("CullingGame");
         MinecraftForge.EVENT_BUS.register(CullingGame.class);
+        step("SoulEchoes");
         MinecraftForge.EVENT_BUS.register(SoulEchoes.class);
+        step("ExpeditionProgress");
         MinecraftForge.EVENT_BUS.register(ExpeditionProgress.class);
+        step("ExpeditionCommands");
         MinecraftForge.EVENT_BUS.register(ExpeditionCommands.class);
         ProgressionContent.init(net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus());
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(Journey.class);
@@ -82,7 +123,9 @@ public final class GeneratedMod {
         character.CharacterCasting.registerEffect("higuruma", character.higuruma.HigurumaSkills.SEAL, (character.CharacterCasting.Effect) (p, s2, r) -> character.higuruma.HigurumaCombat.seal(p));
         character.CharacterCasting.registerEffect("higuruma", character.higuruma.HigurumaSkills.ENHANCE, (character.CharacterCasting.Effect) (p, s2, r) -> character.higuruma.HigurumaCombat.enhanceThrow(p));
         character.CharacterCasting.registerEffect("higuruma", character.higuruma.HigurumaSkills.DOMAIN, (character.CharacterCasting.Effect) (p, s2, r) -> character.higuruma.HigurumaCombat.domain(p));
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.higuruma.HigurumaCombat.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.higuruma.HigurumaDomain.class);
         MinecraftForge.EVENT_BUS.addListener(character.higuruma.HigurumaDomain::serverTick);
         MinecraftForge.EVENT_BUS.addListener(character.higuruma.HigurumaDomain::serverStopped);
@@ -113,12 +156,14 @@ public final class GeneratedMod {
             }
             @Override public String reason() { return "肉体崩溃中：无法使用任何术式"; }
         });
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.kashimo.KashimoCombat.class);
         // 东堂葵 · 不义游戏：注入咒力 / 换位
         character.CharacterCasting.registerEffect("todo", character.todo.TodoSkills.INJECT,
             (character.CharacterCasting.Effect) (p, s2, r) -> character.todo.TodoCombat.inject(p));
         character.CharacterCasting.registerEffect("todo", character.todo.TodoSkills.SWAP,
             (character.CharacterCasting.Effect) (p, s2, r) -> character.todo.TodoCombat.swap(p));
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.todo.TodoCombat.class);
         // 七海建人 · 十划咒法：7:3 弱点
         character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.SMASH,
@@ -135,7 +180,9 @@ public final class GeneratedMod {
             (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiExtras.cast(p, s2.id()));
         character.CharacterCasting.registerEffect("nanami", character.nanami.NanamiSkills.EXECUTE,
             (character.CharacterCasting.Effect) (p, s2, r) -> character.nanami.NanamiExtras.cast(p, s2.id()));
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.nanami.NanamiCombat.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.nanami.NanamiExtras.class);
         for (int hSkill : new int[]{character.higuruma.HigurumaExtras.BONE, character.higuruma.HigurumaExtras.VERDICT,
                 character.higuruma.HigurumaExtras.FREEZE, character.higuruma.HigurumaExtras.COFFIN,
@@ -144,6 +191,7 @@ public final class GeneratedMod {
             character.CharacterCasting.registerEffect("higuruma", hs,
                 (character.CharacterCasting.Effect) (p, s2, r) -> character.higuruma.HigurumaExtras.cast(p, hs));
         }
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.higuruma.HigurumaExtras.class);
         // 石流龙 · 咒力强化/放出：冰沙冲击波（蓄力在 TechniqueInput 里拦截）/ 追踪弹 / 咒力喷涌 / 甜品 / 领域占位
         character.CharacterCasting.registerEffect("ryu", character.ryu.RyuSkills.SCATTER,
@@ -160,21 +208,31 @@ public final class GeneratedMod {
             }
             @Override public String reason() { return "甜品时间：正在吃，2 秒内不能施术"; }
         });
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.ryu.RyuCombat.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.ryu.RyuDomain.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.toji.TojiQte.class);
         // 禅院直哉·投射咒法：八个技能全部走自己的服务端逻辑
         for (int naoyaSkill : character.naoya.NaoyaSkills.wheel()) {
             character.CharacterCasting.registerEffect("naoya", naoyaSkill,
                 (character.CharacterCasting.Effect) (p2, s3, r3) -> character.naoya.NaoyaCombat.cast(p2, s3.id()));
         }
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.naoya.NaoyaCombat.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.naoya.NaoyaDomain.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.mainline.Mainline.class);
         MinecraftForge.EVENT_BUS.register(GuideBook.class);   // 开局《游玩方法手册》   // 共同主线成就
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.TechniqueApi.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.domain.DomainStyleReload.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.domain.PictureDomainApi.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.npc.NpcControl.class);
         MinecraftForge.EVENT_BUS.register(character.npc.NpcCombatCasting.class); // NPC 咒术
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppingEvent event) -> {
@@ -206,9 +264,12 @@ public final class GeneratedMod {
         }
         character.CharacterCasting.registerCooldownScale("hakari", character.hakari.HakariCombat::cooldownScale);
         MinecraftForge.EVENT_BUS.addListener(character.hakari.HakariDomain::onServerTick);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.hakari.HakariCombat.class);
         character.CharacterCasting.registerEffect("yuki", character.yuki.YukiSkills.STAR_RAGE, character.yuki.YukiCombat::starRage);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.CharacterService.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.CharacterRewards.class);
         // 漏壶·灾厄火焰：三招自定义效果 + 被动免疫 + 第一章泡岩浆进度
         character.CharacterCasting.registerEffect("jogo",character.jogo.JogoSkills.FIRE_BUG,character.jogo.JogoCombat::castBugs);
@@ -221,20 +282,27 @@ public final class GeneratedMod {
         character.CharacterCasting.allowWhileMindLocked("jogo",character.jogo.JogoSkills.DOMAIN);
         character.CharacterService.registerRanker("jogo",character.jogo.JogoCombat::rank);
         character.CharacterCasting.registerCooldownScale("jogo",pl->character.jogo.JogoCombat.inDomain(pl)?0.5:1.0);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.jogo.JogoCombat.class);
         character.CharacterCasting.registerEffect("mahito",character.mahito.MahitoSkills.TRANSMUTE,
             (p,skill,rank)->character.mahito.MahitoTransfigure.arm(p));
         for(int id:new int[]{character.mahito.MahitoSkills.TAIL,character.mahito.MahitoSkills.COLLAPSE,character.mahito.MahitoSkills.ARMS,character.mahito.MahitoSkills.DODGE,character.mahito.MahitoSkills.REFORGE})
             character.CharacterCasting.registerEffect("mahito",id,(p,skill,rank)->character.mahito.MahitoCombat.cast(p,skill.id()));
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.mahito.MahitoTransfigure.class);
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.living.LivingHurtEvent ev)->{if(ev.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp&&character.mahito.MahitoSelf.damageScale(sp)<1f)ev.setAmount(ev.getAmount()*character.mahito.MahitoSelf.damageScale(sp));});
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.mahito.MahitoPowers.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.mahito.MahitoSelf.class);
         character.CharacterCasting.registerEffect("mahito",character.mahito.MahitoSkills.SELF_EMBRYO,
             (p,skill,rank)->character.domainking.SelfEmbryoDomain.toggle(p));
         character.domainking.DomainKingCombat.register();
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.domainking.DomainKingCombat.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.domainking.SelfEmbryoDomain.class);
+        step("NpcCurse");
         MinecraftForge.EVENT_BUS.register(NpcCurse.class);
         MinecraftForge.EVENT_BUS.addListener((TickEvent.ServerTickEvent e)->{if(e.phase==TickEvent.Phase.END)NpcBridge.tick();});
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppingEvent e)->NpcBridge.clear());
@@ -253,39 +321,68 @@ public final class GeneratedMod {
             character.CharacterCasting.registerEffect("uraume", us,
                 (character.CharacterCasting.Effect) (p, s2, r) -> character.uraume.UraumeCombat.cast(p, us));
         }
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.toji.TojiCombat.class);
         // r218：死灭洄游规则系统（规则结算 + 刷新/敌对）
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.culling.CullingRules.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.culling.CullingSpawns.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.culling.CullingExtras.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.culling.CullingPerks.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.culling.CullingEntry.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.culling.CullingGate.class);
+        step("BloodWingsRain");
         MinecraftForge.EVENT_BUS.register(BloodWingsRain.class);
+        step("UraumeIce");
         MinecraftForge.EVENT_BUS.register(UraumeIce.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.uraume.UraumePalaceDomain.class);
+        step("GojoBranchCombat");
         MinecraftForge.EVENT_BUS.register(GojoBranchCombat.class);
+        step("character");
         MinecraftForge.EVENT_BUS.register(character.yuji.YujiRebuild.class);
+        step("FingerPossession");
         MinecraftForge.EVENT_BUS.register(FingerPossession.class);
         for (int yujiSkill : character.yuji.YujiRebuildSkills.WHEEL)
             character.CharacterCasting.registerEffect("yuji", yujiSkill, (p, s, r) -> character.yuji.YujiRebuild.cast(p, s.id()));
+        step("SukunaNpcTrueForm");
         MinecraftForge.EVENT_BUS.register(SukunaNpcTrueForm.class);
         Network.registerDrawing();
+        step("SlashForms");
         MinecraftForge.EVENT_BUS.register(SlashForms.class);
+        step("DismantleMotion");
         MinecraftForge.EVENT_BUS.register(DismantleMotion.class);
+        step("MeleeCombo");
         MinecraftForge.EVENT_BUS.register(MeleeCombo.class);
+        step("FreehandDrawing");
         MinecraftForge.EVENT_BUS.register(FreehandDrawing.class);
+        step("Skills");
         MinecraftForge.EVENT_BUS.register(Skills.class);
+        step("NetBranches");
         MinecraftForge.EVENT_BUS.register(NetBranches.class);
+        step("Curse");
         MinecraftForge.EVENT_BUS.register(Curse.class);
+        step("CombatSettings");
         MinecraftForge.EVENT_BUS.register(CombatSettings.class);
+        step("CombatSafety");
         MinecraftForge.EVENT_BUS.register(CombatSafety.class);
+        step("BloodArts");
         MinecraftForge.EVENT_BUS.register(BloodArts.class);
+        step("BloodDomain");
         MinecraftForge.EVENT_BUS.register(BloodDomain.class);
+        step("DeathStar");
         MinecraftForge.EVENT_BUS.register(DeathStar.class);
+        step("GuardianCombat");
         MinecraftForge.EVENT_BUS.register(GuardianCombat.class);
+        step("GuardianProgress");
         MinecraftForge.EVENT_BUS.register(GuardianProgress.class);
         // 对战败北在本模组的伤害加成结算后判断，防止附加伤害穿过1血保护。
+        step("EternalLove");
         MinecraftForge.EVENT_BUS.register(EternalLove.class);
         if(net.minecraftforge.fml.ModList.get().isLoaded("touhou_little_maid"))MinecraftForge.EVENT_BUS.register(MaidDuel.class);
         // 专用服务器不加载任何客户端类；客户端关键事件改为从入口显式接入。

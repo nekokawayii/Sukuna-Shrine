@@ -115,7 +115,14 @@ public final class Client {
         var p=net.minecraft.client.Minecraft.getInstance().player;
         return p!=null&&(p.getMainHandItem().is(VoidContent.SHINBUKE.get())||p.getOffhandItem().is(VoidContent.SHINBUKE.get()));
     }
-    public static boolean availableSkill(int skill){if(toolBlocksTechnique()||!character.CharacterClient.allows(skill))return false;
+    public static boolean availableSkill(int skill){
+        // 五条悟轮盘分支（3400-3405）：不是角色技能表里的编号，不能走 allows 门禁，
+        // 否则每次选中都会被 fallbackSkill() 顶回「苍」——用户看到的"无法选中，直接跳回苍"。
+        if(GojoBranches.branch(skill)){
+            var gojoRole=character.CharacterClient.selected();
+            return progress.gojo()||(gojoRole!=null&&"gojo".equals(gojoRole.id()));
+        }
+        if(toolBlocksTechnique()||!character.CharacterClient.allows(skill))return false;
         // 乙骨的复制品：借用的是旧术式编号，但不该受原角色的解锁链约束。
         // 否则永远选不中，Client.selected 会停在 1000（里香），表现为「复制术式变成里香、共用冷却」。
         if(character.CharacterClient.copied(skill))return true;

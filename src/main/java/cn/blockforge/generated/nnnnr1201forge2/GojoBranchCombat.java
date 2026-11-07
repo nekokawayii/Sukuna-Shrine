@@ -245,14 +245,22 @@ public final class GojoBranchCombat {
             double angle = o.angle + 0.18;   // 约 5.4 格/刻：连续环绕，不再是"一格一格跳"
             Vec3 at = o.owner.position().add(Math.cos(angle) * 30, 1.5, Math.sin(angle) * 30);
             ORBITS.set(ORBITS.indexOf(o), new Orbit(o.owner, o.level, o.end, angle));
-            for (LivingEntity t : targetsOf(o.owner, at, 7.5)) {   // 苍放大 3 倍 → 受击判定也 ×3
-                t.invulnerableTime = 0;
-                if (o.owner instanceof ServerPlayer sp) CombatSettings.hurt(sp, t, sp.damageSources().magic(), 25f);
-                else t.hurt(o.owner.damageSources().magic(), 25f);
-                t.invulnerableTime = 0;
-                Vec3 push = t.position().subtract(at).normalize().scale(1.1);
-                t.setDeltaMovement(push.x, 0.55, push.z);
-                t.hurtMarked = true;
+            // 苍是引力：把周围敌人往球心吸，并按秒结算伤害（不击退）
+            for (LivingEntity t : targetsOf(o.owner, at, 14)) {
+                Vec3 pull = at.subtract(t.position());
+                if (pull.lengthSqr() > .25) {
+                    pull = pull.normalize().scale(.85);
+                    t.setDeltaMovement(t.getDeltaMovement().add(pull.x, .12, pull.z));
+                    t.hurtMarked = true;
+                }
+            }
+            if (now % 20 == 0) {
+                for (LivingEntity t : targetsOf(o.owner, at, 7.5)) {
+                    t.invulnerableTime = 0;
+                    if (o.owner instanceof ServerPlayer sp) CombatSettings.hurt(sp, t, sp.damageSources().magic(), 20f);
+                    else t.hurt(o.owner.damageSources().magic(), 20f);
+                    t.invulnerableTime = 0;
+                }
             }
             Network.send(o.level, new Network.Effect(GojoFx.BLUE, o.owner.getId(), at, Vec3.ZERO, 7.5f, 4, 0));
         }

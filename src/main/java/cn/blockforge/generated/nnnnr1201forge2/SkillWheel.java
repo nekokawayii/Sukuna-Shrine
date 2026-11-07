@@ -42,7 +42,15 @@ public final class SkillWheel extends Screen {
     @Override public boolean keyPressed(int key,int scan,int mods){if((key==GLFW.GLFW_KEY_LEFT||key==GLFW.GLFW_KEY_RIGHT||key==GLFW.GLFW_KEY_PAGE_UP||key==GLFW.GLFW_KEY_PAGE_DOWN)&&pages()){changePage(key==GLFW.GLFW_KEY_LEFT||key==GLFW.GLFW_KEY_PAGE_UP?-1:1);return true;}return super.keyPressed(key,scan,mods);}
     @Override public boolean isPauseScreen(){return false;}
     private int outerRadius(){return WheelSideSlots.radius(width,height,ice(),gojo());}
-    private int[] branches(){if(page!=0||!Client.progress.sukuna())return new int[0];
+    private int[] branches(){
+        if(gojo()){
+            int sector=current-34;
+            if(sector==0)return new int[]{GojoBranches.SINGULARITY,GojoBranches.TEAR,GojoBranches.METEOR};
+            if(sector==1)return new int[]{GojoBranches.HEAVY,GojoBranches.TURBULENCE};
+            if(sector==6)return new int[]{GojoBranches.BRAINDEAD};
+            return new int[0];
+        }
+        if(page!=0||!Client.progress.sukuna())return new int[0];
         // 「咒力附拳」不占分支：它是轮盘右上角的固定格（见 {@link WheelSideSlots#fist}），始终显示。
         if(current==0)return Client.progress.awakened()?new int[]{18,24,26,27,28,29}:new int[]{24,26,28,29};if(current==1&&Client.progress.awakened())return new int[]{17,21};if(current==2&&Client.progress.fingers()>=5)return new int[]{19,20,25,32,SimpleDomain.SKILL};if(current==3&&Client.voidStage())return new int[]{30,FurnaceMax.SKILL};if(current==5&&Client.progress.awakened())return new int[]{31};return new int[0];}
     private WheelSideSlots.Box branchBox(int i){int n=branches().length,step=Math.min(30,Math.max(14,(height-140)/Math.max(1,n)));return new WheelSideSlots.Box(centerX()+outerRadius()+4,48+i*step,74,step-2);}
@@ -81,6 +89,8 @@ public final class SkillWheel extends Screen {
     @Override public boolean mouseReleased(double x,double y,int button){updateHover(x,y);if(Client.WHEEL.matchesMouse(button)){confirm();return true;}return super.mouseReleased(x,y,button);}
     private boolean branchCorridor(double mx,double my){
         int[] choices=branches();if(choices.length==0)return false;
+        if(gojo()){var first=branchBox(0);var last=branchBox(choices.length-1);
+            return mx>=first.x()-6&&mx<=first.x()+first.width()+6&&my>=first.y()-6&&my<=last.y()+last.height()+6;}
         double a=-Math.PI/2+current*Math.PI*2/count();
         double radius=outerRadius()*0.72,startX=centerX()+Math.cos(a)*radius,startY=height/2.0+Math.sin(a)*radius;
         var first=branchBox(0);var last=branchBox(choices.length-1);
@@ -89,11 +99,7 @@ public final class SkillWheel extends Screen {
     @Override public void mouseMoved(double mx,double my){
         if(Client.wheelHeld()){
             if(ice()&&WheelSideSlots.iceContains(width,height,mx,my))current=my<height/2.0?BranchRules.FROST:BranchRules.ICEFALL;
-            else if(gojo()&&WheelSideSlots.gojoContains(width,height,mx,my)){
-                int sec=WheelSideSlots.gojoSector(width,height,mx,my);
-                boolean branch=minecraft!=null&&minecraft.player!=null&&minecraft.player.isShiftKeyDown();
-                current=branch&&sec<6?GojoBranches.SINGULARITY+sec:34+sec;
-            }
+            else if(gojo()&&WheelSideSlots.gojoContains(width,height,mx,my))current=34+WheelSideSlots.gojoSector(width,height,mx,my);
             else if(Client.progress.sukuna()&&!branchCorridor(mx,my)){
                 double x=mx-centerX(),y=my-height/2.0,r=x*x+y*y;int outer=outerRadius();
                 if(r>=centerRadius()*centerRadius()&&r<=outer*outer)current=skillAt(x,y);
@@ -103,7 +109,7 @@ public final class SkillWheel extends Screen {
     }
     private int cost(int skill){if(GojoBranches.branch(skill))return GojoBranches.cost(skill);if(BloodRules.skill(skill))return BloodRules.cost(skill);if(skill==Skills.FIST_SKILL)return 0;if(skill==FurnaceMax.SKILL)return FurnaceMax.COST;if(skill==SimpleDomain.SKILL)return 150;if(skill>=34)return GojoPlayer.costOf(skill-34);if(skill==FinaleRules.SKILL)return (int)Client.progress.energy();if(skill==29||skill==32)return Curse.COST[0];if(skill==30)return Curse.COST[3];if(skill==31)return 2000;if(skill==28)return Curse.COST[0];if(skill>=24)return skill==24?120:skill==25?180:skill==26?0:2000;if(skill==22||skill==23)return Uraume.cost(skill);if(skill==19)return 180;if(skill==20)return 120;if(skill==21)return BranchRules.wallCost(Client.progress.wallSpacing());if(NetBranchRules.branch(skill))return NetBranchRules.cost(skill);return skill<7?Curse.COST[skill]:GuardianPlayerSkills.COST[skill-7];}
     private static final String[] GOJO_DESC={"引力拉扯：把敌人吸向蓝色光球并施加缓慢（自带引力视界与拖尾）","红色斥力球：高伤害与超级击退","蓄力3秒后打出圆柱激光，沿直线贯穿并击飞","双手合十5秒，苍与赫对撞成紫球后打出（打不死会引爆 +25%，打死则贯穿）","念完四句咒词后原地引爆，范围48格 · 反噬自己40%生命","向准星方向瞬移最多8格","近距离三连拳，命中减速","领域展开：范围内敌人无法行动并持续受伤","长按引导：光球每秒5格跟随准星，松手后停留5秒"};
-    private String desc(int skill){if(BloodRules.skill(skill))return BloodRules.DESC[skill-BloodRules.FIRST];return switch(skill){
+    private String desc(int skill){if(GojoBranches.branch(skill))return GojoBranches.desc(skill);if(BloodRules.skill(skill))return BloodRules.DESC[skill-BloodRules.FIRST];return switch(skill){
         case 33->"蓄力8秒 → 五阶段终结 · 耗尽咒力 · 停恢复60秒 · 熔断180秒";
         case 24->"随机形状 · 每道间隔0.1秒 · 跟随顶部剑气/斩击模式";
         case 25->"身后1～20道十字 · 先慢后快 · 发出后不追踪";

@@ -101,7 +101,10 @@ public final class FingerPossession {
         tune(npc, power);
         level.addFreshEntity(npc);
         p.getPersistentData().putBoolean("SukunaPossessed", true);
-        p.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+        p.setCamera(npc);                 // 看宿傩的视角，而不是旁观模式
+        p.setInvisible(true);             // 自己的身体留在原地，但不显眼
+        p.setDeltaMovement(0, 0, 0);
+        p.hurtMarked = true;
         Network.send(level, new Network.Effect(CAMERA_LOCK, p.getId(), at, Vec3.ZERO, 1f, ACTIVE_TICKS, 0));
         var definition = character.CharacterService.selected(p);
         boolean yuji = definition != null && "yuji".equals(definition.id());
@@ -187,8 +190,8 @@ public final class FingerPossession {
 
     private static void finish(ServerPlayer p) {
         p.getPersistentData().remove("SukunaPossessed");
-        if (p.gameMode.getGameModeForPlayer() != net.minecraft.world.level.GameType.SURVIVAL)
-            p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+        p.setCamera(p);
+        p.setInvisible(false);
     }
 
     @SubscribeEvent
@@ -211,10 +214,14 @@ public final class FingerPossession {
             if (p.gameMode.getGameModeForPlayer() == net.minecraft.world.level.GameType.SPECTATOR) {
                 p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
             }
+            p.setCamera(p); p.setInvisible(false);
             return;
         }
         p.getPersistentData().remove("SukunaPossessed");
-        p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+        p.setCamera(p);
+        p.setInvisible(false);
+        if (p.gameMode.getGameModeForPlayer() != net.minecraft.world.level.GameType.SURVIVAL)
+            p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
         Network.send(p.serverLevel(), new Network.Effect(CAMERA_LOCK, p.getId(), p.position(), Vec3.ZERO, 1f, 0, 0));
     }
 

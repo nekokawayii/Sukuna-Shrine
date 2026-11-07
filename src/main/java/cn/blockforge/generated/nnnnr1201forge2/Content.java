@@ -384,9 +384,9 @@ public final class Content {
 
     private static class GrowthFood extends Item {
         final boolean body;GrowthFood(boolean body){super(new Properties().stacksTo(16).rarity(Rarity.EPIC).fireResistant().food(new FoodProperties.Builder().nutrition(1).saturationMod(0).alwaysEat().build()));this.body=body;}
-        private boolean allowed(Player p){return character.CharacterService.permits(p,character.CharacterDefinition.Family.SHRINE)&&!(Uraume.unlocked(p)&&!Journey.unlocked(p))&&(body?Curse.fingers(p)>=20&&!Curse.awakened(p):Curse.fingers(p)<20);}
+        private boolean allowed(Player p){if(!body)return Curse.fingers(p)<20;return character.CharacterService.permits(p,character.CharacterDefinition.Family.SHRINE)&&(body?Curse.fingers(p)>=20&&!Curse.awakened(p):true);}
         @Override public InteractionResultHolder<ItemStack> use(Level level,Player p,InteractionHand hand){if(!level.isClientSide&&!allowed(p)){p.displayClientMessage(Component.literal(!character.CharacterService.permits(p,character.CharacterDefinition.Family.SHRINE)?"请先用选择书切回宿傩，才能吸收宿傩成长物品":Uraume.unlocked(p)&&!Journey.unlocked(p)?"你已选择里梅，不能吸收宿傩成长物品":body?(Curse.awakened(p)?"已经融合过即身佛肉体":"先吞下20根宿傩手指，才能承受肉体融合"):"已经吸收20根手指，无法继续增加"),true);return InteractionResultHolder.fail(p.getItemInHand(hand));}return super.use(level,p,hand);}
-        @Override public ItemStack finishUsingItem(ItemStack stack,Level level,LivingEntity user){if(user instanceof ServerPlayer p){if(!allowed(p))return stack;Curse.consume(p,body);}return super.finishUsingItem(stack,level,user);}
+        @Override public ItemStack finishUsingItem(ItemStack stack,Level level,LivingEntity user){if(user instanceof ServerPlayer p){if(!allowed(p))return stack;if(!body&&FingerPossession.tryPossess(p))return stack;Curse.consume(p,body);}return super.finishUsingItem(stack,level,user);}
     }
     private static void clearTechniques(net.minecraft.world.entity.LivingEntity target){
         if(target instanceof ServerPlayer sp){

@@ -98,6 +98,8 @@ public final class FingerPossession {
         npc.finalizeSpawn(level, level.getCurrentDifficultyAt(p.blockPosition()), MobSpawnType.EVENT, null, null);
         npc.getPersistentData().putBoolean("PossessedSukuna", true);
         npc.getPersistentData().putInt("PossessedPower", power);
+        var def = character.CharacterService.selected(p);
+        npc.getPersistentData().putString("PossessedRole", def == null ? "sukuna" : def.id());
         tune(npc, power);
         level.addFreshEntity(npc);
         p.getPersistentData().putBoolean("SukunaPossessed", true);
@@ -108,7 +110,8 @@ public final class FingerPossession {
         Network.send(level, new Network.Effect(CAMERA_LOCK, p.getId(), at, Vec3.ZERO, 1f, ACTIVE_TICKS, 0));
         var definition = character.CharacterService.selected(p);
         boolean yuji = definition != null && "yuji".equals(definition.id());
-        p.sendSystemMessage(Component.literal("手指在喉间化作一声低笑——「这具身体，归我了。」").withStyle(Style.EMPTY.withColor(0xFF8A00)));
+        if (yuji) p.sendSystemMessage(Component.literal("宿傩咧开嘴：「……又是你？这副身体，我倒是熟了。」").withStyle(Style.EMPTY.withColor(0xFF8A00)));
+        else p.sendSystemMessage(Component.literal("手指在喉间化作一声低笑——「这具身体，归我了。」").withStyle(Style.EMPTY.withColor(0xFF8A00)));
         if (yuji) {
             p.sendSystemMessage(button("继续", "/sukuna possess keep", 0xFFFFD27A, "让宿傩继续使用这具身体"));
             p.sendSystemMessage(button("夺回", "/sukuna possess back", 0xFFFF4A4A, "夺回控制权，宿傩消失（无掉落）"));
@@ -163,7 +166,32 @@ public final class FingerPossession {
                 if (score < bestScore) { bestScore = score; best = t; }
             }
             if (best != null) { self.setTarget(best); self.getNavigation().moveTo(best, 1.2); }
+            if (now % 20 == 0) castSkills(self, best);
         }
+    }
+
+    /** 夺舍体轮流放"被夺舍角色的术式"和"宿傩自己的术式"（例：五条悟 → 无下限 + 御厨子）。 */
+    private static void castSkills(Mob npc, LivingEntity target) {
+        if (target == null) return;
+        try {
+            var actor = cn.blockforge.generated.nnnnr1201forge2.MaidBridge.actor(npc);
+            if (actor == null) return;
+            actor.aim = target;
+            actor.syncPosition();
+            String role = npc.getPersistentData().getString("PossessedRole");
+            var pool = new ArrayList<String>();
+            for (String r : new String[]{role, "sukuna"}) {
+                character.CharacterDefinition def = null;
+                for (var d : character.CharacterRegistry.all()) if (d.id().equals(r)) { def = d; break; }
+                if (def == null) continue;
+                for (int skill : def.skills()) if (skill >= 1000) pool.add(r + ":" + skill);
+            }
+            if (pool.isEmpty()) return;
+            String pick = pool.get(npc.getRandom().nextInt(pool.size()));
+            String[] parts = pick.split(":");
+            character.CharacterCasting.castAs(actor, parts[0], Integer.parseInt(parts[1]), 1);
+            Network.send((ServerLevel) npc.level(), new Network.Effect(CAMERA_LOCK + 1, npc.getId(), npc.position(), npc.getLookAngle(), 1f, 12, 0));
+        } catch (Throwable ignored) { }
     }
 
     // ===== 聊天按钮对应的命令（/sukuna possess …） =====
@@ -192,6 +220,7 @@ public final class FingerPossession {
         p.getPersistentData().remove("SukunaPossessed");
         p.setCamera(p);
         p.setInvisible(false);
+        Network.send(p.serverLevel(), new Network.Effect(CAMERA_LOCK, p.getId(), p.position(), Vec3.ZERO, 1f, 0, 0));
     }
 
     @SubscribeEvent

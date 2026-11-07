@@ -39,13 +39,22 @@ public final class TechniqueInputClient {
         if(!valid||heldSkill>=0&&heldSkill!=Client.selected||worldLease>0&&Client.selected!=SlashFormRules.WORLD){cancel();previous=down;return;}
         if(gameTick&&worldLease>0){worldLease--;if(worldLease%10==0)send(SlashFormRules.WORLD,1);}
         // 动作中的输入不能再次启动技能，但仍必须送达松手与取消。
-        if(heldSkill>=0){if(!down){send(heldSkill,2);heldSkill=-1;}else if(gameTick&&++ticks%10==0)send(heldSkill,1);}
+        if(heldSkill>=0){
+            if(!down){
+                com.mojang.logging.LogUtils.getLogger().info("[施法按住] 客户端判定松手 skill="+heldSkill+" ticks="+ticks+" down="+down);
+                send(heldSkill,2);heldSkill=-1;
+            }else if(gameTick&&++ticks%10==0){
+                com.mojang.logging.LogUtils.getLogger().info("[施法按住] 心跳 ticks="+ticks+" down="+down);
+                send(heldSkill,1);
+            }
+        }
         if(down&&!previous&&heldSkill<0&&!FinaleClient.local()&&!DomainClashClient.active()&&!NetBranchVisuals.locked()&&!DismantleMotionClient.locked()&&(Client.selected!=SlashFormRules.FREEHAND||AuthorityClient.enabled()&&mc.player!=null&&(Authority.medium(mc.player.getMainHandItem())>=0||Authority.medium(mc.player.getOffhandItem())>=0))){
             heldSkill=Client.selected;ticks=0;
             if(heldSkill==SlashFormRules.WORLD)worldLease=320;
             // 无量空处（输入侧技能号 = 34+轮盘格，无量空处 = 格 6 → 40）的释放键：客户端确实发出去了才落盘 ——
             // 与服务端那条"是否接管"配对看，一眼分清"客户端压根没发包"和"发了但服务端状态对不上"。
             if(GojoPlayer.voidKey(heldSkill))com.mojang.logging.LogUtils.getLogger().info("[无量空处] 客户端按下 发出 skill="+heldSkill+" phase=0（再按一次 = 放下/收起）");
+            com.mojang.logging.LogUtils.getLogger().info("[施法按住] 客户端下发 phase=0 skill="+heldSkill+" down="+down);
             send(heldSkill,0);
         }
         previous=down;

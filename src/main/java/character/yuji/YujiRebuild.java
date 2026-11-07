@@ -31,6 +31,7 @@ public final class YujiRebuild {
     /** 延时结算任务：二段径庭拳 / 蓄力重击 / 拳风飞行体。 */
     private record Job(ServerPlayer owner, ServerLevel level, LivingEntity target, Vec3 pos, Vec3 dir, long at, int kind, int step) { }
     private static final List<Job> JOBS = new ArrayList<>();
+    private static final List<Job> PENDING = new ArrayList<>();
 
     // ===== 被动：连击狂热 =====
     public static int combo(ServerPlayer p) { return Curse.data(p).getInt("YujiCombo"); }
@@ -294,8 +295,8 @@ public final class YujiRebuild {
     @SubscribeEvent
     public static void tick(TickEvent.ServerTickEvent e) {
         if (e.phase != TickEvent.Phase.END) return;
-        for (var it = JOBS.iterator(); it.hasNext(); ) {
-            Job j = it.next();
+        for (Job j : new ArrayList<>(JOBS)) {
+            var it = JOBS.listIterator(JOBS.indexOf(j));
             long now = j.level.getGameTime();
             if (now < j.at) continue;
             if (j.owner == null || !j.owner.isAlive()) { it.remove(); continue; }
@@ -320,8 +321,7 @@ public final class YujiRebuild {
                             t.setDeltaMovement(push.x, 0.75, push.z); t.hurtMarked = true;
                         }
                     } else {
-                        long remain = JOBS.stream().filter(x -> x.kind == 1).count();
-                        if (remain <= 1) for (LivingEntity t : front(j.owner, 4, 50)) hit(j.owner, t, 9, false);
+                        for (LivingEntity t : front(j.owner, 4, 50)) hit(j.owner, t, 9, false);
                     }
                     fx(j.owner, j.level, YujiFx.BARRAGE, j.owner.getEyePosition().add(j.dir.scale(1.5)), j.dir, 1f, 8);
                 }
@@ -350,11 +350,12 @@ public final class YujiRebuild {
                         }
                         if (done || pos.distanceTo(j.pos) > 22) break;
                     }
-                    JOBS.add(new Job(j.owner, j.level, null, pos, j.dir, now + 1, 3, 0));
+                    PENDING.add(new Job(j.owner, j.level, null, pos, j.dir, now + 1, 3, 0));
                 }
                 default -> it.remove();
             }
         }
+        if (!PENDING.isEmpty()) { JOBS.addAll(PENDING); PENDING.clear(); }
         // 连击超时清空
         for (ServerPlayer p : e.getServer().getPlayerList().getPlayers()) {
             if (!"yuji".equals(role(p))) continue;

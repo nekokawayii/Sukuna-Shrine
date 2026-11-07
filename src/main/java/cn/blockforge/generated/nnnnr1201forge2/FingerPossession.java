@@ -60,7 +60,39 @@ public final class FingerPossession {
         "「……啧。」宿傩退回意识深处，身体重新属于你。",
         "你咬紧牙关把那张脸从意识里挤出去——控制权回来了。"
     };
+    private static final java.util.Map<String, String[]> ROLE_TAUNTS = java.util.Map.ofEntries(
+        java.util.Map.entry("gojo", new String[]{
+            "「五条悟？呵……最强的身体，正好拿来用。」",
+            "六眼有些刺眼。「不过，戴着它看世界还挺清楚。」",
+            "「无下限……原来你是这么挡住别人的。」"}),
+        java.util.Map.entry("uraume", new String[]{
+            "「里梅。你总是这么守时。」",
+            "「起来吧，我的厨师。今晚的料理由我来选。」",
+            "「冰凝咒法……冷得很，倒也衬你。」"}),
+        java.util.Map.entry("megumi", new String[]{
+            "「惠……影子里那个孩子，我认得。」",
+            "「十种影法术，可惜在你这儿只用来藏东西。」"}),
+        java.util.Map.entry("jogo", new String[]{
+            "「漏壶，火候还差得远。」",
+            "「火山与岩浆……你这副身体倒是热得很。」"}),
+        java.util.Map.entry("blood", new String[]{
+            "「胀相。诅咒的血脉，闻着就亲切。」",
+            "「赤血操术……你流的是我的血。」"}),
+        java.util.Map.entry("kashimo", new String[]{
+            "「鹿紫云一——当年那个疯子。还没打够吗？」"}),
+        java.util.Map.entry("mahito", new String[]{
+            "「真人。同类之间，就不必客气了。」"}),
+        java.util.Map.entry("toji", new String[]{
+            "「甚尔。这具身体真干净，一点咒力都没有。」"}),
+        java.util.Map.entry("nobara", new String[]{"「那把锤子……有点吵。」"})
+    );
     private static String pick(ServerPlayer p, String[] pool) { return pool[p.getRandom().nextInt(pool.length)]; }
+    private static String taunt(ServerPlayer p, String role, boolean yuji) {
+        if (yuji) return pick(p, YUJI_TAUNTS);
+        String[] own = role == null ? null : ROLE_TAUNTS.get(role);
+        if (own != null && p.getRandom().nextInt(100) < 80) return pick(p, own); // 80% 说专属台词
+        return pick(p, TAUNTS);
+    }
     private static int fingers(ServerPlayer p) { return Curse.fingers(p); }
 
     /** 术式伤害永久倍率（与 /sukuna damage 用的是同一把键）。 */
@@ -146,7 +178,8 @@ public final class FingerPossession {
         Network.send(level, new Network.Effect(CAMERA_LOCK, p.getId(), at, Vec3.ZERO, 1f, ACTIVE_TICKS, 0));
         var definition = character.CharacterService.selected(p);
         boolean yuji = definition != null && "yuji".equals(definition.id());
-        p.sendSystemMessage(Component.literal(pick(p, yuji ? YUJI_TAUNTS : TAUNTS)).withStyle(Style.EMPTY.withColor(0xFF8A00)));
+        String roleId = definition == null ? "sukuna" : definition.id();
+        p.sendSystemMessage(Component.literal(taunt(p, roleId, yuji)).withStyle(Style.EMPTY.withColor(0xFF8A00)));
         if (yuji) {
             p.sendSystemMessage(button("继续", "/sukuna possess keep", 0xFFFFD27A, "让宿傩继续使用这具身体"));
             p.sendSystemMessage(button("夺回", "/sukuna possess back", 0xFFFF4A4A, "夺回控制权，宿傩消失（无掉落）"));

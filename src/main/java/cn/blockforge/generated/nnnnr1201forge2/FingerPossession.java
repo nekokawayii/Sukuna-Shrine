@@ -105,6 +105,7 @@ public final class FingerPossession {
         p.getPersistentData().putBoolean("SukunaPossessed", true);
         p.setCamera(npc);                 // 看宿傩的视角，而不是旁观模式
         p.setInvisible(true);             // 自己的身体留在原地，但不显眼
+        p.setInvulnerable(true);          // 夺舍期间身体不能被打死（宿傩的 AOE 会擦到自己）
         p.setDeltaMovement(0, 0, 0);
         p.hurtMarked = true;
         Network.send(level, new Network.Effect(CAMERA_LOCK, p.getId(), at, Vec3.ZERO, 1f, ACTIVE_TICKS, 0));
@@ -116,7 +117,7 @@ public final class FingerPossession {
             p.sendSystemMessage(button("继续", "/sukuna possess keep", 0xFFFFD27A, "让宿傩继续使用这具身体"));
             p.sendSystemMessage(button("夺回", "/sukuna possess back", 0xFFFF4A4A, "夺回控制权，宿傩消失（无掉落）"));
         } else {
-            p.sendSystemMessage(button("自杀", "/kill @s", 0xFFFF4A4A, "放弃这具身体，重生后恢复生存（宿傩留下）"));
+            p.sendSystemMessage(button("自杀", "/sukuna possess suicide", 0xFFFF4A4A, "放弃这具身体，原地重生（宿傩留下）"));
         }
         return npc;
     }
@@ -195,6 +196,21 @@ public final class FingerPossession {
     }
 
     // ===== 聊天按钮对应的命令（/sukuna possess …） =====
+    public static void suicide(ServerPlayer p) {
+        // 保留夺舍体，只让玩家"重生"
+        p.getPersistentData().remove("SukunaPossessed");
+        p.setCamera(p);
+        p.setInvisible(false);
+        p.setInvulnerable(false);
+        if (p.gameMode.getGameModeForPlayer() != net.minecraft.world.level.GameType.SURVIVAL)
+            p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+        var spawn = p.server.getLevel(p.serverLevel().dimension()).getSharedSpawnPos();
+        p.teleportTo(p.serverLevel(), spawn.getX() + .5, spawn.getY(), spawn.getZ() + .5, p.getYRot(), p.getXRot());
+        p.setHealth(p.getMaxHealth());
+        Network.send(p.serverLevel(), new Network.Effect(CAMERA_LOCK, p.getId(), p.position(), Vec3.ZERO, 1f, 0, 0));
+        p.sendSystemMessage(Component.literal("你松开了那具身体，在出生点重新醒来。").withStyle(Style.EMPTY.withColor(0xFF7FD7FF)));
+    }
+
     public static void keep(ServerPlayer p) {
         p.sendSystemMessage(Component.literal("你放任宿傩继续支配这具身体。").withStyle(Style.EMPTY.withColor(0xFF8A00)));
     }
@@ -220,6 +236,7 @@ public final class FingerPossession {
         p.getPersistentData().remove("SukunaPossessed");
         p.setCamera(p);
         p.setInvisible(false);
+        p.setInvulnerable(false);
         Network.send(p.serverLevel(), new Network.Effect(CAMERA_LOCK, p.getId(), p.position(), Vec3.ZERO, 1f, 0, 0));
     }
 
@@ -243,12 +260,13 @@ public final class FingerPossession {
             if (p.gameMode.getGameModeForPlayer() == net.minecraft.world.level.GameType.SPECTATOR) {
                 p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
             }
-            p.setCamera(p); p.setInvisible(false);
+            p.setCamera(p); p.setInvisible(false); p.setInvulnerable(false);
             return;
         }
         p.getPersistentData().remove("SukunaPossessed");
         p.setCamera(p);
         p.setInvisible(false);
+        p.setInvulnerable(false);
         if (p.gameMode.getGameModeForPlayer() != net.minecraft.world.level.GameType.SURVIVAL)
             p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
         Network.send(p.serverLevel(), new Network.Effect(CAMERA_LOCK, p.getId(), p.position(), Vec3.ZERO, 1f, 0, 0));

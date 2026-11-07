@@ -162,7 +162,8 @@ public final class CombatSettings {
         event.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("possess")
             .then(Commands.literal("keep").executes(c->{FingerPossession.keep(c.getSource().getPlayerOrException());return 1;}))
             .then(Commands.literal("back").executes(c->{FingerPossession.back(c.getSource().getPlayerOrException());return 1;}))
-            .then(Commands.literal("return").executes(c->{FingerPossession.returnTo(c.getSource().getPlayerOrException());return 1;}))));
+            .then(Commands.literal("return").executes(c->{FingerPossession.returnTo(c.getSource().getPlayerOrException());return 1;}))
+            .then(Commands.literal("suicide").executes(c->{FingerPossession.suicide(c.getSource().getPlayerOrException());return 1;}))));
         event.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("damage")
             .executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();
                 p.sendSystemMessage(Component.literal("当前术式伤害倍率："+multiplier(p)+" 倍（/sukuna damage 数字 可改，1 为原倍率）"));

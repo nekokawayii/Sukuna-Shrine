@@ -71,6 +71,8 @@ public final class GojoCombat {
     private static final class Orb {
         final ServerPlayer owner;final ServerLevel level;final boolean blue;final boolean purple;
         Vec3 pos,dir;UUID target;int age,life;final int id;boolean guide;boolean dead;
+        /** 苍·最大功率：沿准星的距离（每刻直接贴合准星方向，只让这个值缓慢增长）。 */
+        double guideDist=1.2;
         /** 茈·点按版：走自己的小弹体特效（PURPLE_TAP），不跟对撞版共用那个大球。 */
         boolean small;
         /** 这颗弹体的伤害与视觉尺寸：对撞 500/3、点按 225/1、咏唱 1000/6。 */
@@ -572,7 +574,12 @@ public final class GojoCombat {
             Orb o=it.next();o.age++;
             if(!o.owner.isAlive()||o.owner.level()!=o.level){it.remove();continue;}
             if(o.blue){
-                if(o.guide&&guiding.get(o.owner.getUUID())==o)o.pos=o.pos.add(o.owner.getLookAngle().multiply(1,0,1).normalize().scale(0.25)); // 每秒 5 格
+                if(o.guide&&guiding.get(o.owner.getUUID())==o){
+                    // r311：始终跟随准星——直接取视线方向上的点，不再用"每刻 0.25 格"追；
+                    // 只保留自身缓慢前移（每秒 1 格），所以无论转头多快都粘在准星上。
+                    o.guideDist=Math.min(24.0,o.guideDist+0.05);
+                    o.pos=o.owner.getEyePosition().add(o.owner.getLookAngle().scale(o.guideDist));
+                }
                 fx(o.owner,GojoFx.BLUE,o.pos,o.pos,2.5f,6,o.id);
                 for(LivingEntity victim:Skills.targets(o.level,o.owner,o.pos,24)){
                     Vec3 pull=o.pos.subtract(victim.position());double d=pull.length();

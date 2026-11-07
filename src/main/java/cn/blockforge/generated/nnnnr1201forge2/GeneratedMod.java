@@ -247,6 +247,7 @@ public final class GeneratedMod {
         MinecraftForge.EVENT_BUS.register(BloodWingsRain.class);
         MinecraftForge.EVENT_BUS.register(UraumeIce.class);
         MinecraftForge.EVENT_BUS.register(character.uraume.UraumePalaceDomain.class);
+        MinecraftForge.EVENT_BUS.register(GojoBranchCombat.class);
         MinecraftForge.EVENT_BUS.register(SukunaNpcTrueForm.class);
         Network.registerDrawing();
         MinecraftForge.EVENT_BUS.register(SlashForms.class);

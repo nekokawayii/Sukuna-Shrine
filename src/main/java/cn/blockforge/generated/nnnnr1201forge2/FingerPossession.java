@@ -31,6 +31,13 @@ public final class FingerPossession {
 
     private static int fingers(ServerPlayer p) { return Curse.fingers(p); }
 
+    /** 术式伤害永久倍率（与 /sukuna damage 用的是同一把键）。 */
+    private static void multiplyDamage(ServerPlayer p, double factor) {
+        var d = Curse.data(p);
+        double now = d.contains("DamageMultiplier") ? d.getDouble("DamageMultiplier") : 1.0;
+        d.putDouble("DamageMultiplier", Math.min(10000.0, Math.max(0.001, now * factor)));
+    }
+
     /** 手指吃完后的掷骰。返回 true = 被夺舍（不再走正常成长）。 */
     public static boolean tryPossess(ServerPlayer p) {
         var definition = character.CharacterService.selected(p);
@@ -46,6 +53,7 @@ public final class FingerPossession {
             if (today < 2) { // 虎杖：每日两根内，咒力直接翻倍、无副作用
                 d.putInt("YujiFingerToday", today + 1);
                 Curse.addRaw(p, (int) Math.min(1_000_000, Curse.maximum(p)));
+                multiplyDamage(p, 1.1);
                 Curse.consume(p, false);
                 return true;
             }
@@ -56,6 +64,7 @@ public final class FingerPossession {
         }
         if (p.getRandom().nextInt(100) < 30) { // 30%：咒力翻倍 + 反胃/黑暗/缓慢 15 秒
             Curse.addRaw(p, (int) Math.min(1_000_000, Curse.maximum(p)));
+            multiplyDamage(p, 1.5);
             p.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 300, 0, false, true));
             p.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 300, 0, false, true));
             p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 300, 4, false, true));

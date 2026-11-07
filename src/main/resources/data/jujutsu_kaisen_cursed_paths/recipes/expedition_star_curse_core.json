@@ -1,0 +1,36 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:star_iron_fragment"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:star_iron_fragment"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:star_iron_fragment"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:star_iron_fragment"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:star_iron_fragment"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:star_iron_fragment"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:star_iron_fragment"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:star_iron_fragment"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:star_iron_fragment"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:star_curse_core",
+    "count": 1
+  }
+}

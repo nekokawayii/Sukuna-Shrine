@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:stone_bricks"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:seal_white"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:residue_low"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:simple_seal_pillar",
+    "count": 2
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "type": "jujutsu_kaisen_cursed_paths:soul_corridor",
+  "generator": {
+    "type": "jujutsu_kaisen_cursed_paths:soul_corridor",
+    "settings": {
+      "biome": "jujutsu_kaisen_cursed_paths:soul_corridor",
+      "lakes": false,
+      "features": false,
+      "structure_overrides": [],
+      "layers": [{"height":1,"block":"minecraft:bedrock"}]
+    }
+  }
+}

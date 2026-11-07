@@ -1,0 +1,1 @@
+{"parent":"jujutsu_kaisen_cursed_paths:mainline/energy_train_9","display":{"icon":{"item":"minecraft:experience_bottle"},"title":"咒力总量训练10","description":"累计击杀 30 只咒灵，永久提升 3000 点咒力上限","frame":"task","show_toast":true,"announce_to_chat":true,"hidden":false},"criteria":{"learned":{"trigger":"minecraft:impossible"}}}

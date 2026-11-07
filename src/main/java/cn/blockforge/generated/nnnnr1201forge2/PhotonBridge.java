@@ -52,10 +52,10 @@ public final class PhotonBridge {
             Object shape=field(config,"shape");call(shape,"setScale",triple(spread,spread,spread));
             Object renderer=field(config,"renderer");call(renderer,"setBloomEffect",true);call(renderer,"setBloomColor",color);
             Object material=field(config,"material");call(material,"setCull",false);
-            Object tex=type("gameobject.emitter.data.material.TextureMaterial").getConstructor(ResourceLocation.class).newInstance(new ResourceLocation("sukuna",texture));call(material,"setMaterial",tex);
+            Object tex=type("gameobject.emitter.data.material.TextureMaterial").getConstructor(ResourceLocation.class).newInstance(new ResourceLocation("jujutsu_kaisen_cursed_paths",texture));call(material,"setMaterial",tex);
             Object emission=field(config,"emission");call(emission,"setEmissionRate",number(0));Object burst=type("gameobject.emitter.data.EmissionSetting$Burst").getConstructor().newInstance();
             burst.getClass().getField("time").set(burst,0);burst.getClass().getField("cycles").set(burst,1);burst.getClass().getField("interval").set(burst,1);burst.getClass().getField("probability").set(burst,1.0f);call(burst,"setCount",number(count));((List<Object>)call(emission,"getBursts")).add(burst);
-            Object fx=type("fx.FX").getConstructor().newInstance();call(fx,"setFxLocation",new ResourceLocation("sukuna","cursed_flame"));((List<Object>)call(call(fx,"getMainFX"),"objects")).add(emitter);
+            Object fx=type("fx.FX").getConstructor().newInstance();call(fx,"setFxLocation",new ResourceLocation("jujutsu_kaisen_cursed_paths","cursed_flame"));((List<Object>)call(call(fx,"getMainFX"),"objects")).add(emitter);
             BlockPos bp=BlockPos.containing(pos);Object effect=type("fx.BlockEffect").getConstructor(type("fx.FX"),Level.class,BlockPos.class).newInstance(fx,Minecraft.getInstance().level,bp);
             call(effect,"setAllowMulti",true);call(effect,"setOffset",pos.x-bp.getX()-0.5,pos.y-bp.getY()-0.5,pos.z-bp.getZ()-0.5);call(effect,"start");Object runtime=call(effect,"getRuntime");return new Handle(runtime,call(runtime,"getRoot"),effect,bp);
         }catch(Exception e){fail(e);return null;}

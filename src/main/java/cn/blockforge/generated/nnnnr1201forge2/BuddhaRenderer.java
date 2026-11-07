@@ -15,7 +15,7 @@ public final class BuddhaRenderer<T extends Mob> extends EntityRenderer<T> {
     private final java.util.Map<T,Animation> animations=new java.util.WeakHashMap<>();
     public BuddhaRenderer(EntityRendererProvider.Context context){super(context);shadowRadius=0.6f;}
     @Override public boolean shouldRender(T entity,net.minecraft.client.renderer.culling.Frustum frustum,double x,double y,double z){return frustum.isVisible(entity.getBoundingBox().inflate(entity instanceof BuddhaEntity?6:1));}
-    @Override public ResourceLocation getTextureLocation(T entity){return new ResourceLocation("sukuna","textures/entity/"+(entity instanceof BuddhaEntity?"ashen_longarms":"parasite")+"_0.png");}
+    @Override public ResourceLocation getTextureLocation(T entity){return new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/"+(entity instanceof BuddhaEntity?"ashen_longarms":"parasite")+"_0.png");}
     @Override public void render(T entity,float yaw,float partial,PoseStack ps,MultiBufferSource buffers,int light){
         ps.pushPose();ps.mulPose(Axis.YP.rotationDegrees(180-yaw));float age=entity.tickCount+partial;
         if(entity instanceof BuddhaEntity b){

@@ -1,0 +1,15 @@
+{
+  "name": "jujutsu_kaisen_cursed_paths:culling_cube",
+  "fallback": "minecraft:empty",
+  "elements": [
+    {
+      "weight": 1,
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "jujutsu_kaisen_cursed_paths:culling_cube/main",
+        "processors": "minecraft:empty",
+        "projection": "rigid"
+      }
+    }
+  ]
+}

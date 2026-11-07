@@ -12,7 +12,7 @@ import net.minecraftforge.client.event.*;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import static cn.blockforge.generated.nnnnr1201forge2.Client.*;
 
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class SoulClient {
     private record Visual(Network.Effect e,long start){}
     private record Domain(Vec3 center,long end,long born,float radius,boolean station){}

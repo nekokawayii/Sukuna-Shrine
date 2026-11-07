@@ -30,7 +30,7 @@ public final class NpcBridge {
         }
         if (e instanceof SorcererNpcEntity npc) return npc.characterId();
         if (e instanceof ChosoEntity) return "blood";
-        if (e instanceof SukunaNpcEntity) return "sukuna";
+        if (e instanceof SukunaNpcEntity) return "jujutsu_kaisen_cursed_paths";
         if (e instanceof JogoNpcEntity) return "jogo";
         if (e instanceof UraumeNpcEntity) return "uraume";
         if (e instanceof RyuNpcEntity) return "ryu";
@@ -120,7 +120,7 @@ public final class NpcBridge {
             setId(mob.getId());
             CompoundTag d = Curse.data(this);
             d.putString("SelectedCharacter", characterId);
-            if (characterId.equals("sukuna")) {
+            if (characterId.equals("jujutsu_kaisen_cursed_paths")) {
                 for (String flag : List.of("Memory", "Awakened", "Nine", "SoulShrine", "VoidShrine", "PureLandVictory")) d.putBoolean(flag, true);
                 d.putInt("Fingers", 20);
             }

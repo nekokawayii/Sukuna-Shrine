@@ -14,7 +14,7 @@ import net.minecraft.world.item.SwordItem;
  *  <p>模组自己的术式用 {@link #mark(String)} 在施术前打标记；标记是**一次伤害一份**：
  *  {@code CombatSettings.hurt} 在结算时 {@link #consume()} 取走，服务端每刻开始再兜底清空，
  *  所以原版/其他模组的伤害永远不会被前一刻残留的标记污染。原版与其他模组的伤害按 DamageSource 归类。</p> */
-@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid="sukuna")
+@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class AttackTypes {
     public static final String SLASH="slash",FIRE="fire",SOUL="soul",VOID="void",ARROW="arrow",TRIDENT="trident",
         UNARMED="unarmed",THROWN="thrown",EXPLOSION="explosion",MAGIC="magic",ICE="ice",LIGHTNING="lightning";
@@ -139,7 +139,7 @@ public final class AttackTypes {
     public static String bySource(DamageSource source){
         if(source==null)return UNARMED;
         if(source.getMsgId().equals("soul_edge")||source.getMsgId().equals("soul_devourer"))return SOUL;
-        if(source.is(DeathStar.DAMAGE)||source.is(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,new net.minecraft.resources.ResourceLocation("sukuna","blood")))||source.is(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,new net.minecraft.resources.ResourceLocation("sukuna","blood_true"))))return BLOOD;
+        if(source.is(DeathStar.DAMAGE)||source.is(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,new net.minecraft.resources.ResourceLocation("jujutsu_kaisen_cursed_paths","blood")))||source.is(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,new net.minecraft.resources.ResourceLocation("jujutsu_kaisen_cursed_paths","blood_true"))))return BLOOD;
         if(source.getEntity() instanceof ShadowEntity||source.getDirectEntity() instanceof ShadowEntity||source.getEntity() instanceof MahoragaEntity||source.getDirectEntity() instanceof MahoragaEntity)return TEN_SHADOWS;
         if(source.is(DamageTypeTags.IS_EXPLOSION))return EXPLOSION;
         if(source.is(DamageTypeTags.IS_LIGHTNING))return LIGHTNING;

@@ -16,7 +16,7 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public final class VoidJourney {
-    public static final ResourceKey<Level> ARENA=ResourceKey.create(Registries.DIMENSION,new ResourceLocation("sukuna","void_arena"));
+    public static final ResourceKey<Level> ARENA=ResourceKey.create(Registries.DIMENSION,new ResourceLocation("jujutsu_kaisen_cursed_paths","void_arena"));
     public static boolean evolved(Player p){return Curse.data(p).getBoolean("VoidShrine");}
     public static void enter(ServerPlayer p){
         if(p.level().dimension()==ARENA){leave(p);return;}
@@ -107,7 +107,7 @@ public final class VoidJourney {
     @SubscribeEvent public static void logout(PlayerEvent.PlayerLoggedOutEvent e){clear(e.getEntity());}
     @SubscribeEvent public static void dimension(PlayerEvent.PlayerChangedDimensionEvent e){clear(e.getEntity());}
     @SubscribeEvent public static void respawn(PlayerEvent.PlayerRespawnEvent e){clear(e.getEntity());}
-    @SubscribeEvent public static void commands(RegisterCommandsEvent e){e.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("void")
+    @SubscribeEvent public static void commands(RegisterCommandsEvent e){e.getDispatcher().register(Commands.literal("jujutsu_kaisen_cursed_paths").then(Commands.literal("void")
         .then(Commands.literal("enter").executes(c->{enter(c.getSource().getPlayerOrException());return 1;}))
         .then(Commands.literal("leave").executes(c->{leave(c.getSource().getPlayerOrException());return 1;}))
         .then(Commands.literal("key").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();if(!SoulJourney.evolved(p)&&!Journey.maidCleared(p,"YujiDefeated"))return 0;if(!p.getInventory().contains(new ItemStack(VoidContent.KEY.get())))Journey.give(p,new ItemStack(VoidContent.KEY.get()));return 1;}))

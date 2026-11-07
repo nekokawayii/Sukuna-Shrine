@@ -16,7 +16,7 @@ import net.minecraftforge.eventbus.api.*;
 import net.minecraftforge.fml.common.Mod;
 
 /** 言灵恩赐：服务端成员、目标、传送和序列化，实体 AI 仍可使用原生技能。 */
-@Mod.EventBusSubscriber(modid="sukuna")
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class Legion {
     private static final String OWNER="AuthorityLegionOwner";
     private static final Map<UUID,LinkedHashSet<UUID>> TARGETS=new HashMap<>();

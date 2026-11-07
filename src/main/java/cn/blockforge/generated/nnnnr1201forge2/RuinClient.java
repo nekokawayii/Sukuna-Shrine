@@ -17,7 +17,7 @@ import net.minecraftforge.client.event.*;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 /** 遗迹的局部天空和非实体残影，不生成怪物、不改变世界时间。 */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class RuinClient {
     private static Vec3 origin;private static int rotation;private static long until,caption;
     private static Vec3 local(double x,double y,double z){return switch(rotation){case 1->origin.add(64-z,y,x);case 2->origin.add(48-x,y,64-z);case 3->origin.add(z,y,48-x);default->origin.add(x,y,z);};}
@@ -49,7 +49,7 @@ public final class RuinClient {
     }
     private static void ghosts(PoseStack ps,float t){
         var mc=Minecraft.getInstance();if(ghost==null)ghost=new HumanoidModel<>(mc.getEntityModels().bakeLayer(ModelLayers.PLAYER));
-        var source=mc.renderBuffers().bufferSource();var buffer=source.getBuffer(RenderType.entityTranslucent(new ResourceLocation("sukuna","textures/entity/yuji.png")));
+        var source=mc.renderBuffers().bufferSource();var buffer=source.getBuffer(RenderType.entityTranslucent(new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/yuji.png")));
         for(int i=0;i<5;i++){float phase=(t+i*57)%240;if(phase>75)continue;float alpha=(float)Math.sin(phase/75*Math.PI)*0.22f;boolean runner=i==0,teacher=i==4;Vec3 p=runner?local(12+phase*.25,11,27):local(i<3?10:34,teacher?11:11.15,teacher?48:39+(i%2)*12);
             ghost.setupAnim(mc.player,runner?t*.3f:0,runner?.7f:0,t,0,0);ghost.hat.visible=false;
             if(!runner&&!teacher){ghost.rightLeg.xRot=ghost.leftLeg.xRot=-1.4f;ghost.rightArm.xRot=ghost.leftArm.xRot=-0.65f;}

@@ -39,31 +39,31 @@ public final class RitualRecipes {
         add("blood_armor",1,72000,"blood_armor",1,false,"minecraft:iron_chestplate",1,"mutant_gland",6,"curse_flesh",8,"residue_high",3);
         add("poison",1,72000,"poison_coating",4,false,"mutant_gland",4,"curse_flesh",2,"residue_high",2);
         add("incarnation",1,72000,"incarnation_reagent",1,false,"soul_molt",1,"kenjaku_thread",2,"curse_flesh",4,"residue_high",3);
-        add("tenka",2,240,"sukuna:tenka_spear",1,true,"heavenly_bone",1,"tenka_fragment",3,"star_curse_core",1,"jujutsu_alloy",8,"residue_high",9);
+        add("tenka",2,240,"jujutsu_kaisen_cursed_paths:tenka_spear",1,true,"heavenly_bone",1,"tenka_fragment",3,"star_curse_core",1,"jujutsu_alloy",8,"residue_high",9);
         add("soul_blade",2,240,"soul_splitter",1,true,"heavenly_bone",1,"soul_echo",8,"star_curse_core",1,"jujutsu_alloy",8,"residue_high",9);
-        add("playful_cloud",2,240,"sukuna:yuyun",1,true,"heavenly_bone",1,"playful_cloud_parts",3,"star_curse_core",1,"jujutsu_alloy",8,"residue_high",9);
+        add("playful_cloud",2,240,"jujutsu_kaisen_cursed_paths:yuyun",1,true,"heavenly_bone",1,"playful_cloud_parts",3,"star_curse_core",1,"jujutsu_alloy",8,"residue_high",9);
         add("ultimate",2,240,"ultimate_scroll",1,false,"star_curse_core",1,"volcanic_core",1,"seal_gold",3,"residue_high",9);
         // r249：狱门僵与点数改为祭坛专属（工作台配方已删除，材料同步加价）
-        add("prison_realm",1,2400,"sukuna:prison_realm",1,false,
+        add("prison_realm",1,2400,"jujutsu_kaisen_cursed_paths:prison_realm",1,false,
             "heavenly_bone",2,"tenka_fragment",6,"star_curse_core",3,"prison_fragment",8,"residue_high",9);
-        add("culling_points",0,1200,"sukuna:culling_points",1,false,
+        add("culling_points",0,1200,"jujutsu_kaisen_cursed_paths:culling_points",1,false,
             "tenka_fragment",8,"star_curse_core",4,"golden_relic",2,"curse_concentrate",4,"residue_high",6);
         // 同一批"特殊道具"全部改成祭坛专属（工作台配方已删）
-        add("kenjaku_invitation",2,300,"sukuna:kenjaku_invitation",1,false,
+        add("kenjaku_invitation",2,300,"jujutsu_kaisen_cursed_paths:kenjaku_invitation",1,false,
             "residue_high",4,"ancient_talisman",2,"prison_fragment",2);
-        add("void_key",1,2400,"sukuna:void_key",1,false,
+        add("void_key",1,2400,"jujutsu_kaisen_cursed_paths:void_key",1,false,
             "tenka_fragment",4,"star_curse_core",3,"curse_crystal",6,"golden_relic",2,"residue_high",6);
-        add("eternal_love",0,1200,"sukuna:eternal_love",1,false,
+        add("eternal_love",0,1200,"jujutsu_kaisen_cursed_paths:eternal_love",1,false,
             "star_curse_core",2,"curse_crystal",4,"golden_relic",1,"residue_high",3);
-        add("culling_key",0,1200,"sukuna:culling_key",1,false,
+        add("culling_key",0,1200,"jujutsu_kaisen_cursed_paths:culling_key",1,false,
             "seal_gold",2,"star_iron_fragment",4,"residue_high",4);
-        add("curse_summon_talisman",0,800,"sukuna:curse_summon_talisman",1,false,
+        add("curse_summon_talisman",0,800,"jujutsu_kaisen_cursed_paths:curse_summon_talisman",1,false,
             "seal_white",2,"curse_concentrate",2,"residue_medium",4);
-        add("buddha_incense",0,800,"sukuna:buddha_incense",1,false,
+        add("buddha_incense",0,800,"jujutsu_kaisen_cursed_paths:buddha_incense",1,false,
             "seal_white",1,"curse_concentrate",1,"soul_echo",2,"residue_medium",3);
     }
     private static void add(String id,int tier,int ticks,String output,int count,boolean bp,Object... parts){Map<String,Integer> m=new LinkedHashMap<>();for(int i=0;i<parts.length;i+=2)m.put((String)parts[i],(Integer)parts[i+1]);ALL.add(new Recipe(id,tier,ticks,output,count,bp,Collections.unmodifiableMap(m)));}
-    public static Item resolve(String id){return ForgeRegistries.ITEMS.getValue(new ResourceLocation(id.contains(":")?id:"sukuna:"+id));}
+    public static Item resolve(String id){return ForgeRegistries.ITEMS.getValue(new ResourceLocation(id.contains(":")?id:"jujutsu_kaisen_cursed_paths:"+id));}
     public static Recipe get(String id){return ALL.stream().filter(r->r.id.equals(id)).findFirst().orElse(null);}
     public static void take(ServerPlayer p,Item item,int amount){for(int i=0;i<p.getInventory().getContainerSize()&&amount>0;i++){var s=p.getInventory().getItem(i);if(s.is(item)){int n=Math.min(amount,s.getCount());s.shrink(n);amount-=n;}}}
     private RitualRecipes(){}

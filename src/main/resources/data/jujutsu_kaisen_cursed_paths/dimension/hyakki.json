@@ -1,0 +1,13 @@
+{
+  "type": "jujutsu_kaisen_cursed_paths:hyakki",
+  "generator": {
+    "type": "jujutsu_kaisen_cursed_paths:hyakki_cathedral",
+    "settings": {
+      "biome": "jujutsu_kaisen_cursed_paths:death_knell_church",
+      "lakes": false,
+      "features": false,
+      "structure_overrides": [],
+      "layers": [{"height":1,"block":"minecraft:bedrock"}]
+    }
+  }
+}

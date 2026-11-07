@@ -15,7 +15,7 @@ import org.lwjgl.opengl.GL30;
 
 /** 动态血液材质负责主体，Photon 负责雾、飞沫与亮点；后者失败不吞掉整招。 */
 public final class BloodClient {
-    private static final ResourceLocation TEXTURE=new ResourceLocation("sukuna","textures/effect/living_blood.png");
+    private static final ResourceLocation TEXTURE=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/effect/living_blood.png");
     private static ShaderInstance shader;
     private record Visual(Network.Effect e,long born,long end){}
     private record Particle(PhotonFx.Handle h,long end){}
@@ -26,7 +26,7 @@ public final class BloodClient {
     private static Object world;
     private static long tick;
     public static final class Registration {
-        @SubscribeEvent public static void shaders(RegisterShadersEvent event){shader=null;try{event.registerShader(new ShaderInstance(event.getResourceProvider(),new ResourceLocation("sukuna","blood_fluid"),DefaultVertexFormat.POSITION_COLOR_TEX),s->shader=s);}catch(java.io.IOException|RuntimeException error){com.mojang.logging.LogUtils.getLogger().warn("赤血动态材质加载失败，保留流动血线与基础材质",error);}}
+        @SubscribeEvent public static void shaders(RegisterShadersEvent event){shader=null;try{event.registerShader(new ShaderInstance(event.getResourceProvider(),new ResourceLocation("jujutsu_kaisen_cursed_paths","blood_fluid"),DefaultVertexFormat.POSITION_COLOR_TEX),s->shader=s);}catch(java.io.IOException|RuntimeException error){com.mojang.logging.LogUtils.getLogger().warn("赤血动态材质加载失败，保留流动血线与基础材质",error);}}
     }
     /** 翅王是否仍在持续（客户端判断，供左键血雨用）。 */
     private static long wingsUntil;

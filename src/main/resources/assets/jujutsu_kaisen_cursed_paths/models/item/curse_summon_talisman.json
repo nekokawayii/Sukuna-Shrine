@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "jujutsu_kaisen_cursed_paths:item/curse_summon_talisman"
+  }
+}

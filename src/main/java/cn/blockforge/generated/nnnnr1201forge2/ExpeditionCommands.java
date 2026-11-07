@@ -14,7 +14,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 public final class ExpeditionCommands {
     @SubscribeEvent public static void register(RegisterCommandsEvent e){
         e.getDispatcher().register(Commands.literal("sukuna_expedition")
-            .then(Commands.literal("guide").executes(c->{c.getSource().sendSuccess(()->Component.literal("自然结构：/locate structure sukuna:juvenile_center；群系：/locate biome sukuna:cursed_wasteland；祭坛潜行右键切配方，普通右键投入背包材料。管理员测试：/sukuna_expedition altar 0 或 1 或 2"),false);return 1;}))
+            .then(Commands.literal("guide").executes(c->{c.getSource().sendSuccess(()->Component.literal("自然结构：/locate structure jujutsu_kaisen_cursed_paths:juvenile_center；群系：/locate biome jujutsu_kaisen_cursed_paths:cursed_wasteland；祭坛潜行右键切配方，普通右键投入背包材料。管理员测试：/sukuna_expedition altar 0 或 1 或 2"),false);return 1;}))
             .then(Commands.literal("hyakki").requires(c->c.hasPermission(2)).executes(c->{character.yuta.YutaProgress.teleportHyakki(c.getSource().getPlayerOrException());return 1;}))
             .then(Commands.literal("points").executes(c->{var p=c.getSource().getPlayerOrException();c.getSource().sendSuccess(()->Component.literal("死灭回游积分："+ExpeditionProgress.data(p).getInt("CullingPoints")),false);return 1;}))
             .then(Commands.literal("altar").requires(c->c.hasPermission(2)).then(Commands.argument("tier",IntegerArgumentType.integer(0,2)).executes(c->build(c.getSource().getPlayerOrException(),IntegerArgumentType.getInteger(c,"tier"))))));

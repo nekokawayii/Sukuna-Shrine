@@ -13,7 +13,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public final class CullingGame {
-    public static final ResourceKey<Level> DIM=ResourceKey.create(Registries.DIMENSION,new ResourceLocation("sukuna","culling_game"));
+    public static final ResourceKey<Level> DIM=ResourceKey.create(Registries.DIMENSION,new ResourceLocation("jujutsu_kaisen_cursed_paths","culling_game"));
     public static void enter(ServerPlayer p){
         if(PrisonSystem.locked(p)){p.sendSystemMessage(Component.literal("封印中无法使用死灭回游通行咒符。"));return;}
         if(p.level().dimension().equals(DIM)){leave(p);return;}
@@ -43,7 +43,7 @@ public final class CullingGame {
         p.teleportTo(to,safe.getX()+.5,safe.getY(),safe.getZ()+.5,p.getYRot(),p.getXRot());p.fallDistance=0;
     }
     public static void exchange(ServerPlayer p){
-        String[] ids={"special_blueprint","curse_concentrate","star_iron_fragment","sukuna:yuyun"};int[] costs={40,10,15,100};
+        String[] ids={"special_blueprint","curse_concentrate","star_iron_fragment","jujutsu_kaisen_cursed_paths:yuyun"};int[] costs={40,10,15,100};
         var d=ExpeditionProgress.data(p);int selection=Math.floorMod(d.getInt("CullingExchangeChoice"),ids.length),points=d.getInt("CullingPoints");
         if(p.isShiftKeyDown()){selection=(selection+1)%ids.length;d.putInt("CullingExchangeChoice",selection);p.sendSystemMessage(Component.literal("积分 "+points+"；选择 "+new ItemStack(RitualRecipes.resolve(ids[selection])).getHoverName().getString()+"，需要 "+costs[selection]+" 分。普通右键购买。"));return;}
         int cost=character.culling.CullingRules.special(p,"half_price")?Math.max(1,costs[selection]/2):costs[selection];

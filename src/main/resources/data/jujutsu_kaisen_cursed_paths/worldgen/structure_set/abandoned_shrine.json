@@ -1,0 +1,15 @@
+{
+  "structures": [
+    {
+      "structure": "jujutsu_kaisen_cursed_paths:abandoned_shrine",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 32,
+    "separation": 16,
+    "salt": 474578,
+    "frequency": 0.8
+  }
+}

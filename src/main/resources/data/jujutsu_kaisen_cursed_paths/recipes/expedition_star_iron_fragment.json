@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:nether_star_fragment"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:residue_high"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:star_iron_fragment",
+    "count": 1
+  }
+}

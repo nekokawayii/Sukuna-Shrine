@@ -7,7 +7,7 @@ import character.domain.PictureDomainApi;
 public final class PictureDomainExample {
     public static final int SKILL=9100;
     public static void install(String role){
-        var sky=new DomainPresentation.Style("sukuna:textures/block/yuki_star_shell.png",0x77BBFF,0,1.5f,true);
+        var sky=new DomainPresentation.Style("jujutsu_kaisen_cursed_paths:textures/block/yuki_star_shell.png",0x77BBFF,0,1.5f,true);
         PictureDomainApi.register(role,SKILL,new PictureDomainApi.Definition(
             20,600,20,20,sky,PictureDomainApi.damage(6)));
     }

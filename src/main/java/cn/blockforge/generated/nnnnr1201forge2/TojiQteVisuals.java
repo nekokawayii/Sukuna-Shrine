@@ -24,7 +24,7 @@ import net.minecraftforge.fml.common.Mod;
  * ② 被锁定的生物/弹幕身上包一圈会收缩的红环；
  * ③ 连招命中时播对应的自绘动作 + 红色冲击波。
  */
-@Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths", value = Dist.CLIENT)
 public final class TojiQteVisuals {
     private record Mark(int entity, long until) {}
     private record Burst(Vec3 at, int combo, long born, int life) {}
@@ -65,7 +65,7 @@ public final class TojiQteVisuals {
                     npc.getPersistentData().putLong("TojiVisualAt",now);
                 }
                 if (mc.level != null && mc.level.getEntity(e.owner()) instanceof AbstractClientPlayer player) {
-                    MotionFallbackClient.play(player, "sukuna:toji_c" + combo,
+                    MotionFallbackClient.play(player, "jujutsu_kaisen_cursed_paths:toji_c" + combo,
                         new java.util.UUID(e.owner(), Math.max(1L, (long) e.size())), 0);
                 }
                 Client.shake(2);

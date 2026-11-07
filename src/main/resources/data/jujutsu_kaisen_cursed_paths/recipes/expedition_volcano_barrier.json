@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:lava_obsidian"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:volcanic_core"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:residue_high"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:volcano_barrier",
+    "count": 8
+  }
+}

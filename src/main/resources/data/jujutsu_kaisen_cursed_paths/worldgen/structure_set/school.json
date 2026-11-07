@@ -1,0 +1,16 @@
+{
+  "structures": [
+    {
+      "structure": "jujutsu_kaisen_cursed_paths:school",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "salt": 913571,
+    "spacing": 96,
+    "separation": 48,
+    "spread_type": "linear",
+    "frequency": 0.35
+  }
+}

@@ -7,7 +7,7 @@ import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.eventbus.api.*;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class AimAssistClient {
     private static Network.AimState state=new Network.AimState(true,AimRules.DEFAULT_ANGLE,AimRules.DEFAULT_RANGE,false);
     private static double fov=70;

@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:residue_medium"
+    },
+    {
+      "item": "minecraft:amethyst_shard"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:curse_crystal",
+    "count": 2
+  }
+}

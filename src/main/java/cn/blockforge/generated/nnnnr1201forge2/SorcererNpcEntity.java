@@ -48,7 +48,7 @@ public final class SorcererNpcEntity extends PathfinderMob implements character.
     }
     public static AttributeSupplier.Builder attributes(String role){
         // r215：走 NpcBalance 统一表（整合包模式 ×30），实体进世界时还会再核一次。
-        double health=NpcBalance.health("sukuna:"+role+"_npc");
+        double health=NpcBalance.health("jujutsu_kaisen_cursed_paths:"+role+"_npc");
         return createMobAttributes().add(Attributes.MAX_HEALTH,health)
             .add(Attributes.ATTACK_DAMAGE,role.equals("toji")?14:8)
             .add(Attributes.ATTACK_SPEED,4).add(Attributes.MOVEMENT_SPEED,role.equals("toji")?.36:.29)

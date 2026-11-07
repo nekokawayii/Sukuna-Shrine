@@ -2,7 +2,7 @@
 """生成「学校」结构模板（128×128 占地，主世界自然生成用）。
 
 运行：python tools/generate_school.py --root . [--force]
-输出：src/main/resources/data/sukuna/structures/school/main.nbt
+输出：src/main/resources/data/jujutsu_kaisen_cursed_paths/structures/school/main.nbt
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from pathlib import Path
 
 SIZE = (128, 40, 128)
 DATA_VERSION = 3465
-LOOT = "sukuna:chests/school"
+LOOT = "jujutsu_kaisen_cursed_paths:chests/school"
 blocks: dict[tuple[int, int, int], tuple[str, tuple, dict | None]] = {}
 
 
@@ -276,7 +276,7 @@ def main():
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
-    target = args.root / "src/main/resources/data/sukuna/structures/school/main.nbt"
+    target = args.root / "src/main/resources/data/jujutsu_kaisen_cursed_paths/structures/school/main.nbt"
     if target.exists() and not args.force:
         raise FileExistsError(f"已存在，确认后加 --force：{target}")
     data, report = make_template()

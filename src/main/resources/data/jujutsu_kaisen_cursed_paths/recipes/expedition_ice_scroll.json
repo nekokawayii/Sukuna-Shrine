@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:frozen_crystal"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:seal_gold"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:ice_scroll",
+    "count": 1
+  }
+}

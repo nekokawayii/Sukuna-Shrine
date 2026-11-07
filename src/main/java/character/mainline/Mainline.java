@@ -98,8 +98,8 @@ public final class Mainline {
         Curse.data(p).putBoolean(PREFIX+id,true);award(p,id);
         p.sendSystemMessage(Component.literal("【成就解锁】"+NAMES[id]).withStyle(ChatFormatting.GOLD));sync(p);
     }
-    private static void award(ServerPlayer p,int id){var a=p.server.getAdvancements().getAdvancement(new ResourceLocation("sukuna","mainline/"+IDS[id]));if(a!=null)for(String criterion:a.getCriteria().keySet())p.getAdvancements().award(a,criterion);}
-    private static void awardCount(ServerPlayer p,int id,int count){var a=p.server.getAdvancements().getAdvancement(new ResourceLocation("sukuna","mainline/"+IDS[id]));if(a!=null)for(int i=1;i<=count;i++)p.getAdvancements().award(a,"use_"+i);}
+    private static void award(ServerPlayer p,int id){var a=p.server.getAdvancements().getAdvancement(new ResourceLocation("jujutsu_kaisen_cursed_paths","mainline/"+IDS[id]));if(a!=null)for(String criterion:a.getCriteria().keySet())p.getAdvancements().award(a,criterion);}
+    private static void awardCount(ServerPlayer p,int id,int count){var a=p.server.getAdvancements().getAdvancement(new ResourceLocation("jujutsu_kaisen_cursed_paths","mainline/"+IDS[id]));if(a!=null)for(int i=1;i<=count;i++)p.getAdvancements().award(a,"use_"+i);}
     private static void addCount(ServerPlayer p,int id,int cap){Curse.data(p).putInt(COUNT+id,MainlineRules.nextCount(count(p,id),cap));awardCount(p,id==SIMPLE?DOMAIN:AMPLIFY,count(p,id));sync(p);}
     public static void onCharacterChosen(ServerPlayer p){unlock(p,SORCERER);}
     public static int mask(Player p){int m=0;for(int i=0;i<NAMES.length;i++)if(unlocked(p,i))m|=1<<i;return m;}

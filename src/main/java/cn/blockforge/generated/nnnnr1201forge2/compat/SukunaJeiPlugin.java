@@ -15,7 +15,7 @@ import net.minecraft.world.item.ItemStack;
 public class SukunaJeiPlugin implements IModPlugin {
 
     @Override public ResourceLocation getPluginUid() {
-        return new ResourceLocation("sukuna", "jei_plugin");
+        return new ResourceLocation("jujutsu_kaisen_cursed_paths", "jei_plugin");
     }
 
     @Override public void registerCategories(IRecipeCategoryRegistration registration) {

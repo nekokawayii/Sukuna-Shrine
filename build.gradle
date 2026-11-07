@@ -1,8 +1,8 @@
 plugins { id 'java'; id 'net.minecraftforge.gradle' version '[6.0,6.2)' }
-version = '1.8.1-original-textures-r361'
+version = '1.8.1-original-textures-r362'
 group = 'cn.blockforge.generated.nnnnr1201forge2'
-base { archivesName = "sukuna-forge-1.20.1" }
-// 产物文件名固定为 sukuna-forge-1.20.1（不带版本号），版本号只保留在 jar 内部的 mods.toml 里。
+base { archivesName = "jujutsu-kaisen-cursed-paths-forge-1.20.1" }
+// 产物文件名固定为 jujutsu-kaisen-cursed-paths-forge-1.20.1（不带版本号），版本号只保留在 jar 内部的 mods.toml 里。
 tasks.withType(Jar).configureEach { archiveVersion = '' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 minecraft { mappings channel: 'official', version: '1.20.1' }
@@ -16,14 +16,14 @@ dependencies {
 }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
 processResources {
-    def props = [mod_id: 'sukuna', mod_name: '咒命歧路', mod_version: project.version,
+    def props = [mod_id: 'jujutsu_kaisen_cursed_paths', mod_name: 'Jujutsu Kaisen: Cursed Paths', mod_version: project.version,
                  minecraft_version: '1.20.1', forge_version: '47.4.0']
     inputs.properties props
     filteringCharset = 'UTF-8'
     filesMatching('META-INF/mods.toml') { expand props }
 }
 jar {
-    // 用户要求：发行 jar 的文件名固定为 sukuna-forge-1.20.1（不带版本号），版本只写进模组内部
+    // 用户要求：发行 jar 的文件名固定为 jujutsu-kaisen-cursed-paths-forge-1.20.1（不带版本号），版本只写进模组内部
     archiveVersion = ''
     archiveClassifier = 'ask'
     manifest { attributes 'Sukuna-Wallpaper-Edition': 'ask' }
@@ -70,7 +70,7 @@ def copyToMods = tasks.register('copyToMods', Copy) {
     onlyIf { modsDir.isDirectory() || modsDir.parentFile?.isDirectory() && modsDir.mkdirs() }
     // 先清掉旧版 sukuna jar（只匹配本模组的文件名，绝不动 photon / playeranimator 等前置）
     doFirst {
-        modsDir.listFiles({ f -> f.isFile() && f.name.startsWith('sukuna-forge-') && f.name.endsWith('.jar') } as FileFilter)
+        modsDir.listFiles({ f -> f.isFile() && f.name.startsWith('jujutsu-kaisen-cursed-paths-forge-') && f.name.endsWith('.jar') } as FileFilter)
                 ?.each { if (it.delete()) logger.lifecycle("已移除旧版 ${it.name}") }
     }
     // mods 里只放一份：两个 jar 是同一个 modid，同放会触发 Forge 的重复模组判定。

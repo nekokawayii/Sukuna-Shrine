@@ -31,11 +31,11 @@ public final class IwateVillage {
     private static CompoundTag blockTag(String id,int x,int y,int z){CompoundTag t=new CompoundTag();t.putString("id",id);t.putInt("x",x);t.putInt("y",y);t.putInt("z",z);return t;}
     private static void chest(ChunkAccess c,int x,int y,int z,boolean photo,String... items){
         if(!owns(c,x,z))return;set(c,x,y,z,Blocks.CHEST);CompoundTag t=blockTag("minecraft:chest",x,y,z);
-        if(photo){t.putString("LootTable","sukuna:chests/iwate_house");t.putLong("LootTableSeed",x*341873128712L^z*132897987541L);}
+        if(photo){t.putString("LootTable","jujutsu_kaisen_cursed_paths:chests/iwate_house");t.putLong("LootTableSeed",x*341873128712L^z*132897987541L);}
         else{ListTag list=new ListTag();for(int i=0;i<items.length;i++){CompoundTag item=new CompoundTag();item.putByte("Slot",(byte)i);item.putString("id","minecraft:"+items[i]);item.putByte("Count",(byte)1);list.add(item);}t.put("Items",list);}blockNbt(c,t);
     }
     private static void photoChest(ChunkAccess c,int x,int y,int z){
-        if(!owns(c,x,z))return;set(c,x,y,z,Blocks.CHEST);CompoundTag t=blockTag("minecraft:chest",x,y,z);t.putString("LootTable","sukuna:chests/yuji_home");t.putLong("LootTableSeed",x*341873128712L^z*132897987541L);blockNbt(c,t);
+        if(!owns(c,x,z))return;set(c,x,y,z,Blocks.CHEST);CompoundTag t=blockTag("minecraft:chest",x,y,z);t.putString("LootTable","jujutsu_kaisen_cursed_paths:chests/yuji_home");t.putLong("LootTableSeed",x*341873128712L^z*132897987541L);blockNbt(c,t);
     }
     private static boolean intersects(ChunkAccess c,int x,int z,int w,int d){if(IwateStructures.capturing())return true;return c.getPos().getMaxBlockX()>=x&&c.getPos().getMinBlockX()<x+w&&c.getPos().getMaxBlockZ()>=z&&c.getPos().getMinBlockZ()<z+d;}
     static void blueprint(String name){switch(name){case "farmhouse"->{farmhouse(null,0,0);for(int x=1;x<=17;x++)for(int z=25;z<=35;z++){set(null,x,Y-2,z,Blocks.CLAY);if(x==1||x==17||z==25||z==35)set(null,x,Y-1,z,Blocks.MOSSY_COBBLESTONE);else {set(null,x,Y-1,z,Blocks.WATER);if((x+z)%3!=0)set(null,x,Y,z,SoulContent.RICE.get());}}}case "warehouse"->warehouse(null,0,0);case "shrine"->shrine(null,0,0);case "bus"->bus(null,0,0);case "school"->school(null,0,0);case "clinic"->clinic(null,0,0);case "station"->station(null,0,0);case "home"->home(null);default->{shell(null,0,0,13,13,1);table(null,3,Y,6);bedding(null,3,Y,2);chest(null,9,Y,3,true);door(null,6,Y,12,false);sign(null,6,Y,14,"森林木屋","旧日的回忆","", "",0);}}}

@@ -24,7 +24,7 @@ import net.minecraftforge.registries.ForgeRegistries;
  * <p>音效严格依次播放（实测时长）：start 1.19s → mid 1.12s → ost 25.71s，
  * 即 start 在 0 刻、mid 在 24 刻、ost 在 47 刻。
  */
-@Mod.EventBusSubscriber(modid = "sukuna")
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths")
 public final class YutaDomain {
     public static final int SKILL = 1002;
     /** 领域半径（方块）。 */
@@ -58,7 +58,7 @@ public final class YutaDomain {
         cn.blockforge.generated.nnnnr1201forge2.DomainClash.opened(p, p.position(), RADIUS);
         if(!active(p))return;
         YutaTerrain.begin(p, RADIUS);
-        play(p, "sukuna:yuta_domain_start");
+        play(p, "jujutsu_kaisen_cursed_paths:yuta_domain_start");
         ensureRika(p);
         p.displayClientMessage(Component.literal("领域展开 · 真赝相爱"), false);
     }
@@ -89,8 +89,8 @@ public final class YutaDomain {
             }
             long age = now - entry.getValue().start;
             var state = entry.getValue();
-            if (!state.mid && age >= MID_TICK) { play(p, "sukuna:yuta_domain_mid"); state.mid = true; }
-            if (!state.ost && age >= OST_TICK) { play(p, "sukuna:yuta_domain_ost"); state.ost = true; }
+            if (!state.mid && age >= MID_TICK) { play(p, "jujutsu_kaisen_cursed_paths:yuta_domain_mid"); state.mid = true; }
+            if (!state.ost && age >= OST_TICK) { play(p, "jujutsu_kaisen_cursed_paths:yuta_domain_ost"); state.ost = true; }
 
             if(cn.blockforge.generated.nnnnr1201forge2.DomainClash.active(p))continue;
             if(p instanceof cn.blockforge.generated.nnnnr1201forge2.NpcBridge.NpcActor&&age>=600+state.extra){

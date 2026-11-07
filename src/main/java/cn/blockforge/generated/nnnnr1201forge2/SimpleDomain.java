@@ -26,7 +26,7 @@ import net.minecraft.world.phys.Vec3;
  *        减速是**直接改 MOVEMENT_SPEED 属性**，不是「缓慢」药水效果 —— HUD 上不会出现药水图标，
  *        也只在这个技能维持期间存在，收招立刻恢复。</li>
  *  </ul> */
-@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid="sukuna")
+@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class SimpleDomain {
     /** 技能号（捌的新分支，挂在轮盘 side 列表里）。
      *  **注意：不能用 33** —— 33 是 {@code FinaleRules.SKILL}（终式），

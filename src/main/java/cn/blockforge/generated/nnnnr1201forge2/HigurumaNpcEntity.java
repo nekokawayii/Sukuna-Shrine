@@ -19,7 +19,7 @@ public class HigurumaNpcEntity extends PathfinderMob {
 
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes()
-            .add(Attributes.MAX_HEALTH, NpcBalance.health("sukuna:higuruma_npc"))
+            .add(Attributes.MAX_HEALTH, NpcBalance.health("jujutsu_kaisen_cursed_paths:higuruma_npc"))
             .add(Attributes.ATTACK_DAMAGE, 7.0)
             .add(Attributes.MOVEMENT_SPEED, 0.30)
             .add(Attributes.FOLLOW_RANGE, 40.0)

@@ -1,0 +1,15 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_heart": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {"items": [{"items": ["minecraft:heart_of_the_sea"]}]}
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {"recipe": "jujutsu_kaisen_cursed_paths:true_false_love"}
+    }
+  },
+  "requirements": [["has_heart", "has_the_recipe"]],
+  "rewards": {"recipes": ["jujutsu_kaisen_cursed_paths:true_false_love"]}
+}

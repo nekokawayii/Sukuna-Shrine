@@ -1,0 +1,36 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:alloy_block",
+    "count": 1
+  }
+}

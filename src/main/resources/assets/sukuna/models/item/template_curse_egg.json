@@ -1,7 +1,0 @@
-{
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "sukuna:item/curse_egg_base",
-    "layer1": "sukuna:item/curse_egg_overlay"
-  }
-}

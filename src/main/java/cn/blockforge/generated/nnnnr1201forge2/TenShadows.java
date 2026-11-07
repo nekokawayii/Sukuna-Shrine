@@ -16,7 +16,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.*;
 
-@Mod.EventBusSubscriber(modid="sukuna")
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class TenShadows {
     public static final int CHANT_TICKS=181;
     public static final int FX_POSE=262;

@@ -47,7 +47,7 @@ public final class GuideBook {
         if (patchouli != net.minecraft.world.item.Items.AIR
             && net.minecraftforge.fml.ModList.get().isLoaded("patchouli")) {
             ItemStack stack = new ItemStack(patchouli);
-            stack.getOrCreateTag().putString("patchouli:book", "sukuna:guide");
+            stack.getOrCreateTag().putString("patchouli:book", "jujutsu_kaisen_cursed_paths:guide");
             return stack;
         }
         ItemStack stack = new ItemStack(Content.MANUAL.get());

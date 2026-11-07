@@ -33,7 +33,7 @@ import net.minecraftforge.fml.common.Mod;
  *        起效/更新/销毁全部放到客户端 `tick()` 里做，回收用"**{@link #GRACE} 刻没刷新才销毁**"的宽限判定，
  *        既不会因为状态抖动反复重建，也能在附拳关闭后自动收掉。</li>
  *  </ol> */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class FistFlameClient {
     /** 服务端广播的特效号：附拳期间每 15 刻一条（带 entityId 与寿命）。 */
     public static final int FX=236;
@@ -159,7 +159,7 @@ public final class FistFlameClient {
         return m.invoke(o instanceof Class<?>?null:o,args);
     }
 
-    @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)
+    @Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)
     public static final class Registration {
         @SubscribeEvent public static void layers(EntityRenderersEvent.AddLayers e){
             for(String skin:e.getSkins()){PlayerRenderer renderer=e.getSkin(skin);if(renderer!=null)renderer.addLayer(new Punch(renderer));}

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""往结构 NBT 的 entities 列表里塞一只胀相（sukuna:choso）。"""
+"""往结构 NBT 的 entities 列表里塞一只胀相（jujutsu_kaisen_cursed_paths:choso）。"""
 import gzip
 import struct
 import sys
@@ -86,7 +86,7 @@ i = 3  # tag(1) + 空名字长度(2)
 root, _ = read_payload(10, raw, i)
 
 entity = {
-    "id": (8, "sukuna:choso"),
+    "id": (8, "jujutsu_kaisen_cursed_paths:choso"),
     "Pos": (9, (6, list(POS))),
     "Rotation": (9, (5, [0.0, 0.0])),
     "PersistenceRequired": (1, 1),

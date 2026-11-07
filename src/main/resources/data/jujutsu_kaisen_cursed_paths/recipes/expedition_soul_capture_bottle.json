@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:glass_bottle"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:seal_white"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:soul_capture_bottle",
+    "count": 1
+  }
+}

@@ -19,7 +19,7 @@ import net.minecraftforge.fml.common.Mod;
  *
  *  <p>茈 1 格/刻 → 拖尾最长约 24 格；苍引导时 0.25 格/刻 → 缎带短而粗。两种颜色与宽度分开配。
  *  最后一发包之后再留几刻再丢，免得弹体消失时缎带"啪"地断掉。</p> */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class GojoTrailClient {
     public static final int BLUE=0,PURPLE=1;
     /** 每条拖尾最多留几个点 / 最后一次采点之后还留几刻。 */

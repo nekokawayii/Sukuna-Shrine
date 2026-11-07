@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "jujutsu_kaisen_cursed_paths:item/forbidden_armor"
+  }
+}

@@ -20,7 +20,7 @@ import net.minecraftforge.fml.common.Mod;
  * <p>池子按目标判定：目标是玩家就看该玩家当前选择的角色；目标是已知 Boss 实体就按其类型。
  * <p>已复制的术式编号存在该角色的存档段（{@code YutaCopies}），切换角色再切回不会丢。
  */
-@Mod.EventBusSubscriber(modid = "sukuna")
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths")
 public final class YutaCopies {
     private static final String KEY = "YutaCopies";
     private static final String USED = "YutaUsedDuringRika";
@@ -129,7 +129,7 @@ public final class YutaCopies {
                 case "uraume" -> URAUME;
                 case "blood" -> BLOOD;
                 case "yuji" -> YUJI;
-                case "sukuna" -> SUKUNA;
+                case "jujutsu_kaisen_cursed_paths" -> SUKUNA;
                 default -> new int[0];
             };
         }

@@ -26,7 +26,7 @@ public final class MahoragaArmor {
         @Override public int getEnchantmentValue(){return 22;}
         @Override public net.minecraft.sounds.SoundEvent getEquipSound(){return SoundEvents.ARMOR_EQUIP_GOLD;}
         @Override public Ingredient getRepairIngredient(){return Ingredient.of(Items.GOLD_INGOT);}
-        @Override public String getName(){return "sukuna:mahoraga_wheel";}
+        @Override public String getName(){return "jujutsu_kaisen_cursed_paths:mahoraga_wheel";}
         @Override public float getToughness(){return 4f;}
         @Override public float getKnockbackResistance(){return 0.1f;}
     };

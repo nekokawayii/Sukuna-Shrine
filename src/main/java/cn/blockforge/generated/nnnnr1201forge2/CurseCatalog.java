@@ -20,7 +20,7 @@ public final class CurseCatalog {
         return "";
     }
     private static List<Form> load(){
-        try(var in=CurseCatalog.class.getResourceAsStream("/data/sukuna/curse_catalog.json")){
+        try(var in=CurseCatalog.class.getResourceAsStream("/data/jujutsu_kaisen_cursed_paths/curse_catalog.json")){
             if(in==null)throw new IllegalStateException("缺少咒灵目录");
             var list=new ArrayList<Form>();var rows=JsonParser.parseReader(new InputStreamReader(in,StandardCharsets.UTF_8)).getAsJsonArray();
             for(var row:rows){var o=row.getAsJsonObject();var b=o.getAsJsonArray("bounds");float loX=b.get(0).getAsJsonArray().get(0).getAsFloat(),hiX=b.get(0).getAsJsonArray().get(1).getAsFloat(),loZ=b.get(2).getAsJsonArray().get(0).getAsFloat(),hiZ=b.get(2).getAsJsonArray().get(1).getAsFloat();

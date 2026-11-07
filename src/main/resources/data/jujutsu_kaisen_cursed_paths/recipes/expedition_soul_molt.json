@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:incarnation_reagent"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:curse_flesh"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:soul_molt",
+    "count": 1
+  }
+}

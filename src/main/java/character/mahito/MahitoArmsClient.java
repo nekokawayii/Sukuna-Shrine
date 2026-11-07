@@ -29,7 +29,7 @@ import java.util.Map;
  * 沿肩部左右交替错开、略微前倾，看起来像从身体侧后方长出来的多余手臂。</p>
  * <p>说明：目前只做“模型渲染”，额外手臂的独立持物/使用与第一人称手部还没有接入。</p>
  */
-@Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths", value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class MahitoArmsClient {
     private static final Map<Integer, Integer> ARMS = new HashMap<>();
     private static final Map<Integer, List<ItemStack>> HELD = new HashMap<>();

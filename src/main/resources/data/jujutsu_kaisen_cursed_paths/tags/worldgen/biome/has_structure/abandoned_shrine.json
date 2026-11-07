@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "#minecraft:is_forest",
+    "minecraft:cherry_grove",
+    "jujutsu_kaisen_cursed_paths:cursed_wasteland",
+    "jujutsu_kaisen_cursed_paths:cursed_sakura_forest"
+  ]
+}

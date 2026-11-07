@@ -8,7 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 
 /** 观测者用**本地玩家自己的皮肤**渲染——你在白色空间里面对的，是你自己的身体。 */
 public final class ObserverRenderer extends MobRenderer<ObserverEntity,ObserverRenderer.Model> {
-    private static final ResourceLocation DEFAULT_SKIN=new ResourceLocation("sukuna","textures/entity/yuji_guardian.png");
+    private static final ResourceLocation DEFAULT_SKIN=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/yuji_guardian.png");
     public ObserverRenderer(EntityRendererProvider.Context context){super(context,new Model(),0.5f);}
     @Override public ResourceLocation getTextureLocation(ObserverEntity entity){
         var player=Minecraft.getInstance().player;

@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 
 /** 使用64×32旧版玩家UV，直接读取用户256×128皮肤，不缩图。 */
 public final class YujiRenderer extends MobRenderer<YujiEntity,YujiRenderer.Model> {
-    private static final ResourceLocation SKIN=new ResourceLocation("sukuna","textures/entity/yuji.png");
+    private static final ResourceLocation SKIN=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/yuji.png");
     public YujiRenderer(EntityRendererProvider.Context context){super(context,new Model(),0.4f);}
     @Override public ResourceLocation getTextureLocation(YujiEntity entity){return SKIN;}
     @Override protected RenderType getRenderType(YujiEntity entity,boolean visible,boolean translucent,boolean glowing){return RenderType.entityTranslucent(SKIN);}

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:simple_seal_pillar"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:seal_gold"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:special_seal_pillar",
+    "count": 1
+  }
+}

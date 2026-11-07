@@ -16,11 +16,11 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 
 public final class SoulContent {
-    private static final DeferredRegister<Codec<? extends ChunkGenerator>> GENERATORS=DeferredRegister.create(Registries.CHUNK_GENERATOR,"sukuna");
+    private static final DeferredRegister<Codec<? extends ChunkGenerator>> GENERATORS=DeferredRegister.create(Registries.CHUNK_GENERATOR,"jujutsu_kaisen_cursed_paths");
     public static final RegistryObject<Codec<? extends ChunkGenerator>> CORRIDOR=GENERATORS.register("soul_corridor",()->SoulCorridorGenerator.CODEC);
-    public static final RegistryObject<EntityType<MegumiEntity>> MEGUMI=Content.ENTITIES.register("megumi",()->EntityType.Builder.of(MegumiEntity::new,MobCategory.CREATURE).sized(.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("sukuna:megumi"));
-    public static final RegistryObject<EntityType<YujiEntity>> YUJI=Content.ENTITIES.register("yuji_echo",()->EntityType.Builder.of(YujiEntity::new,MobCategory.MONSTER).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("sukuna:yuji_echo"));
-    public static final RegistryObject<EntityType<GuardianEntity>> GUARDIAN=Content.ENTITIES.register("yuji_guardian",()->EntityType.Builder.of(GuardianEntity::new,MobCategory.MONSTER).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("sukuna:yuji_guardian"));
+    public static final RegistryObject<EntityType<MegumiEntity>> MEGUMI=Content.ENTITIES.register("megumi",()->EntityType.Builder.of(MegumiEntity::new,MobCategory.CREATURE).sized(.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:megumi"));
+    public static final RegistryObject<EntityType<YujiEntity>> YUJI=Content.ENTITIES.register("yuji_echo",()->EntityType.Builder.of(YujiEntity::new,MobCategory.MONSTER).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:yuji_echo"));
+    public static final RegistryObject<EntityType<GuardianEntity>> GUARDIAN=Content.ENTITIES.register("yuji_guardian",()->EntityType.Builder.of(GuardianEntity::new,MobCategory.MONSTER).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:yuji_guardian"));
     public static final RegistryObject<Item> GUARDIAN_EGG=Content.ITEMS.register("yuji_guardian_spawn_egg",()->new net.minecraftforge.common.ForgeSpawnEggItem(GUARDIAN,0x191919,0xc88484,new Item.Properties()));
     /** 黑色、通往地下的灵魂通道传送门；右键在遗迹入口和灵魂通道之间切换。 */
     public static final RegistryObject<Block> GATE=ProgressionContent.BLOCKS.register("soul_gate",()->new Block(BlockBehaviour.Properties.copy(Blocks.OBSIDIAN).strength(-1,3600000).noCollission().noOcclusion().lightLevel(s->2)){

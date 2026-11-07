@@ -15,7 +15,7 @@ public final class HigurumaJudgeRenderer extends EntityRenderer<HigurumaJudgeEnt
     public HigurumaJudgeRenderer(EntityRendererProvider.Context context) { super(context); shadowRadius = 1f; }
 
     @Override public ResourceLocation getTextureLocation(HigurumaJudgeEntity entity) {
-        return new ResourceLocation("sukuna", "textures/entity/higuruma_judge_0.png");
+        return new ResourceLocation("jujutsu_kaisen_cursed_paths", "textures/entity/higuruma_judge_0.png");
     }
 
     @Override public void render(HigurumaJudgeEntity entity, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int light) {

@@ -10,7 +10,7 @@ public final class ShadowRenderer extends EntityRenderer<ShadowEntity> {
     private final ShadowModel[] models=new ShadowModel[TenShadowRules.COUNT];
     private static final float[] HEIGHT={1.35f,1.35f,1.8f,.9f,1.2f,2.6f,2.8f,.65f,3.1f,2.2f,2.1f};
     public ShadowRenderer(EntityRendererProvider.Context context){super(context);shadowRadius=.5f;}
-    @Override public ResourceLocation getTextureLocation(ShadowEntity e){return new ResourceLocation("sukuna","textures/entity/ten_shadows/"+TenShadowRules.IDS[e.kind()]+"_0.png");}
+    @Override public ResourceLocation getTextureLocation(ShadowEntity e){return new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/ten_shadows/"+TenShadowRules.IDS[e.kind()]+"_0.png");}
     @Override public boolean shouldRender(ShadowEntity e,net.minecraft.client.renderer.culling.Frustum frustum,double x,double y,double z){return frustum.isVisible(e.getBoundingBox().inflate(6));}
     @Override public void render(ShadowEntity e,float yaw,float partial,PoseStack ps,MultiBufferSource buffers,int light){
         int kind=e.kind();ShadowModel model=models[kind];if(model==null)models[kind]=model=new ShadowModel(TenShadowRules.IDS[kind]);

@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 /** 鹿紫云一 NPC：玩家模型 + 用户提供的皮肤。 */
 public final class KashimoNpcRenderer extends MobRenderer<KashimoNpcEntity, PlayerModel<KashimoNpcEntity>> {
     private static final ResourceLocation SKIN =
-        new ResourceLocation("sukuna", "textures/entity/kashimo_npc.png");
+        new ResourceLocation("jujutsu_kaisen_cursed_paths", "textures/entity/kashimo_npc.png");
 
     public KashimoNpcRenderer(EntityRendererProvider.Context context) {
         super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false), 0.5f);

@@ -9,7 +9,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
 
 /** 每位玩家独立保存，不改镜头方向、不跨墙、不替客户端判定伤害。 */
-@Mod.EventBusSubscriber(modid="sukuna")
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class AimAssist {
     public static final int ENABLED=202,ANGLE=203,RANGE=204,CIRCLE=205;
     private static CompoundTag tag(Player p){return Curse.data(p).getCompound("AimAssist");}

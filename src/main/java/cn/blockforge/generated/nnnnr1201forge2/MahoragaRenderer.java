@@ -23,12 +23,12 @@ public final class MahoragaRenderer<T extends MahoragaEntity> extends EntityRend
     private static final BbModel BODY=new BbModel("mahoraga","mahoraga");
     private static final BbModel WHEEL=new BbModel("mahoraga_wheel","mahoraga_wheel");
     private static final java.util.Map<MahoragaEntity,float[]> turns=new java.util.WeakHashMap<>();
-    private static final ResourceLocation RING=new ResourceLocation("sukuna","textures/effect/ring.png");
-    private static final ResourceLocation STREAK=new ResourceLocation("sukuna","textures/effect/streak.png");
+    private static final ResourceLocation RING=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/effect/ring.png");
+    private static final ResourceLocation STREAK=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/effect/streak.png");
     /** 模型高 3.69 格。 */
     private static final float MODEL_HEIGHT=3.69f;
     public MahoragaRenderer(EntityRendererProvider.Context context){super(context);shadowRadius=1.7f;}
-    @Override public ResourceLocation getTextureLocation(T entity){return new ResourceLocation("sukuna","textures/entity/mahoraga_0.png");}
+    @Override public ResourceLocation getTextureLocation(T entity){return new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/mahoraga_0.png");}
     @Override public boolean shouldRender(T entity,net.minecraft.client.renderer.culling.Frustum frustum,double x,double y,double z){return frustum.isVisible(entity.getBoundingBox().inflate(9));}
     @Override public void render(T entity,float yaw,float partial,PoseStack ps,MultiBufferSource buffers,int light){
         float age=entity.tickCount+partial;

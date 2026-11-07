@@ -16,14 +16,14 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /** 纯客户端演出，不生成一堆装饰生物；每个领域固定24只倒悬手臂。 */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class MahitoVisuals {
     private record Visual(Network.Effect effect,long born){}
     private static final List<Visual> EFFECTS=new ArrayList<>();
     private static final Map<Integer,Visual> DOMAINS=new HashMap<>();
     private static BbModel tail=new BbModel("mahito_tail","mahito_soul"),arm=new BbModel("mahito_arm","mahito_soul");
-    private static final ResourceLocation SKIN=new ResourceLocation("sukuna","textures/entity/mahito_soul_0.png");
-    private static final ResourceLocation FACES=new ResourceLocation("sukuna","textures/block/mahito_faces.png");
+    private static final ResourceLocation SKIN=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/mahito_soul_0.png");
+    private static final ResourceLocation FACES=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/block/mahito_faces.png");
     public static void receive(Network.Effect e){
         var mc=Minecraft.getInstance();if(mc.level==null)return;
         if(e.kind()==MahitoCombat.DOMAIN_END){DOMAINS.remove(e.owner());return;}

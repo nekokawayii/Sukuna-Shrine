@@ -34,7 +34,7 @@ public final class SorcererNpcRenderer extends MobRenderer<SorcererNpcEntity,Pla
             if(!"toji".equals(entity.characterId()))return;
             var data=entity.getPersistentData();int combo=data.getInt("TojiVisualCombo");if(combo<=0)return;
             double elapsed=entity.level().getGameTime()-data.getLong("TojiVisualAt")+(age-entity.tickCount);
-            var frame=MotionFallbackClient.sampleDefinition("sukuna:toji_c"+combo,elapsed);if(frame==null)return;
+            var frame=MotionFallbackClient.sampleDefinition("jujutsu_kaisen_cursed_paths:toji_c"+combo,elapsed);if(frame==null)return;
             var pose=frame.pose();
             body.xRot=rad(pose.body());head.xRot+=rad(pose.head());
             leftArm.xRot=rad(pose.leftArm());rightArm.xRot=rad(pose.rightArm());
@@ -51,6 +51,6 @@ public final class SorcererNpcRenderer extends MobRenderer<SorcererNpcEntity,Pla
         return super.getRenderType(entity,entity.mahitoPose()==5?false:visible,entity.mahitoPose()==5||translucent,glowing);
     }
     @Override public ResourceLocation getTextureLocation(SorcererNpcEntity entity){
-        return new ResourceLocation("sukuna","textures/entity/"+entity.characterId()+"_npc.png");
+        return new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/"+entity.characterId()+"_npc.png");
     }
 }

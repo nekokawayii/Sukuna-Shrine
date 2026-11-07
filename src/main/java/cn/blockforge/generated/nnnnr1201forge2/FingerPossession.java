@@ -199,9 +199,9 @@ public final class FingerPossession {
     /** 手指吃完后的掷骰。返回 true = 被夺舍（不再走正常成长）。 */
     public static boolean tryPossess(ServerPlayer p) {
         var definition = character.CharacterService.selected(p);
-        String id = definition == null ? "sukuna" : definition.id();
+        String id = definition == null ? "jujutsu_kaisen_cursed_paths" : definition.id();
         boolean yuji = "yuji".equals(id);
-        if ("sukuna".equals(id)) return false;
+        if ("jujutsu_kaisen_cursed_paths".equals(id)) return false;
         int total = fingers(p) + 1; // 这一根即将入账
         if (yuji) {
             long day = p.level().getDayTime() / 24000L;
@@ -260,7 +260,7 @@ public final class FingerPossession {
         npc.getPersistentData().putBoolean("PossessedSukuna", true);
         npc.getPersistentData().putInt("PossessedPower", power);
         var def = character.CharacterService.selected(p);
-        npc.getPersistentData().putString("PossessedRole", def == null ? "sukuna" : def.id());
+        npc.getPersistentData().putString("PossessedRole", def == null ? "jujutsu_kaisen_cursed_paths" : def.id());
         tune(npc, power);
         level.addFreshEntity(npc);
         p.getPersistentData().putBoolean("SukunaPossessed", true);
@@ -272,7 +272,7 @@ public final class FingerPossession {
         Network.send(level, new Network.Effect(CAMERA_LOCK, p.getId(), at, Vec3.ZERO, 1f, ACTIVE_TICKS, 0));
         var definition = character.CharacterService.selected(p);
         boolean yuji = definition != null && "yuji".equals(definition.id());
-        String roleId = definition == null ? "sukuna" : definition.id();
+        String roleId = definition == null ? "jujutsu_kaisen_cursed_paths" : definition.id();
         p.sendSystemMessage(Component.literal(taunt(p, roleId, yuji)).withStyle(Style.EMPTY.withColor(0xFF8A00)));
         if (yuji) {
             p.sendSystemMessage(button("继续", "/sukuna possess keep", 0xFFFFD27A, "让宿傩继续使用这具身体"));
@@ -342,7 +342,7 @@ public final class FingerPossession {
             actor.syncPosition();
             String role = npc.getPersistentData().getString("PossessedRole");
             var pool = new ArrayList<String>();
-            for (String r : new String[]{role, "sukuna"}) {
+            for (String r : new String[]{role, "jujutsu_kaisen_cursed_paths"}) {
                 character.CharacterDefinition def = null;
                 for (var d : character.CharacterRegistry.all()) if (d.id().equals(r)) { def = d; break; }
                 if (def == null) continue;

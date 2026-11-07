@@ -15,7 +15,7 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty;
  * 领域方块（石流龙「打上花火」的内壳材料）。
  *
  * <p>本质是"绿幕"：六个面都贴同一张图，`image` 属性 0~7 决定贴哪一张，
- * 所以不同领域可以长出完全不同的外观（`assets/sukuna/textures/effect/domain_*.png` 或复用的特效图）。
+ * 所以不同领域可以长出完全不同的外观（`assets/jujutsu_kaisen_cursed_paths/textures/effect/domain_*.png` 或复用的特效图）。
  * 不可破坏、无掉落；领域收起时由 {@code RyuDomain} 逐格还原。
  */
 public class DomainScreenBlock extends DomainMaskBlock {

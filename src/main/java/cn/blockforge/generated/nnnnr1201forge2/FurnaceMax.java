@@ -30,7 +30,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  *
  *  <p>与其它技能的关系：这是「开」的一支，**灶/开系对魔虚罗 ×20**的规则照旧生效
  *  （{@link MahoragaRules#bossDamage}）；蓄力期间接管输入，宿傩六式一律不理（同简易领域的做法）。</p> */
-@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid="sukuna")
+@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class FurnaceMax {
     /** 技能号（开的分支，挂在轮盘 side 列表里）。已占用到 43（简易领域），所以取 44。 */
     public static final int SKILL=44;

@@ -15,10 +15,10 @@ import net.minecraft.resources.ResourceLocation;
 /** 两面宿傩 NPC：玩家模型 + 用户提供的皮肤；原身形态换皮并多长两只手臂（r274）。 */
 public final class SukunaNpcRenderer extends MobRenderer<SukunaNpcEntity, PlayerModel<SukunaNpcEntity>> {
     private static final ResourceLocation SKIN =
-        new ResourceLocation("sukuna", "textures/entity/sukuna_npc.png");
+        new ResourceLocation("jujutsu_kaisen_cursed_paths", "textures/entity/sukuna_npc.png");
     /** 原身形态皮肤。 */
     private static final ResourceLocation TRUE_FORM =
-        new ResourceLocation("sukuna", "textures/entity/sukuna_true_form.png");
+        new ResourceLocation("jujutsu_kaisen_cursed_paths", "textures/entity/sukuna_true_form.png");
 
     public SukunaNpcRenderer(EntityRendererProvider.Context context) {
         super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false), 0.5f);

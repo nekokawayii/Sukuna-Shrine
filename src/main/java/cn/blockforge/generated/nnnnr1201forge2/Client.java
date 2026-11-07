@@ -18,19 +18,19 @@ import java.util.*;
 /** 事件由 ClientBootstrap 显式注册，避免核心渲染路径只依赖自动扫描。 */
 public final class Client {
     private static KeyMapping gameplayKey(String name,int key){return new KeyMapping(name,KeyConflictContext.IN_GAME,com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,key,"key.categories.sukuna");}
-    public static final KeyMapping WHEEL=gameplayKey("key.sukuna.wheel",GLFW.GLFW_KEY_N);
-    public static final KeyMapping CAST=gameplayKey("key.sukuna.cast",GLFW.GLFW_KEY_R);
-    public static final KeyMapping GUIDE=gameplayKey("key.sukuna.guide",GLFW.GLFW_KEY_J);
-    public static final KeyMapping ROTATE=gameplayKey("key.sukuna.rotate",GLFW.GLFW_KEY_V);
-    public static final KeyMapping RELATIONS=gameplayKey("key.sukuna.relations",GLFW.GLFW_KEY_O);
-    public static final KeyMapping FIST=gameplayKey("key.sukuna.fist",GLFW.GLFW_KEY_DELETE);
-    public static final KeyMapping STREAM=gameplayKey("key.sukuna.stream",GLFW.GLFW_KEY_HOME);
-    public static final KeyMapping AMPLIFY=gameplayKey("key.sukuna.amplify",GLFW.GLFW_KEY_G);
-    public static final KeyMapping LIMBS=gameplayKey("key.sukuna.limbs",GLFW.GLFW_KEY_U);
-    public static final KeyMapping LIMB_1=gameplayKey("key.sukuna.limb1",GLFW.GLFW_KEY_LEFT_BRACKET);
-    public static final KeyMapping LIMB_2=gameplayKey("key.sukuna.limb2",GLFW.GLFW_KEY_RIGHT_BRACKET);
-    public static final KeyMapping LIMB_3=gameplayKey("key.sukuna.limb3",GLFW.GLFW_KEY_SEMICOLON);
-    public static final KeyMapping LIMB_4=gameplayKey("key.sukuna.limb4",GLFW.GLFW_KEY_APOSTROPHE);
+    public static final KeyMapping WHEEL=gameplayKey("key.jujutsu_kaisen_cursed_paths.wheel",GLFW.GLFW_KEY_N);
+    public static final KeyMapping CAST=gameplayKey("key.jujutsu_kaisen_cursed_paths.cast",GLFW.GLFW_KEY_R);
+    public static final KeyMapping GUIDE=gameplayKey("key.jujutsu_kaisen_cursed_paths.guide",GLFW.GLFW_KEY_J);
+    public static final KeyMapping ROTATE=gameplayKey("key.jujutsu_kaisen_cursed_paths.rotate",GLFW.GLFW_KEY_V);
+    public static final KeyMapping RELATIONS=gameplayKey("key.jujutsu_kaisen_cursed_paths.relations",GLFW.GLFW_KEY_O);
+    public static final KeyMapping FIST=gameplayKey("key.jujutsu_kaisen_cursed_paths.fist",GLFW.GLFW_KEY_DELETE);
+    public static final KeyMapping STREAM=gameplayKey("key.jujutsu_kaisen_cursed_paths.stream",GLFW.GLFW_KEY_HOME);
+    public static final KeyMapping AMPLIFY=gameplayKey("key.jujutsu_kaisen_cursed_paths.amplify",GLFW.GLFW_KEY_G);
+    public static final KeyMapping LIMBS=gameplayKey("key.jujutsu_kaisen_cursed_paths.limbs",GLFW.GLFW_KEY_U);
+    public static final KeyMapping LIMB_1=gameplayKey("key.jujutsu_kaisen_cursed_paths.limb1",GLFW.GLFW_KEY_LEFT_BRACKET);
+    public static final KeyMapping LIMB_2=gameplayKey("key.jujutsu_kaisen_cursed_paths.limb2",GLFW.GLFW_KEY_RIGHT_BRACKET);
+    public static final KeyMapping LIMB_3=gameplayKey("key.jujutsu_kaisen_cursed_paths.limb3",GLFW.GLFW_KEY_SEMICOLON);
+    public static final KeyMapping LIMB_4=gameplayKey("key.jujutsu_kaisen_cursed_paths.limb4",GLFW.GLFW_KEY_APOSTROPHE);
     private static void limbUse(int index) {
         if (Minecraft.getInstance().screen != null) return;
         Network.CHANNEL.sendToServer(new TechniqueInput.Input(2100, 7, false, false, false, false, 522 + index, 0));

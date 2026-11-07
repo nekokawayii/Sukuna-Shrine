@@ -13,7 +13,7 @@ public final class CurseRoster {
     static {
         for(var form:CurseCatalog.FORMS){
             String id="curse_"+form.id();
-            var type=Content.ENTITIES.register(id,()->EntityType.Builder.of(LowCurseEntity::new,MobCategory.MONSTER).sized(form.width(),form.height()).clientTrackingRange(12).updateInterval(2).build("sukuna:"+id));
+            var type=Content.ENTITIES.register(id,()->EntityType.Builder.of(LowCurseEntity::new,MobCategory.MONSTER).sized(form.width(),form.height()).clientTrackingRange(12).updateInterval(2).build("jujutsu_kaisen_cursed_paths:"+id));
             TYPES.put(form.id(),type);
             EGGS.add(Content.ITEMS.register(id+"_spawn_egg",()->new net.minecraftforge.common.ForgeSpawnEggItem(type,0x302A38,form.grade()==0?0xA51949:0x9C859F,new Item.Properties())));
         }

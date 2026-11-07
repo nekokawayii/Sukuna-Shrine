@@ -26,10 +26,10 @@ import net.minecraftforge.eventbus.api.*;
 import net.minecraftforge.fml.common.Mod;
 
 /** 真人共用战斗规则。延迟命中重查敌友；临时属性均使用独立修饰符，不改基础存档数值。 */
-@Mod.EventBusSubscriber(modid="sukuna")
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class MahitoCombat {
     public static final int TOUCH=730,TAIL=731,THREADS=732,ARMS=733,DODGE=734,REFORGE=735,DOMAIN=736,DOMAIN_END=737,PUPPET=738;
-    private static final ResourceKey<DamageType> SOUL=ResourceKey.create(Registries.DAMAGE_TYPE,new ResourceLocation("sukuna","mahito_soul"));
+    private static final ResourceKey<DamageType> SOUL=ResourceKey.create(Registries.DAMAGE_TYPE,new ResourceLocation("jujutsu_kaisen_cursed_paths","mahito_soul"));
     private static final UUID ARMOR_ZERO=UUID.fromString("a3e7c83d-1883-486a-a617-1bac84e21d00");
     private static final UUID SOUL_LOSS=UUID.fromString("a3e7c83d-1883-486a-a617-1bac84e21d01");
     private static final UUID ROOT=UUID.fromString("a3e7c83d-1883-486a-a617-1bac84e21d02");

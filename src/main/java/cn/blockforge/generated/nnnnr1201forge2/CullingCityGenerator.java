@@ -44,7 +44,7 @@ public final class CullingCityGenerator extends FlatLevelSource {
                 if(lx==12&&lz==12&&y<top)put(c,x,y,z,Blocks.IRON_BLOCK);
                 if(lx==13&&lz==12&&y<top){c.setBlockState(new BlockPos(x,y,z),Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING,net.minecraft.core.Direction.EAST),false);}
             }
-            if(lx==12&&lz==15){put(c,x,66,z,Blocks.CHEST);CompoundTag n=be("minecraft:chest",x,66,z);n.putString("LootTable","sukuna:chests/culling_city");n.putLong("LootTableSeed",x*341873128712L+z*132897987541L);c.setBlockEntityNbt(n);}
+            if(lx==12&&lz==15){put(c,x,66,z,Blocks.CHEST);CompoundTag n=be("minecraft:chest",x,66,z);n.putString("LootTable","jujutsu_kaisen_cursed_paths:chests/culling_city");n.putLong("LootTableSeed",x*341873128712L+z*132897987541L);c.setBlockEntityNbt(n);}
             }
             if(Math.abs(x)<=5&&Math.abs(z)<=5){for(int y=65;y<=104;y++)if(Math.abs(x)==5&&Math.abs(z)==5||y%8==0)put(c,x,y,z,Blocks.IRON_BLOCK);}
             if(x==0&&z==-8)put(c,x,65,z,ExpeditionContent.block("culling_exchange"));

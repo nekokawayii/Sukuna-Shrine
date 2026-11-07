@@ -12,7 +12,7 @@ import net.minecraftforge.fml.common.Mod;
  * `bus = Mod.EventBusSubscriber.Bus.MOD` 的订阅者注册；挂在 Forge 总线上永远不会触发
  * （r350 提示面板不显示的根因就是这个——红光和提示一起哑掉）。
  */
-@Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths", value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class TojiOverlay {
     @SubscribeEvent public static void register(RegisterGuiOverlaysEvent event) {
         event.registerAboveAll("sukuna_toji_qte",

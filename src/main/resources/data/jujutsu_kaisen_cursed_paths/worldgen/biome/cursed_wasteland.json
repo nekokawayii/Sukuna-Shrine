@@ -1,0 +1,53 @@
+{
+  "has_precipitation": true,
+  "temperature": 0.65,
+  "downfall": 0.5,
+  "effects": {
+    "fog_color": 6444655,
+    "water_color": 4533583,
+    "water_fog_color": 2497840,
+    "sky_color": 6444655,
+    "grass_color": 3221305,
+    "foliage_color": 2433066,
+    "mood_sound": {
+      "sound": "minecraft:ambient.soul_sand_valley.mood",
+      "tick_delay": 6000,
+      "block_search_extent": 8,
+      "offset": 2
+    }
+  },
+  "spawners": {},
+  "spawn_costs": {},
+  "carvers": {
+    "air": [
+      "minecraft:cave",
+      "minecraft:cave_extra_underground",
+      "minecraft:canyon"
+    ]
+  },
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "minecraft:ore_dirt",
+      "minecraft:ore_gravel",
+      "minecraft:ore_coal_upper",
+      "minecraft:ore_coal_lower",
+      "minecraft:ore_iron_middle",
+      "minecraft:ore_iron_small",
+      "minecraft:ore_gold",
+      "minecraft:ore_redstone",
+      "minecraft:ore_diamond"
+    ],
+    [],
+    [],
+    [],
+    [
+      "jujutsu_kaisen_cursed_paths:cursed_landscape"
+    ]
+  ]
+}

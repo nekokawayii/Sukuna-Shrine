@@ -24,7 +24,7 @@ public final class ShadowEntity extends PathfinderMob {
     private static final EntityDataAccessor<Optional<UUID>> OWNER=SynchedEntityData.defineId(ShadowEntity.class,EntityDataSerializers.OPTIONAL_UUID);
     private static final EntityDataAccessor<Boolean> RITUAL=SynchedEntityData.defineId(ShadowEntity.class,EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<org.joml.Vector3f> EMERGE=SynchedEntityData.defineId(ShadowEntity.class,EntityDataSerializers.VECTOR3);
-    private static final ResourceKey<DamageType> PIERCE=ResourceKey.create(Registries.DAMAGE_TYPE,new ResourceLocation("sukuna","shadow_totality"));
+    private static final ResourceKey<DamageType> PIERCE=ResourceKey.create(Registries.DAMAGE_TYPE,new ResourceLocation("jujutsu_kaisen_cursed_paths","shadow_totality"));
     public static final int IDLE=0,ATTACK=1,SPECIAL=2,EMERGING=3,DISSOLVE=4;
     private long expires,actionEnd;
     private int attackCooldown,specialCooldown,stage,oxAim,oxRun,oxRecovery;

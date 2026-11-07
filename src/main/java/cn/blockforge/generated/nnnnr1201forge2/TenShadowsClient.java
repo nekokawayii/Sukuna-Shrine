@@ -20,7 +20,7 @@ import net.minecraftforge.fml.common.Mod;
 
 /** 事件由 ClientBootstrap 显式注册。 */
 public final class TenShadowsClient {
-    public static final ResourceLocation SKIN=new ResourceLocation("sukuna","textures/entity/meguna.png");
+    public static final ResourceLocation SKIN=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/meguna.png");
     private record State(boolean incarnated,boolean tamed,boolean partial,long end,long manifestEnd){}
     private static final Map<UUID,State> states=new HashMap<>();
     private static long tick;private static VesselRenderer renderer;private static PlayerModel<AbstractClientPlayer> arms;private static boolean rendering;
@@ -100,7 +100,7 @@ public final class TenShadowsClient {
         }
     }
     static final class MegumiRenderer extends MobRenderer<MegumiEntity,PlayerModel<MegumiEntity>>{
-        private static final ResourceLocation SKIN=new ResourceLocation("sukuna","textures/entity/megumi.png");
+        private static final ResourceLocation SKIN=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/megumi.png");
         MegumiRenderer(EntityRendererProvider.Context c){super(c,new MegumiModel(c),.3f);}
         @Override public ResourceLocation getTextureLocation(MegumiEntity e){return SKIN;}
         @Override protected void setupRotations(MegumiEntity e,PoseStack ps,float age,float yaw,float partial){if(e.downed()){ps.mulPose(Axis.YP.rotationDegrees(180-yaw));ps.translate(0,.2,-.8);ps.mulPose(Axis.XP.rotationDegrees(90));}else super.setupRotations(e,ps,age,yaw,partial);}

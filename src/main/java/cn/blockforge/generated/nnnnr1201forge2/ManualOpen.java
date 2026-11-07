@@ -12,7 +12,7 @@ public final class ManualOpen {
             Object inst = api.getMethod("get").invoke(null);
             inst.getClass().getMethod("openBookGUI", net.minecraft.world.entity.player.Player.class,
                 net.minecraft.resources.ResourceLocation.class)
-                .invoke(inst, p, new net.minecraft.resources.ResourceLocation("sukuna", "guide"));
+                .invoke(inst, p, new net.minecraft.resources.ResourceLocation("jujutsu_kaisen_cursed_paths", "guide"));
             return true;
         } catch (Throwable ignored) {
             return false;

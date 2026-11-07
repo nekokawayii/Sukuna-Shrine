@@ -18,7 +18,7 @@ import net.minecraftforge.fml.common.Mod;
  * 不义游戏的表现层：被注入咒力的方块/实体上方挂一圈紫色咒力环（永久显示，直到被换位消耗），
  * 换位瞬间两端各炸一圈光环并连一道雷线。
  */
-@Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths", value = Dist.CLIENT)
 public final class TodoVisuals {
     private static final int CORE = 0xFFFFFF, GLOW = 0xB58CFF;
     private static final String TEX_GLOW = "textures/effect/glow.png";

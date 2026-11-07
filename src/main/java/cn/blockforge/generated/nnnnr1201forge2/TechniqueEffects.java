@@ -6,7 +6,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.*;
 
 public final class TechniqueEffects {
-    public static final DeferredRegister<MobEffect> EFFECTS=DeferredRegister.create(ForgeRegistries.MOB_EFFECTS,"sukuna");
+    public static final DeferredRegister<MobEffect> EFFECTS=DeferredRegister.create(ForgeRegistries.MOB_EFFECTS,"jujutsu_kaisen_cursed_paths");
     public static final RegistryObject<MobEffect> BURNOUT=EFFECTS.register("technique_burnout",()->new MobEffect(MobEffectCategory.HARMFUL,0x853343){
         @Override public List<ItemStack> getCurativeItems(){return List.of();}
     });

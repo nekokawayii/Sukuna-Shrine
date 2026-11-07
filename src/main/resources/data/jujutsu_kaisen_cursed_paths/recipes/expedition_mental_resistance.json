@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:wraith_tear"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:seal_white"
+    },
+    {
+      "item": "minecraft:glass_bottle"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:mental_resistance",
+    "count": 1
+  }
+}

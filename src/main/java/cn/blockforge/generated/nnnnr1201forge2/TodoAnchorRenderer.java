@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 /** 特效锚点：什么都不画（咒力环由 TodoVisuals 负责），只需要一个合法的渲染器。 */
 public final class TodoAnchorRenderer extends EntityRenderer<TodoAnchorEntity> {
     private static final ResourceLocation DUMMY =
-        new ResourceLocation("sukuna", "textures/entity/todo_npc.png");
+        new ResourceLocation("jujutsu_kaisen_cursed_paths", "textures/entity/todo_npc.png");
 
     public TodoAnchorRenderer(EntityRendererProvider.Context context) { super(context); }
 

@@ -31,7 +31,7 @@ public final class MaidBridge {
         if(old!=null)old.retire();
         Actor actor=new Actor((ServerLevel)maid.level(),maid);ACTORS.put(maid.getUUID(),actor);return actor;
     }
-    public static boolean modCreature(LivingEntity target){var id=ForgeRegistries.ENTITY_TYPES.getKey(target.getType());return id!=null&&id.getNamespace().equals("sukuna");}
+    public static boolean modCreature(LivingEntity target){var id=ForgeRegistries.ENTITY_TYPES.getKey(target.getType());return id!=null&&id.getNamespace().equals("jujutsu_kaisen_cursed_paths");}
     public static boolean recovering(Player p){return isCaster(p)&&Curse.data(p).getBoolean("MaidRecovering");}
     public static boolean domainReady(ServerPlayer p){return !isCaster(p)||!Curse.active(p,"MaidDomainCooldown");}
     public static void domainOpened(ServerPlayer p){if(isCaster(p))Curse.status(p,"MaidDomainCooldown",ShrineRules.MAID_DOMAIN_COOLDOWN_TICKS);}

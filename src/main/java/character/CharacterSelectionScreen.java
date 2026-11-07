@@ -26,7 +26,7 @@ public final class CharacterSelectionScreen extends Screen {
             CATEGORY.put(id, 0);
         }
         // 诅咒师（r286：宿傩也归这里）
-        for (String id : new String[]{"uraume", "sukuna"}) {
+        for (String id : new String[]{"uraume", "jujutsu_kaisen_cursed_paths"}) {
             CATEGORY.put(id, 1);
         }
         // 咒灵

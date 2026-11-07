@@ -13,7 +13,7 @@ import net.minecraft.resources.ResourceLocation;
  * 与 {@link GuardianRenderer} 同一套惯例（本仓库不用 GeckoLib，也没有动画文件）。
  */
 public final class GetoRenderer extends MobRenderer<GetoEntity, GetoRenderer.Model> {
-    private static final ResourceLocation SKIN = new ResourceLocation("sukuna", "textures/entity/geto.png");
+    private static final ResourceLocation SKIN = new ResourceLocation("jujutsu_kaisen_cursed_paths", "textures/entity/geto.png");
 
     public GetoRenderer(EntityRendererProvider.Context context) { super(context, new Model(), 0.6f); }
 

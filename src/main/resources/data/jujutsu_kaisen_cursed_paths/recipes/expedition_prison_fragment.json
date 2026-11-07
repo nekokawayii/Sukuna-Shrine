@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:kenjaku_thread"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:soul_molt"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:star_iron_fragment"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:prison_fragment",
+    "count": 1
+  }
+}

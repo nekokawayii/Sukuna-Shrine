@@ -14,7 +14,7 @@ import java.util.Map;
  * 服务端在改完形态后广播 Effect(303)（owner=实体 id，size=宽比例，life=高比例×1000），
  * 客户端登记到 map，渲染时按比例缩放（不改碰撞箱）。
  */
-@Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths", value = Dist.CLIENT)
 public final class TransformedScaleClient {
     private record Scale(float w, float h, long at) {}
     private static final Map<Integer, Scale> SCALES = new HashMap<>();

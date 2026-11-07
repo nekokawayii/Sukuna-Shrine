@@ -18,7 +18,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
 
 /** 高位战服务端：入口、权威战斗状态、断线恢复与胜负结算。 */
-@Mod.EventBusSubscriber(modid="sukuna")
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class ObserverRitual {
     public static final int FX_START=250,FX_SHAKE=251,FX_BLACK=252,FX_DIALOG=253,FX_ATTACK=254,FX_LINE=255,FX_END=256,FX_FIGHT=257;
     public static final Vec3 SPACE=new Vec3(.5,400,.5),BOSS_AT=SPACE.add(0,0,-4.5);
@@ -160,9 +160,9 @@ public final class ObserverRitual {
         finish(s,true,true);
     }
     @SubscribeEvent public static void commands(net.minecraftforge.event.RegisterCommandsEvent e){
-        e.getDispatcher().register(net.minecraft.commands.Commands.literal("sukuna").then(net.minecraft.commands.Commands.literal("reset").requires(source->source.getEntity() instanceof ServerPlayer player&&active(player)).executes(c->{reset(c.getSource().getPlayerOrException());return 1;})));
+        e.getDispatcher().register(net.minecraft.commands.Commands.literal("jujutsu_kaisen_cursed_paths").then(net.minecraft.commands.Commands.literal("reset").requires(source->source.getEntity() instanceof ServerPlayer player&&active(player)).executes(c->{reset(c.getSource().getPlayerOrException());return 1;})));
         // 已通关但「权限」确实丢了（掉进虚空缝隙等）时的补救，不重复发放。
-        e.getDispatcher().register(net.minecraft.commands.Commands.literal("sukuna").then(net.minecraft.commands.Commands.literal("permission").executes(c->{Authority.restoreReward(c.getSource().getPlayerOrException());return 1;})));
+        e.getDispatcher().register(net.minecraft.commands.Commands.literal("jujutsu_kaisen_cursed_paths").then(net.minecraft.commands.Commands.literal("permission").executes(c->{Authority.restoreReward(c.getSource().getPlayerOrException());return 1;})));
     }
     @SubscribeEvent public static void login(PlayerEvent.PlayerLoggedInEvent e){
         if(!(e.getEntity() instanceof ServerPlayer p)||!Curse.data(p).getBoolean("ObserverRunning"))return;

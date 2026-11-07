@@ -9,7 +9,7 @@ public final class WallpaperPolicy {
     public static final String DEFAULT_MODE=readDefault();
     private static String readDefault(){
         Properties properties=new Properties();
-        try(InputStream in=WallpaperPolicy.class.getResourceAsStream("/sukuna-wallpaper-defaults.properties")){
+        try(InputStream in=WallpaperPolicy.class.getResourceAsStream("/jujutsu_kaisen_cursed_paths-wallpaper-defaults.properties")){
             if(in!=null)properties.load(in);
         }catch(IOException ignored){return "ask";}
         return "on".equals(properties.getProperty("consent"))?"on":"ask";

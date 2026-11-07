@@ -15,7 +15,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /** 共用地形事务。每次领域使用独立 Handle；方块按同一对拼平面选层，原地形不混入其它领域。 */
-@Mod.EventBusSubscriber(modid="sukuna")
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class DomainTerrain extends SavedData {
     private static final int BUDGET=4096;
     private static final class Cell {

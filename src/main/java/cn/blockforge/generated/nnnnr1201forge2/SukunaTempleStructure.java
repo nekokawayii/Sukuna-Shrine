@@ -33,7 +33,7 @@ public final class SukunaTempleStructure extends Structure {
         Heightmap.Types.CODEC.optionalFieldOf("project_start_to_heightmap").forGetter(s->s.heightmap),
         Codec.intRange(1,80).fieldOf("max_distance_from_center").forGetter(s->s.distance)
     ).apply(i,SukunaTempleStructure::new));
-    public static final DeferredRegister<StructureType<?>> TYPES=DeferredRegister.create(Registries.STRUCTURE_TYPE,"sukuna");
+    public static final DeferredRegister<StructureType<?>> TYPES=DeferredRegister.create(Registries.STRUCTURE_TYPE,"jujutsu_kaisen_cursed_paths");
     public static final RegistryObject<StructureType<SukunaTempleStructure>> TYPE=TYPES.register("overworld_temple",()->()->CODEC);
     private static volatile ChunkGenerator overworldGenerator;
     private final Holder<StructureTemplatePool> pool;

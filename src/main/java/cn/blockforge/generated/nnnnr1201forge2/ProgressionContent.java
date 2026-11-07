@@ -18,7 +18,7 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 
 public final class ProgressionContent {
-    public static final DeferredRegister<Block> BLOCKS=DeferredRegister.create(ForgeRegistries.BLOCKS,"sukuna");
+    public static final DeferredRegister<Block> BLOCKS=DeferredRegister.create(ForgeRegistries.BLOCKS,"jujutsu_kaisen_cursed_paths");
     private static final List<RegistryObject<Item>> ALL=new ArrayList<>();
     private static RegistryObject<Item> item(String id,java.util.function.Supplier<Item> factory){var r=Content.ITEMS.register(id,factory);ALL.add(r);return r;}
     public static final RegistryObject<Item> MEMORY=item("sukuna_memory",character.TechniqueBook::new);

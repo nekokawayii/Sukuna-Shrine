@@ -19,6 +19,6 @@ public final class TechniqueConfig {
     public static boolean chat(){return (SPEC.isLoaded()?DISPLAY.get():DISPLAY.getDefault()).equals("chat");}
     public static int gap(){return SPEC.isLoaded()?CHANT_GAP.get():CHANT_GAP.getDefault();}
     public static int rate(){return SPEC.isLoaded()?MAX_RATE.get():MAX_RATE.getDefault();}
-    public static void register(){ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,SPEC,"sukuna-techniques.toml");}
+    public static void register(){ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,SPEC,"jujutsu_kaisen_cursed_paths-techniques.toml");}
     private TechniqueConfig(){}
 }

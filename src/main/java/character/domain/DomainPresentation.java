@@ -35,7 +35,7 @@ public final class DomainPresentation {
         int color=definition==null?owner instanceof GuardianEntity?0xE6C56B:owner instanceof YujiEntity?0xEE8899:0x77BBFF:definition.color();
         // r238：石流龙暂时不用晚霞天空图（它由 DomainWorldRenderer 画成包住玩家的球面，
         // 用户实测"球壳还在"就是这层）。改回纯色后不再生成任何球面；要恢复把下面这行换回来即可。
-        // if("ryu".equals(role))return Style.image("sukuna:textures/effect/domain_sunset.png",color);
+        // if("ryu".equals(role))return Style.image("jujutsu_kaisen_cursed_paths:textures/effect/domain_sunset.png",color);
         if("ryu".equals(role))return Style.colored(color);
         return Style.colored(color);
     }
@@ -46,10 +46,10 @@ public final class DomainPresentation {
         if(!fallback.texture().isEmpty()||DATA_STYLES.containsKey(role)||STYLES.containsKey(role))return fallback;
         int color=fallback.color();
         return switch(role){
-            case "jogo" -> Style.image("sukuna:textures/effect/domain_jogo/wall_base.png",color);
-            case "ryu" -> Style.image("sukuna:textures/effect/domain_sunset.png",color);
-            case "yuki" -> Style.image("sukuna:textures/block/yuki_star_shell.png",color);
-            case "blood" -> new Style("sukuna:textures/effect/living_blood.png",color,0,.3f,false);
+            case "jogo" -> Style.image("jujutsu_kaisen_cursed_paths:textures/effect/domain_jogo/wall_base.png",color);
+            case "ryu" -> Style.image("jujutsu_kaisen_cursed_paths:textures/effect/domain_sunset.png",color);
+            case "yuki" -> Style.image("jujutsu_kaisen_cursed_paths:textures/block/yuki_star_shell.png",color);
+            case "blood" -> new Style("jujutsu_kaisen_cursed_paths:textures/effect/living_blood.png",color,0,.3f,false);
             case "gojo" -> Style.colored(color); // 保留动态特效与分界，不再覆盖 UV 云图。
             default -> Style.colored(color);
         };

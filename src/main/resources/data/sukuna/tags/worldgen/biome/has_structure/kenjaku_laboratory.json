@@ -1,8 +1,0 @@
-{
-  "replace": false,
-  "values": [
-    "#minecraft:is_overworld",
-    "sukuna:cursed_wasteland",
-    "sukuna:ancient_battlefield"
-  ]
-}

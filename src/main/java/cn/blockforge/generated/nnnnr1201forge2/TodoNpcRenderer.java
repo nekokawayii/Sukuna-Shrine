@@ -11,7 +11,7 @@ import net.minecraft.resources.ResourceLocation;
  */
 public final class TodoNpcRenderer extends MobRenderer<TodoNpcEntity, PlayerModel<TodoNpcEntity>> {
     private static final ResourceLocation SKIN =
-        new ResourceLocation("sukuna", "textures/entity/todo_npc.png");
+        new ResourceLocation("jujutsu_kaisen_cursed_paths", "textures/entity/todo_npc.png");
 
     public TodoNpcRenderer(EntityRendererProvider.Context context) {
         super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false), 0.5f);

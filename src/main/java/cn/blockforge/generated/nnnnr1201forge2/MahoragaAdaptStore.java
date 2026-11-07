@@ -17,7 +17,7 @@ import net.minecraftforge.registries.ForgeRegistries;
  *  <p>规则：被某只生物打中 → 对该生物**整只**累积适应，打满 {@link #CLEAR} 次后它的**所有攻击**对你无效
  *  （不再区分招式）。所有非生物来源的伤害（摔落、火焰、溺水、虚空、中毒、其他模组的场地伤害…）
  *  共用一条「其他伤害」进度，打满后一并免疫。进度按玩家存档，召唤友方魔虚罗时**继承**过去。</p> */
-@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid="sukuna")
+@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class MahoragaAdaptStore {
     /** 打同一个来源达到这一次数 → "完全适应它的存在"：对其真伤 ×2 + 命中 20 秒禁疗。 */
     public static final int CLEAR=12;

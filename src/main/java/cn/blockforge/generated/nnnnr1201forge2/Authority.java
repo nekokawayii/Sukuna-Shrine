@@ -18,7 +18,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.RegistryObject;
 
 /** 通关奖励与永久权限；不向未通关者泄露路线。 */
-@Mod.EventBusSubscriber(modid="sukuna")
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class Authority {
     public static final RegistryObject<Item> PERMISSION=Content.ITEMS.register("permission",()->new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant().food(new FoodProperties.Builder().nutrition(0).saturationMod(0).alwaysEat().build())){
         @Override public InteractionResultHolder<ItemStack> use(Level l,Player p,InteractionHand h){return unlocked(p)?InteractionResultHolder.fail(p.getItemInHand(h)):super.use(l,p,h);}
@@ -92,7 +92,7 @@ public final class Authority {
         remember(p);Curse.data(p).putBoolean("WorldAuthority",true);Curse.add(p,Curse.maximum(p));
         Journey.give(p,new ItemStack(CURSE.get()));Journey.give(p,new ItemStack(BANNER.get()));upgradeFragment(p);settleMarker(p);
         if(!p.getInventory().contains(new ItemStack(EDITOR.get())))Journey.give(p,new ItemStack(EDITOR.get()));
-        var advancement=p.server.getAdvancements().getAdvancement(new ResourceLocation("sukuna","transgressor"));
+        var advancement=p.server.getAdvancements().getAdvancement(new ResourceLocation("jujutsu_kaisen_cursed_paths","transgressor"));
         if(advancement!=null)for(String criterion:advancement.getCriteria().keySet())p.getAdvancements().award(advancement,criterion);
         Curse.sync(p);AuthorityPackets.sync(p);
     }

@@ -24,7 +24,7 @@ import net.minecraftforge.fml.common.Mod;
  * ②弱点暴击的黑金十字火花 + 屏幕轻震；
  * ③强打的三道黑金刀光、隙的细线、瓦落瓦落的金色钟表盘、加班的黑金火焰与第一人称黑边。
  */
-@Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths", value = Dist.CLIENT)
 public final class RatioVisuals {
     private static final int CORE = 0xFFFFFF, GOLD = 0xD8B24A, BLACK = 0x0B0A08;
     private static final String TEX_GLOW = "textures/effect/glow.png";

@@ -18,7 +18,7 @@ import net.minecraft.world.item.ItemStack;
 public class RitualJeiCategory implements IRecipeCategory<RitualRecipes.Recipe> {
 
     public static RecipeType<RitualRecipes.Recipe> TYPE =
-        RecipeType.create("sukuna", "ritual", RitualRecipes.Recipe.class);
+        RecipeType.create("jujutsu_kaisen_cursed_paths", "ritual", RitualRecipes.Recipe.class);
 
     private final IDrawable icon;
     private final IDrawable background;

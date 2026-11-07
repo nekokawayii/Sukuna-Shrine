@@ -13,7 +13,7 @@ import net.minecraftforge.fml.common.Mod;
 
 /** 命中/终结演出：只做大与渐隐，**不结算任何伤害**（伤害在服务端命中的那一刻已经结清）。
  *  Photon 的发射器没法在运行中改尺寸与不透明度，所以这一层用模组自己的顶点通路画。 */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class GojoBlastClient {
     private record Blast(Vec3 at,double radius,int rgb,long born,int life){}
     /** 宇宙大爆炸：白热核心一闪 → 三层不同速度的壳 → 径向光针 → 迟到的第二圈冲击。 */

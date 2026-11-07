@@ -18,7 +18,7 @@ import net.minecraft.resources.ResourceLocation;
  *
  *  <p>设计要点：</p>
  *  <ul>
- *    <li>动画文件放在 {@code assets/sukuna/player_animations/<名字>.json}，由 PlayerAnimator 自己加载；</li>
+ *    <li>动画文件放在 {@code assets/jujutsu_kaisen_cursed_paths/player_animations/<名字>.json}，由 PlayerAnimator 自己加载；</li>
  *    <li>每个玩家占一个 {@code ModifierLayer<KeyframeAnimationPlayer>}（第 {@link #LAYER} 层）；</li>
  *    <li>**时间轴由我们自己驱动**：动作的时长与击发时机由服务端的 {@code DismantleMotionRules} 决定，
  *        所以这里只把"当前第几刻"喂给它，不用它的自动 tick，保证动画与剑气/位移严格对齐；</li>
@@ -64,7 +64,7 @@ public final class PlayerAnimClient {
     private static KeyframeAnimation animation(String name){
         return CACHE.computeIfAbsent(name,k->{
             try{
-                return PlayerAnimationRegistry.getAnimation(new ResourceLocation("sukuna",k));
+                return PlayerAnimationRegistry.getAnimation(new ResourceLocation("jujutsu_kaisen_cursed_paths",k));
             }catch(Throwable t){
                 System.err.println("[SUKUNA] PlayerAnimator 动画读取失败 "+k+"："+t);
                 return null;

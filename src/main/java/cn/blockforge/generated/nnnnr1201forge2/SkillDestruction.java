@@ -153,7 +153,7 @@ public final class SkillDestruction {
         }
     }
     @SubscribeEvent public static void commands(RegisterCommandsEvent e){
-        e.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("gamerule").then(Commands.literal("desblock").requires(s->s.hasPermission(2))
+        e.getDispatcher().register(Commands.literal("jujutsu_kaisen_cursed_paths").then(Commands.literal("gamerule").then(Commands.literal("desblock").requires(s->s.hasPermission(2))
             .executes(c->{boolean on=enabled(c.getSource().getLevel());c.getSource().sendSuccess(()->Component.literal("技能破坏方块："+on),false);return on?1:0;})
             .then(Commands.argument("value",BoolArgumentType.bool()).executes(c->{boolean on=BoolArgumentType.getBool(c,"value");var server=c.getSource().getServer();set(server,on);c.getSource().sendSuccess(()->Component.literal("全部攻击技能破坏方块："+(on?"开启，请远离建筑":"关闭")),true);return 1;})))));
     }

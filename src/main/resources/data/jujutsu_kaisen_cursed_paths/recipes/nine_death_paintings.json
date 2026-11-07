@@ -1,0 +1,35 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:page_zhang"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:page_huai"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:page_xue"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:page_nong"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:page_qing"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:page_dan"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:page_san"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:page_gu"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:page_shao"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:nine_death_paintings"
+  }
+}

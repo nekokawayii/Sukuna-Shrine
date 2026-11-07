@@ -15,7 +15,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraftforge.network.NetworkHooks;
 
 public final class JacobsLadderEntity extends Entity {
-    public static final ResourceKey<DamageType> HOLY=ResourceKey.create(Registries.DAMAGE_TYPE,new ResourceLocation("sukuna","holy_light"));
+    public static final ResourceKey<DamageType> HOLY=ResourceKey.create(Registries.DAMAGE_TYPE,new ResourceLocation("jujutsu_kaisen_cursed_paths","holy_light"));
     private static final EntityDataAccessor<Integer> AGE=SynchedEntityData.defineId(JacobsLadderEntity.class,EntityDataSerializers.INT);
     private UUID owner;
     public JacobsLadderEntity(EntityType<? extends JacobsLadderEntity> type,Level level){super(type,level);setNoGravity(true);noPhysics=true;noCulling=true;}

@@ -1,0 +1,13 @@
+{
+  "type": "jujutsu_kaisen_cursed_paths:prison_realm",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "minecraft:the_void",
+      "lakes": false,
+      "features": false,
+      "layers": [{"height": 64, "block": "minecraft:bedrock"}],
+      "structure_overrides": []
+    }
+  }
+}

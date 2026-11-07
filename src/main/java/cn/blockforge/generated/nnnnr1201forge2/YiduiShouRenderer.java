@@ -19,7 +19,7 @@ public final class YiduiShouRenderer extends EntityRenderer<YiduiShouEntity> {
     }
 
     @Override public ResourceLocation getTextureLocation(YiduiShouEntity entity) {
-        return new ResourceLocation("sukuna", "textures/entity/yiduishou_0.png");
+        return new ResourceLocation("jujutsu_kaisen_cursed_paths", "textures/entity/yiduishou_0.png");
     }
 
     @Override public void render(YiduiShouEntity entity, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int light) {

@@ -33,10 +33,10 @@ import net.minecraftforge.fml.common.Mod;
  *   <li><b>百鬼夜行</b>：新维度内击败 100 只低级咒灵（维度内每 5 秒补怪，上限 15）。</li>
  * </ol>
  */
-@Mod.EventBusSubscriber(modid = "sukuna")
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths")
 public final class YutaProgress {
     public static final ResourceKey<Level> HYAKKI =
-        ResourceKey.create(Registries.DIMENSION, new ResourceLocation("sukuna", "hyakki"));
+        ResourceKey.create(Registries.DIMENSION, new ResourceLocation("jujutsu_kaisen_cursed_paths", "hyakki"));
 
     private static final int VILLAGER_RANGE = 100;
     private static final int WINDOW_TICKS = 2400;      // 120 秒
@@ -219,7 +219,7 @@ public final class YutaProgress {
     public static void teleportHyakki(ServerPlayer p) {
         ServerLevel level = p.server.getLevel(HYAKKI);
         if (level == null) {
-            p.displayClientMessage(Component.literal("百鬼夜行维度未注册（检查 data/sukuna/dimension/hyakki.json）"), false);
+            p.displayClientMessage(Component.literal("百鬼夜行维度未注册（检查 data/jujutsu_kaisen_cursed_paths/dimension/hyakki.json）"), false);
             return;
         }
         // 记录进入前的主世界坐标，章成后自动送回去。

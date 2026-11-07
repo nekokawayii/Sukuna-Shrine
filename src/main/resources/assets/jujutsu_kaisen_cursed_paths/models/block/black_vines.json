@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cross",
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "cross": "jujutsu_kaisen_cursed_paths:block/black_vines"
+  }
+}

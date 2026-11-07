@@ -23,7 +23,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
  * <p>服务端用 {@code Network.Effect(623)} 广播（position=展开点、life=时长刻）；客户端收到后
  * 强制切第三人称，画 40 刻的扩张黑立方（面 + 棱线），播完自动切回第一人称。
  */
-@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT)
+@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths", value = Dist.CLIENT)
 public final class CullingCubeClient {
     private static final int LIFE = 40;
     private static Vec3 center;

@@ -41,7 +41,7 @@ public final class GojoOpticsClient {
     public static final class Registration {
         @SubscribeEvent public static void shaders(RegisterShadersEvent e){
             shader=null;warned=false;
-            try{e.registerShader(new ShaderInstance(e.getResourceProvider(),new ResourceLocation("sukuna","gojo_optics"),DefaultVertexFormat.POSITION),s->{shader=s;warned=false;});}
+            try{e.registerShader(new ShaderInstance(e.getResourceProvider(),new ResourceLocation("jujutsu_kaisen_cursed_paths","gojo_optics"),DefaultVertexFormat.POSITION),s->{shader=s;warned=false;});}
             catch(java.io.IOException|RuntimeException ex){warned=true;com.mojang.logging.LogUtils.getLogger().warn("苍赫茈后期加载失败，保留独立亮核与光环",ex);}
         }
     }

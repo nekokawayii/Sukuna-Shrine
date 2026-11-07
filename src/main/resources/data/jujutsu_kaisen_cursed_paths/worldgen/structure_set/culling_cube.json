@@ -1,0 +1,16 @@
+{
+  "structures": [
+    {
+      "structure": "jujutsu_kaisen_cursed_paths:culling_cube",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "salt": 4815162,
+    "spacing": 256,
+    "separation": 224,
+    "spread_type": "linear",
+    "frequency": 0.02
+  }
+}

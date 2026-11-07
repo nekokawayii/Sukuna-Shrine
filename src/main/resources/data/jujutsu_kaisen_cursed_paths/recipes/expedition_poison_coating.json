@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:gu_extract"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:mutant_gland"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:seal_black"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:poison_coating",
+    "count": 1
+  }
+}

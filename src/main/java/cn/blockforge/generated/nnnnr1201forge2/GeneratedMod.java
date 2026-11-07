@@ -6,7 +6,7 @@ import net.minecraftforge.event.TickEvent;
 
 @Mod(GeneratedMod.MOD_ID)
 public final class GeneratedMod {
-    public static final String MOD_ID = "sukuna";
+    public static final String MOD_ID = "jujutsu_kaisen_cursed_paths";
     public GeneratedMod() {
         GrowthConfig.register();
         TechniqueConfig.register();

@@ -12,7 +12,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /** 舌头是真正的双向定身，不只给缓慢效果；结束、死亡、收回时立即释放。 */
-@Mod.EventBusSubscriber(modid="sukuna")
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class ShadowBindings {
     private record Hold(ShadowEntity frog,LivingEntity target,Vec3 frogAt,Vec3 targetAt,long end){}
     private static final Map<UUID,Hold> holds=new HashMap<>();

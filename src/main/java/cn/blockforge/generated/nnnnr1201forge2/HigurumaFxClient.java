@@ -5,7 +5,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.common.Mod;
 
 /** 日车宽见新招粒子（r344）：PhotonBridge 贴图粒子，金色法庭风。 */
-@Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths", value = Dist.CLIENT)
 public final class HigurumaFxClient {
     private static final int GOLD = 0xFFE8C86A, PALE = 0xFFFFF0C0, WOOD = 0xFF8A6A3A;
 

@@ -1,0 +1,15 @@
+{
+  "structures": [
+    {
+      "structure": "jujutsu_kaisen_cursed_paths:abandoned_branch",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 44,
+    "separation": 22,
+    "salt": 474551,
+    "frequency": 1.0
+  }
+}

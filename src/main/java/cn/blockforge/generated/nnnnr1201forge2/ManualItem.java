@@ -13,7 +13,7 @@ import net.minecraft.world.level.Level;
 /**
  * 《咒术公开玩法手册》：**一个物品，两个显示后端**。
  * <ul>
- *   <li>装了帕秋莉：右键打开帕秋莉版（书 id <code>sukuna:guide</code>）；</li>
+ *   <li>装了帕秋莉：右键打开帕秋莉版（书 id <code>jujutsu_kaisen_cursed_paths:guide</code>）；</li>
  *   <li>没装：右键打开本模组自带的目录式 GUI。</li>
  * </ul>
  * 帕秋莉是可选依赖，这里用反射调用，不引入编译期依赖。

@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:black_rope_fiber"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:black_rope_fiber"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:black_rope_fiber"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:black_rope_fiber"
+    },
+    {
+      "item": "minecraft:chain"
+    },
+    {
+      "item": "minecraft:chain"
+    },
+    {
+      "item": "minecraft:chain"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:thousand_mile_chain",
+    "count": 1
+  }
+}

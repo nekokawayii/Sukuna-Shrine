@@ -12,7 +12,7 @@ public final class ExpeditionArmorItem extends ArmorItem {
 
     public ExpeditionArmorItem(String id, ArmorMaterial material, Type type, Properties properties) {
         super(material, type, properties);
-        this.texture = "sukuna:textures/models/armor/" + id + "_layer_1.png";
+        this.texture = "jujutsu_kaisen_cursed_paths:textures/models/armor/" + id + "_layer_1.png";
     }
 
     @Override

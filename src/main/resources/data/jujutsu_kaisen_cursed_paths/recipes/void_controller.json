@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "conditions": [{"type": "jujutsu_kaisen_cursed_paths:controller_crafting_enabled"}],
+  "category": "misc",
+  "pattern": ["DDD", "DDD", "DDD"],
+  "key": {"D": {"item": "minecraft:dirt"}},
+  "result": {"item": "jujutsu_kaisen_cursed_paths:void_controller", "count": 1}
+}

@@ -14,7 +14,7 @@ public record NpcLoadout(String role, boolean allSkills, List<Integer> selected)
     public static NpcLoadout only(String role, Integer... skills) { return new NpcLoadout(role, false, List.of(skills)); }
     public List<Integer> skills() {
         if (!allSkills) return selected;
-        if (role.equals("sukuna")) return List.of(0,1,2,3,4,5,6,17,18,19,20,21,24,25,26,27,28,29,30,31,32,33,43,44,200,201,202,203,204,205);
+        if (role.equals("jujutsu_kaisen_cursed_paths")) return List.of(0,1,2,3,4,5,6,17,18,19,20,21,24,25,26,27,28,29,30,31,32,33,43,44,200,201,202,203,204,205);
         if (role.equals("blood")) return java.util.stream.IntStream.rangeClosed(BloodRules.FIRST,BloodRules.LAST).boxed().toList();
         if (role.equals("toji")) return java.util.stream.IntStream.rangeClosed(1,20).boxed().toList();
         var definition = CharacterRegistry.get(role);

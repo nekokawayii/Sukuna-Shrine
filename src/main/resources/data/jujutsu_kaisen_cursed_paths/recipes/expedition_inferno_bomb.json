@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:eternal_fire"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:ash_clump"
+    },
+    {
+      "item": "minecraft:gunpowder"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:inferno_bomb",
+    "count": 2
+  }
+}

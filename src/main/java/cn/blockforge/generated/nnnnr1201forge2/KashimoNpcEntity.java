@@ -19,7 +19,7 @@ public class KashimoNpcEntity extends PathfinderMob {
 
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes()
-            .add(Attributes.MAX_HEALTH, NpcBalance.health("sukuna:kashimo_npc"))
+            .add(Attributes.MAX_HEALTH, NpcBalance.health("jujutsu_kaisen_cursed_paths:kashimo_npc"))
             .add(Attributes.ATTACK_DAMAGE, 8.0)
             .add(Attributes.MOVEMENT_SPEED, 0.34)
             .add(Attributes.FOLLOW_RANGE, 44.0)

@@ -7,7 +7,7 @@ import net.minecraft.resources.ResourceLocation;
 
 /** 原版宽臂玩家骨架，64×64 UV 自动对应用户256×256高清皮肤。 */
 public final class GuardianRenderer extends MobRenderer<GuardianEntity,GuardianRenderer.Model> {
-    private static final ResourceLocation SKIN=new ResourceLocation("sukuna","textures/entity/yuji_guardian.png");
+    private static final ResourceLocation SKIN=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/yuji_guardian.png");
     public GuardianRenderer(EntityRendererProvider.Context context){super(context,new Model(),0.5f);}
     @Override public ResourceLocation getTextureLocation(GuardianEntity entity){return SKIN;}
     public static final class Model extends PlayerModel<GuardianEntity> {

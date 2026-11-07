@@ -23,7 +23,7 @@ import org.joml.Vector4f;
  * <p>分工按项目既有约束：形体（雷柱折线 / 焦痕 / 环）走 {@code Client.ribbon/quad} 顶点通路，
  * 发光（火花、光晕、冲击环）走 PhotonFx 加法混合层。
  */
-@Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths", value = Dist.CLIENT)
 public final class KashimoVisuals {
     private static final int CORE = 0xFFFFFF, GLOW = 0x7FD8FF, DEEP = 0x2E9BE0;
     private static final String TEX_GLOW = "textures/effect/glow.png";

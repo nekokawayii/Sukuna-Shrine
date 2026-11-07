@@ -10,7 +10,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /** 五条悟分支六式的表现层（r314）：顶点通路做形体（黑/实色）+ PhotonFx 加法层做光。 */
-@Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths", value = Dist.CLIENT)
 public final class GojoBranchClient {
     private static final int BLUE = 0xFF6FC8FF, RED = 0xFFFF6A5A, VIOLET = 0xFFB57BFF, WHITE = 0xFFEAF7FF;
     private static final int DARK = 0xF00A0618, DARK2 = 0xE6140B2E;

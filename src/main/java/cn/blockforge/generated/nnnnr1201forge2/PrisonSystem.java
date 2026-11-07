@@ -21,7 +21,7 @@ import net.minecraftforge.eventbus.api.*;
 
 /** 所有封印、解封、库存和传送约束只由服务端裁决。 */
 public final class PrisonSystem {
-    public static final ResourceKey<Level> DIMENSION=ResourceKey.create(Registries.DIMENSION,new ResourceLocation("sukuna","prison_realm"));
+    public static final ResourceKey<Level> DIMENSION=ResourceKey.create(Registries.DIMENSION,new ResourceLocation("jujutsu_kaisen_cursed_paths","prison_realm"));
     private static final Set<UUID> TRANSFERRING=new HashSet<>();
     private static final TicketType<UUID> TICKET=TicketType.create("sukuna_prison",Comparator.comparing(UUID::toString),40);
     public static boolean locked(Entity entity){

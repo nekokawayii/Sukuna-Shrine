@@ -23,8 +23,8 @@ import net.minecraftforge.eventbus.api.*;
 /** 赤血操术服务端。客户端只能提交按键，耗能、冷却、命中和状态均在这里核验。 */
 public final class BloodArts {
     public static final int FX=400,FX_HIT=420,FX_POISON=421,FX_TRAIL=422,FX_HEART=423,FX_DRAIN=424,FX_SHATTER=425,FX_READY=426,FX_SPIKE=427;
-    private static final ResourceKey<DamageType> BLOOD=ResourceKey.create(Registries.DAMAGE_TYPE,new ResourceLocation("sukuna","blood"));
-    private static final ResourceKey<DamageType> TRUE=ResourceKey.create(Registries.DAMAGE_TYPE,new ResourceLocation("sukuna","blood_true"));
+    private static final ResourceKey<DamageType> BLOOD=ResourceKey.create(Registries.DAMAGE_TYPE,new ResourceLocation("jujutsu_kaisen_cursed_paths","blood"));
+    private static final ResourceKey<DamageType> TRUE=ResourceKey.create(Registries.DAMAGE_TYPE,new ResourceLocation("jujutsu_kaisen_cursed_paths","blood_true"));
     private static final UUID SPEED=UUID.fromString("ae133000-0001-4000-8000-000000000001"),ATTACK=UUID.fromString("ae133000-0001-4000-8000-000000000002"),SLOW=UUID.fromString("ae133000-0001-4000-8000-000000000003"),BREAK=UUID.fromString("ae133000-0001-4000-8000-000000000004");
     private static final Map<UUID,State> states=new HashMap<>();
     private static final List<Dot> dots=new ArrayList<>();

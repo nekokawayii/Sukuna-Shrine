@@ -14,7 +14,7 @@ import net.minecraft.world.phys.Vec3;
  *  <p>雷击伤害 = {@link #STRIKE_DAMAGE}（基准 15 的 **20 倍** = 300 原值），走模组统一的
  *  {@code BalanceRules} / {@code CombatSettings.hurt} 结算，并按 {@link AttackTypes#LIGHTNING}
  *  归类（魔虚罗的"雷电适应"吃这一条）。</p> */
-@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid="sukuna")
+@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class Shinbuke {
     /** 左键近战伤害（原值）。 */
     public static final double MELEE_DAMAGE=15;

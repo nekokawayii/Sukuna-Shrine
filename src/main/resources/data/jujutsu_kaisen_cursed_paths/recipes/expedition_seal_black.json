@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:seal_white"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:residue_medium"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:seal_black",
+    "count": 1
+  }
+}

@@ -13,8 +13,8 @@ import org.lwjgl.glfw.GLFW;
 
 /** 显式注册的客户端表现；按键只提交操作，不能自行更改服务端调服/扣费。 */
 public final class ShadowClient {
-    public static final KeyMapping RECALL=new KeyMapping("key.sukuna.shadow_recall",net.minecraftforge.client.settings.KeyConflictContext.IN_GAME,com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,GLFW.GLFW_KEY_UNKNOWN,"key.categories.sukuna");
-    public static final KeyMapping OPEN=new KeyMapping("key.sukuna.ten_shadows",net.minecraftforge.client.settings.KeyConflictContext.IN_GAME,com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,GLFW.GLFW_KEY_UNKNOWN,"key.categories.sukuna");
+    public static final KeyMapping RECALL=new KeyMapping("key.jujutsu_kaisen_cursed_paths.shadow_recall",net.minecraftforge.client.settings.KeyConflictContext.IN_GAME,com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,GLFW.GLFW_KEY_UNKNOWN,"key.categories.sukuna");
+    public static final KeyMapping OPEN=new KeyMapping("key.jujutsu_kaisen_cursed_paths.ten_shadows",net.minecraftforge.client.settings.KeyConflictContext.IN_GAME,com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,GLFW.GLFW_KEY_UNKNOWN,"key.categories.sukuna");
     private static ShadowSystem.State state=new ShadowSystem.State(3,false,new int[11],new int[11]);
     private record Effect(ShadowSystem.Fx fx,long start){}
     private static final List<Effect> effects=new ArrayList<>();

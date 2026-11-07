@@ -19,7 +19,7 @@ import net.minecraftforge.registries.*;
 public final class IceContent {
     public static final RegistryObject<Item> MEMORY=Content.ITEMS.register("uraume_memory",()->new IceFood(true));
     public static final RegistryObject<Item> FISH=Content.ITEMS.register("ice_fish",()->new IceFood(false));
-    private static final DeferredRegister<RecipeSerializer<?>> RECIPES=DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS,"sukuna");
+    private static final DeferredRegister<RecipeSerializer<?>> RECIPES=DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS,"jujutsu_kaisen_cursed_paths");
     public static final RegistryObject<SimpleCraftingRecipeSerializer<IceFishRecipe>> FISH_RECIPE=RECIPES.register("ice_fish",()->new SimpleCraftingRecipeSerializer<>(IceFishRecipe::new));
     public static void init(IEventBus bus){RECIPES.register(bus);}
     private static final class IceFood extends Item {

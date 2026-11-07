@@ -17,7 +17,7 @@ public final class JogoNpcRenderer extends EntityRenderer<JogoNpcEntity> {
     }
 
     @Override public ResourceLocation getTextureLocation(JogoNpcEntity entity) {
-        return new ResourceLocation("sukuna", "textures/entity/jogo_npc_0.png");
+        return new ResourceLocation("jujutsu_kaisen_cursed_paths", "textures/entity/jogo_npc_0.png");
     }
 
     @Override public void render(JogoNpcEntity entity, float yaw, float partial, PoseStack ps, MultiBufferSource buffers, int light) {

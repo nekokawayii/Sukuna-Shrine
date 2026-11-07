@@ -8,7 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 
 /** 胀相：玩家模型 + 指定皮肤。 */
 public final class ChosoRenderer extends MobRenderer<ChosoEntity,PlayerModel<ChosoEntity>> {
-    private static final ResourceLocation SKIN=new ResourceLocation("sukuna","textures/entity/choso.png");
+    private static final ResourceLocation SKIN=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/choso.png");
     public ChosoRenderer(EntityRendererProvider.Context context){
         super(context,new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER),false),0.5f);
     }

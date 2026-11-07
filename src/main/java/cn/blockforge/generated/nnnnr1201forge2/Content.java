@@ -17,24 +17,24 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.phys.Vec3;
 
 public final class Content {
-    public static final DeferredRegister<Item> ITEMS=DeferredRegister.create(ForgeRegistries.ITEMS,"sukuna");
-    public static final DeferredRegister<EntityType<?>> ENTITIES=DeferredRegister.create(ForgeRegistries.ENTITY_TYPES,"sukuna");
-    public static final RegistryObject<EntityType<BuddhaEntity>> BUDDHA=ENTITIES.register("sokushinbutsu",()->EntityType.Builder.of(BuddhaEntity::new,MobCategory.MONSTER).sized(1.7f,4.0f).clientTrackingRange(16).updateInterval(1).build("sukuna:sokushinbutsu"));
-    public static final RegistryObject<EntityType<ParasiteEntity>> PARASITE=ENTITIES.register("parasitic_buddha",()->EntityType.Builder.of(ParasiteEntity::new,MobCategory.MONSTER).sized(1.5f,3.0f).clientTrackingRange(10).build("sukuna:parasitic_buddha"));
-    public static final RegistryObject<EntityType<ParasiteEntity>> MOTHER=ENTITIES.register("buddha_mother",()->EntityType.Builder.of(ParasiteEntity::new,MobCategory.MONSTER).sized(1.8f,3).clientTrackingRange(14).build("sukuna:buddha_mother"));
-    public static final RegistryObject<EntityType<DaitianEntity>> DAITIAN=ENTITIES.register("daitian",()->EntityType.Builder.of(DaitianEntity::new,MobCategory.MONSTER).sized(1.2f,3.5f).clientTrackingRange(12).updateInterval(1).build("sukuna:daitian"));
-    public static final RegistryObject<EntityType<BrokenMahitoEntity>> BROKEN_MAHITO=ENTITIES.register("broken_mahito",()->EntityType.Builder.of(BrokenMahitoEntity::new,MobCategory.MONSTER).sized(1.0f,3.0f).clientTrackingRange(16).updateInterval(1).build("sukuna:broken_mahito"));
-    public static final RegistryObject<EntityType<MahitoLimbEntity>> MAHITO_LIMB=ENTITIES.register("mahito_limb",()->EntityType.Builder.of(MahitoLimbEntity::new,MobCategory.MISC).sized(0.7f,0.7f).clientTrackingRange(16).updateInterval(1).build("sukuna:mahito_limb"));
+    public static final DeferredRegister<Item> ITEMS=DeferredRegister.create(ForgeRegistries.ITEMS,"jujutsu_kaisen_cursed_paths");
+    public static final DeferredRegister<EntityType<?>> ENTITIES=DeferredRegister.create(ForgeRegistries.ENTITY_TYPES,"jujutsu_kaisen_cursed_paths");
+    public static final RegistryObject<EntityType<BuddhaEntity>> BUDDHA=ENTITIES.register("sokushinbutsu",()->EntityType.Builder.of(BuddhaEntity::new,MobCategory.MONSTER).sized(1.7f,4.0f).clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:sokushinbutsu"));
+    public static final RegistryObject<EntityType<ParasiteEntity>> PARASITE=ENTITIES.register("parasitic_buddha",()->EntityType.Builder.of(ParasiteEntity::new,MobCategory.MONSTER).sized(1.5f,3.0f).clientTrackingRange(10).build("jujutsu_kaisen_cursed_paths:parasitic_buddha"));
+    public static final RegistryObject<EntityType<ParasiteEntity>> MOTHER=ENTITIES.register("buddha_mother",()->EntityType.Builder.of(ParasiteEntity::new,MobCategory.MONSTER).sized(1.8f,3).clientTrackingRange(14).build("jujutsu_kaisen_cursed_paths:buddha_mother"));
+    public static final RegistryObject<EntityType<DaitianEntity>> DAITIAN=ENTITIES.register("daitian",()->EntityType.Builder.of(DaitianEntity::new,MobCategory.MONSTER).sized(1.2f,3.5f).clientTrackingRange(12).updateInterval(1).build("jujutsu_kaisen_cursed_paths:daitian"));
+    public static final RegistryObject<EntityType<BrokenMahitoEntity>> BROKEN_MAHITO=ENTITIES.register("broken_mahito",()->EntityType.Builder.of(BrokenMahitoEntity::new,MobCategory.MONSTER).sized(1.0f,3.0f).clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:broken_mahito"));
+    public static final RegistryObject<EntityType<MahitoLimbEntity>> MAHITO_LIMB=ENTITIES.register("mahito_limb",()->EntityType.Builder.of(MahitoLimbEntity::new,MobCategory.MISC).sized(0.7f,0.7f).clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:mahito_limb"));
     /** 隐藏 Boss「观测者」：假玩家外观，不 AI、不受伤、只盯着镜头。 */
-    public static final RegistryObject<EntityType<ObserverEntity>> OBSERVER=ENTITIES.register("observer",()->EntityType.Builder.of(ObserverEntity::new,MobCategory.MONSTER).sized(0.6f,1.8f).clientTrackingRange(24).updateInterval(1).build("sukuna:observer"));
+    public static final RegistryObject<EntityType<ObserverEntity>> OBSERVER=ENTITIES.register("observer",()->EntityType.Builder.of(ObserverEntity::new,MobCategory.MONSTER).sized(0.6f,1.8f).clientTrackingRange(24).updateInterval(1).build("jujutsu_kaisen_cursed_paths:observer"));
     /** 夏油杰：第二章人形 Boss（HD 皮肤 geto.png + 原版玩家骨架）。 */
-    public static final RegistryObject<EntityType<GetoEntity>> GETO=ENTITIES.register("geto",()->EntityType.Builder.of(GetoEntity::new,MobCategory.MONSTER).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("sukuna:geto"));
+    public static final RegistryObject<EntityType<GetoEntity>> GETO=ENTITIES.register("geto",()->EntityType.Builder.of(GetoEntity::new,MobCategory.MONSTER).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:geto"));
     /** 低级咒灵：夏油杰「咒灵操术·群袭」的召唤物，运行时解析 basement_wanderer.bbmodel。 */
-    public static final RegistryObject<EntityType<LowCurseEntity>> LOW_CURSE=ENTITIES.register("low_curse",()->EntityType.Builder.of(LowCurseEntity::new,MobCategory.MONSTER).sized(0.7f,2.0f).clientTrackingRange(12).updateInterval(2).build("sukuna:low_curse"));
+    public static final RegistryObject<EntityType<LowCurseEntity>> LOW_CURSE=ENTITIES.register("low_curse",()->EntityType.Builder.of(LowCurseEntity::new,MobCategory.MONSTER).sized(0.7f,2.0f).clientTrackingRange(12).updateInterval(2).build("jujutsu_kaisen_cursed_paths:low_curse"));
     /** 里香：乙骨忧太的召唤物（无限血、两分钟、自动攻击）。 */
     /** 死灭洄游专用的「羂索」：只会召唤强化原版生物的轻量独立生物（r230）。 */
-    public static final RegistryObject<EntityType<character.culling.CullingGetoEntity>> CULLING_GETO=ENTITIES.register("culling_geto",()->EntityType.Builder.of(character.culling.CullingGetoEntity::new,MobCategory.MONSTER).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(2).build("sukuna:culling_geto"));
-    public static final RegistryObject<EntityType<RikaEntity>> RIKA=ENTITIES.register("rika",()->EntityType.Builder.of(RikaEntity::new,MobCategory.CREATURE).sized(1.6f,4.0f).clientTrackingRange(16).updateInterval(1).build("sukuna:rika"));
+    public static final RegistryObject<EntityType<character.culling.CullingGetoEntity>> CULLING_GETO=ENTITIES.register("culling_geto",()->EntityType.Builder.of(character.culling.CullingGetoEntity::new,MobCategory.MONSTER).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(2).build("jujutsu_kaisen_cursed_paths:culling_geto"));
+    public static final RegistryObject<EntityType<RikaEntity>> RIKA=ENTITIES.register("rika",()->EntityType.Builder.of(RikaEntity::new,MobCategory.CREATURE).sized(1.6f,4.0f).clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:rika"));
     public static final RegistryObject<Item> IDLE_TRANSFIGURATION_CURSE=ITEMS.register("idle_transfiguration_curse",()->new Item(new Item.Properties().rarity(Rarity.EPIC).stacksTo(16)));
     public static final RegistryObject<Item> MAHITO_FINGER=ITEMS.register("mahito_finger",()->new Item(new Item.Properties().rarity(Rarity.EPIC).stacksTo(16)));
     public static final RegistryObject<Item> YUJI_FAMILY_PHOTO=ITEMS.register("yuji_family_photo",()->new Item(new Item.Properties().rarity(Rarity.RARE).stacksTo(1)));
@@ -43,40 +43,40 @@ public final class Content {
     public static final RegistryObject<EntityType<character.higuruma.HigurumaJudgeEntity>> HIGURUMA_JUDGE =
         ENTITIES.register("higuruma_judge", () -> EntityType.Builder.<character.higuruma.HigurumaJudgeEntity>of(
             character.higuruma.HigurumaJudgeEntity::new, MobCategory.CREATURE).sized(0.8f, 2.2f)
-            .clientTrackingRange(10).updateInterval(2).build("sukuna:higuruma_judge"));
+            .clientTrackingRange(10).updateInterval(2).build("jujutsu_kaisen_cursed_paths:higuruma_judge"));
     public static final RegistryObject<Item> EXECUTIONER_SWORD=ITEMS.register("executioner_sword",
         ()->new character.higuruma.ExecutionerSwordItem(new Item.Properties().stacksTo(1).durability(1).rarity(Rarity.EPIC)));
     /** 无为转变·分身 / 尾巴：玩家模型、友方。 */
     public static final RegistryObject<EntityType<character.mahito.MahitoCloneEntity>> MAHITO_CLONE =
         ENTITIES.register("mahito_clone", () -> EntityType.Builder.<character.mahito.MahitoCloneEntity>of(
             character.mahito.MahitoCloneEntity::new, MobCategory.CREATURE).sized(0.6f, 1.8f)
-            .clientTrackingRange(10).updateInterval(2).build("sukuna:mahito_clone"));
+            .clientTrackingRange(10).updateInterval(2).build("jujutsu_kaisen_cursed_paths:mahito_clone"));
     /** 圆钝果实：真人领域里的不可移动实体（渲染 一堆手.bbmodel）。 */
     public static final RegistryObject<EntityType<YiduiShouEntity>> YIDUI = ENTITIES.register("yidui",
-        () -> EntityType.Builder.of(YiduiShouEntity::new, MobCategory.MONSTER).sized(2.0f, 2.0f).clientTrackingRange(10).updateInterval(20).build("sukuna:yidui"));
+        () -> EntityType.Builder.of(YiduiShouEntity::new, MobCategory.MONSTER).sized(2.0f, 2.0f).clientTrackingRange(10).updateInterval(20).build("jujutsu_kaisen_cursed_paths:yidui"));
     /** 漏壶（NPC）：敌对，使用漏壶技能；见到玩家开领域（冷却 300 秒）。 */
     public static final RegistryObject<EntityType<JogoNpcEntity>> JOGO_NPC = ENTITIES.register("jogo_npc",
-        () -> EntityType.Builder.of(JogoNpcEntity::new, MobCategory.MONSTER).sized(1.0f, 3.0f).fireImmune().clientTrackingRange(16).updateInterval(1).build("sukuna:jogo_npc"));
+        () -> EntityType.Builder.of(JogoNpcEntity::new, MobCategory.MONSTER).sized(1.0f, 3.0f).fireImmune().clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:jogo_npc"));
     public static final RegistryObject<Item> JOGO_NPC_EGG = ITEMS.register("jogo_npc_spawn_egg",
         () -> new net.minecraftforge.common.ForgeSpawnEggItem(JOGO_NPC, 0xE6400A, 0x2A1410, new Item.Properties()));
     /** 里梅（NPC）：敌对，玩家模型 + 冰凝咒法。 */
     public static final RegistryObject<EntityType<UraumeNpcEntity>> URAUME_NPC = ENTITIES.register("uraume_npc",
-        () -> EntityType.Builder.of(UraumeNpcEntity::new, MobCategory.MONSTER).sized(0.6f, 1.8f).clientTrackingRange(16).updateInterval(1).build("sukuna:uraume_npc"));
+        () -> EntityType.Builder.of(UraumeNpcEntity::new, MobCategory.MONSTER).sized(0.6f, 1.8f).clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:uraume_npc"));
     public static final RegistryObject<Item> URAUME_NPC_EGG = ITEMS.register("uraume_npc_spawn_egg",
         () -> new net.minecraftforge.common.ForgeSpawnEggItem(URAUME_NPC, 0xE8EEF2, 0x6FA8C8, new Item.Properties()));
     /** 胀相：中立角色，会赤血操术。 */
     public static final RegistryObject<EntityType<ChosoEntity>> CHOSO=ENTITIES.register("choso",
-        ()->EntityType.Builder.of(ChosoEntity::new,MobCategory.CREATURE).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("sukuna:choso"));
+        ()->EntityType.Builder.of(ChosoEntity::new,MobCategory.CREATURE).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:choso"));
     public static final RegistryObject<Item> CHOSO_EGG=ITEMS.register("choso_spawn_egg",
         ()->new net.minecraftforge.common.ForgeSpawnEggItem(CHOSO,0x2A1030,0x8C1E3A,new Item.Properties()));
     /** 东堂葵：玩家模型 NPC，用「不义游戏」（注入咒力 + 换位）。皮肤等用户给图，先用默认 Steve。 */
     public static final RegistryObject<EntityType<TodoNpcEntity>> TODO_NPC=ENTITIES.register("todo_npc",
-        ()->EntityType.Builder.of(TodoNpcEntity::new,MobCategory.CREATURE).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("sukuna:todo_npc"));
+        ()->EntityType.Builder.of(TodoNpcEntity::new,MobCategory.CREATURE).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:todo_npc"));
     public static final RegistryObject<Item> TODO_NPC_EGG=ITEMS.register("todo_npc_spawn_egg",
         ()->new net.minecraftforge.common.ForgeSpawnEggItem(TODO_NPC,0x2A2038,0xB58CFF,new Item.Properties()));
     /** 石流龙：玩家模型 NPC，用「咒力强化/放出」（光炮 / 追踪弹 / 喷涌 / 甜品）。皮肤等用户给图，先用默认 Steve。 */
     public static final RegistryObject<EntityType<RyuNpcEntity>> RYU_NPC=ENTITIES.register("ryu_npc",
-        ()->EntityType.Builder.of(RyuNpcEntity::new,MobCategory.CREATURE).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("sukuna:ryu_npc"));
+        ()->EntityType.Builder.of(RyuNpcEntity::new,MobCategory.CREATURE).sized(0.6f,1.8f).clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:ryu_npc"));
     public static final RegistryObject<Item> RYU_NPC_EGG=ITEMS.register("ryu_npc_spawn_egg",
         ()->new net.minecraftforge.common.ForgeSpawnEggItem(RYU_NPC,0x0A1016,0x9FDFFF,new Item.Properties()));
     public static final RegistryObject<EntityType<HakariNpcEntity>> HAKARI_NPC=ENTITIES.register("hakari_npc",
@@ -117,7 +117,7 @@ public final class Content {
     private static RegistryObject<EntityType<SorcererNpcEntity>> sorcerer(String role){
         return ENTITIES.register(role+"_npc",()->EntityType.Builder.<SorcererNpcEntity>of(
             (type,level)->new SorcererNpcEntity(type,level,role),MobCategory.CREATURE)
-            .sized(role.equals("mahito")?1f:.6f,role.equals("mahito")?3f:1.8f).clientTrackingRange(12).updateInterval(2).build("sukuna:"+role+"_npc"));
+            .sized(role.equals("mahito")?1f:.6f,role.equals("mahito")?3f:1.8f).clientTrackingRange(12).updateInterval(2).build("jujutsu_kaisen_cursed_paths:"+role+"_npc"));
     }
     private static RegistryObject<Item> sorcererEgg(String role,RegistryObject<EntityType<SorcererNpcEntity>> type,int a,int b){
         return ITEMS.register(role+"_npc_spawn_egg",()->new net.minecraftforge.common.ForgeSpawnEggItem(type,a,b,new Item.Properties()));
@@ -125,7 +125,7 @@ public final class Content {
     /** 不义游戏：纯客户端特效被注入的一瞬间就地生成的锚点实体（不渲染、不可攻击）。 */
     public static final RegistryObject<EntityType<TodoAnchorEntity>> TODO_ANCHOR=ENTITIES.register("todo_anchor",
         ()->EntityType.Builder.of(TodoAnchorEntity::new,MobCategory.MISC).sized(0.25f,0.25f)
-            .clientTrackingRange(10).updateInterval(20).build("sukuna:todo_anchor"));
+            .clientTrackingRange(10).updateInterval(20).build("jujutsu_kaisen_cursed_paths:todo_anchor"));
     /** 咒具·游云：三节棍，伤害 18，右键横扫 10 格。 */
     public static final RegistryObject<Item> YUYUN=ITEMS.register("yuyun",()->new net.minecraft.world.item.SwordItem(
             net.minecraft.world.item.Tiers.IRON,15,-2.4f,new Item.Properties().stacksTo(1).rarity(Rarity.RARE)){
@@ -315,7 +315,7 @@ public final class Content {
 
     /** 领域内的坟头（插着鬼妖村正，右键拔出）。 */
     public static final net.minecraftforge.registries.DeferredRegister<net.minecraft.world.level.block.Block> YUTA_BLOCKS=
-        net.minecraftforge.registries.DeferredRegister.create(net.minecraftforge.registries.ForgeRegistries.BLOCKS,"sukuna");
+        net.minecraftforge.registries.DeferredRegister.create(net.minecraftforge.registries.ForgeRegistries.BLOCKS,"jujutsu_kaisen_cursed_paths");
     public static final RegistryObject<net.minecraft.world.level.block.Block> YUTA_GRAVE=YUTA_BLOCKS.register("yuta_grave",
         ()->new character.yuta.YutaGraveBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of()
             .noCollission().strength(0.4f).noOcclusion().lightLevel(st->7)));
@@ -325,7 +325,7 @@ public final class Content {
             .strength(-1f,3600000f).lightLevel(st->15)));
 
     public static final net.minecraftforge.registries.DeferredRegister<net.minecraft.world.level.block.entity.BlockEntityType<?>> YUTA_BES=
-        net.minecraftforge.registries.DeferredRegister.create(net.minecraftforge.registries.ForgeRegistries.BLOCK_ENTITY_TYPES,"sukuna");
+        net.minecraftforge.registries.DeferredRegister.create(net.minecraftforge.registries.ForgeRegistries.BLOCK_ENTITY_TYPES,"jujutsu_kaisen_cursed_paths");
     public static final RegistryObject<net.minecraft.world.level.block.entity.BlockEntityType<character.yuta.YutaGraveBlockEntity>> YUTA_GRAVE_BE=
         YUTA_BES.register("yuta_grave",()->net.minecraft.world.level.block.entity.BlockEntityType.Builder
             .of(character.yuta.YutaGraveBlockEntity::new,YUTA_GRAVE.get()).build(null));

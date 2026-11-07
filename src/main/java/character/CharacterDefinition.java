@@ -17,7 +17,7 @@ public record CharacterDefinition(String id, String name, String technique, Stri
      * 事件型章节：给「目睹里香」「决战夏油杰」「百鬼夜行」这种无法用累计击杀表达的个人线用。
      * <p>进度不写在这条数据里，由各角色自己的进度监听器判定并写入存档标记（CharacterService.markChapter）。
      *
-     * @param bossId  仅 BOSS_KILL 使用，实体类型编号（如 sukuna:geto）
+     * @param bossId  仅 BOSS_KILL 使用，实体类型编号（如 jujutsu_kaisen_cursed_paths:geto）
      * @param target  需要的次数：VILLAGER_THEN_KILLS 是窗口内击杀数，BOSS_KILL 是 1，DIMENSION_KILLS 是该维度击杀数
      */
     public record EventChapter(String id, String title, String goal, int target, ChapterKind kind,

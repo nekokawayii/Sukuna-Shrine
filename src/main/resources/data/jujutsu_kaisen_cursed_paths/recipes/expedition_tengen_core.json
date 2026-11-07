@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:star_curse_core"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:spirit_stone"
+    },
+    {
+      "item": "minecraft:obsidian"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:nether_star_fragment"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:tengen_core",
+    "count": 1
+  }
+}

@@ -496,7 +496,7 @@ public final class CullingRules {
             BlockPos at=level.getBlockState(base).isAir()?base:base.above();
             level.setBlockAndUpdate(at,Blocks.CHEST.defaultBlockState());
             if(level.getBlockEntity(at) instanceof ChestBlockEntity chest)
-                chest.setLootTable(new ResourceLocation("sukuna","chests/hidden_rich"),rnd.nextLong());
+                chest.setLootTable(new ResourceLocation("jujutsu_kaisen_cursed_paths","chests/hidden_rich"),rnd.nextLong());
             for(ServerPlayer viewer:level.players())
                 if(viewer.distanceToSqr(Vec3.atCenterOf(at))<96*96)
                     viewer.displayClientMessage(Component.literal("资源互换：终极宝箱出现在 ("+x+", "+at.getY()+", "+z+")").withStyle(ChatFormatting.GOLD),false);

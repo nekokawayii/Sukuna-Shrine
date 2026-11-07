@@ -43,12 +43,12 @@ public final class ShadowModel {
         return mesh?m:m.translate(-origin.x,-origin.y,-origin.z);
     }
     private void load(){
-        try(var in=Minecraft.getInstance().getResourceManager().open(new ResourceLocation("sukuna","models/"+folder+"/"+id+".bbmodel"));var reader=new InputStreamReader(in,StandardCharsets.UTF_8)){
+        try(var in=Minecraft.getInstance().getResourceManager().open(new ResourceLocation("jujutsu_kaisen_cursed_paths","models/"+folder+"/"+id+".bbmodel"));var reader=new InputStreamReader(in,StandardCharsets.UTF_8)){
             JsonObject root=JsonParser.parseReader(reader).getAsJsonObject();
             Map<String,JsonObject> elements=new HashMap<>(),groups=new HashMap<>();
             for(JsonElement e:root.getAsJsonArray("elements")){JsonObject o=e.getAsJsonObject();elements.put(o.get("uuid").getAsString(),o);}
             if(root.has("groups"))for(JsonElement e:root.getAsJsonArray("groups")){JsonObject o=e.getAsJsonObject();groups.put(o.get("uuid").getAsString(),o);}
-            textures=new ResourceLocation[root.getAsJsonArray("textures").size()];for(int i=0;i<textures.length;i++)textures[i]=new ResourceLocation("sukuna","textures/entity/"+folder+"/"+id+"_"+i+".png");
+            textures=new ResourceLocation[root.getAsJsonArray("textures").size()];for(int i=0;i<textures.length;i++)textures[i]=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/"+folder+"/"+id+"_"+i+".png");
             float tw=root.getAsJsonObject("resolution").get("width").getAsFloat(),th=root.getAsJsonObject("resolution").get("height").getAsFloat();
             for(JsonElement node:root.getAsJsonArray("outliner"))roots.add(compile(node,elements,groups,tw,th,new Matrix4f()));
             for(JsonElement e:root.getAsJsonArray("animations")){

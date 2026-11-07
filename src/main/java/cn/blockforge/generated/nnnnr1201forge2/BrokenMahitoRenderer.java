@@ -12,7 +12,7 @@ import net.minecraft.resources.ResourceLocation;
 
 /** 使用提供的真人续作皮肤渲染破碎真人。 */
 public final class BrokenMahitoRenderer extends MobRenderer<BrokenMahitoEntity,BrokenMahitoRenderer.Model> {
-    private static final ResourceLocation SKIN=new ResourceLocation("sukuna","textures/entity/broken_mahito.png");
+    private static final ResourceLocation SKIN=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/broken_mahito.png");
     public BrokenMahitoRenderer(EntityRendererProvider.Context context){super(context,new Model(),0.4f);}
     @Override public ResourceLocation getTextureLocation(BrokenMahitoEntity entity){return SKIN;}
     @Override protected void scale(BrokenMahitoEntity entity,PoseStack pose,float partial){float s=3f/1.8f;pose.scale(s,s,s);}

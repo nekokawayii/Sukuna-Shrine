@@ -26,7 +26,7 @@ public class SukunaNpcEntity extends PathfinderMob {
 
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes()
-            .add(Attributes.MAX_HEALTH, NpcBalance.health("sukuna:sukuna_npc"))
+            .add(Attributes.MAX_HEALTH, NpcBalance.health("jujutsu_kaisen_cursed_paths:sukuna_npc"))
             .add(Attributes.ATTACK_DAMAGE, 14.0)
             .add(Attributes.MOVEMENT_SPEED, 0.34)
             .add(Attributes.FOLLOW_RANGE, 48.0)

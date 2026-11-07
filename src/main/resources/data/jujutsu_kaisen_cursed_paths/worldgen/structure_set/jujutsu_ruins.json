@@ -1,0 +1,16 @@
+{
+  "structures": [
+    {
+      "structure": "jujutsu_kaisen_cursed_paths:jujutsu_ruins",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "salt": 47139851,
+    "spacing": 28,
+    "separation": 10,
+    "spread_type": "linear",
+    "frequency": 0.6
+  }
+}

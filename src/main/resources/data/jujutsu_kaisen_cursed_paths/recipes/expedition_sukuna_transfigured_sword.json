@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:soul_molt"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:gu_extract"
+    },
+    {
+      "item": "minecraft:iron_sword"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:seal_black"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:transfigured_sword",
+    "count": 1
+  }
+}

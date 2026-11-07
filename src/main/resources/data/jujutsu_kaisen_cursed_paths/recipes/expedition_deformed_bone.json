@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:tainted_bone"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:tainted_bone"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:tainted_bone"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:deformed_bone",
+    "count": 1
+  }
+}

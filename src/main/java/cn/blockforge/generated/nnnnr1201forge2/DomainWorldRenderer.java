@@ -15,12 +15,12 @@ import net.minecraftforge.fml.common.Mod;
 import java.util.*;
 
 /** 真实世界中的球面天空和对拼交界。深度测试保留，绝不使用遮住 NPC 的全屏贴片。 */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class DomainWorldRenderer {
     private static DomainPresentation.Snapshot snapshot;
     private static long received;
     private static net.minecraft.client.multiplayer.ClientLevel receivedLevel;
-    @Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)
+    @Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT,bus=Mod.EventBusSubscriber.Bus.MOD)
     public static final class Setup {
         @SubscribeEvent public static void setup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event){
             event.enqueueWork(()->DomainPresentation.receiver=DomainWorldRenderer::receive);
@@ -76,7 +76,7 @@ public final class DomainWorldRenderer {
                 Vec3 direction=polygon.get(i).subtract(f.style().cameraSky()?camera:f.center());
                 us[i]=(float)character.domain.DomainVisualRules.u(direction.x,direction.z); // Math.atan2
                 vs[i]=(float)character.domain.DomainVisualRules.v(direction.x,direction.y,direction.z); // Math.asin
-                if(f.style().texture().equals("sukuna:textures/effect/domain_sunset.png"))
+                if(f.style().texture().equals("jujutsu_kaisen_cursed_paths:textures/effect/domain_sunset.png"))
                     vs[i]=(float)character.domain.DomainVisualRules.sunsetV(vs[i]);
             }
             for(int i=1;i<count;i++)us[i]=(float)character.domain.DomainVisualRules.unwrap(us[0],us[i]);

@@ -19,7 +19,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 /** 自然生成与任务生成共用模板，范围记录保存在各自世界中。 */
 public final class RuinAtmosphere {
-    private static final ResourceKey<Structure> KEY=ResourceKey.create(Registries.STRUCTURE,new ResourceLocation("sukuna","jujutsu_ruins"));
+    private static final ResourceKey<Structure> KEY=ResourceKey.create(Registries.STRUCTURE,new ResourceLocation("jujutsu_kaisen_cursed_paths","jujutsu_ruins"));
     public static final class Sites extends SavedData {
         final List<BlockPos> origins=new ArrayList<>();
         static Sites load(CompoundTag tag){Sites s=new Sites();for(long n:tag.getLongArray("Origins"))s.origins.add(BlockPos.of(n));return s;}
@@ -28,7 +28,7 @@ public final class RuinAtmosphere {
     private static Sites sites(ServerLevel l){return l.getDataStorage().computeIfAbsent(Sites::load,Sites::new,"sukuna_ruins_r20");}
     public static boolean build(ServerPlayer p){
         if(p.level().dimension()!=Level.OVERWORLD){p.sendSystemMessage(Component.literal("请回到主世界生成高专遗迹。"));return false;}
-        var level=p.serverLevel();var template=level.getStructureManager().get(new ResourceLocation("sukuna","jujutsu_ruins"));
+        var level=p.serverLevel();var template=level.getStructureManager().get(new ResourceLocation("jujutsu_kaisen_cursed_paths","jujutsu_ruins"));
         if(template.isEmpty()){p.sendSystemMessage(Component.literal("高专建筑资源未载入，未生成建筑。"));return false;}
         BlockPos base=null;
         // 只选择玩家未踏入的区块，避免清除住宅；地形起伏限制防止地基悬空。

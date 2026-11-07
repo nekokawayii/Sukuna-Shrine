@@ -9,9 +9,9 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
  * 伏黑甚尔 20 条连招的**专属动作**（走项目自绘动作系统 {@link MotionFallbackClient}）。
  *
  * <p>每招三段姿态：起手 → 命中 → 收招；三段之间线性混合，其它玩家也能看到。
- * 动作名与 {@link character.toji.TojiCombos} 的连招编号一一对应：`sukuna:toji_c1` ~ `sukuna:toji_c20`。
+ * 动作名与 {@link character.toji.TojiCombos} 的连招编号一一对应：`jujutsu_kaisen_cursed_paths:toji_c1` ~ `jujutsu_kaisen_cursed_paths:toji_c20`。
  */
-@Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths", value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class TojiActions {
     private static final DismantlePose.Pose STAND = new DismantlePose.Pose(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
@@ -60,7 +60,7 @@ public final class TojiActions {
 
     private static void action(int combo, int duration, DismantlePose.Pose windup,
                                DismantlePose.Pose strike, DismantlePose.Pose recover) {
-        MotionFallbackClient.register("sukuna:toji_c" + combo, duration, age -> {
+        MotionFallbackClient.register("jujutsu_kaisen_cursed_paths:toji_c" + combo, duration, age -> {
             double t = Math.max(0, Math.min(1, age / duration));
             DismantlePose.Pose pose;
             if (t < 0.3) pose = STAND.mix(windup, t / 0.3);

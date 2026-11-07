@@ -12,10 +12,10 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 /** 由 tools/bbmodel_to_java.py 从 model.bbmodel 自动生成（方块数 85，贴图 128×128）。 */
-@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid="sukuna", value=net.minecraftforge.api.distmarker.Dist.CLIENT, bus=net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.MOD)
+@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths", value=net.minecraftforge.api.distmarker.Dist.CLIENT, bus=net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.MOD)
 public final class JogoNpcModel extends EntityModel<JogoNpcEntity> {
     public static final net.minecraft.client.model.geom.ModelLayerLocation LAYER =
-        new net.minecraft.client.model.geom.ModelLayerLocation(new net.minecraft.resources.ResourceLocation("sukuna", "jogo_npc"), "main");
+        new net.minecraft.client.model.geom.ModelLayerLocation(new net.minecraft.resources.ResourceLocation("jujutsu_kaisen_cursed_paths", "jogo_npc"), "main");
     private final ModelPart root;
 
     public JogoNpcModel(ModelPart root) { this.root = root; }

@@ -17,7 +17,7 @@ public final class PrisonClient {
     public static void reset(){realm=null;light=null;}
     public static final class RealmRenderer extends EntityRenderer<PrisonRealmEntity> {
         public RealmRenderer(EntityRendererProvider.Context c){super(c);shadowRadius=.6f;reset();}
-        @Override public ResourceLocation getTextureLocation(PrisonRealmEntity e){return new ResourceLocation("sukuna","textures/entity/sealing/prison_realm_0.png");}
+        @Override public ResourceLocation getTextureLocation(PrisonRealmEntity e){return new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/sealing/prison_realm_0.png");}
         @Override public void render(PrisonRealmEntity e,float yaw,float partial,PoseStack ps,MultiBufferSource buffers,int packed){
             ps.pushPose();ps.mulPose(Axis.YP.rotationDegrees(180-e.getYRot()));ps.translate(0,-.125,0);
             float frame=Math.max(0,Math.min(PrisonRules.OPEN_TICKS,e.frame()+(e.open()?partial:-2*partial)));
@@ -27,7 +27,7 @@ public final class PrisonClient {
     }
     public static final class LightRenderer extends EntityRenderer<JacobsLadderEntity> {
         public LightRenderer(EntityRendererProvider.Context c){super(c);shadowRadius=0;}
-        @Override public ResourceLocation getTextureLocation(JacobsLadderEntity e){return new ResourceLocation("sukuna","textures/entity/sealing/jacobs_ladder_0.png");}
+        @Override public ResourceLocation getTextureLocation(JacobsLadderEntity e){return new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/sealing/jacobs_ladder_0.png");}
         @Override public void render(JacobsLadderEntity e,float yaw,float partial,PoseStack ps,MultiBufferSource buffers,int packed){
             ps.pushPose();float scale=10/Math.max(1,light().width());ps.scale(scale,16/Math.max(1,light().height()),scale);
             light().render(ps,buffers,LightTexture.FULL_BRIGHT,"holy_aurora",Math.min(6,(e.age()+partial)/20),1);ps.popPose();

@@ -8,7 +8,7 @@ import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 
 public final class ShadowContent {
-    public static final RegistryObject<EntityType<ShadowEntity>> SHIKIGAMI=Content.ENTITIES.register("ten_shadow",()->EntityType.Builder.of(ShadowEntity::new,MobCategory.CREATURE).sized(.9f,1.2f).clientTrackingRange(16).updateInterval(1).build("sukuna:ten_shadow"));
+    public static final RegistryObject<EntityType<ShadowEntity>> SHIKIGAMI=Content.ENTITIES.register("ten_shadow",()->EntityType.Builder.of(ShadowEntity::new,MobCategory.CREATURE).sized(.9f,1.2f).clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:ten_shadow"));
     public static final RegistryObject<Item> SOUL=Content.ITEMS.register("megumi_soul",()->new Item(new Item.Properties().rarity(Rarity.RARE)));
     public static final RegistryObject<Item> SEANCE=Content.ITEMS.register("megumi_seance",()->new MegumiSeanceItem(new Item.Properties().rarity(Rarity.EPIC).stacksTo(16)));
     public static void init(IEventBus bus){bus.addListener(ShadowContent::attributes);}

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:cauldron"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:alloy_block"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:curse_crystal"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:curse_flesh"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:gu_vat",
+    "count": 1
+  }
+}

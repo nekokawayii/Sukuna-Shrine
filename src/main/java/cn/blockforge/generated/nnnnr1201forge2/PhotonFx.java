@@ -123,7 +123,7 @@ public final class PhotonFx {
         if(mode==MODE_VERTICAL)tryCall(field(config,"renderer"),"setRenderMode",enumOf(ROOT+"gameobject.emitter.data.RendererSetting$Particle$Mode","Vertical"));
         if(bloom!=0){Object r=field(config,"renderer");tryCall(r,"setBloomEffect",true);tryCall(r,"setBloomColor",bloom);}
         Object material=field(config,"material");
-        tryCall(material,"setMaterial",type("gameobject.emitter.data.material.TextureMaterial").getConstructor(ResourceLocation.class).newInstance(new ResourceLocation("sukuna",texture)));
+        tryCall(material,"setMaterial",type("gameobject.emitter.data.material.TextureMaterial").getConstructor(ResourceLocation.class).newInstance(new ResourceLocation("jujutsu_kaisen_cursed_paths",texture)));
         Object blend=call(material,"getBlendMode");
         tryCall(blend,"setEnableBlend",true);
         if(additive){
@@ -155,7 +155,7 @@ public final class PhotonFx {
         Class<?> iface=type("fx.IEffect");
         return Proxy.newProxyInstance(PhotonFx.class.getClassLoader(),new Class<?>[]{iface},(proxy,method,args)->switch(method.getName()){
             case "getLevel"->Minecraft.getInstance().level;
-            case "toString"->"sukuna:photon_fx";
+            case "toString"->"jujutsu_kaisen_cursed_paths:photon_fx";
             case "hashCode"->System.identityHashCode(proxy);
             case "equals"->proxy==args[0];
             default->null;
@@ -165,7 +165,7 @@ public final class PhotonFx {
         if(broken||placements.isEmpty()||Minecraft.getInstance().level==null)return null;
         try{
             Object fx=type("fx.FX").getConstructor().newInstance();
-            call(fx,"setFxLocation",new ResourceLocation("sukuna","gojo_fx"));
+            call(fx,"setFxLocation",new ResourceLocation("jujutsu_kaisen_cursed_paths","gojo_fx"));
             @SuppressWarnings("unchecked") List<Object> objects=(List<Object>)call(call(fx,"getMainFX"),"objects");
             for(Placement p:placements)objects.add(p.emitter().object());
             // 用内部 runtime（不拷贝对象）：这样每个发射器的独立位置/朝向才真的生效，

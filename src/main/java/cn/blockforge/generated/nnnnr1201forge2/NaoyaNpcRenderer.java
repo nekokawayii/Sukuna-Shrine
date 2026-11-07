@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 /** 禅院直哉 NPC：保留玩家几何体，使用独立绘制的金发白袍皮肤。 */
 public final class NaoyaNpcRenderer extends MobRenderer<NaoyaNpcEntity, PlayerModel<NaoyaNpcEntity>> {
     private static final ResourceLocation SKIN =
-        new ResourceLocation("sukuna", "textures/entity/naoya_npc.png");
+        new ResourceLocation("jujutsu_kaisen_cursed_paths", "textures/entity/naoya_npc.png");
 
     public NaoyaNpcRenderer(EntityRendererProvider.Context context) {
         super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false), 0.5f);

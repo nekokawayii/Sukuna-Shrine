@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:curse_flesh"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:curse_flesh"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:curse_flesh"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:curse_flesh"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:idle_transfigured_flesh",
+    "count": 1
+  }
+}

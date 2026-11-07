@@ -12,7 +12,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.function.Consumer;
 
 public final class Network {
-    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation("sukuna", "skills"), () -> "sukuna-chain-r295", "sukuna-chain-r295"::equals, "sukuna-chain-r295"::equals);
+    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation("jujutsu_kaisen_cursed_paths", "skills"), () -> "sukuna-chain-r295", "sukuna-chain-r295"::equals, "sukuna-chain-r295"::equals);
     public static Consumer<Effect> clientReceiver = e -> {};
     /** 天逆蛑腰间挂件：服务端告诉客户端某个玩家背包里有没有这件咒具。 */
     public static Consumer<PendantState> pendantReceiver = p -> {};

@@ -21,7 +21,7 @@ import net.minecraftforge.fml.common.Mod;
  *  <p>Photon 的叠加混合 + bloom 画不出纯黑，所以"纯黑盘面 + 白色硬边"这一小块仍用模组自己的顶点通路，
  *  和整块底衬一起画在 {@code AFTER_CUTOUT_BLOCKS}：比天空与方块高一级、比实体低一级，
  *  并顺手清掉深度缓冲，让远处的粒子不再被（已经被盖住的地形）挡掉，而怪物与玩家依旧压在画布之上。</p> */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class GojoVoidClient {
     private static int ownerId=Integer.MIN_VALUE;
     private static Vec3 center,anchor,holeAt,holeOffset;

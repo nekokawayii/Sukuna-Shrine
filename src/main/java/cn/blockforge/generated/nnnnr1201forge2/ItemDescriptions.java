@@ -7,10 +7,10 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.ChatFormatting;
 
-@Mod.EventBusSubscriber(modid="sukuna")
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class ItemDescriptions {
     @SubscribeEvent public static void tooltip(ItemTooltipEvent event){
-        var id=ForgeRegistries.ITEMS.getKey(event.getItemStack().getItem());if(id==null||!id.getNamespace().equals("sukuna"))return;
+        var id=ForgeRegistries.ITEMS.getKey(event.getItemStack().getItem());if(id==null||!id.getNamespace().equals("jujutsu_kaisen_cursed_paths"))return;
         String text=switch(id.getPath()){
             case "sukuna_finger"->"不可合成；击败神庙内咒胎戴天获得。长按右键吞噬，最多20根。|每根固定增加："+GrowthConfig.FINGER.description(Network.tooltipFactor(BalanceRules.Category.PLAYER_HEALTH),Network.tooltipFactor(BalanceRules.Category.PLAYER_ATTACK),Network.tooltipFactor(BalanceRules.Category.DAMAGE))+"。|5根起普攻附带一次原伤害70%的解；Del单独切换附拳。|5/10/15/18/20根解锁招式强化。|15根解锁反转术式：轮盘左侧方格，松手直接自疗；永久生命成长越高，恢复量和咒力消耗越高。";
             case "buddha_body"->"击败即身佛掉落；吃满20根手指后长按右键融合，仅一次。|"+GrowthConfig.BODY.description(Network.tooltipFactor(BalanceRules.Category.PLAYER_HEALTH),Network.tooltipFactor(BalanceRules.Category.PLAYER_ATTACK),Network.tooltipFactor(BalanceRules.Category.DAMAGE))+"；解锁飞行、世界斩、虚空捌和空间斩。";
@@ -28,7 +28,7 @@ public final class ItemDescriptions {
             case "void_key"->"击败虎杖残影后获得。右键进入基岩层虚空竞技场，再次右键返回。|击败五条悟后吃下虚空相咒胎，解锁虚空御厨子；虎杖残影通关后可前往Y=1000真人区域。|丢失后可用 /sukuna void key 补领。";
             case "gojo_spawn_egg"->"测试用：生成五条悟。|150000 生命、20 防御（关闭模式按固定值首领比值 "+BalanceRules.ratio(BalanceRules.factor(false,BalanceRules.Category.BOSS_FIXED))+" 生效，为 "+BalanceRules.number(BalanceRules.strength(150000,BalanceRules.Category.BOSS_FIXED))+" 生命），无下限免疫除世界斩与领域展延外的全部伤害。|击败固定掉落虚空相咒胎与六眼。";
             case "gojo_fragment"->"六眼：击败五条悟固定掉落 1 枚，没有任何阶段要求。|玩家：直接右键（潜行右键也行）即为吃下，屏幕最右侧开启五条悟技能轮盘。|女仆：对准自家女仆潜行右键喂下，之后在女仆任务里选择「六眼」，她会自己放苍、赫、茈与无量空处。|与宿傩记忆、里梅记忆共存，互不覆盖，任务随时可切回。|无限制茈会伤到自己，慎用。";
-            case "void_controller"->"右键打开控制面板，填写生命、频率和伤害，按回车保存。|填写整合包原值（开启模式严格 100% 生效）；关闭模式按分类比值生效（首领生命×"+BalanceRules.ratio(BalanceRules.factor(false,BalanceRules.Category.BOSS))+"、护甲×"+BalanceRules.ratio(BalanceRules.factor(false,BalanceRules.Category.BOSS_ARMOR))+"、受伤上限×"+BalanceRules.ratio(BalanceRules.factor(false,BalanceRules.Category.BOSS_HIT_CAP))+"、净土守护者生命×"+BalanceRules.ratio(BalanceRules.factor(false,BalanceRules.Category.BOSS_GUARDIAN))+"），时间、数量和范围不变。|整合包模式开关：config/sukuna-growth.toml 的 balance.modpackMode；完整分类比值可用 /sukuna balance 查看。|首领设置全存档共用，立即覆盖已加载首领；生命修改同时补满。|末页可开启全部首领与所有生物互相敌对。|可选配方：工作台九格泥土；默认关闭。|在 config/sukuna-growth.toml 的 crafting 中将 controllerCrafting 改为 true，重启后生效；联机以服务端为准。";
+            case "void_controller"->"右键打开控制面板，填写生命、频率和伤害，按回车保存。|填写整合包原值（开启模式严格 100% 生效）；关闭模式按分类比值生效（首领生命×"+BalanceRules.ratio(BalanceRules.factor(false,BalanceRules.Category.BOSS))+"、护甲×"+BalanceRules.ratio(BalanceRules.factor(false,BalanceRules.Category.BOSS_ARMOR))+"、受伤上限×"+BalanceRules.ratio(BalanceRules.factor(false,BalanceRules.Category.BOSS_HIT_CAP))+"、净土守护者生命×"+BalanceRules.ratio(BalanceRules.factor(false,BalanceRules.Category.BOSS_GUARDIAN))+"），时间、数量和范围不变。|整合包模式开关：config/jujutsu_kaisen_cursed_paths-growth.toml 的 balance.modpackMode；完整分类比值可用 /sukuna balance 查看。|首领设置全存档共用，立即覆盖已加载首领；生命修改同时补满。|末页可开启全部首领与所有生物互相敌对。|可选配方：工作台九格泥土；默认关闭。|在 config/jujutsu_kaisen_cursed_paths-growth.toml 的 crafting 中将 controllerCrafting 改为 true，重启后生效；联机以服务端为准。";
             case "true_false_love"->"女仆饰品｜放入女仆饰品栏生效，放在背包或手中无效。|女仆需已吃下宿傩记忆、选择伏魔御厨子任务并站立，随后会与主人对战。|女仆降至1血时结束对战并恢复满血；主人死亡重生后也会摘下返还。|对战结束，饰品返回主人背包；背包已满则掉在主人身边。";
             case "eternal_love"->"右键生物：你的术式不再伤害或锁定它；Shift＋右键解除。|工作台：上中金锭；中排紫水晶碎片、钻石、紫水晶碎片；下中虞美人。";
             case "sukuna_memory"->"右键打开咒术选择书：五条悟、里梅、咒胎九相图、虎杖、宿傩、伏黑甚尔。|确认后立即切换角色术式、中央轮盘和资源条；书不消耗，可再次换角色。|甚尔没有咒力和轮盘：R突进，潜行+R重击，跳跃+R跃身。|角色进度分开保存，战斗中不能切换；纸与腐肉可合成补领。";

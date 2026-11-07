@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 
 /** 死灭洄游专用羂索的渲染器：直接复用夏油杰皮肤 + 原版玩家骨架（r230）。 */
 public final class CullingGetoRenderer extends MobRenderer<character.culling.CullingGetoEntity, PlayerModel<character.culling.CullingGetoEntity>> {
-    private static final ResourceLocation SKIN = new ResourceLocation("sukuna", "textures/entity/geto.png");
+    private static final ResourceLocation SKIN = new ResourceLocation("jujutsu_kaisen_cursed_paths", "textures/entity/geto.png");
 
     public CullingGetoRenderer(EntityRendererProvider.Context context) { super(context, new Model(), 0.6f); }
 

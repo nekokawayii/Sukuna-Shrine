@@ -23,7 +23,7 @@ import net.minecraftforge.fml.common.Mod;
  *        伤害 = **本次普攻伤害的 3 次方**（封顶 {@link #MAX_DAMAGE}）。</li>
  *  </ul>
  *  服务端负责掷骰、发标记与结算瞬移黑闪；客户端只管画红圈、瞄准判定与发按键包。 */
-@Mod.EventBusSubscriber(modid="sukuna")
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class BlackFlashMarks {
     /** 特效号：客户端据此在指定点画红圈（position=点，owner=敌人 id，life=持续时间刻）。 */
     public static final int FX_MARK=237;

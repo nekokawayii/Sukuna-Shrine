@@ -34,7 +34,7 @@ public class TodoNpcEntity extends PathfinderMob {
 
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes()
-            .add(Attributes.MAX_HEALTH, NpcBalance.health("sukuna:todo_npc"))
+            .add(Attributes.MAX_HEALTH, NpcBalance.health("jujutsu_kaisen_cursed_paths:todo_npc"))
             .add(Attributes.ATTACK_DAMAGE, 6.0)
             .add(Attributes.MOVEMENT_SPEED, 0.32)
             .add(Attributes.FOLLOW_RANGE, 32.0)

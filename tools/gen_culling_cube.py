@@ -5,7 +5,7 @@ S = 48
 BLACK = "minecraft:black_concrete"
 GLASS = "minecraft:black_stained_glass"
 RED = "minecraft:red_concrete"
-palette = [BLACK, GLASS, RED, "sukuna:culling_seam"]
+palette = [BLACK, GLASS, RED, "jujutsu_kaisen_cursed_paths:culling_seam"]
 pidx = {n: i for i, n in enumerate(palette)}
 
 blocks = []
@@ -30,7 +30,7 @@ for dx in range(-2, 3):
         inside = abs(dx) <= 1 and 0 <= dy <= 2
         if inside:
             # 缝隙本体：可走进去的判定方块
-            put(x, y, z, "sukuna:culling_seam")
+            put(x, y, z, "jujutsu_kaisen_cursed_paths:culling_seam")
         else:
             put(x, y, z, RED)
 
@@ -78,7 +78,7 @@ out += b"\x09" + tag_string("entities") + b"\x0a" + struct.pack(">i", 0)
 
 out += b"\x00"  # end root
 
-dst = "src/main/resources/data/sukuna/structures/culling_cube/main.nbt"
+dst = "src/main/resources/data/jujutsu_kaisen_cursed_paths/structures/culling_cube/main.nbt"
 os.makedirs(os.path.dirname(dst), exist_ok=True)
 with open(dst, "wb") as f:
     f.write(gzip.compress(bytes(out), 9, mtime=0))

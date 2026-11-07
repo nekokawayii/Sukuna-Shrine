@@ -127,7 +127,7 @@ public final class CharacterService {
         Curse.sync(p);CharacterPackets.sync(p,true);TenShadows.sync(p);ShadowSystem.sync(p);AuthorityPackets.sync(p);
         p.sendSystemMessage(Component.literal("已选择 "+definition.name()+" · "+definition.technique()+"。"+(definition.hasWheel()?"长按N打开中央轮盘，R释放，J查看个人线。":"无咒力、无轮盘：R突进，潜行+R重击，跳跃+R跃身；J查看个人线。")));
     }
-    private static String legacyId(CompoundTag tag) { return tag.getBoolean("Memory")?"sukuna":tag.getBoolean("GojoMemory")?"gojo":tag.getBoolean("UraumeMemory")?"uraume":"sukuna"; }
+    private static String legacyId(CompoundTag tag) { return tag.getBoolean("Memory")?"jujutsu_kaisen_cursed_paths":tag.getBoolean("GojoMemory")?"gojo":tag.getBoolean("UraumeMemory")?"uraume":"jujutsu_kaisen_cursed_paths"; }
     private static CompoundTag initial(CharacterDefinition d) {
         var tag=new CompoundTag();tag.putDouble("Energy",d.resource()==CharacterDefinition.Resource.STAMINA?0:d.family()==CharacterDefinition.Family.SHRINE?1000:d.config().base().energy());tag.putDouble("TojiStamina",100);tag.putBoolean("MemoryGiven",true);
         switch(d.family()) {

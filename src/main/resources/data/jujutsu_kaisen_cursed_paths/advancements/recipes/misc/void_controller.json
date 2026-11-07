@@ -1,0 +1,16 @@
+{
+  "parent": "minecraft:recipes/root",
+  "conditions": [{"type": "jujutsu_kaisen_cursed_paths:controller_crafting_enabled"}],
+  "criteria": {
+    "has_dirt": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {"items": [{"items": ["minecraft:dirt"]}]}
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {"recipe": "jujutsu_kaisen_cursed_paths:void_controller"}
+    }
+  },
+  "requirements": [["has_dirt", "has_the_recipe"]],
+  "rewards": {"recipes": ["jujutsu_kaisen_cursed_paths:void_controller"]}
+}

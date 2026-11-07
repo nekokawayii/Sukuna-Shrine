@@ -1,9 +1,9 @@
 {
   "replace": false,
   "values": [
-    "sukuna:cursed_wasteland",
-    "sukuna:cursed_sakura_forest",
-    "sukuna:scorched_volcanic_fields",
-    "sukuna:ancient_battlefield"
+    "jujutsu_kaisen_cursed_paths:cursed_wasteland",
+    "jujutsu_kaisen_cursed_paths:cursed_sakura_forest",
+    "jujutsu_kaisen_cursed_paths:scorched_volcanic_fields",
+    "jujutsu_kaisen_cursed_paths:ancient_battlefield"
   ]
 }

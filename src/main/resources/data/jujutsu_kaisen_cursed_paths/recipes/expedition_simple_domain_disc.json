@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:ancient_talisman"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:curse_crystal"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:simple_domain_disc",
+    "count": 1
+  }
+}

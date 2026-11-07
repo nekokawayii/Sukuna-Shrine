@@ -17,27 +17,27 @@ import net.minecraftforge.fml.common.Mod;
  *
  * <p>覆盖的是"新的"那几个 NPC：胀相 / 里梅 / 漏壶 / 东堂葵 / 石流龙。
  */
-@Mod.EventBusSubscriber(modid = "sukuna")
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths")
 public final class NpcBalance {
     /** NPC → 关闭模式下的基础血量（开启时 ×30）。 */
     private static final Map<String, Double> BASE = new LinkedHashMap<>();
     static {
-        BASE.put("sukuna:choso", 550.0);
-        BASE.put("sukuna:uraume_npc", 500.0);
-        BASE.put("sukuna:jogo_npc", 800.0);
-        BASE.put("sukuna:todo_npc", 600.0);
-        BASE.put("sukuna:ryu_npc", 700.0);
-        BASE.put("sukuna:hakari_npc", 900.0);
-        BASE.put("sukuna:naoya_npc", 800.0);
-        BASE.put("sukuna:higuruma_npc", 900.0);
-        BASE.put("sukuna:sukuna_npc", 2000.0);
-        BASE.put("sukuna:kashimo_npc", 1200.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:choso", 550.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:uraume_npc", 500.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:jogo_npc", 800.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:todo_npc", 600.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:ryu_npc", 700.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:hakari_npc", 900.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:naoya_npc", 800.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:higuruma_npc", 900.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:sukuna_npc", 2000.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:kashimo_npc", 1200.0);
         // r215：五位共用 SorcererNpcEntity 的角色 NPC 之前没进这张表，整合包模式下血量还停在 300~700。
-        BASE.put("sukuna:nanami_npc", 300.0);
-        BASE.put("sukuna:yuta_npc", 700.0);
-        BASE.put("sukuna:yuki_npc", 650.0);
-        BASE.put("sukuna:toji_npc", 600.0);
-        BASE.put("sukuna:mahito_npc", 600.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:nanami_npc", 300.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:yuta_npc", 700.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:yuki_npc", 650.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:toji_npc", 600.0);
+        BASE.put("jujutsu_kaisen_cursed_paths:mahito_npc", 600.0);
     }
     public static final double MODPACK_MULTIPLIER = 30.0;
 
@@ -73,7 +73,7 @@ public final class NpcBalance {
             return;
         }
         // r282：宿傩 NPC 特殊档——整合包 18000 / 非整合包 2500（不走 ×30）
-        double want = "sukuna:sukuna_npc".equals(id)
+        double want = "jujutsu_kaisen_cursed_paths:sukuna_npc".equals(id)
             ? (BalanceRules.modpackMode() ? 18000.0 : 2500.0)
             : (BalanceRules.modpackMode() ? base * MODPACK_MULTIPLIER : base);
         if (Math.abs(attribute.getBaseValue() - want) > 0.5) {

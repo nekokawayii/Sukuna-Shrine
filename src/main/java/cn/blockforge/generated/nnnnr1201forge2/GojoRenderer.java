@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 
 /** 五条悟：直接用玩家模型与指定皮肤渲染，不新增独立骨架。 */
 public final class GojoRenderer extends MobRenderer<GojoEntity,PlayerModel<GojoEntity>> {
-    private static final ResourceLocation SKIN=new ResourceLocation("sukuna","textures/entity/gojo.png");
+    private static final ResourceLocation SKIN=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/entity/gojo.png");
     public GojoRenderer(EntityRendererProvider.Context context){
         super(context,new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER),false),0.5f);
     }

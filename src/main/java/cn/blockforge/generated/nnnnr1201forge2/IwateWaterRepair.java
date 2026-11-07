@@ -36,6 +36,6 @@ public final class IwateWaterRepair {
         }
         player.sendSystemMessage(Component.literal("岩手水系修复完成：恢复 "+count+" 列天然河流/梯田；跳过 "+skipped+" 列建筑或非天然方块。没有重建房屋或首领。"));return count;
     }
-    @SubscribeEvent public static void commands(RegisterCommandsEvent event){event.getDispatcher().register(Commands.literal("sukuna").then(Commands.literal("iwate").then(Commands.literal("repair_water").requires(s->s.hasPermission(2)).executes(c->repair(c.getSource().getPlayerOrException())))));}
+    @SubscribeEvent public static void commands(RegisterCommandsEvent event){event.getDispatcher().register(Commands.literal("jujutsu_kaisen_cursed_paths").then(Commands.literal("iwate").then(Commands.literal("repair_water").requires(s->s.hasPermission(2)).executes(c->repair(c.getSource().getPlayerOrException())))));}
     private IwateWaterRepair(){}
 }

@@ -8,9 +8,9 @@ import snownee.jade.api.*;
 import snownee.jade.api.config.IPluginConfig;
 
 /** Jade 只显示服务器提供的余额，绝不在客户端初始化一个假的满咒力池。 */
-@WailaPlugin("sukuna")
+@WailaPlugin("jujutsu_kaisen_cursed_paths")
 public final class JadeNpcPlugin implements IWailaPlugin {
-    private static final ResourceLocation UID = new ResourceLocation("sukuna", "npc_curse");
+    private static final ResourceLocation UID = new ResourceLocation("jujutsu_kaisen_cursed_paths", "npc_curse");
     private static final Provider PROVIDER = new Provider();
     private static final class Provider implements IEntityComponentProvider, IServerDataProvider<EntityAccessor> {
         @Override public void appendServerData(CompoundTag tag, EntityAccessor accessor) {

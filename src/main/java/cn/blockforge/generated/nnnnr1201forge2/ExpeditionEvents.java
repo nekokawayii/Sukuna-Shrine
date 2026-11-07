@@ -92,7 +92,7 @@ public final class ExpeditionEvents {
         if(!(e.getSource().getEntity() instanceof ServerPlayer p)||CombatSettings.scripted(e.getSource())||e.getSource().getDirectEntity()!=p||!e.getSource().is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK))return;
         ItemStack s=p.getMainHandItem();if(!s.is(ExpeditionContent.item("soul_splitter"))&&EnchantmentHelper.getItemEnchantmentLevel(ExpeditionContent.SOUL_EDGE.get(),s)==0)return;
         if(!CombatSettings.canHit(p,e.getEntity()))return;
-        var key=net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,new net.minecraft.resources.ResourceLocation("sukuna",s.getItem() instanceof SoulDevourerItem?"soul_devourer":"soul_edge"));
+        var key=net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,new net.minecraft.resources.ResourceLocation("jujutsu_kaisen_cursed_paths",s.getItem() instanceof SoulDevourerItem?"soul_devourer":"soul_edge"));
         var source=new net.minecraft.world.damagesource.DamageSource(p.level().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE).getHolderOrThrow(key),p);
         e.setCanceled(true);AttackTypes.mark(AttackTypes.SOUL);
         float before=e.getEntity().getHealth()+e.getEntity().getAbsorptionAmount();

@@ -17,7 +17,7 @@ import net.minecraftforge.fml.common.Mod;
  *
  *  <p>每道雷由若干段折线组成，从目标上方 24 格劈到目标身上，配色按彩虹循环（hue 随索引与时间偏移），
  *  用加色混合画成"彩色雷"；落地再补一圈扩散光环。存活 {@link #LIFE} 刻。</p> */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class ShinbukeVisuals {
     /** 网络编号（避开已有区段：180-186 终式、187-203 五条悟、204-218 魔虚罗）。 */
     public static final int STRIKE=219;

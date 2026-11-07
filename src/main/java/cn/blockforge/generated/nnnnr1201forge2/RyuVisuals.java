@@ -17,7 +17,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /** 石流龙的表现层：蓝白高密度光炮、蓄力、追踪弹、咒力喷涌环、甜品、领域起手。 */
-@Mod.EventBusSubscriber(modid = "sukuna", value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = "jujutsu_kaisen_cursed_paths", value = Dist.CLIENT)
 public final class RyuVisuals {
     private static final int CORE = 0xFFFFFF, GLOW = 0x9FDFFF, DEEP = 0x3E93C8;
     private static final String TEX_GLOW = "textures/effect/glow.png";
@@ -47,7 +47,7 @@ public final class RyuVisuals {
     private static final int[] COLORS = {0xFFFFFF, 0xFF5A5A, 0xFFD24A, 0x7CFF6B, 0x6BE8FF, 0x6B8CFF, 0xFF6BE8, 0xFFA24A};
     /** 内部天际图（用户给的落日晚霞，原图原分辨率）。 */
     private static final net.minecraft.resources.ResourceLocation SKY_TEXTURE =
-        new net.minecraft.resources.ResourceLocation("sukuna", "textures/effect/domain_sunset.png");
+        new net.minecraft.resources.ResourceLocation("jujutsu_kaisen_cursed_paths", "textures/effect/domain_sunset.png");
     private static Sky SKY;
     private static Object world;
 

@@ -19,9 +19,9 @@ import net.minecraftforge.event.server.ServerAboutToStartEvent;
 
 public final class ExpeditionWorldgen {
     public static final List<String> BIOMES=List.of("cursed_wasteland","cursed_sakura_forest","scorched_volcanic_fields","ancient_battlefield");
-    private static final DeferredRegister<Codec<? extends BiomeSource>> SOURCES=DeferredRegister.create(Registries.BIOME_SOURCE,"sukuna");
-    private static final DeferredRegister<Codec<? extends ChunkGenerator>> GENERATORS=DeferredRegister.create(Registries.CHUNK_GENERATOR,"sukuna");
-    private static final DeferredRegister<Feature<?>> FEATURES=DeferredRegister.create(ForgeRegistries.FEATURES,"sukuna");
+    private static final DeferredRegister<Codec<? extends BiomeSource>> SOURCES=DeferredRegister.create(Registries.BIOME_SOURCE,"jujutsu_kaisen_cursed_paths");
+    private static final DeferredRegister<Codec<? extends ChunkGenerator>> GENERATORS=DeferredRegister.create(Registries.CHUNK_GENERATOR,"jujutsu_kaisen_cursed_paths");
+    private static final DeferredRegister<Feature<?>> FEATURES=DeferredRegister.create(ForgeRegistries.FEATURES,"jujutsu_kaisen_cursed_paths");
     static {
         SOURCES.register("cursed_overworld",()->CursedSource.CODEC);
         GENERATORS.register("culling_city",()->CullingCityGenerator.CODEC);
@@ -39,7 +39,7 @@ public final class ExpeditionWorldgen {
         var base=generator.getBiomeSource();
         // 已经由其他模组全面接管的群系源保持原样，避免破坏整合包；专用探索维度仍可使用。
         if(!(base instanceof MultiNoiseBiomeSource))return;
-        List<Holder<Biome>> added=BIOMES.stream().map(id->(Holder<Biome>)registry.registryOrThrow(Registries.BIOME).getHolderOrThrow(ResourceKey.create(Registries.BIOME,new ResourceLocation("sukuna",id)))).toList();
+        List<Holder<Biome>> added=BIOMES.stream().map(id->(Holder<Biome>)registry.registryOrThrow(Registries.BIOME).getHolderOrThrow(ResourceKey.create(Registries.BIOME,new ResourceLocation("jujutsu_kaisen_cursed_paths",id)))).toList();
         try{
             var field=Arrays.stream(ChunkGenerator.class.getDeclaredFields()).filter(f->f.getType()==BiomeSource.class).findFirst().orElseThrow();
             var source=new CursedSource(base,added);field.setAccessible(true);field.set(generator,source);

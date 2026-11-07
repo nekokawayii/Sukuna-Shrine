@@ -10,7 +10,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.common.Mod;
 
 /** 固定在世界坐标中的横向十字与实体月牙，不随镜头旋转。 */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class NetBranchVisuals {
     private record Visual(Network.Effect effect,long born){}
     private record Hold(long id,long end){}

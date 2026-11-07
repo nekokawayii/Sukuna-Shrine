@@ -13,7 +13,7 @@ import net.minecraftforge.eventbus.api.*;
 import net.minecraftforge.fml.common.Mod;
 
 /** 白色空间、独立高位机位和输入隔离；所有设置退出后归还。 */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class ObserverClient {
     private static boolean active;
     private static CameraType savedCamera;

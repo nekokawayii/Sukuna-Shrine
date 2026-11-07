@@ -50,7 +50,7 @@ public final class CullingSpawns {
         int sukuna = 0, sorcerers = 0, curses = 0, toji = 0;
         for (Mob m : all) {
             String kind = m.getPersistentData().getString("CullingKind");
-            if ("sukuna".equals(kind)) sukuna++;
+            if ("jujutsu_kaisen_cursed_paths".equals(kind)) sukuna++;
             else if ("sorcerer".equals(kind)) sorcerers++;
             else curses++;
             if (TOJI_ROLE.equals(m.getPersistentData().getString("ExpeditionRole"))) toji++;
@@ -252,7 +252,7 @@ public final class CullingSpawns {
         if (!level.noCollision(mob)) { mob.discard(); return; }
         level.getScoreboard().removePlayerFromTeam(mob.getScoreboardName());
         mob.getPersistentData().putBoolean("CullingEnemy", true);
-        mob.getPersistentData().putString("CullingKind", "sukuna");
+        mob.getPersistentData().putString("CullingKind", "jujutsu_kaisen_cursed_paths");
         mob.getPersistentData().putLong("ExpeditionDespawnAt", level.getGameTime() + 9600);
         var max = mob.getAttribute(Attributes.MAX_HEALTH);
         if (max != null) { double hp = Math.max(2000, max.getBaseValue()) * 3; max.setBaseValue(hp); mob.setHealth((float) hp); }

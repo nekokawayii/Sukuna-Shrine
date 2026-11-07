@@ -151,10 +151,10 @@ public final class YutaTerrain {
         }
     }
 
-    /** 贴 resources/data/sukuna/structures/zhenyanxiangai.nbt；只把真正变化的方块写入记录。 */
+    /** 贴 resources/data/jujutsu_kaisen_cursed_paths/structures/zhenyanxiangai.nbt；只把真正变化的方块写入记录。 */
     private static void placePattern(Job job) {
         var manager = job.level.getServer().getStructureManager();
-        var template = manager.get(new ResourceLocation("sukuna", "zhenyanxiangai"));
+        var template = manager.get(new ResourceLocation("jujutsu_kaisen_cursed_paths", "zhenyanxiangai"));
         if (template.isEmpty()) return;
         StructureTemplate t = template.get();
         net.minecraft.core.Vec3i size = t.getSize();

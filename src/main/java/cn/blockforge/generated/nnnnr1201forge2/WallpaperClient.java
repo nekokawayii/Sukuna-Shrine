@@ -18,7 +18,7 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.system.MemoryStack;
 
 /** 先应用本人的共享选择；未设置时使用发行版默认值，询问版在答复前不读取。 */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class WallpaperClient {
     private static final class Incoming {
         final long revision,born;final int count,total;final byte[] data;int next,offset;
@@ -36,7 +36,7 @@ public final class WallpaperClient {
     private static String imageStatus="尚未读取";
     private static long session,generation,tick,nextUploadTick,decodeFrame=-1;
     private static final Properties config=new Properties();
-    private static Path configPath(){return net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get().resolve("sukuna-wallpaper.properties");}
+    private static Path configPath(){return net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get().resolve("jujutsu_kaisen_cursed_paths-wallpaper.properties");}
     private static void load(){
         boolean failed=false;
         config.clear();try{if(Files.isRegularFile(configPath()))try(var reader=Files.newBufferedReader(configPath())){config.load(reader);}}catch(IOException|IllegalArgumentException ex){failed=true;tell("壁纸配置读取失败，本次仍会询问。");}
@@ -132,7 +132,7 @@ public final class WallpaperClient {
         try{
             // 先淘汰旧纹理，再解码新图，避免暂时同时保留九张完整像素图。
             while(textures.size()>=8)releaseTexture(textures.keySet().iterator().next());
-            ResourceLocation location=new ResourceLocation("sukuna","wallpaper/"+id);
+            ResourceLocation location=new ResourceLocation("jujutsu_kaisen_cursed_paths","wallpaper/"+id);
             WallpaperTexture.register(mc.getTextureManager(),location,bytes);textures.put(id,location);if(mc.player!=null&&id.equals(mc.player.getUUID())){imageStatus="图片已上传，可绘制";tellBar("斩击壁纸：图片已就绪");}return location;
         }catch(IOException|RuntimeException ex){
             // 当前图片失败后不在每帧重试；重新授权或收到新图片时才恢复尝试。
@@ -164,7 +164,7 @@ public final class WallpaperClient {
         root.then(Commands.literal("default").executes(c->{preference="default";save();revoke();load();if(mode.equals("on"))apply(true);else if(mode.equals("off"))apply(false);else promptPending=true;
             tell("已改为跟随本版默认："+(autoShareEdition()?"自动共享版 → 默认分享":"询问版 → 每次询问"));return 1;}));
         root.then(Commands.literal("reload").executes(c->{revoke();load();if(mode.equals("on"))apply(true);else if(mode.equals("off"))apply(false);else promptPending=true;return 1;}));
-        root.then(Commands.literal("status").executes(c->{tell("壁纸分享："+(allowed?"本次开启":"本次关闭")+"；保存选项："+preference+"；本版默认："+WallpaperPolicy.DEFAULT_MODE+"；图片："+imageStatus+"；全部斩击壁纸阶段："+(WallpaperPolicy.allSlashes(Client.progress.voidShrine(),Client.progress.pureLandVictory())?"已解锁":"未解锁，仅世界斩")+"；配置：config/sukuna-wallpaper.properties");return 1;}));
+        root.then(Commands.literal("status").executes(c->{tell("壁纸分享："+(allowed?"本次开启":"本次关闭")+"；保存选项："+preference+"；本版默认："+WallpaperPolicy.DEFAULT_MODE+"；图片："+imageStatus+"；全部斩击壁纸阶段："+(WallpaperPolicy.allSlashes(Client.progress.voidShrine(),Client.progress.pureLandVictory())?"已解锁":"未解锁，仅世界斩")+"；配置：config/jujutsu_kaisen_cursed_paths-wallpaper.properties");return 1;}));
         e.getDispatcher().register(root);
     }
     private WallpaperClient(){}

@@ -44,7 +44,7 @@ public class UraumeNpcEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-            .add(Attributes.MAX_HEALTH, NpcBalance.health("sukuna:uraume_npc"))
+            .add(Attributes.MAX_HEALTH, NpcBalance.health("jujutsu_kaisen_cursed_paths:uraume_npc"))
             .add(Attributes.ATTACK_DAMAGE, 8.0)
             .add(Attributes.MOVEMENT_SPEED, 0.30)
             .add(Attributes.FOLLOW_RANGE, 40.0)
@@ -67,7 +67,7 @@ public class UraumeNpcEntity extends Monster {
         boolean kin = level().getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(16),
             e -> e != this && e.isAlive() && (e instanceof SukunaNpcEntity
                 || e instanceof Player p && character.CharacterService.selected(p) != null
-                    && "sukuna".equals(character.CharacterService.selected(p).id()))).size() > 0;
+                    && "jujutsu_kaisen_cursed_paths".equals(character.CharacterService.selected(p).id()))).size() > 0;
         shotAt = (int) now + (kin ? 25 : 50);
         if (!NpcCurse.spend(this, 40)) { shotAt = (int) now + 20; return; }
         boolean domain = character.npc.NpcDomain.inIceDomain(this);

@@ -13,7 +13,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 /**
  * 不义游戏：1 注入咒力（给任意方块/实体/弹幕挂标记，永久有效直到被消耗）、
  * 2 换位（无 CD，与准星最近的有咒力标记的东西换位，换位前后各 0.3 秒免疫伤害）。
- * <p>玩家与 NPC（{@code sukuna:todo_npc}）共用同一套标记与换位逻辑。
+ * <p>玩家与 NPC（{@code jujutsu_kaisen_cursed_paths:todo_npc}）共用同一套标记与换位逻辑。
  */
 public final class TodoCombat {
     public static final String DODGE_UNTIL = "TodoDodgeUntil";

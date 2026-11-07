@@ -20,22 +20,22 @@ import net.minecraft.client.Minecraft;
 public final class HighResIcon {
     /** 默认目标最长边（16×16 的物品格，32 或 64 都能被原版正常渲染）。 */
     public static final int DEFAULT_MAX=64;
-    /** 源图目录（模组资源内）：{@code assets/sukuna/textures/item_src/<name>.png}。 */
+    /** 源图目录（模组资源内）：{@code assets/jujutsu_kaisen_cursed_paths/textures/item_src/<name>.png}。 */
     public static String sourcePath(String name){return "textures/item_src/"+name+".png";}
-    /** 目标路径：{@code assets/sukuna/textures/item/<name>.png}。 */
+    /** 目标路径：{@code assets/jujutsu_kaisen_cursed_paths/textures/item/<name>.png}。 */
     public static String targetPath(String name){return "textures/item/"+name+".png";}
     /** 把源图等比缩放成 maxSide 内的正方形图标。返回是否成功。 */
     public static boolean convert(String name,int maxSide){
         try{
             var rm=Minecraft.getInstance().getResourceManager();
-            var res=rm.getResource(new net.minecraft.resources.ResourceLocation("sukuna",sourcePath(name)));
+            var res=rm.getResource(new net.minecraft.resources.ResourceLocation("jujutsu_kaisen_cursed_paths",sourcePath(name)));
             if(res.isEmpty())return false;
             NativeImage src;
             try(InputStream in=res.get().open()){src=NativeImage.read(in);}
             NativeImage out=scale(src,maxSide);
             src.close();
             // 写回开发目录（仅开发环境有效；正式包里贴图已预先生成好）
-            Path dir=Path.of("src/main/resources/assets/sukuna/textures/item");
+            Path dir=Path.of("src/main/resources/assets/jujutsu_kaisen_cursed_paths/textures/item");
             Files.createDirectories(dir);
             out.writeToFile(dir.resolve(name+".png").toFile()); // 公开 API（writeToChannel 是私有的）
             out.close();

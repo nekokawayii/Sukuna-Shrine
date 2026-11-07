@@ -25,7 +25,7 @@ public class NaoyaNpcEntity extends PathfinderMob {
 
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes()
-            .add(Attributes.MAX_HEALTH, NpcBalance.health("sukuna:naoya_npc"))
+            .add(Attributes.MAX_HEALTH, NpcBalance.health("jujutsu_kaisen_cursed_paths:naoya_npc"))
             .add(Attributes.ATTACK_DAMAGE, 7.0)
             .add(Attributes.MOVEMENT_SPEED, 0.32)
             .add(Attributes.FOLLOW_RANGE, 40.0)

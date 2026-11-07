@@ -11,7 +11,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /** 独立施术上下文把十倍伤害保留到弹体和持续伤害命中，不会污染玩家下一招。 */
-@Mod.EventBusSubscriber(modid="sukuna")
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths")
 public final class AuthorityEditor {
     private record Echo(ServerPlayer owner,ArmorStand body,MaidBridge.Actor actor,long born,boolean offhand){}
     private static final List<Echo> echoes=new ArrayList<>();

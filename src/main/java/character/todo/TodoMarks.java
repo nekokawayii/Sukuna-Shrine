@@ -19,7 +19,7 @@ import net.minecraft.world.phys.*;
  * <p>规则（用户口径）：
  * ①**生物默认自带咒力** —— 换位可以直接对任何生物使用，不必先注入；
  * ②方块 / 弹幕需要「注入咒力」，注入后**永久有效**直到被换位消耗；
- * ③纯客户端特效没有服务端对象 —— 注入命中的一瞬间就在那个位置**生成一个真正的实体**（{@code sukuna:todo_anchor}），
+ * ③纯客户端特效没有服务端对象 —— 注入命中的一瞬间就在那个位置**生成一个真正的实体**（{@code jujutsu_kaisen_cursed_paths:todo_anchor}），
  * 之后就是普通的实体换位。
  */
 public final class TodoMarks {

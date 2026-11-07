@@ -12,10 +12,10 @@ import net.minecraft.world.phys.Vec3;
 
 /** 视线经纬投影：相邻格共享同一片天空，只画球壳可见表面，不画覆盖生物的屏幕贴片。 */
 public final class DomainMaskRenderer implements BlockEntityRenderer<DomainMaskBlockEntity> {
-    private static final ResourceLocation STAR=new ResourceLocation("sukuna","textures/block/yuki_star_shell.png");
-    private static final ResourceLocation SUNSET=new ResourceLocation("sukuna","textures/effect/domain_sunset.png");
+    private static final ResourceLocation STAR=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/block/yuki_star_shell.png");
+    private static final ResourceLocation SUNSET=new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/effect/domain_sunset.png");
     private static final ResourceLocation[] IMAGES=java.util.stream.IntStream.range(0,9)
-        .mapToObj(i->i<=1?SUNSET:new ResourceLocation("sukuna","textures/block/domain_screen_"+i+".png")).toArray(ResourceLocation[]::new);
+        .mapToObj(i->i<=1?SUNSET:new ResourceLocation("jujutsu_kaisen_cursed_paths","textures/block/domain_screen_"+i+".png")).toArray(ResourceLocation[]::new);
     private static final float[][][] FACES={
         {{0,0,0},{1,0,0},{1,0,1},{0,0,1}},
         {{0,1,1},{1,1,1},{1,1,0},{0,1,0}},

@@ -100,7 +100,7 @@ def make():
 
 if __name__ == "__main__":
     data, count = make()
-    target = Path("src/main/resources/data/sukuna/structures/higuruma_domain/main.nbt")
+    target = Path("src/main/resources/data/jujutsu_kaisen_cursed_paths/structures/higuruma_domain/main.nbt")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(data)
     desk = Path.home() / "Desktop" / "诛伏赐死法庭.nbt"

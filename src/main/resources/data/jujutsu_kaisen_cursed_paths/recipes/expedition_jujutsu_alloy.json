@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:alloy_block"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy",
+    "count": 9
+  }
+}

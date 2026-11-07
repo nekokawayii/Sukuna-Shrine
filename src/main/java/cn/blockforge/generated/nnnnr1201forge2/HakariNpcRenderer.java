@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 /** 秤金次 NPC：玩家模型 + 用户提供的皮肤（512×512 原图原样）。 */
 public final class HakariNpcRenderer extends MobRenderer<HakariNpcEntity, PlayerModel<HakariNpcEntity>> {
     private static final ResourceLocation SKIN =
-        new ResourceLocation("sukuna", "textures/entity/hakari_npc.png");
+        new ResourceLocation("jujutsu_kaisen_cursed_paths", "textures/entity/hakari_npc.png");
 
     public HakariNpcRenderer(EntityRendererProvider.Context context) {
         super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false), 0.5f);

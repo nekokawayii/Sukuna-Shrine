@@ -13,7 +13,7 @@ import net.minecraft.resources.ResourceLocation;
  * <p>尾巴（{@code tail} 标记）**不画模型**，只保留实体做伤害结算。</p>
  */
 public final class MahitoCloneRenderer extends MobRenderer<MahitoCloneEntity, PlayerModel<MahitoCloneEntity>> {
-    private static final ResourceLocation SKIN = new ResourceLocation("sukuna", "textures/entity/mahito_npc.png");
+    private static final ResourceLocation SKIN = new ResourceLocation("jujutsu_kaisen_cursed_paths", "textures/entity/mahito_npc.png");
 
     public MahitoCloneRenderer(EntityRendererProvider.Context context) {
         super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false), 0.5f);

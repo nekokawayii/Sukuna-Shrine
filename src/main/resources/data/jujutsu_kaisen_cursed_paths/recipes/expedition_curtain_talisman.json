@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:black_rope_fiber"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:seal_black"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:residue_medium"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:curtain_talisman",
+    "count": 2
+  }
+}

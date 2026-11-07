@@ -12,8 +12,8 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.registries.RegistryObject;
 
 public final class PrisonContent {
-    public static final RegistryObject<EntityType<PrisonRealmEntity>> REALM=Content.ENTITIES.register("prison_realm",()->EntityType.Builder.<PrisonRealmEntity>of(PrisonRealmEntity::new,MobCategory.MISC).sized(1,1.25f).fireImmune().clientTrackingRange(16).updateInterval(1).build("sukuna:prison_realm"));
-    public static final RegistryObject<EntityType<JacobsLadderEntity>> LIGHT=Content.ENTITIES.register("jacobs_ladder",()->EntityType.Builder.<JacobsLadderEntity>of(JacobsLadderEntity::new,MobCategory.MISC).sized(10,16).fireImmune().clientTrackingRange(24).updateInterval(1).build("sukuna:jacobs_ladder"));
+    public static final RegistryObject<EntityType<PrisonRealmEntity>> REALM=Content.ENTITIES.register("prison_realm",()->EntityType.Builder.<PrisonRealmEntity>of(PrisonRealmEntity::new,MobCategory.MISC).sized(1,1.25f).fireImmune().clientTrackingRange(16).updateInterval(1).build("jujutsu_kaisen_cursed_paths:prison_realm"));
+    public static final RegistryObject<EntityType<JacobsLadderEntity>> LIGHT=Content.ENTITIES.register("jacobs_ladder",()->EntityType.Builder.<JacobsLadderEntity>of(JacobsLadderEntity::new,MobCategory.MISC).sized(10,16).fireImmune().clientTrackingRange(24).updateInterval(1).build("jujutsu_kaisen_cursed_paths:jacobs_ladder"));
     public static final RegistryObject<Item> PRISON=Content.ITEMS.register("prison_realm",PrisonRealmItem::new);
     public static final RegistryObject<Item> LADDER=Content.ITEMS.register("jacobs_ladder",()->new Item(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)){
         @Override public InteractionResultHolder<ItemStack> use(Level level,Player player,InteractionHand hand){

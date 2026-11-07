@@ -11,7 +11,7 @@ import java.util.*;
 
 /** 黑闪表现层（客户端）：播放用户提供的 4 个 Photon 特效文件。
  *  阶段对应：起手闪光 blackflasheffect → 命中爆发 blackflash → 终结冲击 blackflashfinal → 收尾火花 blackflashfinalspark。
- *  资源路径为 {@code assets/sukuna/fx/<名>.fx}（Photon 的 FXHelper.FX_PATH="fx/"，内部拼成 {@code fx/<名>.fx}）。
+ *  资源路径为 {@code assets/jujutsu_kaisen_cursed_paths/fx/<名>.fx}（Photon 的 FXHelper.FX_PATH="fx/"，内部拼成 {@code fx/<名>.fx}）。
  *  前置 Photon 缺失或 .fx 资源缺失时静默降级：只记一条日志，绝不抛出、不刷屏。 */
 public final class BlackFlashFx {
     private static final String ROOT="com.lowdragmc.photon.client.";
@@ -55,7 +55,7 @@ public final class BlackFlashFx {
     private static void spawn(String name,int delay,Vec3 pos){
         if(MISSING.contains(name))return;
         try{
-            Object fx=call(type("fx.FXHelper"),"getFX",new ResourceLocation("sukuna",name));
+            Object fx=call(type("fx.FXHelper"),"getFX",new ResourceLocation("jujutsu_kaisen_cursed_paths",name));
             BlockPos bp=BlockPos.containing(pos);
             Object effect=type("fx.BlockEffect").getConstructor(type("fx.FX"),Level.class,BlockPos.class).newInstance(fx,Minecraft.getInstance().level,bp);
             if(delay>0)call(effect,"setDelay",delay);
@@ -66,7 +66,7 @@ public final class BlackFlashFx {
         }catch(Throwable t){
             if(t instanceof ClassNotFoundException||t instanceof NoClassDefFoundError){
                 if(!broken){broken=true;LogUtils.getLogger().warn("[黑闪] 未安装 Photon，黑闪特效已跳过（音效不受影响）");}
-            }else if(MISSING.add(name))LogUtils.getLogger().warn("[黑闪] 特效文件缺失或不可用，已跳过：sukuna:fx/{}.fx",name);
+            }else if(MISSING.add(name))LogUtils.getLogger().warn("[黑闪] 特效文件缺失或不可用，已跳过：jujutsu_kaisen_cursed_paths:fx/{}.fx",name);
         }
     }
     /** 每刻由 SoulClient.tick 调用：把到期的特效强制销毁，别让它们赖在世界里。 */

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:eternal_fire"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:seal_gold"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:volcanic_core"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:furnace_scroll",
+    "count": 1
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:diamond_boots"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:frame_retina"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:frame_boots",
+    "count": 1
+  }
+}

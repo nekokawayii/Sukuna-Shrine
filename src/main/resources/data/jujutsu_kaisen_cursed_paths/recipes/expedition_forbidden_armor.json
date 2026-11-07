@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:netherite_chestplate"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:kenjaku_thread"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:kenjaku_thread"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:soul_molt"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:seal_gold"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:forbidden_armor",
+    "count": 1
+  }
+}

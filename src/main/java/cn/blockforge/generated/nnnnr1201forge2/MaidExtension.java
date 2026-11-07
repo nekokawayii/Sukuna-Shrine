@@ -24,25 +24,25 @@ import net.minecraftforge.eventbus.api.*;
 /** 由车万女仆的扩展发现机制加载；未安装时主模组不链接此类。 */
 @LittleMaidExtension
 public final class MaidExtension implements ILittleMaid {
-    private static final ResourceLocation ID=new ResourceLocation("sukuna","malevolent_shrine");
+    private static final ResourceLocation ID=new ResourceLocation("jujutsu_kaisen_cursed_paths","malevolent_shrine");
     // 仅供女仆内部选招，不占用玩家轮盘技能编号。
     private static final int MAID_BACKFLIP=101,MAID_KICK=102;
     private static int motionKind(int skill){return skill==MAID_BACKFLIP?DismantleMotionRules.BACKFLIP:skill==MAID_KICK?DismantleMotionRules.FLYING_KICK:skill==DismantleMotionRules.RING_SKILL?DismantleMotionRules.SPIN:skill>=103&&skill<=106?skill-99:0;}
     private static final com.github.tartaricacid.touhoulittlemaid.api.entity.data.TaskDataKey<Boolean> MEMORY=new com.github.tartaricacid.touhoulittlemaid.api.entity.data.TaskDataKey<>() {
-        @Override public ResourceLocation getKey(){return new ResourceLocation("sukuna","shrine_memory");}
+        @Override public ResourceLocation getKey(){return new ResourceLocation("jujutsu_kaisen_cursed_paths","shrine_memory");}
         @Override public net.minecraft.nbt.CompoundTag writeSaveData(Boolean value){var tag=new net.minecraft.nbt.CompoundTag();tag.putBoolean("Unlocked",Boolean.TRUE.equals(value));return tag;}
         @Override public Boolean readSaveData(net.minecraft.nbt.CompoundTag tag){return tag.getBoolean("Unlocked");}
     };
-    private static final ResourceLocation ICE_ID=new ResourceLocation("sukuna","ice_formation");
+    private static final ResourceLocation ICE_ID=new ResourceLocation("jujutsu_kaisen_cursed_paths","ice_formation");
     private static final com.github.tartaricacid.touhoulittlemaid.api.entity.data.TaskDataKey<Boolean> ICE_MEMORY=new com.github.tartaricacid.touhoulittlemaid.api.entity.data.TaskDataKey<>(){
-        @Override public ResourceLocation getKey(){return new ResourceLocation("sukuna","ice_memory");}
+        @Override public ResourceLocation getKey(){return new ResourceLocation("jujutsu_kaisen_cursed_paths","ice_memory");}
         @Override public net.minecraft.nbt.CompoundTag writeSaveData(Boolean value){var tag=new net.minecraft.nbt.CompoundTag();tag.putBoolean("Unlocked",Boolean.TRUE.equals(value));return tag;}
         @Override public Boolean readSaveData(net.minecraft.nbt.CompoundTag tag){return tag.getBoolean("Unlocked");}
     };
     /** 六眼：与宿傩记忆、里梅记忆并存，互不覆盖；只在女仆任务里切换由谁出手。 */
-    private static final ResourceLocation SIX_EYES_ID=new ResourceLocation("sukuna","six_eyes");
+    private static final ResourceLocation SIX_EYES_ID=new ResourceLocation("jujutsu_kaisen_cursed_paths","six_eyes");
     private static final com.github.tartaricacid.touhoulittlemaid.api.entity.data.TaskDataKey<Boolean> SIX_EYES=new com.github.tartaricacid.touhoulittlemaid.api.entity.data.TaskDataKey<>(){
-        @Override public ResourceLocation getKey(){return new ResourceLocation("sukuna","six_eyes_memory");}
+        @Override public ResourceLocation getKey(){return new ResourceLocation("jujutsu_kaisen_cursed_paths","six_eyes_memory");}
         @Override public net.minecraft.nbt.CompoundTag writeSaveData(Boolean value){var tag=new net.minecraft.nbt.CompoundTag();tag.putBoolean("Unlocked",Boolean.TRUE.equals(value));return tag;}
         @Override public Boolean readSaveData(net.minecraft.nbt.CompoundTag tag){return tag.getBoolean("Unlocked");}
     };
@@ -69,7 +69,7 @@ public final class MaidExtension implements ILittleMaid {
         @Override public boolean canAttack(EntityMaid maid,LivingEntity target){return !maid.level().isClientSide&&CombatSettings.canHit(MaidBridge.actor(maid),target);}
         @Override public boolean isEnable(EntityMaid maid){return maid.level().isClientSide?Boolean.TRUE.equals(maid.getData(MEMORY)):maid.getPersistentData().getCompound("SukunaProgress").getBoolean("Memory");}
         @Override public boolean enableLookAndRandomWalk(EntityMaid maid){return maid.getTarget()==null;}
-        @Override public List<String> getDescription(EntityMaid maid){return List.of("task.sukuna.malevolent_shrine.desc");}
+        @Override public List<String> getDescription(EntityMaid maid){return List.of("task.jujutsu_kaisen_cursed_paths.malevolent_shrine.desc");}
     }
     public static final class IceTask implements IAttackTask {
         @Override public ResourceLocation getUid(){return ICE_ID;}
@@ -81,7 +81,7 @@ public final class MaidExtension implements ILittleMaid {
         @Override public boolean canAttack(EntityMaid maid,LivingEntity target){return !maid.level().isClientSide&&CombatSettings.canHit(MaidBridge.actor(maid),target);}
         @Override public boolean isEnable(EntityMaid maid){return maid.level().isClientSide?Boolean.TRUE.equals(maid.getData(ICE_MEMORY)):maid.getPersistentData().getCompound("SukunaProgress").getBoolean("UraumeMemory");}
         @Override public boolean enableLookAndRandomWalk(EntityMaid maid){return maid.getTarget()==null;}
-        @Override public List<String> getDescription(EntityMaid maid){return List.of("task.sukuna.ice_formation.desc");}
+        @Override public List<String> getDescription(EntityMaid maid){return List.of("task.jujutsu_kaisen_cursed_paths.ice_formation.desc");}
     }
     /** 六眼：与宿傩/里梅任务并列，选中后女仆改用五条悟技能组。 */
     public static final class SixEyesTask implements IAttackTask {
@@ -94,7 +94,7 @@ public final class MaidExtension implements ILittleMaid {
         @Override public boolean canAttack(EntityMaid maid,LivingEntity target){return !maid.level().isClientSide&&CombatSettings.canHit(MaidBridge.actor(maid),target);}
         @Override public boolean isEnable(EntityMaid maid){return maid.level().isClientSide?Boolean.TRUE.equals(maid.getData(SIX_EYES)):maid.getPersistentData().getCompound("SukunaProgress").getBoolean("GojoMemory");}
         @Override public boolean enableLookAndRandomWalk(EntityMaid maid){return maid.getTarget()==null;}
-        @Override public List<String> getDescription(EntityMaid maid){return List.of("task.sukuna.six_eyes.desc");}
+        @Override public List<String> getDescription(EntityMaid maid){return List.of("task.jujutsu_kaisen_cursed_paths.six_eyes.desc");}
     }
     @SubscribeEvent(priority=EventPriority.HIGHEST) public void feed(PlayerInteractEvent.EntityInteract event){
         if(!(event.getTarget() instanceof EntityMaid maid)||!event.getEntity().isShiftKeyDown()||!maid.isOwnedBy(event.getEntity()))return;

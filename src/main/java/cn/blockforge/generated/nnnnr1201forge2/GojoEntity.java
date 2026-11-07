@@ -95,7 +95,7 @@ public final class GojoEntity extends Monster {
         return hurt;
     }
     private DamageSource soulSource(){
-        var holder=server().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(ResourceKey.create(Registries.DAMAGE_TYPE,new ResourceLocation("sukuna","guardian_soul")));
+        var holder=server().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(ResourceKey.create(Registries.DAMAGE_TYPE,new ResourceLocation("jujutsu_kaisen_cursed_paths","guardian_soul")));
         return new DamageSource(holder,this);
     }
     private void face(Vec3 point){

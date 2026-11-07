@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:blood_sakura_petal"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:blood_sakura_petal"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:blood_sakura_petal"
+    },
+    {
+      "item": "minecraft:honey_bottle"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:blood_sakura_wine",
+    "count": 1
+  }
+}

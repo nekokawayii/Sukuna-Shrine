@@ -17,7 +17,7 @@ import net.minecraftforge.fml.common.Mod;
 import org.joml.Vector3f;
 
 /** 捕获实体当时的真实蒙皮顶点，沿斩击平面裁成两块；不生成掉落物、不改死亡结算。 */
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class SlashImpactClient {
     private static final DustParticleOptions BLOOD=new DustParticleOptions(new Vector3f(.65f,.012f,.025f),1.15f);
     private record V(Vec3 p,float r,float g,float b,float a,float u,float v,int overlay,int light,Vec3 normal){

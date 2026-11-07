@@ -33,7 +33,7 @@ public class HakariNpcEntity extends PathfinderMob {
 
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes()
-            .add(Attributes.MAX_HEALTH, NpcBalance.health("sukuna:hakari_npc"))
+            .add(Attributes.MAX_HEALTH, NpcBalance.health("jujutsu_kaisen_cursed_paths:hakari_npc"))
             .add(Attributes.ATTACK_DAMAGE, 8.0)
             .add(Attributes.MOVEMENT_SPEED, 0.31)
             .add(Attributes.FOLLOW_RANGE, 40.0)

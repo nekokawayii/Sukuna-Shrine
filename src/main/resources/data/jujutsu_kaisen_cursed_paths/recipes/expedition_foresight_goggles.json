@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "jujutsu_kaisen_cursed_paths:frame_retina"
+    },
+    {
+      "item": "minecraft:glass"
+    },
+    {
+      "item": "jujutsu_kaisen_cursed_paths:jujutsu_alloy"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:foresight_goggles",
+    "count": 1
+  }
+}

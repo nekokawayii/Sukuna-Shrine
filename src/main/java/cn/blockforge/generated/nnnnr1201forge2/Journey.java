@@ -112,7 +112,7 @@ public final class Journey {
     @SubscribeEvent public static void pickup(PlayerEvent.ItemPickupEvent e){if(e.getEntity() instanceof ServerPlayer p)for(int i=0;i<9;i++)if(e.getStack().is(ProgressionContent.PAGES.get(i).get()))Curse.data(p).putBoolean("Page"+i,true);}
     @SubscribeEvent public static void logout(PlayerEvent.PlayerLoggedOutEvent e){positions.remove(e.getEntity().getUUID());}
     @SubscribeEvent public static void commands(RegisterCommandsEvent e){
-        e.getDispatcher().register(Commands.literal("sukuna")
+        e.getDispatcher().register(Commands.literal("jujutsu_kaisen_cursed_paths")
             .then(Commands.literal("guide").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();if(!character.CharacterService.guide(p).isEmpty()){character.CharacterService.showStory(p);return 1;}p.sendSystemMessage(Component.literal(guide(p)+"\n召唤香配方：上中烈焰棒；中排金锭、末影之眼、金锭；下中灵魂沙。\n九相条件按以下顺序，已获得则跳过："));for(int i=0;i<9;i++)p.sendSystemMessage(Component.literal((Curse.data(p).getBoolean("Page"+i)?"✓ ":"○ ")+PAGES[i]+"："+CONDITIONS[i]));return 1;}))
             .then(Commands.literal("ch")
                 .executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();p.sendSystemMessage(Component.literal(residueStatus(p)+"\n管理员设置：/sukuna ch xp 数字（满100自动凝炼）；/sukuna ch level 数字（每个加伤3%，34个完成凝练）。"));return 1;})

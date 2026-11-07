@@ -10,7 +10,7 @@ import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import static cn.blockforge.generated.nnnnr1201forge2.Client.*;
 
-@Mod.EventBusSubscriber(modid="sukuna",value=Dist.CLIENT)
+@Mod.EventBusSubscriber(modid="jujutsu_kaisen_cursed_paths",value=Dist.CLIENT)
 public final class VoidBossClient {
     private static final Map<Integer,Long> shrines=new HashMap<>();
     private static final Set<Integer> blueShrines=new HashSet<>();

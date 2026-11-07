@@ -23,8 +23,8 @@ import net.minecraftforge.eventbus.api.*;
 /** 极之番服务端：单次扣费、40刻蓄力、扫掠碰撞、每次命中重新核验敌友。 */
 public final class DeathStar {
     public static final int FX_CHARGE=440,FX_FLIGHT=441,FX_BURST=442,FX_STOP=443,FX_ANEMIA=444;
-    public static final ResourceKey<DamageType> DAMAGE=ResourceKey.create(Registries.DAMAGE_TYPE,new ResourceLocation("sukuna","death_star"));
-    private static final TagKey<EntityType<?>> BOSSES=TagKey.create(Registries.ENTITY_TYPE,new ResourceLocation("sukuna","death_star_bosses"));
+    public static final ResourceKey<DamageType> DAMAGE=ResourceKey.create(Registries.DAMAGE_TYPE,new ResourceLocation("jujutsu_kaisen_cursed_paths","death_star"));
+    private static final TagKey<EntityType<?>> BOSSES=TagKey.create(Registries.ENTITY_TYPE,new ResourceLocation("jujutsu_kaisen_cursed_paths","death_star_bosses"));
     private static final TagKey<EntityType<?>> FORGE_BOSSES=TagKey.create(Registries.ENTITY_TYPE,new ResourceLocation("forge","bosses"));
     private static final UUID SLOW=UUID.fromString("ae134000-0001-4000-8000-000000000001");
     private static final String UNTIL="DeathStarAnemiaUntil",CEILING="DeathStarHealthCeiling";

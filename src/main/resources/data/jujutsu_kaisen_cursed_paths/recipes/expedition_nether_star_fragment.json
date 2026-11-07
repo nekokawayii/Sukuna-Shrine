@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:nether_star"
+    }
+  ],
+  "result": {
+    "item": "jujutsu_kaisen_cursed_paths:nether_star_fragment",
+    "count": 9
+  }
+}

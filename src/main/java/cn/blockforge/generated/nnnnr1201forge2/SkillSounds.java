@@ -12,7 +12,7 @@ import net.minecraftforge.eventbus.api.IEventBus;
 
 /** 每种招式独立音频槽位；客户端资源包可覆盖同名 Vorbis ogg。 */
 public final class SkillSounds {
-    private static final DeferredRegister<SoundEvent> REGISTRY=DeferredRegister.create(ForgeRegistries.SOUND_EVENTS,"sukuna");
+    private static final DeferredRegister<SoundEvent> REGISTRY=DeferredRegister.create(ForgeRegistries.SOUND_EVENTS,"jujutsu_kaisen_cursed_paths");
     private static final Map<String,RegistryObject<SoundEvent>> SOUNDS=new LinkedHashMap<>();
     public static final String[] NORMAL={"dismantle","web","cleave","flame_bow","furnace","shrine","soul_peel"};
     public static final String[] AWAKENED={"world_slash","sphere_web","void_cleave","heaven_bow","inferno","burning_shrine","soul_peel"};
@@ -35,7 +35,7 @@ public final class SkillSounds {
     }
     private static void register(String id){
         if(SOUNDS.containsKey(id))return;
-        SOUNDS.put(id,REGISTRY.register(id,()->SoundEvent.createVariableRangeEvent(new ResourceLocation("sukuna",id))));
+        SOUNDS.put(id,REGISTRY.register(id,()->SoundEvent.createVariableRangeEvent(new ResourceLocation("jujutsu_kaisen_cursed_paths",id))));
     }
     public static void init(IEventBus bus){REGISTRY.register(bus);}
     public static void play(Entity entity,String id){

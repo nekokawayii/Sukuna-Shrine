@@ -26,9 +26,9 @@ public final class SoulCorridorGenerator extends FlatLevelSource {
     public static void rebuild(LevelChunk chunk){generate(chunk,true);if(chunk.getLevel() instanceof net.minecraft.server.level.ServerLevel level)IwateStructures.place(level,chunk);chunk.setUnsaved(true);chunk.initializeLightSources();}
     @Override public CompletableFuture<ChunkAccess> createBiomes(Executor executor,RandomState random,Blender blender,StructureManager structures,ChunkAccess chunk){
         var registry=structures.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.BIOME);
-        var corridor=registry.getHolderOrThrow(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BIOME,new net.minecraft.resources.ResourceLocation("sukuna","soul_corridor")));
-        var forest=registry.getHolderOrThrow(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BIOME,new net.minecraft.resources.ResourceLocation("sukuna","iwate_forest")));
-        var village=registry.getHolderOrThrow(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BIOME,new net.minecraft.resources.ResourceLocation("sukuna","iwate_village")));
+        var corridor=registry.getHolderOrThrow(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BIOME,new net.minecraft.resources.ResourceLocation("jujutsu_kaisen_cursed_paths","soul_corridor")));
+        var forest=registry.getHolderOrThrow(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BIOME,new net.minecraft.resources.ResourceLocation("jujutsu_kaisen_cursed_paths","iwate_forest")));
+        var village=registry.getHolderOrThrow(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BIOME,new net.minecraft.resources.ResourceLocation("jujutsu_kaisen_cursed_paths","iwate_village")));
         chunk.fillBiomesFromNoise((x,y,z,sampler)->y*4<1288?corridor:IwateTerrain.forest(x*4,z*4)?forest:village,random.sampler());return CompletableFuture.completedFuture(chunk);
     }
     private static void generate(ChunkAccess c,boolean clear){

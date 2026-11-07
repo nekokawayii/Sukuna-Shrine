@@ -1,7 +1,7 @@
 import struct, zlib, sys
 
 src = r"C:\Users\Administrator\.dsh\attachments\v1\objects\76\76ad9b995d0084c8c56e2b8e734f9f4f35567307730a85184b183e52d3d5e2b1"
-dst = r"src/main/resources/assets/sukuna/textures/entity/sukuna_true_form.png"
+dst = r"src/main/resources/assets/jujutsu_kaisen_cursed_paths/textures/entity/sukuna_true_form.png"
 
 raw = open(src, "rb").read()
 assert raw[:8] == b"\x89PNG\r\n\x1a\n"

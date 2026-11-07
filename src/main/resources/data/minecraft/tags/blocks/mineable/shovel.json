@@ -1,8 +1,8 @@
 {
   "replace": false,
   "values": [
-    "sukuna:cursed_soil",
-    "sukuna:blood_soil",
-    "sukuna:volcanic_ash"
+    "jujutsu_kaisen_cursed_paths:cursed_soil",
+    "jujutsu_kaisen_cursed_paths:blood_soil",
+    "jujutsu_kaisen_cursed_paths:volcanic_ash"
   ]
 }

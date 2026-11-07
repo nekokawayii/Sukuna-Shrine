@@ -20,7 +20,7 @@ import java.util.*;
  * 真人领域「自闭圆顿裹」：
  * · 地面 = 改造血肉，上一层铺亮度 10 的光源方块（最外圈不放光源）；
  * · 球壳 = 半径 30 的黑色混凝土，每 15 格嵌 2 格宽肉色（粉红）混凝土网格；
- * · 铺完那一刻在圆心正后方 RADIUS-15 格立 1 只「圆钝果实」（sukuna:yidui，一堆手 bbmodel，渲染 3 倍、不可移动）。
+ * · 铺完那一刻在圆心正后方 RADIUS-15 格立 1 只「圆钝果实」（jujutsu_kaisen_cursed_paths:yidui，一堆手 bbmodel，渲染 3 倍、不可移动）。
  * 方块按队列逐刻施工并记录旧状态，收起/关服时整批还原。
  */
 public final class SelfEmbryoDomain {

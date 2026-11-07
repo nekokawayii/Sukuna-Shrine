@@ -1,5 +1,5 @@
 plugins { id 'java'; id 'net.minecraftforge.gradle' version '[6.0,6.2)' }
-version = '1.8.1-original-textures-r358'
+version = '1.8.1-original-textures-r359'
 group = 'cn.blockforge.generated.nnnnr1201forge2'
 base { archivesName = "sukuna-forge-1.20.1" }
 // 产物文件名固定为 sukuna-forge-1.20.1（不带版本号），版本号只保留在 jar 内部的 mods.toml 里。
@@ -16,7 +16,7 @@ dependencies {
 }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
 processResources {
-    def props = [mod_id: 'sukuna', mod_name: '宿傩 · 伏魔御厨子', mod_version: project.version,
+    def props = [mod_id: 'sukuna', mod_name: '咒命歧路', mod_version: project.version,
                  minecraft_version: '1.20.1', forge_version: '47.4.0']
     inputs.properties props
     filteringCharset = 'UTF-8'

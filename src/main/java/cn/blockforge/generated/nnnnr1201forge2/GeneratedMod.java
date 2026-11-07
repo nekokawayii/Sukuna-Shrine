@@ -9,6 +9,8 @@ public final class GeneratedMod {
     public static final String MOD_ID = "jujutsu_kaisen_cursed_paths";
     public GeneratedMod() {
         GrowthConfig.register();
+        if(net.minecraftforge.fml.loading.FMLEnvironment.dist==net.minecraftforge.api.distmarker.Dist.CLIENT)
+            net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT,()->ConfigClient::registerScreen);
         TechniqueConfig.register();
         MinecraftForge.EVENT_BUS.register(TechniqueInput.class);
         MinecraftForge.EVENT_BUS.register(CombatExpansion.class);

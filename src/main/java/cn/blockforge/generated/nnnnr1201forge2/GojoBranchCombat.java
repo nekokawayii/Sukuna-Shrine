@@ -249,14 +249,16 @@ public final class GojoBranchCombat {
             for (LivingEntity t : targetsOf(o.owner, at, 48)) {
                 Vec3 pull = at.subtract(t.position());
                 if (pull.lengthSqr() > .25) {
-                    pull = pull.normalize().scale(2.2);   // 吸得更快
-                    Vec3 next = new Vec3(pull.x, 0, pull.z);
-                    t.setDeltaMovement(t.getDeltaMovement().add(pull.x, .18, pull.z));
+                    Vec3 flat = new Vec3(pull.x, 0, pull.z);
+                    if (flat.lengthSqr() > 1e-4) flat = flat.normalize().scale(1.1); // 水平吸力，限速
+                    Vec3 next = flat;
+                    // 直接覆写速度并压住竖直分量：否则每刻叠 +Y 会把怪顶上天
+                    t.setDeltaMovement(flat.x, Math.min(0, t.getDeltaMovement().y) - 0.02, flat.z);
                     t.hurtMarked = true;
                     // 被吸着撞墙：一次 1000% 伤害（每 2 秒最多一次，避免贴墙连打）
                     var pdt = t.getPersistentData();
                     if (now >= pdt.getLong("OrbitWallHit")
-                        && !o.level.noCollision(t, t.getBoundingBox().deflate(.05).move(next))) {
+                        && !o.level.noCollision(t, t.getBoundingBox().deflate(.05).move(flat.x, 0, flat.z))) {
                         pdt.putLong("OrbitWallHit", now + 40);
                         t.invulnerableTime = 0;
                         if (o.owner instanceof ServerPlayer sp) CombatSettings.hurt(sp, t, sp.damageSources().genericKill(), 250f);

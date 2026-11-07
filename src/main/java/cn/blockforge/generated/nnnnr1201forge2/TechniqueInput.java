@@ -73,6 +73,8 @@ public final class TechniqueInput {
         }
         // 鹿紫云一：防御键（右键）→ 同极相斥
         if(input.skill()==character.kashimo.KashimoCombat.GUARD&&input.phase()==7){character.kashimo.KashimoCombat.guard(p);return;}
+        // 五条悟分支（3400-3405）不是角色技能，不进 allowsSkill 门禁
+        if(GojoBranches.branch(input.skill())){if(input.phase()==0)GojoBranchCombat.cast(p,input.skill());return;}
         if(!character.CharacterService.allowsSkill(p,input.skill())){
             if(input.phase()==0)p.sendSystemMessage(net.minecraft.network.chat.Component.literal("无法施放：技能"+input.skill()+" 不在当前角色的技能表里"));
             if(input.phase()==3)cancel(p);return;
@@ -84,7 +86,6 @@ public final class TechniqueInput {
             if(input.phase()==0)character.CharacterCasting.cast(p,input.skill());
             return;
         }
-        if(GojoBranches.branch(input.skill())){if(input.phase()==0)GojoBranchCombat.cast(p,input.skill());return;}
         if(character.CharacterSkill.custom(input.skill())){
             // r299：里梅·霜天宫殿，领域开着时再按同一格=收起（必须在冷却检查之前拦下）
             if(input.phase()==0&&input.skill()==character.uraume.UraumeSkills.DOMAIN

@@ -31,7 +31,13 @@ public final class TenShadows {
     /** 0=未调服时开始仪式，1=完全显现，2=不完全显现（开着时再点=解除）。 */
     public record Summon(int mode){}
     public static java.util.function.Consumer<State> receiver=s->{};
-    public static boolean incarnated(Player p){return !character.CharacterService.toji(p)&&Curse.data(p).getBoolean("MegumiIncarnated");}
+    public static boolean incarnated(Player p){
+        if(character.CharacterService.toji(p))return false;
+        // r360：选的是《咒术选择书》的伏黑惠时，不显示受肉伏黑（meguna）外观——外观只属于宿傩线的受肉
+        var d=character.CharacterService.selected(p);
+        if(d!=null&&"megumi".equals(d.id()))return false;
+        return Curse.data(p).getBoolean("MegumiIncarnated");
+    }
     /** 能否使用十影操作（召唤/调服/收回）：受肉伏黑，或直接选了伏黑惠角色。外观仍只看 incarnated。 */
     public static boolean canUse(Player p){
         var d=character.CharacterService.selected(p);

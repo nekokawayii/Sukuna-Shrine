@@ -177,7 +177,8 @@ public final class MahoragaAdaptStore {
     public static final double SUMMON_RANGE=48;
     /** 潜行右键空气：放出（或叫回）**同一只**友方魔虚罗。 */
     public static boolean summonAlly(ServerPlayer owner){
-        if(!TenShadows.incarnated(owner)||!TenShadows.tamed(owner))return false;
+        // r360：选择书选的伏黑惠也要能召唤（受肉外观仍看 incarnated，功能门禁用 canUse）
+        if(!TenShadows.canUse(owner)||!TenShadows.tamed(owner))return false;
         ServerLevel level=owner.serverLevel();
         MahoragaEntity ally=findAlly(level,owner);
         boolean fresh=false;

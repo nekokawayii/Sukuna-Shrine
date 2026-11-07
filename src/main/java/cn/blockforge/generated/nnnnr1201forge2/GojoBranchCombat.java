@@ -23,19 +23,23 @@ public final class GojoBranchCombat {
     private static final List<Shot> SHOTS = new ArrayList<>();
 
     public static void cast(ServerPlayer p, int skill) {
+        com.mojang.logging.LogUtils.getLogger().info("[五条悟分支] 服务端收到 skill=" + skill + " 玩家=" + p.getName().getString());
         if (!GojoBranches.branch(skill) || !(p.level() instanceof ServerLevel level)) return;
         long now = level.getGameTime();
         String key = "GojoBranchCD_" + skill;
         if (Curse.data(p).getLong(key) > now) {
+            com.mojang.logging.LogUtils.getLogger().info("[五条悟分支] 冷却中，剩余 " + (Curse.data(p).getLong(key) - now) + " 刻");
             p.displayClientMessage(net.minecraft.network.chat.Component.literal(
                 GojoBranches.name(skill) + " 冷却中 · " + ((Curse.data(p).getLong(key) - now + 19) / 20) + " 秒"), true);
             return;
         }
         if (!Curse.spend(p, GojoBranches.cost(skill))) {
+            com.mojang.logging.LogUtils.getLogger().info("[五条悟分支] 咒力不足，需要 " + GojoBranches.cost(skill) + " 当前 " + Curse.energy(p));
             p.displayClientMessage(net.minecraft.network.chat.Component.literal("咒力不足"), true);
             return;
         }
         Curse.data(p).putLong(key, now + GojoBranches.cooldown(skill));
+        com.mojang.logging.LogUtils.getLogger().info("[五条悟分支] 开始结算 " + GojoBranches.name(skill));
         Vec3 eye = p.getEyePosition(), look = p.getLookAngle();
         switch (skill) {
             case GojoBranches.SINGULARITY -> {

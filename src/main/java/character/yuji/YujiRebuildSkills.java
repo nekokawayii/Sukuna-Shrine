@@ -39,5 +39,10 @@ public final class YujiRebuildSkills {
             s(KNEE, "膝撞·碎盾", "跃起用膝盖猛撞，对护盾和装甲造成 300% 额外破坏。", 180, 140, 3, 1, 40, 35, 0));
     }
 
+    /** 只给轮盘用的技能对象（不含被动的径庭拳）。 */
+    public static List<CharacterSkill> wheelSkills() {
+        return all().stream().filter(k -> WHEEL.contains(k.id())).toList();
+    }
+
     private YujiRebuildSkills() { }
 }

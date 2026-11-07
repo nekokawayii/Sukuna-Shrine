@@ -22,7 +22,7 @@ public final class GojoBranchCombat {
     private static final List<Meteor> METEORS = new ArrayList<>();
     private static final List<Shot> SHOTS = new ArrayList<>();
     /** 苍·环绕：围绕施术者半径 30 格高速旋转的巨大苍球。 */
-    private record Orbit(ServerPlayer owner, ServerLevel level, long end, double angle) { }
+    private record Orbit(LivingEntity owner, ServerLevel level, long end, double angle) { }
     private static final List<Orbit> ORBITS = new ArrayList<>();
     /** 重压冲击：先在被斩中的目标身上留"斩痕"，10 刻后一起炸开（类似宿傩的解多重斩）。 */
     private record Mark(ServerPlayer owner, ServerLevel level, LivingEntity target, long at) { }
@@ -108,8 +108,9 @@ public final class GojoBranchCombat {
                 else p.displayClientMessage(net.minecraft.network.chat.Component.literal("赫·重压冲击：斩痕附着 " + marked + " 个目标"), true);
             }
             case GojoBranches.TURBULENCE -> {
+                // 5 发极小的赫：体积小、飞行快、单发爆炸小，第 5 发仍带核爆
                 for (int i = 0; i < 5; i++) SHOTS.add(new Shot(p, level, eye, look, now + i * 3, i));
-                Network.send(level, new Network.Effect(GojoBranches.FX_TURBULENCE, p.getId(), eye, look, 5f, 30, 0));
+                Network.send(level, new Network.Effect(GojoBranches.FX_TURBULENCE, p.getId(), eye, look, 1.2f, 24, 0));
             }
             case GojoBranches.BRAINDEAD -> {
                 LivingEntity target = rayTarget(p, 20);
@@ -144,6 +145,19 @@ public final class GojoBranchCombat {
         if (ok[0]) Curse.data(p).putLong(key, now + GojoBranches.cooldown(skill));
         Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> p),
             new Network.Effect(GojoBranches.FX_METEOR + 50, p.getId(), Vec3.ZERO, Vec3.ZERO, 0f, 0, 0));
+    }
+
+    /** Boss 版苍·环绕（r344）。 */
+    public static void orbit(LivingEntity owner) {
+        if (!(owner.level() instanceof ServerLevel level)) return;
+        ORBITS.add(new Orbit(owner, level, level.getGameTime() + 200, 0));
+        Network.send(level, new Network.Effect(GojoBranches.FX_SINGULARITY, owner.getId(),
+            owner.position().add(30, 1.5, 0), Vec3.ZERO, 4f, 60, 0));
+    }
+
+    private static List<LivingEntity> targetsOf(LivingEntity owner, Vec3 at, double r) {
+        return owner.level().getEntitiesOfClass(LivingEntity.class, new AABB(at, at).inflate(r),
+            t -> t != owner && t.isAlive() && (!(owner instanceof ServerPlayer sp) || CombatSafety.canTarget(sp, t)));
     }
 
     private static List<LivingEntity> targets(ServerPlayer p, Vec3 at, double r) {
@@ -231,9 +245,10 @@ public final class GojoBranchCombat {
             double angle = o.angle + 0.45;
             Vec3 at = o.owner.position().add(Math.cos(angle) * 30, 1.5, Math.sin(angle) * 30);
             ORBITS.set(ORBITS.indexOf(o), new Orbit(o.owner, o.level, o.end, angle));
-            for (LivingEntity t : targets(o.owner, at, 4.5)) {
+            for (LivingEntity t : targetsOf(o.owner, at, 4.5)) {
                 t.invulnerableTime = 0;
-                CombatSettings.hurt(o.owner, t, o.owner.damageSources().magic(), 25f);
+                if (o.owner instanceof ServerPlayer sp) CombatSettings.hurt(sp, t, sp.damageSources().magic(), 25f);
+                else t.hurt(o.owner.damageSources().magic(), 25f);
                 t.invulnerableTime = 0;
                 Vec3 push = t.position().subtract(at).normalize().scale(1.1);
                 t.setDeltaMovement(push.x, 0.55, push.z);
@@ -268,7 +283,7 @@ public final class GojoBranchCombat {
             LivingEntity hit = nearest(s.owner, at, 3);
             if (hit != null) {
                 hit.invulnerableTime = 0;
-                CombatSettings.hurt(s.owner, hit, s.owner.damageSources().magic(), 18f);
+                CombatSettings.hurt(s.owner, hit, s.owner.damageSources().magic(), 10f);
                 hit.invulnerableTime = 0;
                 if (s.index == 4) {
                     Network.send(s.level, new Network.Effect(GojoBranches.FX_HEAVY, s.owner.getId(), hit.position(), Vec3.ZERO, 4f, 30, 0));

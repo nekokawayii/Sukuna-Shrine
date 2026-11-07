@@ -31,6 +31,7 @@ public final class GojoEntity extends Monster {
     private static final EntityDataAccessor<Integer> ACTION=SynchedEntityData.defineId(GojoEntity.class,EntityDataSerializers.INT),AGE=SynchedEntityData.defineId(GojoEntity.class,EntityDataSerializers.INT);
     private final ServerBossEvent bar=new ServerBossEvent(Component.literal("五条悟"),BossEvent.BossBarColor.PURPLE,BossEvent.BossBarOverlay.NOTCHED_20);
     private final long[] cooldowns=new long[COUNT];
+    private long orbitReady;
     private final Set<UUID> participants=new HashSet<>();
     private final List<Orb> orbs=new ArrayList<>();
     private final List<Beam> beams=new ArrayList<>();
@@ -130,6 +131,12 @@ public final class GojoEntity extends Monster {
         if(target!=null)participants.add(target.getUUID());
         if(DomainClash.active(this)||DomainClash.stunned(this)){DomainClash.hold(this);tickDomain(now);return;}
         tickOrbs(now);tickBeams(now);tickDomain(now);
+        if(target!=null&&now>=orbitReady&&distanceTo(target)<=40){
+            orbitReady=now+600;
+            GojoBranchCombat.orbit(this);
+            announce("苍·环绕：半径三十，碾碎一切");
+            return;
+        }
         if(action()!=0){channel(target);return;}
         if(target==null)return;
         double distance=distanceTo(target);

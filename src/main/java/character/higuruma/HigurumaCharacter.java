@@ -12,7 +12,9 @@ public final class HigurumaCharacter {
             "higuruma", "日车宽见", "诛伏赐死",
             "律师出身的咒术师。选中后获得法槌（不可丢弃、无限耐久），轮盘：刻印 / 强化 / 领域展开·诛伏赐死。",
             Family.CUSTOM, Resource.CURSED_ENERGY, 0xFFC9A227,
-            List.of(HigurumaSkills.SEAL, HigurumaSkills.ENHANCE, HigurumaSkills.DOMAIN),
+            List.of(HigurumaSkills.SEAL, HigurumaSkills.ENHANCE, HigurumaSkills.DOMAIN,
+                HigurumaSkills.BONE, HigurumaSkills.VERDICT, HigurumaSkills.FREEZE,
+                HigurumaSkills.COFFIN, HigurumaSkills.LIGHT),
             HigurumaStory.chapters(), HigurumaStyle.config());
     }
     private HigurumaCharacter() {}

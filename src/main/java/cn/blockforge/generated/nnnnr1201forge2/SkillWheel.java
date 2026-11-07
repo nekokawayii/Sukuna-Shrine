@@ -25,7 +25,8 @@ public final class SkillWheel extends Screen {
     private int centerX(){return WheelSideSlots.centerX(width,height,ice(),gojo());}
     private int count(){return page>=2?BloodRules.count(page):page==1?GUARDIAN_WHEEL.length:Client.baseWheelCount();}
     private int global(int index){return page>=2?BloodRules.global(page,index):page==1?GUARDIAN_WHEEL[index]+7:index;}
-    private String shortName(int skill){if(BloodRules.skill(skill))return skill==BloodRules.DOMAIN?"胎海":BloodRules.name(skill);if(skill==Skills.FIST_SKILL)return "咒力附拳";if(skill==FurnaceMax.SKILL)return FurnaceMax.SHORT;if(skill==SimpleDomain.SKILL)return "简易领域 · 捌";if(skill>=34)return GojoPlayer.shortName(skill-34);if(CombatExpansionRules.branch(skill))return CombatExpansionRules.name(skill).replace("解 · ","").replace("捌 · ","");if(skill>=24)return SlashFormRules.name(skill).replace("解 · ","").replace("捌 · ","");return skill==22?"霜凪":skill==23?"直瀑":skill>=7&&skill<17?GuardianPlayerSkills.SHORT[skill-7]:skill>=17?BranchRules.name(skill):SHORT[skill];}
+    private String shortName(int skill){if(BloodRules.skill(skill))return skill==BloodRules.DOMAIN?"胎海":BloodRules.name(skill);if(skill==Skills.FIST_SKILL)return "咒力附拳";if(skill==FurnaceMax.SKILL)return FurnaceMax.SHORT;if(skill==SimpleDomain.SKILL)return "简易领域 · 捌";if(GojoBranches.branch(skill))return GojoBranches.label(skill);
+        if(skill>=34)return GojoPlayer.shortName(skill-34);if(CombatExpansionRules.branch(skill))return CombatExpansionRules.name(skill).replace("解 · ","").replace("捌 · ","");if(skill>=24)return SlashFormRules.name(skill).replace("解 · ","").replace("捌 · ","");return skill==22?"霜凪":skill==23?"直瀑":skill>=7&&skill<17?GuardianPlayerSkills.SHORT[skill-7]:skill>=17?BranchRules.name(skill):SHORT[skill];}
     private Button modeButton;
     @Override protected void init(){
         if(TenShadowsClient.has())addRenderableWidget(Button.builder(Component.literal("十影"),b->{confirmed=true;minecraft.setScreen(new TenShadowsScreen());}).bounds(width-78,height-28,70,20).build());
@@ -69,7 +70,9 @@ public final class SkillWheel extends Screen {
             else if(reverseHover){if(Client.progress.fingers()>=15)Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.REVERSE));}
             else if(repairHover)Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.REPAIR_BURNOUT));
             else if(outputHover)Network.CHANNEL.sendToServer(new Network.Cast(SkillAction.GUARDIAN_REVERSE));
-            else {int choice=branchHover>=0?branchHover:current;if(Client.availableSkill(choice))Client.selected=choice;if(Client.selected==BranchRules.WALL){minecraft.setScreen(new WallOptionsScreen());return;}}
+            else {int choice=branchHover>=0?branchHover:current;
+                if(GojoBranches.branch(choice))Client.selected=choice;
+                else {if(Client.availableSkill(choice))Client.selected=choice;if(Client.selected==BranchRules.WALL){minecraft.setScreen(new WallOptionsScreen());return;}}}
         }
         minecraft.setScreen(null);
     }
@@ -86,7 +89,11 @@ public final class SkillWheel extends Screen {
     @Override public void mouseMoved(double mx,double my){
         if(Client.wheelHeld()){
             if(ice()&&WheelSideSlots.iceContains(width,height,mx,my))current=my<height/2.0?BranchRules.FROST:BranchRules.ICEFALL;
-            else if(gojo()&&WheelSideSlots.gojoContains(width,height,mx,my))current=34+WheelSideSlots.gojoSector(width,height,mx,my);
+            else if(gojo()&&WheelSideSlots.gojoContains(width,height,mx,my)){
+                int sec=WheelSideSlots.gojoSector(width,height,mx,my);
+                boolean branch=minecraft!=null&&minecraft.player!=null&&minecraft.player.isShiftKeyDown();
+                current=branch&&sec<6?GojoBranches.SINGULARITY+sec:34+sec;
+            }
             else if(Client.progress.sukuna()&&!branchCorridor(mx,my)){
                 double x=mx-centerX(),y=my-height/2.0,r=x*x+y*y;int outer=outerRadius();
                 if(r>=centerRadius()*centerRadius()&&r<=outer*outer)current=skillAt(x,y);
@@ -94,7 +101,7 @@ public final class SkillWheel extends Screen {
         }
         updateHover(mx,my);super.mouseMoved(mx,my);
     }
-    private int cost(int skill){if(BloodRules.skill(skill))return BloodRules.cost(skill);if(skill==Skills.FIST_SKILL)return 0;if(skill==FurnaceMax.SKILL)return FurnaceMax.COST;if(skill==SimpleDomain.SKILL)return 150;if(skill>=34)return GojoPlayer.costOf(skill-34);if(skill==FinaleRules.SKILL)return (int)Client.progress.energy();if(skill==29||skill==32)return Curse.COST[0];if(skill==30)return Curse.COST[3];if(skill==31)return 2000;if(skill==28)return Curse.COST[0];if(skill>=24)return skill==24?120:skill==25?180:skill==26?0:2000;if(skill==22||skill==23)return Uraume.cost(skill);if(skill==19)return 180;if(skill==20)return 120;if(skill==21)return BranchRules.wallCost(Client.progress.wallSpacing());if(NetBranchRules.branch(skill))return NetBranchRules.cost(skill);return skill<7?Curse.COST[skill]:GuardianPlayerSkills.COST[skill-7];}
+    private int cost(int skill){if(GojoBranches.branch(skill))return GojoBranches.cost(skill);if(BloodRules.skill(skill))return BloodRules.cost(skill);if(skill==Skills.FIST_SKILL)return 0;if(skill==FurnaceMax.SKILL)return FurnaceMax.COST;if(skill==SimpleDomain.SKILL)return 150;if(skill>=34)return GojoPlayer.costOf(skill-34);if(skill==FinaleRules.SKILL)return (int)Client.progress.energy();if(skill==29||skill==32)return Curse.COST[0];if(skill==30)return Curse.COST[3];if(skill==31)return 2000;if(skill==28)return Curse.COST[0];if(skill>=24)return skill==24?120:skill==25?180:skill==26?0:2000;if(skill==22||skill==23)return Uraume.cost(skill);if(skill==19)return 180;if(skill==20)return 120;if(skill==21)return BranchRules.wallCost(Client.progress.wallSpacing());if(NetBranchRules.branch(skill))return NetBranchRules.cost(skill);return skill<7?Curse.COST[skill]:GuardianPlayerSkills.COST[skill-7];}
     private static final String[] GOJO_DESC={"引力拉扯：把敌人吸向蓝色光球并施加缓慢（自带引力视界与拖尾）","红色斥力球：高伤害与超级击退","蓄力3秒后打出圆柱激光，沿直线贯穿并击飞","双手合十5秒，苍与赫对撞成紫球后打出（打不死会引爆 +25%，打死则贯穿）","念完四句咒词后原地引爆，范围48格 · 反噬自己40%生命","向准星方向瞬移最多8格","近距离三连拳，命中减速","领域展开：范围内敌人无法行动并持续受伤","长按引导：光球每秒5格跟随准星，松手后停留5秒"};
     private String desc(int skill){if(BloodRules.skill(skill))return BloodRules.DESC[skill-BloodRules.FIRST];return switch(skill){
         case 33->"蓄力8秒 → 五阶段终结 · 耗尽咒力 · 停恢复60秒 · 熔断180秒";

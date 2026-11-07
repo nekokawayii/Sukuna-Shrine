@@ -84,6 +84,7 @@ public final class TechniqueInput {
             if(input.phase()==0)character.CharacterCasting.cast(p,input.skill());
             return;
         }
+        if(GojoBranches.branch(input.skill())){if(input.phase()==0)GojoBranchCombat.cast(p,input.skill());return;}
         if(character.CharacterSkill.custom(input.skill())){
             // r299：里梅·霜天宫殿，领域开着时再按同一格=收起（必须在冷却检查之前拦下）
             if(input.phase()==0&&input.skill()==character.uraume.UraumeSkills.DOMAIN

@@ -245,28 +245,13 @@ public final class GojoBranchCombat {
             double angle = o.angle + 0.18;   // 约 5.4 格/刻：连续环绕，不再是"一格一格跳"
             Vec3 at = o.owner.position().add(Math.cos(angle) * 30, 1.5, Math.sin(angle) * 30);
             ORBITS.set(ORBITS.indexOf(o), new Orbit(o.owner, o.level, o.end, angle));
-            // 苍是引力：48 格内的敌人被快速吸向球心（不击退）
+            // 苍是引力：48 格内的敌人直接挂到球心上、跟着球一起环绕（不再用速度追）
             for (LivingEntity t : targetsOf(o.owner, at, 48)) {
-                Vec3 pull = at.subtract(t.position());
-                if (pull.lengthSqr() > .25) {
-                    Vec3 flat = new Vec3(pull.x, 0, pull.z);
-                    if (flat.lengthSqr() > 1e-4) flat = flat.normalize().scale(5.0); // 吸得更快，追得上高速环绕
-                    // 竖直：最多只允许比球心高 1 格；超过就不再给向上的量
-                    double vy = t.getY() < at.y + 1.0 ? 0.12 : -0.06;
-                    t.setDeltaMovement(flat.x, vy, flat.z);
-                    t.hurtMarked = true;
-                    // 被吸着撞墙：一次 1000% 伤害（每 2 秒最多一次，避免贴墙连打）
-                    var pdt = t.getPersistentData();
-                    if (now >= pdt.getLong("OrbitWallHit")
-                        && !o.level.noCollision(t, t.getBoundingBox().deflate(.05).move(flat.x, 0, flat.z))) {
-                        pdt.putLong("OrbitWallHit", now + 40);
-                        t.invulnerableTime = 0;
-                        if (o.owner instanceof ServerPlayer sp) CombatSettings.hurt(sp, t, sp.damageSources().genericKill(), 250f);
-                        else t.hurt(o.owner.damageSources().genericKill(), 250f);
-                        t.invulnerableTime = 0;
-                        Network.send(o.level, new Network.Effect(GojoFx.BLUE_END, o.owner.getId(), t.position(), Vec3.ZERO, 3f, 12, 0));
-                    }
-                }
+                Vec3 offset = new Vec3(Math.sin(t.getId() * 1.7), 0, Math.cos(t.getId() * 1.7)).scale(1.1);
+                t.teleportTo(at.x + offset.x, at.y, at.z + offset.z);
+                t.setDeltaMovement(0, Math.min(0, t.getDeltaMovement().y), 0);
+                t.fallDistance = 0;
+                t.hurtMarked = true;
             }
             // 球体本身碰到：每次 25 伤，不击退
             if (now % 4 == 0) {

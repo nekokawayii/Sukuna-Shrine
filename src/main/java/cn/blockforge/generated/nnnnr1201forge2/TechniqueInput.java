@@ -71,6 +71,9 @@ public final class TechniqueInput {
             &&character.ryu.RyuDomain.isOwner(p)){
             character.ryu.RyuDomain.close(p,"主动收起");return;
         }
+        if(input.skill()>=34&&input.skill()<34+GojoPlayer.COUNT)
+            com.mojang.logging.LogUtils.getLogger().info("[五条悟输入] skill="+input.skill()+" phase="+input.phase()
+                +" selected="+(character.CharacterService.selected(p)==null?"null":character.CharacterService.selected(p).id()));
         // 五条悟（角色框架）：技能 34-40 走充能路径，不能走"直接施法"，否则长按永远被当成短按
         if(input.skill()>=34&&input.skill()<34+GojoPlayer.COUNT
             &&character.CharacterService.selected(p)!=null

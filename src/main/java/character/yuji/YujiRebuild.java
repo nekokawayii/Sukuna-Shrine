@@ -296,13 +296,14 @@ public final class YujiRebuild {
     public static void tick(TickEvent.ServerTickEvent e) {
         if (e.phase != TickEvent.Phase.END) return;
         for (Job j : new ArrayList<>(JOBS)) {
-            var it = JOBS.listIterator(JOBS.indexOf(j));
+            int jobIndex = JOBS.indexOf(j);
+            if (jobIndex < 0) continue;
             long now = j.level.getGameTime();
             if (now < j.at) continue;
-            if (j.owner == null || !j.owner.isAlive()) { it.remove(); continue; }
+            if (j.owner == null || !j.owner.isAlive()) { if (jobIndex >= 0) { JOBS.remove(jobIndex); jobIndex = -1; } continue; }
             switch (j.kind) {
                 case 0 -> { // 径庭拳二段
-                    it.remove();
+                    JOBS.remove(jobIndex); jobIndex = -1;
                     if (j.target != null && j.target.isAlive()) {
                         j.target.invulnerableTime = 0;
                         var holder = j.level.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE)
@@ -313,7 +314,7 @@ public final class YujiRebuild {
                     }
                 }
                 case 1 -> { // 乱打每一段
-                    it.remove();
+                    JOBS.remove(jobIndex); jobIndex = -1;
                     if (j.step == 1) {
                         for (LivingEntity t : front(j.owner, 4, 50)) {
                             hit(j.owner, t, 9, false);
@@ -326,7 +327,7 @@ public final class YujiRebuild {
                     fx(j.owner, j.level, YujiFx.BARRAGE, j.owner.getEyePosition().add(j.dir.scale(1.5)), j.dir, 1f, 8);
                 }
                 case 2 -> { // 蓄力重击
-                    it.remove();
+                    JOBS.remove(jobIndex); jobIndex = -1;
                     for (LivingEntity t : front(j.owner, 4, 40)) {
                         hit(j.owner, t, 60, true);
                         if (t instanceof Mob m) character.npc.NpcControl.stun(m, "yuji_charge", 30);
@@ -336,7 +337,7 @@ public final class YujiRebuild {
                     fx(j.owner, j.level, YujiFx.CHARGE_HIT, j.owner.getEyePosition().add(j.dir.scale(2)), j.dir, 2f, 20);
                 }
                 case 3 -> { // 拳风飞行体：每刻前进，撞到敌人即结算
-                    it.remove();
+                    JOBS.remove(jobIndex); jobIndex = -1;
                     Vec3 pos = j.pos;
                     for (int step = 0; step < 8; step++) {
                         pos = pos.add(j.dir.scale(1.2));
@@ -352,7 +353,7 @@ public final class YujiRebuild {
                     }
                     PENDING.add(new Job(j.owner, j.level, null, pos, j.dir, now + 1, 3, 0));
                 }
-                default -> it.remove();
+                default -> { if (jobIndex >= 0) { JOBS.remove(jobIndex); jobIndex = -1; } }
             }
         }
         if (!PENDING.isEmpty()) { JOBS.addAll(PENDING); PENDING.clear(); }

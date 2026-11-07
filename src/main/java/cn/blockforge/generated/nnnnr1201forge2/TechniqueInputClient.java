@@ -23,7 +23,10 @@ public final class TechniqueInputClient {
     public static void inputChanged(){update(false);}
     private static void update(boolean gameTick){
         if(ObserverClient.active()||character.CharacterClient.toji()){clear();return;}
-        var mc=Minecraft.getInstance();boolean down=ClientInput.held(Client.CAST);
+        var mc=Minecraft.getInstance();
+        // r310：改用 KeyMapping 的真实按键状态。ClientInput.held 走 HeldInput 缓存，在"同帧内再来一次事件"
+        // 或窗口焦点/修饰键校验时会把它清空，表现为"按住却立刻判定松手"（ticks=0 就发 phase=2）。
+        boolean down=Client.CAST.isDown();
         boolean valid=mc.player!=null&&mc.player.isAlive()&&mc.screen==null&&mc.isWindowActive()&&mc.mouseHandler.isMouseGrabbed()&&Client.progress.unlocked();
         // 手持神武解：释放键改为"充能"，与轮盘选择无关（先处理，避免被 selected 校验打断）
         boolean tool=mc.player!=null&&(mc.player.getMainHandItem().is(VoidContent.SHINBUKE.get())||mc.player.getOffhandItem().is(VoidContent.SHINBUKE.get()));
